@@ -36,22 +36,10 @@ from app.domain.knowledge_components import KnowledgeComponentId
 # the local placeholder enum is gone; this is now the single source of truth.)
 from app.domain.verifier import ErrorCategory as ErrorType
 
-
-class SurfaceState(StrEnum):
-    """The five enumerated UI surface states (ARCHITECTURE.md §7).
-
-    The turn loop carries the learner's *current* surface state in and returns
-    the *next* surface state out (ARCHITECTURE.md §10 step "next state"). There
-    are exactly five — "adapt with restraint" (ARCHITECTURE.md §2); a StrEnum
-    makes the set closed and serializes each member as its stable string for the
-    DB, the API, and the generated TS union.
-    """
-
-    SYMBOLIC_FOCUS = "S1_symbolic_focus"
-    NUMBER_LINE_PRIMARY = "S2_number_line_primary"
-    FRACTION_BARS_PRIMARY = "S3_fraction_bars_primary"
-    WORKED_EXAMPLE = "S4_worked_example"
-    TRANSFER_PROBE = "S5_transfer_probe"
+# SurfaceState is owned by policy/ (the adaptation policy's vocabulary — it routes
+# between the five states, ARCHITECTURE.md §7); the API imports it forward so the
+# wire speaks the same enum the policy and tutor do (single source of truth, §4).
+from app.policy.surface_states import SurfaceState
 
 
 class ActionType(StrEnum):
