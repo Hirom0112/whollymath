@@ -1,0 +1,40 @@
+# ─── Internal planning docs (intentionally untracked; see CLAUDE.md §1) ───
+# These are internal references we build on top of, not repo deliverables.
+# They live on disk only and must NOT push to GitHub or GitLab.
+# CLAUDE.md stays tracked: it governs how code in this repo is written.
+Nerdy.md
+PROJECT.md
+TECH_STACK.md
+RESEARCH.md
+
+# ─── Secrets / local env ───
+.env
+.env.*
+!.env.example
+
+# ─── OS / editor cruft ───
+.DS_Store
+*.swp
+.idea/
+
+# ─── Python (backend) ───
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# ─── Node / TypeScript (frontend, infrastructure, shared-types) ───
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# ─── ML artifacts (trained models / DataShop pulls live in S3, not git) ───
+*.joblib
+*.pkl
