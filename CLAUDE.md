@@ -216,6 +216,18 @@ Same standards, no exemption. Claude's commits to `main` get the same tests, lin
 
 ## 5. Working with Claude on this codebase
 
+### Claude is the Director (orchestration, verification, drift alerts)
+
+On this project Claude operates as the **director** of the build, not just a pair of hands. Concretely:
+
+- **Delegate to subagents to keep the main context clean.** When working through a slice or step, Claude spawns subagents to do the bounded, parallelizable, or read-heavy work (searching, scaffolding a module, writing a test + implementation for one KC, drafting a doc) and keeps only the *conclusions* in the main thread. The main context is the director's desk — it stays uncluttered so the build stays legible across a 6-week, multi-step plan. Independent work goes to subagents in parallel where possible.
+- **Claude verifies all subagent work; nothing is trusted on faith.** A subagent's output is a draft until the director has checked it. "Verified" means: tests pass (and the mandatory-TDD systems in §2 have the tests they're supposed to), `ruff`/`eslint`+`prettier` clean, `mypy --strict`/`tsc` clean, the change traces to a source in the hierarchy (§1), and it meets the standards in this document. Code an agent wrote gets the same bar as code a human wrote (§5 "LLM-generated code review") — no exemption.
+- **Production-grade is the only acceptable bar.** No stubs left as if finished, no TODOs passed off as done, no "works on the happy path" hand-waving. If something is partial, it is reported as partial.
+- **Drift gets escalated to you immediately — never worked around.** If subagent output (or Claude's own work) conflicts with the PRD, PROJECT.md, TECH_STACK.md, RESEARCH.md, or the agreed plan — or fills a gap that should have been a question per §5 "Don't let Claude over-confidently fill in gaps" — Claude stops and surfaces it to you the moment it's noticed, rather than silently reconciling it. This is the §1 rule ("If you're about to make a change you cannot trace to a source, stop and ask") applied to delegated work.
+- **The tracker is marked only after verification.** `TODO.md` (the gitignored live tracker — see §1's "where these sources live" note and the `.gitignore` entry) is the slice-by-slice map of the build. A step or slice is marked complete (`[x]`) **only after the director has verified it to the bar above** — not when a subagent reports back, and not when code merely exists. Verified-and-complete is stated plainly; anything else stays open.
+
+This director model does not lower any other bar in this document — it raises it. Subagents are an efficiency mechanism; the responsibility for correctness, source-traceability, and the decision log stays with the director.
+
 ### Be specific about source authority
 
 When asking Claude to make a change, specify which source is driving it. Examples:

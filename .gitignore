@@ -7,6 +7,10 @@ PROJECT.md
 TECH_STACK.md
 RESEARCH.md
 
+# ─── Live execution tracker (local-only; see CLAUDE.md §5 "Claude is the Director") ───
+# The slice-by-slice build tracker. Working state, not a deliverable.
+TODO.md
+
 # ─── Secrets / local env ───
 .env
 .env.*
