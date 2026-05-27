@@ -1,0 +1,81 @@
+"""A tiny in-process ASGI client for contract tests (no extra dependencies).
+
+WHY this exists instead of ``fastapi.testclient.TestClient``: Starlette's
+TestClient requires ``httpx``, which is not installed in the backend venv, and
+this slice is under a hard "no new dependencies / do not run uv add" constraint.
+Rather than install httpx, we drive the real ASGI app directly through its ASGI
+interface — which is exactly what TestClient does under the hood, minus the httpx
+transport. This exercises the *full* FastAPI stack (routing, Pydantic validation,
+status codes, JSON serialization), so these remain genuine HTTP-level contract
+tests (CLAUDE.md §9), not handler-function unit tests.
+
+The client is deliberately minimal: JSON in, status + JSON out, for the two verbs
+the contract uses (GET/POST). It is test infrastructure, not product code.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import MutableMapping
+from typing import Any
+
+import anyio
+from fastapi import FastAPI
+
+# ASGI's message type. We annotate ``send`` with this (not ``dict``) because a
+# function accepting a narrower ``dict`` is NOT assignable where ASGI expects one
+# accepting the wider ``MutableMapping`` (parameter types are contravariant) —
+# matching the spec type keeps mypy --strict happy. Plain alias (not the 3.12
+# ``type`` statement) because the project targets py311 (pyproject target-version).
+AsgiMessage = MutableMapping[str, Any]
+
+
+def _request(app: FastAPI, method: str, path: str, body: Any | None) -> tuple[int, Any]:
+    """Send one request to the ASGI ``app`` in-process; return (status, json|None)."""
+    body_bytes = b"" if body is None else json.dumps(body).encode("utf-8")
+    captured: dict[str, Any] = {}
+    chunks: list[bytes] = []
+
+    async def receive() -> AsgiMessage:
+        # Single-shot body; the contract endpoints take small JSON payloads.
+        return {"type": "http.request", "body": body_bytes, "more_body": False}
+
+    async def send(message: AsgiMessage) -> None:
+        if message["type"] == "http.response.start":
+            captured["status"] = message["status"]
+        elif message["type"] == "http.response.body":
+            chunks.append(message.get("body", b""))
+
+    scope: dict[str, Any] = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "method": method,
+        "path": path,
+        "raw_path": path.encode("utf-8"),
+        "query_string": b"",
+        "headers": [(b"content-type", b"application/json")],
+        "scheme": "http",
+        "server": ("testserver", 80),
+        "client": ("testclient", 12345),
+        "root_path": "",
+    }
+
+    async def _run() -> None:
+        await app(scope, receive, send)
+
+    anyio.run(_run)
+
+    raw = b"".join(chunks)
+    parsed = json.loads(raw) if raw else None
+    return captured["status"], parsed
+
+
+def post_json(app: FastAPI, path: str, body: Any) -> tuple[int, Any]:
+    """POST ``body`` as JSON to ``path``; return (status_code, parsed_json)."""
+    return _request(app, "POST", path, body)
+
+
+def get(app: FastAPI, path: str) -> tuple[int, Any]:
+    """GET ``path``; return (status_code, parsed_json)."""
+    return _request(app, "GET", path, None)
