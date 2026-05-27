@@ -1,0 +1,1602 @@
+{
+  "_meta": {
+    "purpose": "Handpicked diagnostic-gem fraction item bank. Each item is engineered to trigger a documented fraction misconception (RESEARCH.md Section 1.2) or to exercise a cited cognitive-science principle (RESEARCH.md Section 1.1/1.3/1.4). This is the diagnostic complement to the procedural bulk generator (PROJECT.md Section 8, problem-generation strategy).",
+    "source": "Locked decision 0.D.7. PROJECT.md Section 3.1 (5 KCs), Section 3.4 (mastery rules), Section 4.2 (personas). RESEARCH.md Section 1.2 (misconceptions), Section 1.3 (interleaving).",
+    "grade_band": "6th-7th grade (CCSS 5.NF.A, 5.NF.B, 6.NS.A, 6.NS.C)",
+    "answer_verification": "Every correct_answer and every misconception wrong_answer_produced in this file was computed with SymPy 1.14.0 (Rational arithmetic), not asserted by hand. See RESEARCH.md Section 6 for the verification note.",
+    "learner_facing_language_rule": "problem_statement.symbolic and any text shown to a learner use kid-friendly words. Curriculum terms (equivalence, denominator, common denominator) appear only in documentation fields (kc_primary, misconceptions_probed, etc.), never in learner-facing text.",
+    "kc_catalog": [
+      "KC_equivalence",
+      "KC_common_denominator",
+      "KC_addition_unlike",
+      "KC_subtraction_unlike",
+      "KC_number_line_placement"
+    ],
+    "misconception_catalog": [
+      "natural-number-bias",
+      "add-across-error",
+      "reduce-means-smaller",
+      "equal-sign-as-procedural",
+      "procedure-without-concept"
+    ]
+  },
+  "item_level_citations": {
+    "gabriel2013": {
+      "source": "Gabriel, F., Coche, F., Szucs, D., Carette, V., Rey, B., & Content, A. (2013). A componential view of children's difficulties in learning fractions. Frontiers in Psychology, 4, 715.",
+      "url_or_doi": "https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2013.00715/full",
+      "finding": "Children apply whole-number logic to fractions: a larger number is assumed to mean a larger magnitude, but a larger denominator means a SMALLER part. On same-numerator comparisons (e.g. 1/5 vs 1/3) children scored only 56% correct versus 83% on same-denominator comparisons, showing they struggle with the inverse denominator-magnitude relationship.",
+      "verification": "resolved (open-access full text fetched and quoted)"
+    },
+    "braithwaite2018": {
+      "source": "Braithwaite, D. W., & Siegler, R. S. (2018). Developmental changes in whole number bias. Developmental Science, 21(2), e12541.",
+      "url_or_doi": "https://doi.org/10.1111/desc.12541",
+      "finding": "Whole number bias is the tendency to focus on the separate numerator and denominator of a fraction rather than its magnitude. The paper measures it on BOTH fraction magnitude comparison and number-line estimation across grades 4-8, and notes children often add or subtract fractions by operating on numerators and denominators separately (treating the parts as independent whole numbers). Whole number bias also interferes with judging equivalent fractions.",
+      "verification": "resolved (DOI redirects to Wiley landing page; author/title/journal confirmed verbatim from paper's own first page text)"
+    },
+    "aksoy2017": {
+      "source": "Aksoy, N. C., & Yazlik, D. O. (2017). Student Errors in Fractions and Possible Causes of These Errors. Journal of Education and Training Studies, 5(11), 219-233.",
+      "url_or_doi": "https://doi.org/10.11114/jets.v5i11.2679",
+      "finding": "Qualitative study of 189 Turkish 5th- and 6th-grade students. Documents, with student work samples: adding fractions by summing numerators and denominators separately; performing addition/subtraction without equalizing denominators; and performing procedures without conceptual grounding (the paper attributes errors to students not using models/representations). The add-across and no-common-denominator patterns are the directly-supported claims this bank relies on; the denominator-of-0 specific is consistent with the error type but not confirmed verbatim.",
+      "verification": "resolved (full ERIC PDF EJ1161215 extracted and relevant passages quoted; DOI registered with Redfame/JETS)"
+    },
+    "malone2016": {
+      "source": "Malone, A. S., & Fuchs, L. S. (2016). Error Patterns in Ordering Fractions Among At-Risk Fourth-Grade Students. Journal of Learning Disabilities, 50(3), 337-352.",
+      "url_or_doi": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5018237/",
+      "finding": "Whole-number ordering errors (treating numerator and denominator as independent whole numbers) accounted for 65% of incorrect responses; a smaller-denominator-means-bigger-fraction error accounted for 18%. Accuracy on number-line fraction-magnitude estimation significantly predicted lower whole-number-bias error rates; strong number-line performers showed whole-number-ordering errors only 4% of the time.",
+      "verification": "resolved (PMC full record fetched; citation, error categories, and statistics confirmed)"
+    },
+    "mcneil2006": {
+      "source": "McNeil, N. M., Grandau, L., Knuth, E. J., Alibali, M. W., Stephens, A. C., Hattikudur, S., & Krill, D. E. (2006). Middle-School Students' Understanding of the Equal Sign: The Books They Read Can't Help. Cognition and Instruction, 24(3), 367-385.",
+      "url_or_doi": "https://doi.org/10.1207/s1532690xci2403_3",
+      "finding": "Middle-school students frequently hold an operational view of the equal sign ('compute and write the answer') rather than a relational view ('the two sides name the same amount'). Standard 'operations = answer' presentation (e.g. 3 + 4 = 7) reinforces the operational reading; the operational reading is linked to difficulty transitioning to algebra.",
+      "verification": "resolved (ERIC EJ740660 record confirmed; DOI 10.1207/s1532690xci2403_3 verified)"
+    },
+    "lenz2021": {
+      "source": "Lenz, K., & Wittmann, G. (2021). Individual Differences in Conceptual and Procedural Fraction Knowledge: What Makes the Difference and What Does it Look Like? International Electronic Journal of Mathematics Education, 16(1), em0615.",
+      "url_or_doi": "https://doi.org/10.29333/iejme/9282",
+      "finding": "Cluster analysis of 377 students found a distinct group with relative strength in procedural fraction knowledge and relative weakness in conceptual knowledge - i.e. students who can run the algorithm but cannot explain or apply the concept. Documents procedure-without-concept as an empirically separable learner profile.",
+      "verification": "resolved (open-access; abstract extracted from PDF; DOI 10.29333/iejme/9282 confirmed)"
+    },
+    "barbieri2024": {
+      "source": "Barbieri, C. A., et al. (2024). Targeting fraction misconceptions and reducing high confidence errors in an online tutor. Journal of Computer Assisted Learning, 40(1), 254-268.",
+      "url_or_doi": "https://doi.org/10.1111/jcal.12877",
+      "finding": "Study of 130 students (grades 4-11) on fraction-equivalence misconceptions and high-confidence errors. Studying combined correct-and-incorrect worked examples improved fraction-equivalence knowledge and reduced the rate of high-confidence equivalence errors, on par with problem-solving plus feedback.",
+      "verification": "resolved (DOI 10.1111/jcal.12877 redirects to Wiley landing; title/journal/year/sample confirmed via search and abstract)"
+    }
+  },
+  "bank_level_citations": {
+    "rohrer2014": {
+      "source": "Rohrer, D., Dedrick, R. F., & Burgess, K. (2014). The benefit of interleaved mathematics practice is not limited to superficially similar kinds of problems. Psychonomic Bulletin & Review, 21(5), 1323-1330.",
+      "url_or_doi": "https://pubmed.ncbi.nlm.nih.gov/24578089/",
+      "finding": "Classroom RCT with grade-7 students (n=140) over nine weeks; on a test two weeks later, interleaved practice scored 72% versus 38% for blocked practice (d=1.05). Interleaving forces the learner to choose a strategy from the problem itself rather than knowing it in advance from the block.",
+      "verification": "resolved (PubMed record fetched; title/authors/year/finding confirmed)",
+      "role": "Bank-level rationale: this diagnostic bank is designed to be delivered INTERLEAVED across KCs, not in blocks. Rohrer et al. is why interleaving is the delivery mode (PROJECT.md Section 3.4 rule 4, Section 3.6). It does not ground any single item; it grounds how the bank is used."
+    },
+    "bailey2012": {
+      "source": "Bailey, D. H., Hoard, M. K., Nugent, L., & Geary, D. C. (2012). Competence with fractions predicts gains in mathematics achievement. Journal of Experimental Child Psychology, 113(3), 447-455.",
+      "url_or_doi": "https://doi.org/10.1016/j.jecp.2012.06.004",
+      "finding": "In a sample of 6th- and 7th-grade students (n=212), 6th-grade fractions-concepts performance predicted one-year gains in overall mathematics achievement, over and above whole-number knowledge. Fraction magnitude understanding (including number-line placement) is the studied algebra-readiness signal.",
+      "verification": "resolved (PMC3444669 / ScienceDirect; DOI 10.1016/j.jecp.2012.06.004 confirmed; sample is our exact 6th-7th grade band)",
+      "role": "Bank-level rationale: justifies why this domain (fractions, incl. number-line magnitude) is the algebra-readiness gateway worth a handpicked diagnostic bank (PROJECT.md Section 3.1). Grounds the bank's existence, not any single item."
+    }
+  },
+  "items": [
+    {
+      "id": "EQ-001",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Are these two the same amount of pizza? 2/4 and 1/2",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "yes_no",
+        "value": "yes",
+        "sympy_check": "Rational(2,4) == Rational(1,2)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "A learner who reads the top and bottom as separate whole numbers sees 2 and 4 versus 1 and 2 and concludes the fractions must be different. The area model side-by-side exposes that the shaded amount is identical."
+        },
+        {
+          "name": "equal-sign-as-procedural",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "This is a relational 'are these the same amount?' judgment with no operation to perform. A learner whose only meaning for '=' is 'compute and write the answer' has no procedure to run and falls back on 'the numbers differ, so no.' (Grounded by McNeil et al. 2006 on operational-vs-relational equality; the item's primary citation covers the magnitude angle.)"
+        }
+      ],
+      "difficulty": 1,
+      "format": "area_model",
+      "research_citation_ref": "gabriel2013",
+      "why_this_grounds_the_item": "Gabriel et al. show children apply whole-number logic and misjudge fraction magnitude; pairing 2/4 with 1/2 directly probes whether the learner sees the single magnitude or the separate components."
+    },
+    {
+      "id": "EQ-002",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Tim says 3/6 is the same amount as 1/2. Is Tim right?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "yes_no",
+        "value": "yes",
+        "sympy_check": "Rational(3,6) == Rational(1,2)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "equal-sign-as-procedural",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "Asked to judge whether two written forms name the same amount (a relational question), a learner who only reads '=' as 'go compute' has no procedure to run and defaults to 'they look different, so no.' Catches the operational reading of equality."
+        },
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "3 and 6 versus 1 and 2 look like different numbers to a learner who treats the parts independently."
+        }
+      ],
+      "difficulty": 1,
+      "format": "symbolic",
+      "research_citation_ref": "mcneil2006",
+      "why_this_grounds_the_item": "McNeil et al. document that middle-schoolers often read '=' operationally rather than relationally; an 'are these the same amount?' judgment with no operation to perform isolates that operational habit."
+    },
+    {
+      "id": "EQ-003",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Fill in the missing top number so both names show the same amount: 1/2 is the same as ?/8",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 4,
+        "sympy_check": "Rational(1,2) == Rational(4,8)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "1",
+          "why_this_item_catches_it": "A learner who memorized 'change the bottom' but never understood why both parts must scale together changes 2 to 8 and leaves the top as 1, giving 1/8. The required top number is 4."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "lenz2021",
+      "why_this_grounds_the_item": "Lenz & Wittmann identify a learner profile strong on procedure but weak on concept; a fill-the-blank equivalence item rewards understanding that the whole must scale, not just one part."
+    },
+    {
+      "id": "EQ-004",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Fill in the missing top number so both names show the same amount: 2/3 is the same as ?/9",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 6,
+        "sympy_check": "Rational(2,3) == Rational(6,9)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "2",
+          "why_this_item_catches_it": "Tripling the bottom (3 to 9) while leaving the top at 2 gives 2/9, the classic 'scale only one part' slip. The top must also triple to 6."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "lenz2021",
+      "why_this_grounds_the_item": "Same procedure-without-concept profile, probed with a non-unit fraction so the learner cannot coast on the easy 1/2 case; a different angle than EQ-003."
+    },
+    {
+      "id": "EQ-005",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Maria cut a cake into 8 equal pieces and ate 4 of them. Did she eat the same amount as half the cake?",
+        "representations_available": [
+          "word_problem",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "yes_no",
+        "value": "yes",
+        "sympy_check": "Rational(4,8) == Rational(1,2)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "A learner fixated on the whole numbers (4 pieces, 8 pieces, versus 'half') may not connect 4-out-of-8 to one half. The word/area framing tests the same KC as EQ-001 in a story context."
+        },
+        {
+          "name": "reduce-means-smaller",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "A learner who believes naming an amount with fewer/smaller pieces (one half) makes it less than 4-out-of-8 pieces will say no. Eating 4 of 8 pieces is exactly half. (Grounded by Barbieri et al. 2024 on high-confidence equivalence errors; the item's primary citation covers the magnitude angle.)"
+        }
+      ],
+      "difficulty": 1,
+      "format": "word_problem",
+      "research_citation_ref": "gabriel2013",
+      "why_this_grounds_the_item": "Gabriel et al.'s magnitude-misjudgment finding probed in a word-problem representation, supporting the multi-representation mastery rule (PROJECT.md Section 3.4 rule 2)."
+    },
+    {
+      "id": "EQ-006",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Are 6/8 and 3/4 the same amount?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "yes_no",
+        "value": "yes",
+        "sympy_check": "Rational(6,8) == Rational(3,4)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "reduce-means-smaller",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "A learner who believes that writing a fraction with smaller numbers (3/4) makes it a smaller amount than 6/8 will say they are not equal. They are the same amount; only the numbers used to name it changed."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "barbieri2024",
+      "why_this_grounds_the_item": "Barbieri et al. target high-confidence fraction-equivalence errors; this item surfaces the belief that simplifying changes the value, a high-confidence equivalence error."
+    },
+    {
+      "id": "EQ-007",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Which one shows the same amount as 1/3? Choose: 2/6 or 1/6 or 4/6",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "choice",
+        "value": "2/6",
+        "sympy_check": "Rational(2,6) == Rational(1,3) and Rational(1,6) != Rational(1,3) and Rational(4,6) != Rational(1,3)",
+        "note": "Single correct key: only 2/6 equals 1/3. Distractors 1/6 and 4/6 do not. The learner-facing options match the options field."
+      },
+      "options": [
+        "2/6",
+        "1/6",
+        "4/6"
+      ],
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "1/6",
+          "why_this_item_catches_it": "A learner matching surface digits may pick 1/6 because it shares the numeral 1 with 1/3, ignoring magnitude. Only 2/6 names the same amount as 1/3."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "gabriel2013",
+      "why_this_grounds_the_item": "Gabriel et al.'s whole-number-bias finding; the distractors are chosen so surface-digit matching leads to the wrong choice while magnitude reasoning leads to the right one."
+    },
+    {
+      "id": "EQ-008",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Fill in the missing top number so both show the same amount: 3/4 is the same as ?/12",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 9,
+        "sympy_check": "Rational(3,4) == Rational(9,12)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "3",
+          "why_this_item_catches_it": "Multiplying the bottom by 3 (4 to 12) but leaving the top at 3 gives 3/12. The top must also be multiplied by 3, giving 9. Probes whether scaling is understood or rote."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "lenz2021",
+      "why_this_grounds_the_item": "Procedure-without-concept profile (Lenz & Wittmann) with a larger scale factor than EQ-003/EQ-004, raising difficulty within the same misconception."
+    },
+    {
+      "id": "EQ-009",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "A recipe uses 2/5 of a cup. Jordan only has a measuring cup marked in tenths. How many tenths of a cup does Jordan need?",
+        "representations_available": [
+          "word_problem",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 4,
+        "sympy_check": "Rational(2,5) == Rational(4,10)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "2",
+          "why_this_item_catches_it": "A learner who knows the steps but not the meaning may rename the bottom (5 to 10) and keep the top as 2, answering 2/10. The amount must stay the same, so the top doubles to 4."
+        }
+      ],
+      "difficulty": 2,
+      "format": "word_problem",
+      "research_citation_ref": "lenz2021",
+      "why_this_grounds_the_item": "Procedure-without-concept probed in a word-problem context, giving the equivalence KC a second representation per the multi-representation mastery rule."
+    },
+    {
+      "id": "EQ-010",
+      "kc_primary": "KC_equivalence",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "5/10 of the marbles are blue. Is that the same as half the marbles being blue?",
+        "representations_available": [
+          "word_problem",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "yes_no",
+        "value": "yes",
+        "sympy_check": "Rational(5,10) == Rational(1,2)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "reduce-means-smaller",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "A learner who thinks the smaller-number name (1/2) must be a smaller amount than 5/10 will say no. The two name the same amount."
+        },
+        {
+          "name": "equal-sign-as-procedural",
+          "wrong_answer_produced": "no",
+          "why_this_item_catches_it": "Like EQ-001/EQ-002 this is a relational same-amount judgment with nothing to compute; a learner who only reads equality as a compute-prompt cannot evaluate 'are these the same amount?' and defaults to 'no.' (Grounded by McNeil et al. 2006; primary citation covers the equivalence-error angle.)"
+        }
+      ],
+      "difficulty": 1,
+      "format": "word_problem",
+      "research_citation_ref": "barbieri2024",
+      "why_this_grounds_the_item": "Barbieri et al.'s high-confidence equivalence errors; this is a second angle on reduce-means-smaller (word/area at difficulty 1 vs EQ-006 symbolic at difficulty 2)."
+    },
+    {
+      "id": "CD-001",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "To add 1/3 and 1/4, you first rename both so the pieces are the same size. What size pieces (bottom number) lets you write BOTH 1/3 and 1/4 with whole pieces?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 12,
+        "sympy_check": "lcm(3,4) == 12"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "7",
+          "why_this_item_catches_it": "A learner who never internalized why a same-size piece is needed often just adds the two bottoms (3 + 4 = 7), the same independent-parts habit behind add-across. The smallest shared piece-size is 12, not 7."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Aksoy & Yazlik document students operating on numerators and denominators separately and adding without equalizing; asking for the shared piece-size first exposes whether the learner understands the need for equal parts."
+    },
+    {
+      "id": "CD-002",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "What is the smallest size of piece (bottom number) that works for BOTH 1/2 and 1/3?",
+        "representations_available": [
+          "symbolic",
+          "area_model",
+          "number_line"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 6,
+        "sympy_check": "lcm(2,3) == 6"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "5",
+          "why_this_item_catches_it": "Adding the bottoms (2 + 3 = 5) reflects the independent-parts habit; 5 is not a size into which both halves and thirds divide evenly. The smallest shared piece-size is 6."
+        }
+      ],
+      "difficulty": 1,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Same documented add-without-equalizing pattern (Aksoy & Yazlik), easiest case (halves and thirds), with a number-line representation available to ground 'same-size pieces'."
+    },
+    {
+      "id": "CD-003",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [
+        "KC_equivalence"
+      ],
+      "problem_statement": {
+        "symbolic": "You want to compare 1/4 and 1/6 using same-size pieces. Rewrite 1/4 using twelfths: 1/4 is how many twelfths?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 3,
+        "sympy_check": "Rational(1,4) == Rational(3,12)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "1",
+          "why_this_item_catches_it": "A learner who changes only the bottom (4 to 12) and keeps the top at 1 answers 1/12. Renaming to a shared piece-size requires scaling the top too; 1/4 is 3 twelfths."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "lenz2021",
+      "why_this_grounds_the_item": "The convert-to-shared-size step is exactly where procedure-without-concept learners (Lenz & Wittmann) drop the numerator; isolates that sub-step before the addition KC."
+    },
+    {
+      "id": "CD-004",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "What is the smallest piece-size (bottom number) that works for BOTH 1/2 and 1/5?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 10,
+        "sympy_check": "lcm(2,5) == 10"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "7",
+          "why_this_item_catches_it": "Adding bottoms gives 2 + 5 = 7, which is not a shared piece-size for halves and fifths. The smallest shared size is 10."
+        }
+      ],
+      "difficulty": 1,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-without-equalizing pattern (Aksoy & Yazlik); a different number pair than CD-002 so the learner cannot pattern-match the answer."
+    },
+    {
+      "id": "CD-005",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Sam needs same-size pieces for 1/4 and 1/6. He says '4 and 6 makes 10, so use tenths.' Is Sam right? If not, what bottom number should he use?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "structured",
+        "value": {
+          "sam_correct": "no",
+          "correct_bottom": 12
+        },
+        "sympy_check": "lcm(4,6) == 12 and 10 != 12"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "yes (10)",
+          "why_this_item_catches_it": "Sam adds the bottoms (4 + 6 = 10). A learner with the same habit agrees. The smallest shared piece-size for fourths and sixths is 12, not 10. This is an error-finding framing that also catches procedure-without-concept (PROJECT.md Section 3.9, Persona Priya)."
+        }
+      ],
+      "difficulty": 3,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Aksoy & Yazlik's add-without-equalizing error, presented as an error-finding probe (the Procedure Priya signature, PROJECT.md Section 4.2 Persona 2) at the highest difficulty in this KC."
+    },
+    {
+      "id": "CD-006",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [
+        "KC_equivalence"
+      ],
+      "problem_statement": {
+        "symbolic": "Rewrite 1/3 using twelfths: 1/3 is how many twelfths?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 4,
+        "sympy_check": "Rational(1,3) == Rational(4,12)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "1",
+          "why_this_item_catches_it": "Changing only the bottom (3 to 12) and keeping the top at 1 gives 1/12. The top must scale by the same factor (x4), giving 4 twelfths."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "lenz2021",
+      "why_this_grounds_the_item": "Convert-to-shared-size sub-step (Lenz & Wittmann procedure-without-concept), paired with CD-003 to give the KC two angles on the same misconception."
+    },
+    {
+      "id": "CD-007",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "What is the smallest piece-size (bottom number) that works for BOTH 1/3 and 1/6?",
+        "representations_available": [
+          "symbolic",
+          "area_model",
+          "number_line"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 6,
+        "sympy_check": "lcm(3,6) == 6"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "9",
+          "why_this_item_catches_it": "Adding the bottoms gives 3 + 6 = 9. Because 6 is already a multiple of 3, the shared size is just 6 - a learner who always multiplies or adds the bottoms misses that one bottom already works."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-without-equalizing pattern (Aksoy & Yazlik), with a nested pair (6 is a multiple of 3) so the learner must reason about shared size rather than blindly combine the bottoms."
+    },
+    {
+      "id": "CD-008",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "A pizza is cut so one friend's slices are halves and another's are eighths. To talk about both with the same-size slice, what bottom number should they use?",
+        "representations_available": [
+          "word_problem",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 8,
+        "sympy_check": "lcm(2,8) == 8"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "10",
+          "why_this_item_catches_it": "Adding the bottoms gives 2 + 8 = 10. Since eighths already divide into halves, the shared size is 8. Catches the always-combine-the-bottoms habit in a story context."
+        }
+      ],
+      "difficulty": 2,
+      "format": "word_problem",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-without-equalizing (Aksoy & Yazlik) in a word-problem representation, giving the common-denominator KC a non-symbolic angle (multi-representation rule)."
+    },
+    {
+      "id": "CD-009",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "What is the smallest piece-size (bottom number) that works for BOTH 1/3 and 1/9?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 9,
+        "sympy_check": "lcm(3,9) == 9"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "27",
+          "why_this_item_catches_it": "A learner who rotely multiplies the two bottoms (3 x 9 = 27) gets a size that works but is not the smallest, and misses that 9 already works. Reveals procedure applied without reasoning about whether one bottom already fits."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "lenz2021",
+      "why_this_grounds_the_item": "Lenz & Wittmann's procedure-without-concept profile: the multiply-the-bottoms rule runs without the conceptual check that 9 is already a multiple of 3."
+    },
+    {
+      "id": "CD-010",
+      "kc_primary": "KC_common_denominator",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "What is the smallest piece-size (bottom number) that works for BOTH 1/6 and 1/8?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "integer",
+        "value": 24,
+        "sympy_check": "lcm(6,8) == 24"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "48",
+          "why_this_item_catches_it": "Multiplying the bottoms (6 x 8 = 48) gives a workable but not smallest size; the smallest shared piece-size is 24. Probes whether the learner finds the smallest shared size or rotely multiplies."
+        },
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "14",
+          "why_this_item_catches_it": "Adding the bottoms (6 + 8 = 14) is not a shared size for sixths and eighths."
+        }
+      ],
+      "difficulty": 3,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Hardest pair in this KC (neither bottom divides the other); separates learners who reason about shared size from those running add-the-bottoms or multiply-the-bottoms by rote (Aksoy & Yazlik)."
+    },
+    {
+      "id": "ADD-001",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "1/2 + 1/4 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "3/4",
+        "sympy_check": "Rational(1,2)+Rational(1,4) == Rational(3,4)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "2/6",
+          "why_this_item_catches_it": "Adding tops and bottoms separately gives (1+1)/(2+4) = 2/6. The correct sum is 3/4. The area model shows 2/6 is smaller than either starting piece, which is impossible for a sum."
+        }
+      ],
+      "difficulty": 1,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Aksoy & Yazlik document the summation of numerator and denominator separately as a primary addition error; this is the canonical unlike-denominator add-across probe."
+    },
+    {
+      "id": "ADD-002",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "1/3 + 1/4 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "7/12",
+        "sympy_check": "Rational(1,3)+Rational(1,4) == Rational(7,12)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "2/7",
+          "why_this_item_catches_it": "Adding across gives (1+1)/(3+4) = 2/7. The correct sum is 7/12. Because 2/7 is less than 1/3, the area model exposes the impossibility."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-across with coprime bottoms (Aksoy & Yazlik) so the wrong answer 2/7 cannot accidentally reduce to the right value; a different angle than ADD-001."
+    },
+    {
+      "id": "ADD-003",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "1/2 + 1/3 = ?",
+        "representations_available": [
+          "symbolic",
+          "number_line"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "5/6",
+        "sympy_check": "Rational(1,2)+Rational(1,3) == Rational(5,6)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "2/5",
+          "why_this_item_catches_it": "Adding across gives 2/5, which is less than 1/2; the number line makes clear a sum must land to the right of both addends. The correct sum is 5/6."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-across (Aksoy & Yazlik) probed on a number line, where 'a sum lands past both pieces' is visible; supports the multi-representation mastery rule for this KC."
+    },
+    {
+      "id": "ADD-004",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "Tim worked out 1/4 + 1/4 and wrote 2/8. Is Tim right? If not, what is the correct answer?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "structured",
+        "value": {
+          "tim_correct": "no",
+          "correct_sum": "1/2"
+        },
+        "sympy_check": "Rational(1,4)+Rational(1,4) == Rational(1,2) and Rational(2,8) == Rational(1,4)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "yes (2/8)",
+          "why_this_item_catches_it": "Tim added tops and bottoms: (1+1)/(4+4) = 2/8. A learner sharing the habit agrees. The correct sum is 1/2. Note 2/8 equals 1/4, so Tim's answer is actually smaller than one of the two equal pieces he started with - a strong tell. This is the exact PROJECT.md Section 3.9 / Persona Surface Sam error-finding item."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "braithwaite2018",
+      "why_this_grounds_the_item": "Braithwaite & Siegler cite '1/8 + 1/8 proposed as 2/16' as the textbook whole-number-bias addition error; this is the 1/4 + 1/4 = 2/8 variant named verbatim in PROJECT.md Section 4.2 (Surface Sam) and the error-finding transfer (Section 3.9)."
+    },
+    {
+      "id": "ADD-005",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "Ben ate 1/4 of a chocolate bar and Mia ate 1/6 of the same bar. How much did they eat together?",
+        "representations_available": [
+          "word_problem",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "5/12",
+        "sympy_check": "Rational(1,4)+Rational(1,6) == Rational(5,12)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "2/10",
+          "why_this_item_catches_it": "Adding across gives (1+1)/(4+6) = 2/10 = 1/5, which is less than 1/4 - impossible for a total. Correct total is 5/12."
+        }
+      ],
+      "difficulty": 2,
+      "format": "word_problem",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-across (Aksoy & Yazlik) in a word-problem representation; the 'total smaller than a part' contradiction is concrete in a sharing story."
+    },
+    {
+      "id": "ADD-006",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "2/3 + 1/6 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "5/6",
+        "sympy_check": "Rational(2,3)+Rational(1,6) == Rational(5,6)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "3/9",
+          "why_this_item_catches_it": "Adding across gives (2+1)/(3+6) = 3/9 = 1/3, smaller than 2/3 alone. Correct sum is 5/6. The nested bottoms (6 is a multiple of 3) also probe whether the learner renames only the part that needs it."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-across (Aksoy & Yazlik) with a non-unit numerator and nested bottoms; distinct from the unit-fraction cases ADD-001 to ADD-003."
+    },
+    {
+      "id": "ADD-007",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "1/2 + 2/5 = ?",
+        "representations_available": [
+          "symbolic",
+          "number_line"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "9/10",
+        "sympy_check": "Rational(1,2)+Rational(2,5) == Rational(9,10)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "3/7",
+          "why_this_item_catches_it": "Adding across gives (1+2)/(2+5) = 3/7, which is less than 1/2; on the number line the sum should land near 1. Correct sum is 9/10."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-across (Aksoy & Yazlik) on a number line, second non-unit-numerator angle; the near-1 sum makes the 3/7 error visibly wrong."
+    },
+    {
+      "id": "ADD-008",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "3/4 + 1/8 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "7/8",
+        "sympy_check": "Rational(3,4)+Rational(1,8) == Rational(7,8)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "4/12",
+          "why_this_item_catches_it": "Adding across gives (3+1)/(4+8) = 4/12 = 1/3, far smaller than 3/4. Correct sum is 7/8. Nested bottoms (8 is a multiple of 4) test renaming only one part."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-across (Aksoy & Yazlik) with nested bottoms and a large gap between the wrong and right answers, making the misconception easy to diagnose."
+    },
+    {
+      "id": "ADD-009",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "2/5 + 1/10 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "1/2",
+        "sympy_check": "Rational(2,5)+Rational(1,10) == Rational(1,2)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "3/15",
+          "why_this_item_catches_it": "Adding across gives (2+1)/(5+10) = 3/15 = 1/5, less than 2/5. Correct sum is 1/2. The clean answer 1/2 makes the contrast with the wrong 1/5 stark."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-across (Aksoy & Yazlik); the sum reduces to a familiar 1/2, so the learner who trusts add-across produces an answer that is clearly too small."
+    },
+    {
+      "id": "ADD-010",
+      "kc_primary": "KC_addition_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "A jug has 1/3 liter of juice. You pour in 1/2 liter more. How much juice is in the jug now?",
+        "representations_available": [
+          "word_problem",
+          "number_line"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "5/6",
+        "sympy_check": "Rational(1,3)+Rational(1,2) == Rational(5,6)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "add-across-error",
+          "wrong_answer_produced": "2/5",
+          "why_this_item_catches_it": "Adding across gives (1+1)/(3+2) = 2/5, less than the 1/2 liter just poured in - impossible. Correct total is 5/6 liter."
+        }
+      ],
+      "difficulty": 2,
+      "format": "word_problem",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Add-across (Aksoy & Yazlik) in a measurement word problem with a number line; pouring more in cannot reduce the amount, exposing the error physically."
+    },
+    {
+      "id": "SUB-001",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "1/2 - 1/4 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "1/4",
+        "sympy_check": "Rational(1,2)-Rational(1,4) == Rational(1,4)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "0/2",
+          "why_this_item_catches_it": "Subtracting tops and bottoms separately gives (1-1)/(4-2) = 0/2 = 0, claiming nothing is left when in fact 1/4 remains. This is the subtraction form of the independent-parts error."
+        }
+      ],
+      "difficulty": 1,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Aksoy & Yazlik document students subtracting denominators from each other and obtaining nonsense (e.g. denominator 0); this is the canonical subtract-across probe with a clean zero result."
+    },
+    {
+      "id": "SUB-002",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "3/4 - 1/3 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "5/12",
+        "sympy_check": "Rational(3,4)-Rational(1,3) == Rational(5,12)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "2/1",
+          "why_this_item_catches_it": "Subtracting across gives (3-1)/(4-3) = 2/1 = 2, a result bigger than 1 from subtracting two amounts under 1 - clearly impossible. Correct answer is 5/12."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) where the wrong answer (2) is absurdly large, making the misconception self-evidently wrong; coprime bottoms prevent accidental correctness."
+    },
+    {
+      "id": "SUB-003",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "2/3 - 1/6 = ?",
+        "representations_available": [
+          "symbolic",
+          "number_line"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "1/2",
+        "sympy_check": "Rational(2,3)-Rational(1,6) == Rational(1,2)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "1/-3",
+          "why_this_item_catches_it": "Subtracting bottoms gives 3-6 = -3, a negative bottom (1/-3), which is meaningless for sizes of pieces. The correct answer is 1/2. Nested bottoms (6 is a multiple of 3) also probe renaming."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) producing a negative bottom, an impossibility a number line makes obvious; second representation for this KC."
+    },
+    {
+      "id": "SUB-004",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "Lena had 7/8 of a ribbon and used 1/2 of the whole ribbon's length. How much ribbon is left?",
+        "representations_available": [
+          "word_problem",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "3/8",
+        "sympy_check": "Rational(7,8)-Rational(1,2) == Rational(3,8)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "6/6",
+          "why_this_item_catches_it": "Subtracting across gives (7-1)/(8-2) = 6/6 = 1, claiming a whole ribbon is left after using some - more than she started with. Correct answer is 3/8."
+        }
+      ],
+      "difficulty": 2,
+      "format": "word_problem",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) in a word problem; the wrong answer claims a full ribbon remains, a contradiction the story makes plain."
+    },
+    {
+      "id": "SUB-005",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "Tim worked out 5/6 - 1/3 and wrote 4/3. Is Tim right? If not, what is the correct answer?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "structured",
+        "value": {
+          "tim_correct": "no",
+          "correct_difference": "1/2"
+        },
+        "sympy_check": "Rational(5,6)-Rational(1,3) == Rational(1,2) and Rational(4,3) != Rational(1,2)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "yes (4/3)",
+          "why_this_item_catches_it": "Tim subtracted across: (5-1)/(6-3) = 4/3, which is more than 1 - bigger than the 5/6 he started with. A learner with the habit agrees. Correct answer is 1/2."
+        },
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "yes (4/3)",
+          "why_this_item_catches_it": "A learner who cannot judge reasonableness (4/3 > 5/6 after subtracting) and only checks 'did I run a procedure' accepts Tim's answer. This is the error-finding probe for Procedure Priya (PROJECT.md Section 3.9, Section 4.2 Persona 2)."
+        }
+      ],
+      "difficulty": 3,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) as an error-finding item; the impossible result (difference larger than the minuend) is exactly the reasonableness check that distinguishes conceptual from procedural learners."
+    },
+    {
+      "id": "SUB-006",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "1/2 - 1/3 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "1/6",
+        "sympy_check": "Rational(1,2)-Rational(1,3) == Rational(1,6)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "0/-1",
+          "why_this_item_catches_it": "Subtracting across gives (1-1)/(2-3) = 0/-1 = 0, claiming nothing remains. The correct difference is 1/6. The area model shows a small sliver remains."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) with coprime bottoms; the small but nonzero 1/6 result is exactly what the across-error erases."
+    },
+    {
+      "id": "SUB-007",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "3/4 - 1/2 = ?",
+        "representations_available": [
+          "symbolic",
+          "number_line"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "1/4",
+        "sympy_check": "Rational(3,4)-Rational(1,2) == Rational(1,4)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "2/2",
+          "why_this_item_catches_it": "Subtracting across gives (3-1)/(4-2) = 2/2 = 1, claiming a whole is left after subtracting - bigger than 3/4. Correct answer is 1/4."
+        }
+      ],
+      "difficulty": 1,
+      "format": "number_line",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) on a number line at low difficulty (halves and fourths); the result-equals-1 error is visible against the 0-to-1 line."
+    },
+    {
+      "id": "SUB-008",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "2/3 - 1/4 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "5/12",
+        "sympy_check": "Rational(2,3)-Rational(1,4) == Rational(5,12)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "1/-1",
+          "why_this_item_catches_it": "Subtracting across gives (2-1)/(3-4) = 1/-1 = -1, a negative result from subtracting a smaller amount from a larger one - impossible. Correct answer is 5/12."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) with coprime bottoms producing a negative result, a clear impossibility; distinct numbers from SUB-002."
+    },
+    {
+      "id": "SUB-009",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "4/5 - 1/10 = ?",
+        "representations_available": [
+          "symbolic",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "7/10",
+        "sympy_check": "Rational(4,5)-Rational(1,10) == Rational(7,10)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "3/-5",
+          "why_this_item_catches_it": "Subtracting across gives (4-1)/(5-10) = 3/-5, a negative bottom. Correct answer is 7/10. Nested bottoms (10 is a multiple of 5) also probe renaming only the part that needs it."
+        }
+      ],
+      "difficulty": 2,
+      "format": "symbolic",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) with nested bottoms; the negative bottom is meaningless for piece sizes, exposing the error."
+    },
+    {
+      "id": "SUB-010",
+      "kc_primary": "KC_subtraction_unlike",
+      "kc_secondary": [
+        "KC_common_denominator"
+      ],
+      "problem_statement": {
+        "symbolic": "A water tank is 3/4 full. After watering the garden it is 1/8 full. How much of the tank's water was used?",
+        "representations_available": [
+          "word_problem",
+          "area_model"
+        ]
+      },
+      "correct_answer": {
+        "type": "fraction",
+        "value": "5/8",
+        "sympy_check": "Rational(3,4)-Rational(1,8) == Rational(5,8)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "2/-4",
+          "why_this_item_catches_it": "Subtracting across gives (3-1)/(4-8) = 2/-4, a negative bottom. Correct answer is 5/8. Nested bottoms test renaming 3/4 into eighths first."
+        }
+      ],
+      "difficulty": 2,
+      "format": "word_problem",
+      "research_citation_ref": "aksoy2017",
+      "why_this_grounds_the_item": "Subtract-across (Aksoy & Yazlik) in a word problem; the 'amount used' framing requires renaming to eighths, and the negative-bottom error is concretely impossible."
+    },
+    {
+      "id": "NL-001",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Drag the marker to where 1/2 belongs on the line from 0 to 1.",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "point_on_unit_interval",
+        "value": "1/2",
+        "sympy_check": "Rational(1,2) > 0 and Rational(1,2) < 1"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "near 2 (past the 1 mark)",
+          "why_this_item_catches_it": "A learner who reads the bottom number 2 as a position places the marker near 2, off the 0-to-1 line entirely. 1/2 sits at the midpoint between 0 and 1."
+        }
+      ],
+      "difficulty": 1,
+      "format": "number_line",
+      "research_citation_ref": "braithwaite2018",
+      "why_this_grounds_the_item": "Braithwaite & Siegler measure whole-number bias directly on number-line estimation; the simplest placement (1/2) checks whether the learner reads the fraction as a magnitude or as separate whole numbers."
+    },
+    {
+      "id": "NL-002",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Put 1/6 and 1/2 on the line from 0 to 1. Which one sits closer to 0?",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "structured",
+        "value": {
+          "closer_to_zero": "1/6",
+          "order": "1/6 then 1/2"
+        },
+        "sympy_check": "Rational(1,6) < Rational(1,2)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "1/2 closer to 0",
+          "why_this_item_catches_it": "A learner who treats 6 > 2 as 'bigger fraction' places 1/6 farther right than 1/2, getting the order backwards. In truth 1/6 is the smaller amount and sits closer to 0. This is the exact PROJECT.md Section 3.1 trap ('1/6 > 1/2 because 6 > 2')."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "gabriel2013",
+      "why_this_grounds_the_item": "Gabriel et al. found same-numerator comparisons (the larger-denominator-smaller-part relation) are where children fail most; this is the project's named natural-number-bias signature on a number line."
+    },
+    {
+      "id": "NL-003",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Drag the marker to where 3/4 belongs on the line from 0 to 1.",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "point_on_unit_interval",
+        "value": "3/4",
+        "sympy_check": "Rational(3,4) > 0 and Rational(3,4) < 1"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "near 3 or near 4 (off the line)",
+          "why_this_item_catches_it": "A learner reading 3 and 4 as whole-number positions drags the marker past 1, off the 0-to-1 line. 3/4 sits three-quarters of the way from 0 to 1."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "braithwaite2018",
+      "why_this_grounds_the_item": "Braithwaite & Siegler's number-line estimation measure; a non-unit fraction near 1 tests magnitude understanding beyond the easy 1/2 case."
+    },
+    {
+      "id": "NL-004",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Put 1/3 and 1/4 on the line from 0 to 1. Which one is farther from 0?",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "structured",
+        "value": {
+          "farther_from_zero": "1/3",
+          "order": "1/4 then 1/3"
+        },
+        "sympy_check": "Rational(1,3) > Rational(1,4)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "1/4 farther from 0",
+          "why_this_item_catches_it": "A learner who thinks 4 > 3 means 1/4 > 1/3 places 1/4 farther right. In truth 1/3 is the larger amount. Probes the inverse denominator-magnitude relation."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "gabriel2013",
+      "why_this_grounds_the_item": "Gabriel et al.'s same-numerator difficulty (56% accuracy); thirds-versus-fourths is a different pair than NL-002, probing the same misconception from another angle."
+    },
+    {
+      "id": "NL-005",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Three runners are at 1/2, 1/4, and 3/4 of the way around a track. Place each runner on the track line from start (0) to finish (1).",
+        "representations_available": [
+          "word_problem",
+          "number_line"
+        ]
+      },
+      "correct_answer": {
+        "type": "ordered_points",
+        "value": [
+          "1/4",
+          "1/2",
+          "3/4"
+        ],
+        "sympy_check": "Rational(1,4) < Rational(1,2) and Rational(1,2) < Rational(3,4)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "order by bottom numbers: 1/2, 1/4, 3/4 (placing 1/2 first because 2 is smallest)",
+          "why_this_item_catches_it": "A learner ordering by the bottom numbers (2, 4, 4) instead of by amount misplaces the runners. Correct left-to-right order is 1/4, 1/2, 3/4."
+        }
+      ],
+      "difficulty": 2,
+      "format": "word_problem",
+      "research_citation_ref": "malone2016",
+      "why_this_grounds_the_item": "Malone & Fuchs studied ordering-fractions error patterns dominated by whole-number bias; a multi-point ordering task in a story context probes exactly those patterns."
+    },
+    {
+      "id": "NL-006",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Drag the marker to where 2/3 belongs on the line from 0 to 1.",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "point_on_unit_interval",
+        "value": "2/3",
+        "sympy_check": "Rational(2,3) > 0 and Rational(2,3) < 1"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "at 1/2 (midpoint)",
+          "why_this_item_catches_it": "A learner who sees 2 and 3 as 'about the middle numbers' parks the marker at the midpoint instead of two-thirds along. 2/3 sits past the midpoint, closer to 1."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "braithwaite2018",
+      "why_this_grounds_the_item": "Braithwaite & Siegler's number-line measure; a non-unit fraction whose components do not cue the position checks true magnitude placement."
+    },
+    {
+      "id": "NL-007",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [
+        "KC_equivalence"
+      ],
+      "problem_statement": {
+        "symbolic": "Where does 2/4 go on the line from 0 to 1? Is it the same spot as 1/2?",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "structured",
+        "value": {
+          "point": "1/2",
+          "same_as_half": "yes"
+        },
+        "sympy_check": "Rational(2,4) == Rational(1,2) and Rational(2,4) > 0 and Rational(2,4) < 1"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "no, 2/4 is a different spot than 1/2",
+          "why_this_item_catches_it": "A learner who treats 2/4 and 1/2 as different because the numbers differ places them at different points. They land on the same point. Links number-line placement with equivalence."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "braithwaite2018",
+      "why_this_grounds_the_item": "Braithwaite & Siegler note whole-number bias interferes with equivalent-fraction judgments; placing 2/4 and 1/2 on the same line tests whether equivalence is understood as same magnitude."
+    },
+    {
+      "id": "NL-008",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Put 2/5 and 3/5 on the line from 0 to 1. Which is closer to the finish (1)?",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "structured",
+        "value": {
+          "closer_to_one": "3/5",
+          "order": "2/5 then 3/5"
+        },
+        "sympy_check": "Rational(3,5) > Rational(2,5) and Rational(3,5) < 1"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "treats them as far apart like 2 and 3",
+          "why_this_item_catches_it": "Same-bottom fractions should be ordered by the top number and sit close together (one fifth apart). A learner over-spacing them by treating 2 and 3 as whole numbers misjudges the gap. 3/5 is closer to 1."
+        }
+      ],
+      "difficulty": 1,
+      "format": "number_line",
+      "research_citation_ref": "malone2016",
+      "why_this_grounds_the_item": "Malone & Fuchs document whole-number ordering errors; same-denominator pairs check whether the learner reasons about fifths as fixed-size pieces."
+    },
+    {
+      "id": "NL-009",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "Drag the marker to where 1/8 belongs on the line from 0 to 1.",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "point_on_unit_interval",
+        "value": "1/8",
+        "sympy_check": "Rational(1,8) > 0 and Rational(1,8) < 1"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "far right (near 1) because 8 is large",
+          "why_this_item_catches_it": "A learner who reads the large bottom number 8 as 'big amount' places 1/8 far to the right. In truth 1/8 is one of the smallest amounts here and sits very close to 0."
+        }
+      ],
+      "difficulty": 2,
+      "format": "number_line",
+      "research_citation_ref": "gabriel2013",
+      "why_this_grounds_the_item": "Gabriel et al.: a larger denominator means a smaller part. A unit fraction with a large bottom (1/8) is the strongest test of whether the learner inverts denominator size into magnitude."
+    },
+    {
+      "id": "NL-010",
+      "kc_primary": "KC_number_line_placement",
+      "kc_secondary": [],
+      "problem_statement": {
+        "symbolic": "On a number line from 0 to 1, Tim placed 1/6 farther from 0 than 1/3, saying 'six is bigger than three.' Is Tim right? Where should each one go?",
+        "representations_available": [
+          "number_line",
+          "symbolic"
+        ]
+      },
+      "correct_answer": {
+        "type": "structured",
+        "value": {
+          "tim_correct": "no",
+          "order": "1/6 then 1/3"
+        },
+        "sympy_check": "Rational(1,6) < Rational(1,3)"
+      },
+      "misconceptions_probed": [
+        {
+          "name": "natural-number-bias",
+          "wrong_answer_produced": "yes, 1/6 farther from 0",
+          "why_this_item_catches_it": "Tim applies whole-number reasoning (6 > 3). A learner who shares the bias agrees. In truth 1/6 is the smaller amount and sits closer to 0 than 1/3. Error-finding framing also catches procedure-without-concept."
+        },
+        {
+          "name": "procedure-without-concept",
+          "wrong_answer_produced": "yes, 1/6 farther from 0",
+          "why_this_item_catches_it": "A learner who cannot reason about magnitude and only checks 'bigger bottom number' accepts Tim's claim without a procedure to fall back on. Distinguishes magnitude understanding from rule-following (Persona Priya, PROJECT.md Section 4.2)."
+        }
+      ],
+      "difficulty": 3,
+      "format": "number_line",
+      "research_citation_ref": "malone2016",
+      "why_this_grounds_the_item": "Malone & Fuchs found number-line magnitude skill is the strongest protector against whole-number-bias ordering errors; an error-finding number-line item at top difficulty directly tests that protection (and serves the Section 3.9 error-finding transfer)."
+    }
+  ]
+}
