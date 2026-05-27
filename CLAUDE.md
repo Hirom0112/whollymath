@@ -431,7 +431,7 @@ If you change the mastery model, run the persona suite. If any persona now achie
 
 ### Cost controls
 
-- Billing alert at $100, $200, $500 (configured day one)
+- Budget guardrails (configured day one, 2026-05-27): a **$50/month** AWS cost budget with email alerts at 50% ($25), 80% ($40), 100% ($50), and forecasted-100%; plus AWS Cost Anomaly Detection emailing (via SNS topic `whollymath-cost-alerts`) on any spike **≥ $10** (IMMEDIATE). Tightened from the original $100/$200/$500 plan per team direction. Created via CLI for immediate protection; to be codified as a CDK BudgetStack at Slice I (do not double-create).
 - LLM API spending monitored separately (LLM provider's dashboard)
 - RDS in single AZ, smallest instance class that works
 - ECS Fargate task sized to minimum that handles demo load
