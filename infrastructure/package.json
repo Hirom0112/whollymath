@@ -1,0 +1,13 @@
+{
+  "name": "@whollymath/infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AWS CDK (TypeScript) infrastructure: S3+CloudFront, ECS Fargate, RDS Postgres, Secrets Manager. See TECH_STACK §7, CLAUDE.md §10.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

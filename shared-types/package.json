@@ -1,0 +1,17 @@
+{
+  "name": "@whollymath/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TypeScript types generated from backend Pydantic schemas (TECH_STACK §2). One source of truth for the API contract.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "//generate": "Regenerates src/generated.ts from backend Pydantic models via pydantic-to-typescript (runs in the backend's uv env). Wire the real module path once Pydantic models exist; the schema lives in app.api.schemas (TECH_STACK §2).",
+    "generate": "cd ../backend && uv run pydantic2ts --module app.api.schemas --output ../shared-types/src/generated.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

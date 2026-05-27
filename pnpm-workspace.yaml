@@ -1,0 +1,6 @@
+# pnpm workspace tying together the TypeScript projects (TECH_STACK §8).
+# Backend is a separate Python project managed by uv and is intentionally NOT listed here.
+packages:
+  - 'frontend'
+  - 'shared-types'
+  - 'infrastructure'

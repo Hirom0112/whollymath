@@ -1,0 +1,20 @@
+{
+  "name": "whollymath",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WhollyMath monorepo root: pnpm workspace tying together frontend, shared-types, and infrastructure (all TypeScript). Backend is a separate uv-managed Python project. See TECH_STACK.md §8.",
+  "packageManager": "pnpm@10.33.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "lint": "pnpm -r --if-present lint",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test"
+  },
+  "devDependencies": {
+    "prettier": "3.8.3"
+  }
+}

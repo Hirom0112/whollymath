@@ -1,0 +1,24 @@
+# Local Postgres for development — parity with prod RDS (TECH_STACK §4, §8; CLAUDE.md §10).
+# Credentials/port/db match DATABASE_URL in .env.example:
+#   postgresql://whollymath:whollymath@localhost:5432/whollymath
+services:
+  postgres:
+    image: postgres:16
+    container_name: whollymath-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: whollymath
+      POSTGRES_PASSWORD: whollymath
+      POSTGRES_DB: whollymath
+    ports:
+      - '5432:5432'
+    volumes:
+      - whollymath_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U whollymath -d whollymath']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  whollymath_pgdata:

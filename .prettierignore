@@ -1,0 +1,12 @@
+# Build output and deps
+node_modules/
+dist/
+build/
+coverage/
+# Python project (backend) is formatted by ruff, not prettier
+backend/
+# Generated lockfiles
+pnpm-lock.yaml
+# Repo-root docs are authored/owned outside the toolchain and are not Prettier-managed
+# (CLAUDE.md, TECH_STACK.md, etc. are governed by the source hierarchy, not a formatter).
+*.md
