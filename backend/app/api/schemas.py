@@ -30,6 +30,12 @@ from pydantic import BaseModel, ConfigDict, Field
 # strings) keeps the contract aligned with the domain and the generated TS types.
 from app.domain.knowledge_components import KnowledgeComponentId
 
+# ErrorType IS the domain verifier's ErrorCategory (Slice 1.4). The verifier owns
+# the §3.6 routing alphabet; the API speaks the very same enum so the wire contract
+# and the policy that routes on it cannot drift. (Reconciles the Slice 1.9 flag —
+# the local placeholder enum is gone; this is now the single source of truth.)
+from app.domain.verifier import ErrorCategory as ErrorType
+
 
 class SurfaceState(StrEnum):
     """The five enumerated UI surface states (ARCHITECTURE.md §7).
@@ -62,23 +68,9 @@ class ActionType(StrEnum):
     REQUEST_HINT = "request_hint"
 
 
-class ErrorType(StrEnum):
-    """A coarse, labeled classification of a wrong answer (ARCHITECTURE.md §10).
-
-    The verifier returns "correct? + error type" (ARCHITECTURE.md §10 step 4),
-    and the policy routes on the *kind* of error: a magnitude error sends the
-    learner toward the number line (S2), an operation/format error toward
-    fraction bars (S3) (ARCHITECTURE.md §7 transitions). This enum is the closed
-    set of those labels at the contract level; the verifier (domain layer, a
-    later slice) decides which one actually applies.
-    """
-
-    # Carried explicitly (not None) so the field is non-optional and total.
-    NONE = "none"
-    MAGNITUDE = "magnitude"
-    OPERATION = "operation"
-    FORMAT = "format"
-    OTHER = "other"
+# ErrorType is imported above from the domain verifier (Slice 1.4's ErrorCategory):
+# its values are none/magnitude/operation/format/other, the closed §3.6 routing set,
+# and the verifier decides which applies. The API does not redefine it.
 
 
 class MasterySnapshot(BaseModel):
