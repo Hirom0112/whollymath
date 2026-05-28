@@ -205,6 +205,36 @@ export interface MasterySnapshot {
   mastered: boolean;
 }
 /**
+ * The authenticated learner's persistent identity handle + carried-forward mastery (PL.3).
+ *
+ * Returned by ``GET /me`` for a request bearing a valid Google ID token. This is the
+ * "same login anywhere → same state" proof: the ``learner_id`` is the stable persistence
+ * handle the Google ``sub`` maps to (idempotently — the same login always resolves to the
+ * same row), and ``mastery`` is that learner's persisted per-KC state (reusing the PL.1
+ * ``MasteryState`` rows), so a learner signing in on a new device sees their prior progress.
+ *
+ * What is deliberately NOT here: the Google ``sub`` itself. The ``sub`` is an auth-layer
+ * secret-ish identifier we key on but never re-expose; the wire handle is the internal
+ * ``learner_id``. ``email`` is included only as the convenience label the surface greets the
+ * learner with. Neither field is consumed by any turn-loop decision — identity never reaches
+ * the mastery model, policy, or LLM (ARCHITECTURE.md §14 invariant 8); this payload exists
+ * purely for persistence/continuity on the auth path.
+ */
+export interface MeResponse {
+  /**
+   * Stable persistence handle the Google sub maps to (PL.3).
+   */
+  learner_id: number;
+  /**
+   * The learner's Google email, if the token carried one — a display label only.
+   */
+  email?: string | null;
+  /**
+   * The learner's carried-forward per-KC mastery (PL.1 rows; mastered=confirmed).
+   */
+  mastery?: MasterySnapshot[];
+}
+/**
  * One arm's verdict on one pre-registered metric, pre-formatted for display.
  *
  * Like ``ArmVerdictView`` but for the per-metric table (Slice 5.3.3): a short status label

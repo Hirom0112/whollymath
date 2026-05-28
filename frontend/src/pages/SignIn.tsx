@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { fetchMe, setAuthToken } from '../api';
+import { promptGoogleSignIn } from '../auth/google';
 import { Mascot } from '../components/Mascot';
 import './SignIn.css';
 
-/** How the learner chose to enter. Google is the real account path (OIDC, slice PL.3);
- * "demo" is the no-account guest path. For now both just advance to the decision page —
- * actual Google auth lands with PL.3. */
+/** How the learner chose to enter. Google is the real account path (OIDC, Slice PL.3); "demo"
+ * is the no-account guest path. Choosing Google triggers the GIS flow (when configured) and,
+ * on success, sets the bearer token so the session is keyed to the persistent learner; either
+ * way the learner advances — sign-in never blocks the flow (graceful, anonymous fallback). */
 export type SignInMethod = 'google' | 'demo';
 
 const ROLL_IN_MS = 2200;
@@ -101,6 +104,22 @@ export function SignIn({
   function handleChoose(method: SignInMethod): void {
     if (leaving) {
       return;
+    }
+    // The real account path: kick off Google sign-in (no-op when unconfigured). It runs
+    // alongside the roll-off animation and never blocks — a successful credential sets the
+    // bearer token (so the learner is keyed to their persistent account); a failure or the
+    // guest path just continues anonymously.
+    if (method === 'google') {
+      void promptGoogleSignIn().then(async (token) => {
+        if (token === null) return;
+        setAuthToken(token);
+        try {
+          await fetchMe(); // warms continuity; carried-forward mastery is read here
+        } catch {
+          // a 401 (e.g. server auth not configured) → stay anonymous, never block the learner
+          setAuthToken(null);
+        }
+      });
     }
     setLeaving(true);
     const delay = prefersReducedMotion() ? REDUCED_MS : ROLL_OUT_MS;
