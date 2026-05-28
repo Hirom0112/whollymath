@@ -1,0 +1,77 @@
+/* S2 number-line workspace — a placeable marker on the 0–1 line (Slice 2.5). */
+
+.wm-numline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.wm-numline-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none; /* let pointer drags scrub instead of scrolling the page */
+  cursor: pointer;
+}
+
+.wm-nl-track {
+  stroke: var(--wm-navy-deep);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.wm-nl-tick {
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.wm-nl-end {
+  fill: var(--wm-ink);
+  font-family: var(--wm-font-sans);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.wm-nl-marker {
+  outline: none;
+  cursor: grab;
+}
+
+.wm-nl-marker:focus-visible .wm-nl-knob {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 0 4px var(--wm-blue-soft));
+}
+
+.wm-nl-stem {
+  stroke: var(--wm-navy-deep);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.wm-nl-knob {
+  fill: var(--wm-blue-bright);
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2.5;
+}
+
+.wm-nl-start {
+  align-self: flex-start;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+  background: transparent;
+  border: none;
+  padding: 4px 2px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.wm-nl-start:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

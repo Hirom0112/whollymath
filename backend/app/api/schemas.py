@@ -74,6 +74,8 @@ class ProblemView(BaseModel):
       - ``kc`` / ``surface_format`` let the surface pick the right workspace
         (symbolic editor / number line / fraction bars — §3.5).
       - ``statement`` is the kid-friendly text shown to the learner.
+      - ``tick_segments`` is a NUMBER-LINE rendering hint: how many equal intervals
+        to divide the 0–1 line into. ``None`` for non-number-line problems.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -82,6 +84,17 @@ class ProblemView(BaseModel):
     kc: KnowledgeComponentId
     surface_format: Representation = Field(description="Representation to render (§3.5).")
     statement: str = Field(min_length=1, description="Kid-friendly problem text.")
+    # The number-line surface needs a candidate set to snap a drag onto BEFORE the
+    # answer reaches the domain (the verifier does exact Rational equality, no
+    # tolerance — verifier.py docstring). The candidate set is k/tick_segments for
+    # k=0..tick_segments; the displayed fraction p/q is exactly one of them because
+    # the generator displays the reduced target and tick_segments == its denominator.
+    # None when the problem is not a number-line placement (no snap grid needed).
+    tick_segments: int | None = Field(
+        default=None,
+        ge=1,
+        description="Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.",
+    )
 
 
 class RouteOptionView(BaseModel):

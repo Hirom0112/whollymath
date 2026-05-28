@@ -99,6 +99,8 @@ export interface MasterySnapshot {
  *   - ``kc`` / ``surface_format`` let the surface pick the right workspace
  *     (symbolic editor / number line / fraction bars — §3.5).
  *   - ``statement`` is the kid-friendly text shown to the learner.
+ *   - ``tick_segments`` is a NUMBER-LINE rendering hint: how many equal intervals
+ *     to divide the 0–1 line into. ``None`` for non-number-line problems.
  */
 export interface ProblemView {
   /**
@@ -111,6 +113,10 @@ export interface ProblemView {
    * Kid-friendly problem text.
    */
   statement: string;
+  /**
+   * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
+   */
+  tick_segments?: number | null;
 }
 /**
  * One Turn-0 routing option for the cold-start menu (decision 0.D.2).
@@ -179,6 +185,10 @@ export interface ProblemView1 {
    * Kid-friendly problem text.
    */
   statement: string;
+  /**
+   * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
+   */
+  tick_segments?: number | null;
 }
 /**
  * One learner action entering the turn loop (ARCHITECTURE.md §10 steps 1-2).

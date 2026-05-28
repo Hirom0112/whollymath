@@ -7,7 +7,7 @@ import {
   type SurfaceState,
   type TurnResponse,
 } from '../api';
-import { fractionToAnswer, SymbolicEditor, type FractionValue } from '../workspace';
+import { fractionToAnswer, NumberLine, SymbolicEditor, type FractionValue } from '../workspace';
 import './Tutor.css';
 
 const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
@@ -46,6 +46,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const [surfaceState, setSurfaceState] = useState<SurfaceState>(session.surface_state);
   const [answer, setAnswer] = useState('');
   const [fraction, setFraction] = useState<FractionValue>(EMPTY_FRACTION);
+  const [tick, setTick] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>('answering');
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -56,11 +57,25 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // latency_ms, which feeds the engagement floor (§6) and HelpNeed (§8) server-side.
   const startedAt = useRef<number>(Date.now());
 
-  // The S1 symbolic state uses the stacked fraction editor; other surfaces fall back
-  // to a plain field until their manipulative lands (NumberLine S2 / FractionBar S3).
+  // Each surface format has its own input mode; all of them ultimately produce the
+  // "n/d" answer string the domain verifier parses. Symbolic → the stacked fraction
+  // editor; number_line (with a tick hint) → the draggable marker; anything else →
+  // a plain field until its manipulative lands (FractionBar S3).
   const isSymbolic = problem.surface_format === 'symbolic';
-  const submittedAnswer = isSymbolic ? fractionToAnswer(fraction) : answer;
-  const canSubmit = submittedAnswer.trim() !== '';
+  const isNumberLine = problem.surface_format === 'number_line' && problem.tick_segments != null;
+
+  let submittedAnswer: string;
+  let canSubmit: boolean;
+  if (isSymbolic) {
+    submittedAnswer = fractionToAnswer(fraction);
+    canSubmit = submittedAnswer !== '';
+  } else if (isNumberLine) {
+    submittedAnswer = tick === null ? '' : `${String(tick)}/${String(problem.tick_segments)}`;
+    canSubmit = tick !== null;
+  } else {
+    submittedAnswer = answer;
+    canSubmit = answer.trim() !== '';
+  }
 
   async function handleSubmit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
@@ -111,6 +126,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     setSurfaceState(result.next_surface_state);
     setAnswer('');
     setFraction(EMPTY_FRACTION);
+    setTick(null);
     setHint(null);
     setHintUsed(false);
     setResult(null);
@@ -132,6 +148,13 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
                 onChange={setFraction}
                 disabled={phase === 'submitting'}
                 prompt="Your answer"
+              />
+            ) : isNumberLine && problem.tick_segments != null ? (
+              <NumberLine
+                segments={problem.tick_segments}
+                value={tick}
+                onChange={setTick}
+                disabled={phase === 'submitting'}
               />
             ) : (
               <>

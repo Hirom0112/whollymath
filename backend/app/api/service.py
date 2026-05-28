@@ -81,13 +81,23 @@ def _problem_view(problem: Problem) -> ProblemView:
 
     Deliberately drops ``correct_value`` / ``operands``: the answer never crosses to
     the client (correctness is the verifier's job server-side, §8.2). Only the
-    renderable subset travels.
+    renderable subset travels — plus, for a number-line problem, the snap-grid hint.
+
+    ``tick_segments`` is the displayed target's denominator (``correct_value.q``). The
+    generator displays the REDUCED target (``target.p/target.q``) and sets
+    ``correct_value`` to that same value, so the denominator is exactly the grid the
+    learner reads, and the target sits on one of the k/q ticks. Exposing the
+    denominator (e.g. "fifths") is the standard number-line scaffold; it does not
+    reveal WHERE the fraction sits. ``None`` for any non-number-line surface — those
+    do not snap a drag, so they need no grid.
     """
+    is_number_line = problem.surface_format is Representation.NUMBER_LINE
     return ProblemView(
         problem_id=problem.problem_id,
         kc=problem.kc,
         surface_format=problem.surface_format,
         statement=problem.statement,
+        tick_segments=int(problem.correct_value.q) if is_number_line else None,
     )
 
 
