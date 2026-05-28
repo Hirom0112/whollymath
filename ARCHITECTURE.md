@@ -509,9 +509,13 @@ learner works a problem is the signal that distinguishes confident-wrong from st
 genuine understanding from lucky wandering — signals a chat box or a static walkthrough
 physically cannot collect.
 
-- **What.** Keystrokes with timing, edits/backspaces, number-line drag paths (oscillation /
-  overshoot around the target), fraction-bar interactions, focus/blur, idle, hint open + dwell,
-  and submit — instrumented in the frontend `telemetry/` layer.
+- **What.** Keystrokes with timing, edits/backspaces, **answer-revision count** (how many
+  times the answer changed before submit), **time-to-first-interaction** (the hesitation before
+  the learner first touches the problem), number-line drag paths (oscillation / overshoot around
+  the target), fraction-bar interactions, focus/blur, idle, hint open + dwell, submit, and
+  **navigation/page events** (sign-in method chosen, surface-state transitions, problem
+  presented) — instrumented in the frontend `telemetry/` layer, each tied to its problem/KC/
+  surface-state context.
 - **Transport.** Events are buffered client-side and flushed asynchronously to a new `/events`
   endpoint — **off the turn loop** (invariant 7). Fire-and-forget with retry; never blocking an
   answer.
