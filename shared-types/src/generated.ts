@@ -6,6 +6,10 @@
 */
 
 /**
+ * Which intervention form was offered (§3.7).
+ */
+export type InterventionKind = "inline_assertion" | "conceptual_prompt";
+/**
  * Stable KC identifiers, matching `diagnostic_gems.json` `_meta.kc_catalog`.
  *
  * ``StrEnum`` makes a member compare equal to and serialize as its catalog
@@ -66,6 +70,22 @@ export type SurfaceState2 =
   | "S4_worked_example"
   | "S5_transfer_probe";
 
+/**
+ * A proactively-offered help nudge (Slice 4.5), or absent when none is offered.
+ *
+ * Distinct from the reactive ``hint`` (which answers an explicit REQUEST_HINT): this is
+ * help the system offers *unasked* after the §3.7 sustained-signal gate fires on the
+ * HelpNeed stream. Present only when the session's proactive arm is enabled AND the gate
+ * fired; ``null`` otherwise (the observe-only default). The surface renders ``text``
+ * inline in the workspace, never as a modal (§3.8 refuse-rule 6).
+ */
+export interface InterventionView {
+  kind: InterventionKind;
+  /**
+   * The pre-written nudge text (no LLM, §8.1).
+   */
+  text: string;
+}
 /**
  * A per-KC mastery readout returned to the surface (ARCHITECTURE.md §6).
  *
@@ -268,9 +288,13 @@ export interface TurnResponse {
    */
   mastery?: MasterySnapshot[];
   /**
-   * Observe-only P(unproductive) from the HelpNeed predictor for the NEXT problem, given this session's history (Slice 4.4.1). It is reported, not acted on: the surface must NOT branch on it yet — interventions are Slice 4.5, gated on a sustained signal (RESEARCH.md §7.5). null on a hint turn (no answer was submitted, so the history is unchanged).
+   * Observe-only P(unproductive) from the HelpNeed predictor for the NEXT problem, given this session's history (Slice 4.4.1). It is reported, not acted on by the surface. null on a hint turn (no answer was submitted, so the history is unchanged).
    */
   help_need?: number | null;
+  /**
+   * A proactively-offered help nudge (Slice 4.5), present only when the session's proactive arm is enabled AND the §3.7 sustained-signal gate fired on the HelpNeed stream. null in the observe-only default. Rendered inline in the workspace (§3.8 refuse-rule 6).
+   */
+  intervention?: InterventionView | null;
   /**
    * The next problem to present after this turn, or null when the loop has nothing further to serve (e.g. an unrecognized session). The surface renders it directly; the deterministic loop chose it (§10 step 12).
    */

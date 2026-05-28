@@ -61,6 +61,36 @@ class ActionType(StrEnum):
 # and the verifier decides which applies. The API does not redefine it.
 
 
+class InterventionKind(StrEnum):
+    """Which proactive-intervention form was offered (PROJECT.md §3.7).
+
+    ``INLINE_ASSERTION`` is the first fire — a partial scaffold shown *within* the
+    workspace (Maniktala et al. 2020; §3.8 refuse-rule 6). v1 fills it with the
+    pre-written conceptual nudge (Slice 3.8); the LLM-mediated partial worked step lands
+    at Slice 5.6 (no LLM in the turn loop, §8.1). ``CONCEPTUAL_PROMPT`` is the ~30s-no-
+    response escalation (§3.7 step 2), reserved here and surfaced when the UI timer lands.
+    """
+
+    INLINE_ASSERTION = "inline_assertion"
+    CONCEPTUAL_PROMPT = "conceptual_prompt"
+
+
+class InterventionView(BaseModel):
+    """A proactively-offered help nudge (Slice 4.5), or absent when none is offered.
+
+    Distinct from the reactive ``hint`` (which answers an explicit REQUEST_HINT): this is
+    help the system offers *unasked* after the §3.7 sustained-signal gate fires on the
+    HelpNeed stream. Present only when the session's proactive arm is enabled AND the gate
+    fired; ``null`` otherwise (the observe-only default). The surface renders ``text``
+    inline in the workspace, never as a modal (§3.8 refuse-rule 6).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: InterventionKind = Field(description="Which intervention form was offered (§3.7).")
+    text: str = Field(min_length=1, description="The pre-written nudge text (no LLM, §8.1).")
+
+
 class ProblemView(BaseModel):
     """The learner-facing view of one presented problem (ARCHITECTURE.md §10 step 12).
 
@@ -259,9 +289,17 @@ class TurnResponse(BaseModel):
         description=(
             "Observe-only P(unproductive) from the HelpNeed predictor for the NEXT "
             "problem, given this session's history (Slice 4.4.1). It is reported, not "
-            "acted on: the surface must NOT branch on it yet — interventions are Slice "
-            "4.5, gated on a sustained signal (RESEARCH.md §7.5). null on a hint turn "
-            "(no answer was submitted, so the history is unchanged)."
+            "acted on by the surface. null on a hint turn (no answer was submitted, so "
+            "the history is unchanged)."
+        ),
+    )
+    intervention: InterventionView | None = Field(
+        default=None,
+        description=(
+            "A proactively-offered help nudge (Slice 4.5), present only when the "
+            "session's proactive arm is enabled AND the §3.7 sustained-signal gate fired "
+            "on the HelpNeed stream. null in the observe-only default. Rendered inline "
+            "in the workspace (§3.8 refuse-rule 6)."
         ),
     )
     next_problem: ProblemView | None = Field(
@@ -277,6 +315,8 @@ class TurnResponse(BaseModel):
 __all__ = [
     "ActionType",
     "ErrorType",
+    "InterventionKind",
+    "InterventionView",
     "MasterySnapshot",
     "ProblemView",
     "RouteOptionView",

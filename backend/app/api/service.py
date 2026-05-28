@@ -31,6 +31,8 @@ from dataclasses import dataclass, field
 from app.api.schemas import (
     ActionType,
     ErrorType,
+    InterventionKind,
+    InterventionView,
     MasterySnapshot,
     ProblemView,
     RouteOptionView,
@@ -42,6 +44,7 @@ from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
 from app.helpneed.live_features import LiveTurn, live_features
 from app.helpneed.predictor import HelpNeedPredictor
+from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.tutor.hints import select_nudge
 from app.tutor.session import RouteOption, TutorSession, routing_choices
 
@@ -174,10 +177,41 @@ def _help_need(
     return predictor.predict_proba(features)
 
 
+def _maybe_intervene(
+    live: _LiveSession,
+    gate: SustainedHelpNeedGate,
+    next_problem: Problem,
+) -> InterventionView | None:
+    """Decide whether to PROACTIVELY offer help before the next problem (Slice 4.5.1).
+
+    Returns an intervention only when BOTH (a) this session's proactive arm is enabled
+    and (b) the §3.7 sustained-signal ``gate`` fires on the accumulated HelpNeed stream
+    (K consecutive turns at P ≥ threshold). Default-OFF means the live experience is
+    unchanged until the Slice 5.4 A/B turns the arm on per session — so we make no
+    "proactive helps" claim before it is measured (RESEARCH.md §7.5 decision).
+
+    The offered text is the pre-written conceptual nudge for the upcoming problem's KC
+    (Slice 3.8 ``select_nudge`` — no LLM, no SymPy, §8.1). It is rendered as an inline
+    assertion (§3.8 refuse-rule 6); the LLM-mediated partial worked step is Slice 5.6.
+    This is consistent with refuse-rule 5 (no auto-help in the first 60s *except in
+    response to wrong answers*): the gate fires precisely on accumulated unproductive
+    struggle, and the offer is made between problems, not mid-problem (refuse-rule 1).
+    """
+    if not live.proactive_enabled:
+        return None
+    if not gate.should_intervene(live.help_need_history):
+        return None
+    return InterventionView(
+        kind=InterventionKind.INLINE_ASSERTION,
+        text=select_nudge(next_problem.kc).text,
+    )
+
+
 def _answer_response(
-    session: TutorSession,
+    live: _LiveSession,
     request: TurnRequest,
     predictor: HelpNeedPredictor | None,
+    gate: SustainedHelpNeedGate,
 ) -> TurnResponse:
     """Run one SUBMIT_ANSWER turn end-to-end and shape the wire reply.
 
@@ -187,10 +221,14 @@ def _answer_response(
     pre-parse or pre-validate the math (§8.2). A missing answer on a submit becomes
     the empty string, which the verifier treats as wrong (honest, never a crash).
 
-    After the deterministic turn, the HelpNeed predictor scores the next problem
-    OBSERVE-ONLY (Slice 4.4.1, ``_help_need``) — reported, never acted on. It runs
-    AFTER the verify/mastery/policy path, so it cannot perturb the turn's outcome.
+    Order matters (CLAUDE.md §8.1): the deterministic verify/mastery/policy path runs and
+    fixes the turn outcome FIRST. Only then does the HelpNeed predictor score the next
+    problem (``_help_need``); that P is appended to the session stream and the §3.7 gate
+    decides whether to proactively intervene. Neither the score nor the gate can perturb
+    correctness, the surface state, or the next-problem choice — they are read off the
+    settled turn, so a proactive arm changes only the ``intervention`` field.
     """
+    session = live.tutor
     answered = session.current_problem
     result = session.submit_answer(
         request.submitted_answer or "",
@@ -198,6 +236,9 @@ def _answer_response(
         hint_used=request.hint_used,
     )
     next_problem = _serve_next(session, answered.kc)
+    help_need = _help_need(session, next_problem, predictor)
+    if help_need is not None:
+        live.help_need_history.append(help_need)
     return TurnResponse(
         correct=result.correct,
         error_type=result.error_category,
@@ -208,7 +249,8 @@ def _answer_response(
             MasterySnapshot(kc_id=m.kc, probability=m.probability, mastered=m.mastered)
             for m in result.mastery_snapshot
         ],
-        help_need=_help_need(session, next_problem, predictor),
+        help_need=help_need,
+        intervention=_maybe_intervene(live, gate, next_problem),
         next_problem=_problem_view(next_problem),
     )
 
@@ -237,8 +279,24 @@ def _hint_response(session: TutorSession) -> TurnResponse:
 
 
 @dataclass
+class _LiveSession:
+    """The per-session runtime record behind a ``session_id`` (Slices 4.4/4.5).
+
+    Bundles the ``TutorSession`` with the live-loop state that is an API-layer concern,
+    not the tutor's: the accumulated observe-only HelpNeed ``help_need_history`` the §3.7
+    gate reads, and ``proactive_enabled`` — this session's A/B arm. The arm defaults OFF
+    (observe-only), so a session never sees a proactive intervention unless it was started
+    into the proactive arm; the Slice 5.4 A/B is what turns it on per session.
+    """
+
+    tutor: TutorSession
+    proactive_enabled: bool = False
+    help_need_history: list[float] = field(default_factory=list)
+
+
+@dataclass
 class SessionStore:
-    """In-memory ``session_id -> TutorSession`` map — the live-session boundary.
+    """In-memory ``session_id -> _LiveSession`` map — the live-session boundary.
 
     Runtime state, not deterministic-harness state: a live learner session is
     identified by an opaque id the client echoes onto each turn (TECH_STACK §9 — no
@@ -251,28 +309,37 @@ class SessionStore:
     observe-only (Slice 4.4.1). It is optional so contract/boundary tests can build a
     bare store; ``create_app`` always injects the committed artifact, so production
     always scores. When absent, ``help_need`` is simply omitted (left ``None``).
+
+    ``gate`` is the §3.7 sustained-signal intervention gate (Slice 4.5.1), shared across
+    sessions because it is pure/stateless (the per-session P stream lives on each
+    ``_LiveSession``). It only matters for sessions whose proactive arm is enabled.
     """
 
     predictor: HelpNeedPredictor | None = None
-    _sessions: dict[str, TutorSession] = field(default_factory=dict)
+    gate: SustainedHelpNeedGate = field(default_factory=SustainedHelpNeedGate)
+    _sessions: dict[str, _LiveSession] = field(default_factory=dict)
 
-    def start(self, route_key: str) -> StartSessionResponse:
+    def start(self, route_key: str, *, proactive_enabled: bool = False) -> StartSessionResponse:
         """Start a session from a Turn-0 route key and return its Turn-1 problem (0.D.2).
 
         Derives everything server-side from the locked routing table: the chosen
         ``RouteOption`` builds a ``TutorSession`` via ``from_route`` (which seeds the
         BKT prior-not-commitment and presents the locked calibration item). The new
         session is stored under a freshly minted opaque id the client threads onto
-        every subsequent turn.
+        every subsequent turn. ``proactive_enabled`` is the session's A/B arm (default
+        OFF = observe-only); the Slice 5.4 harness sets it, not the client.
         """
         option = _route_for_key(route_key)
-        session = TutorSession.from_route(option)
+        live = _LiveSession(
+            tutor=TutorSession.from_route(option),
+            proactive_enabled=proactive_enabled,
+        )
         session_id = uuid.uuid4().hex
-        self._sessions[session_id] = session
+        self._sessions[session_id] = live
         return StartSessionResponse(
             session_id=session_id,
-            surface_state=session.surface_state,
-            problem=_problem_view(session.current_problem),
+            surface_state=live.tutor.surface_state,
+            problem=_problem_view(live.tutor.current_problem),
         )
 
     def process_turn(self, request: TurnRequest) -> TurnResponse:
@@ -284,12 +351,12 @@ class SessionStore:
         serves the next problem. All turn-loop composition happens behind this seam so
         the route stays thin (CLAUDE.md §7).
         """
-        session = self._sessions.get(request.session_id)
-        if session is None:
+        live = self._sessions.get(request.session_id)
+        if live is None:
             raise SessionNotFoundError(request.session_id)
         if request.action is ActionType.REQUEST_HINT:
-            return _hint_response(session)
-        return _answer_response(session, request, self.predictor)
+            return _hint_response(live.tutor)
+        return _answer_response(live, request, self.predictor, self.gate)
 
 
 __all__ = [
