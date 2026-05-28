@@ -40,13 +40,14 @@ from app.api.schemas import (
     TurnRequest,
     TurnResponse,
 )
-from app.domain.knowledge_components import KnowledgeComponentId, Representation
+from app.domain.knowledge_components import Representation
 from app.domain.problem_generators import Problem
 from app.helpneed.live_features import LiveTurn, live_features
 from app.helpneed.predictor import HelpNeedPredictor
 from app.llm.provider import LLMProvider
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
+from app.policy.scheduler import next_spec
 from app.tutor.hints import select_nudge
 from app.tutor.session import RouteOption, TutorSession, routing_choices
 
@@ -120,29 +121,23 @@ def _route_for_key(route_key: str) -> RouteOption:
     raise UnknownRouteError(route_key)
 
 
-def _serve_next(session: TutorSession, kc: KnowledgeComponentId) -> Problem:
-    """Choose and present the next problem after a turn (the MVP scheduling default).
+def _serve_next(session: TutorSession) -> Problem:
+    """Choose and present the next problem after a turn, via the interleaving scheduler.
 
-    **Scope flag (CLAUDE.md §1):** the real adaptive scheduler — interleaving across
-    KCs (0.D.5: 3 items / ≥2 KCs) and HelpNeed-driven selection — is Slice 4.x and is
-    NOT wired here. Until then this uses a conservative, sourced default: **stay on
-    the KC just practiced**, in a representation the live frontend can actually answer.
+    The goal KC is the cold-start route's KC (the first turn). The scheduler
+    (``policy.scheduler.next_spec``) interleaves a companion KC on a fixed cadence (so the
+    mastery model's ≥2-KC interleaving rule can fire) and rotates the goal KC through the
+    representations the live surface can render and answer (so the ≥2-representations rule can
+    fire). Both were impossible under the old "stay on one KC, one format" stub — which made
+    the experience monotonous AND mastery unreachable live (PROJECT.md §3.4/§3.6, 0.D.5).
 
-    The format is chosen by the KC, not the surface state, so the served statement
-    always matches a rendered input widget: number-line placement → ``NUMBER_LINE``
-    (the draggable marker, with ``tick_segments``), everything else → ``SYMBOLIC`` (the
-    fraction editor, which expresses any ``a/b``). The S2/S3 manipulatives-as-workspace
-    morph (a number line / fraction bars that VISUALIZE an arithmetic problem while the
-    answer is entered separately) is the fuller Slice 2.5 follow-up; until it lands a
-    surface state must not pick a format with no answer widget, or the learner sees a
-    statement with no usable input. The seed is the session's turn count, so the walk
-    is deterministic and each turn yields a fresh problem (PROJECT.md §4.1).
+    Every served ``(kc, format)`` pair has a real answer widget (scheduler only emits live
+    representations), so the learner never sees a statement with no usable input. The seed is
+    the session's turn count, so the walk is deterministic and fresh (PROJECT.md §4.1).
     """
-    surface_format = (
-        Representation.NUMBER_LINE
-        if kc is KnowledgeComponentId.NUMBER_LINE_PLACEMENT
-        else Representation.SYMBOLIC
-    )
+    goal_kc = session.history[0].observation.kc
+    served_index = len(session.history) - 1  # 0 = the first problem after the cold-start item
+    kc, surface_format = next_spec(goal_kc, served_index)
     return session.present_problem(kc=kc, seed=len(session.history), surface_format=surface_format)
 
 
@@ -239,13 +234,12 @@ def _answer_response(
     settled turn, so a proactive arm changes only the ``intervention`` field.
     """
     session = live.tutor
-    answered = session.current_problem
     result = session.submit_answer(
         request.submitted_answer or "",
         latency_ms=request.latency_ms,
         hint_used=request.hint_used,
     )
-    next_problem = _serve_next(session, answered.kc)
+    next_problem = _serve_next(session)
     help_need = _help_need(session, next_problem, predictor)
     if help_need is not None:
         live.help_need_history.append(help_need)

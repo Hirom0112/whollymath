@@ -153,6 +153,20 @@ def _unlike_pair(rng: random.Random) -> tuple[Rational, Rational]:
     return first, second
 
 
+def _unlike_pair_sum_below_one(rng: random.Random) -> tuple[Rational, Rational]:
+    """An unlike-denominator pair whose SUM is < 1, for number-line addition.
+
+    The number-line surface spans 0–1, so an addition answered by placing the total must
+    have a total in that interval. We resample until the sum fits (bounded), falling back to
+    a known-good in-scope pair (1/4 + 1/3 = 7/12) so the generator is always deterministic
+    and never loops forever (CLAUDE.md §8.5)."""
+    for _ in range(50):
+        first, second = _unlike_pair(rng)
+        if first + second < 1:
+            return first, second
+    return Rational(1, 4), Rational(1, 3)
+
+
 def _ordered_unlike_pair(rng: random.Random) -> tuple[Rational, Rational]:
     """An unlike-denominator pair ordered larger-first, for well-formed subtraction.
 
@@ -269,10 +283,22 @@ def _generate_addition(rng: random.Random, seed: int, surface_format: Representa
     The correct value is the SymPy sum (ADD items, e.g. 1/2 + 1/4 = 3/4). A sum of
     two positive fractions is strictly larger than either addend — the property the
     area model / number line use to expose the add-across error.
+
+    Two REAL representations (so the mastery model's rule 2 can be met live): the default
+    SYMBOLIC "a/b + c/d = ?" answered in the fraction editor, and a NUMBER_LINE form where
+    the learner places the TOTAL on the 0–1 line (operands sampled so the sum fits 0–1).
     """
-    first, second = _unlike_pair(rng)
-    total = first + second
-    statement = f"{first.p}/{first.q} + {second.p}/{second.q} = ?"
+    if surface_format is Representation.NUMBER_LINE:
+        first, second = _unlike_pair_sum_below_one(rng)
+        total = first + second
+        statement = (
+            f"Add {first.p}/{first.q} + {second.p}/{second.q}, then drag the marker to where "
+            f"the total sits on the line from 0 to 1."
+        )
+    else:
+        first, second = _unlike_pair(rng)
+        total = first + second
+        statement = f"{first.p}/{first.q} + {second.p}/{second.q} = ?"
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.ADDITION_UNLIKE, seed, surface_format),
         kc=KnowledgeComponentId.ADDITION_UNLIKE,
@@ -289,10 +315,20 @@ def _generate_subtraction(rng: random.Random, seed: int, surface_format: Represe
 
     Ordered larger-first so the difference is positive (in-scope). The correct value
     is the SymPy difference (SUB items, e.g. 1/2 - 1/4 = 1/4).
+
+    Two REAL representations (rule 2): SYMBOLIC "a/b - c/d = ?" in the fraction editor, and a
+    NUMBER_LINE form placing the result on 0–1 (a proper-fraction difference is always in
+    that interval).
     """
     minuend, subtrahend = _ordered_unlike_pair(rng)
     difference = minuend - subtrahend
-    statement = f"{minuend.p}/{minuend.q} - {subtrahend.p}/{subtrahend.q} = ?"
+    if surface_format is Representation.NUMBER_LINE:
+        statement = (
+            f"Subtract {minuend.p}/{minuend.q} - {subtrahend.p}/{subtrahend.q}, then drag the "
+            f"marker to where the answer sits on the line from 0 to 1."
+        )
+    else:
+        statement = f"{minuend.p}/{minuend.q} - {subtrahend.p}/{subtrahend.q} = ?"
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.SUBTRACTION_UNLIKE, seed, surface_format),
         kc=KnowledgeComponentId.SUBTRACTION_UNLIKE,
