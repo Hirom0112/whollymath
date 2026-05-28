@@ -12,7 +12,7 @@ describe('ColdStart', () => {
     render(<ColdStart onChoose={vi.fn()} />);
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /what do you want to work on\?/i }),
+      screen.getByRole('heading', { level: 1, name: /where do you want to start\?/i }),
     ).toBeInTheDocument();
 
     // Three KC options + one "I'm not sure" default = four buttons.

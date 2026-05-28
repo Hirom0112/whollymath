@@ -48,6 +48,15 @@ learner feels capable and unhurried. The interface is quiet by default *precisel
 so that when it changes, the change is legible* — the adaptive morph is the
 centerpiece, and a noisy base would drown it out.
 
+**Register arc (onboarding vs. working surfaces).** The *onboarding* surfaces — the
+brand landing (mascot, warm) and the Turn-0 "world" cold start (a fantasy-landscape
+backdrop with chunky, illustrated option cards) — run deliberately warmer and more
+playful: they *invite*. The *working* in-problem surfaces (S1–S5) settle into the
+calm register above. The warmth is a bridge into the tutor, not the working tone;
+the kid is welcomed, then focused. (Decision 2026-05-27 — the cold start moved from
+an earlier flat/editorial treatment to the world-card design at the team's
+direction.)
+
 ## Anti-references
 
 - **Varsity Tutors "Homework Help"** — a static, linear worked-example walkthrough.

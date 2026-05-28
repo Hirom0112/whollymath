@@ -1,22 +1,17 @@
-import type { CSSProperties } from 'react';
-
 import './ColdStart.css';
-
-// Lets us pass the per-item entrance-stagger delay through a CSS custom property
-// without `any`. CSSProperties does not type custom properties; the indexed-record
-// shape is the standard React-with-strict TS pattern.
-type CSSVarStyle = CSSProperties & Record<`--${string}`, string>;
 
 /**
  * The Turn-0 routing screen (the kid-friendly cold start, locked in PROJECT.md
- * decision 0.D.2). This is the first product surface — the calm, composed register
- * (PRODUCT.md), not the warm landing brand. Three equal-weight KC options + one
- * de-emphasized "I'm not sure" default. NO diagnostic / quiz framing, NO curriculum
- * terms. The kid-friendly prompts mirror the backend source of truth in
- * backend/app/tutor/session.py (RouteOption.prompt) so the surface and the tutor
- * agree on the menu without string drift.
+ * decision 0.D.2). Sits inside a "world" — a stylized fantasy-landscape backdrop
+ * with a centered cream panel holding three chunky side-by-side option cards
+ * and a de-emphasized "I'm not sure" link below. The polymath-card pattern
+ * (icon + label, soft per-card tints) gives the screen a warm, game-feel
+ * register that follows naturally from the landing.
  *
- * The four route keys here ARE the backend's RouteOption.key values:
+ * The four route keys here ARE the backend's RouteOption.key values
+ * (backend/app/tutor/session.py); the prompts are mirrored verbatim from there
+ * so the surface and the tutor agree on the menu without string drift.
+ *
  *   - 'combine'        → KC_addition_unlike
  *   - 'same_amount'    → KC_equivalence
  *   - 'where_on_line'  → KC_number_line_placement
@@ -25,35 +20,117 @@ type CSSVarStyle = CSSProperties & Record<`--${string}`, string>;
 export type RouteKey = 'combine' | 'same_amount' | 'where_on_line' | 'not_sure';
 
 interface RouteChoice {
-  key: RouteKey;
+  key: Exclude<RouteKey, 'not_sure'>;
   prompt: string;
+  /** Per-card soft tint class — peach / mint / sky from tokens.css. */
+  tint: 'combine' | 'same_amount' | 'where_on_line';
+  /** Inline SVG icon (~44px) representing the KC concept. */
+  icon: React.JSX.Element;
 }
 
-// The three real KC options. Equal-weight (same visual treatment, in the order the
-// backend lists them — combine / same_amount / where_on_line). Copy is verbatim
-// from backend/app/tutor/session.py so a kid-friendly copy change happens in one
-// place. The "I'm not sure" default is rendered separately, with de-emphasized
-// chrome, because 0.D.2 requires it visually distinct.
+const ICON_COMBINE = (
+  <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
+    <rect x="6" y="10" width="14" height="28" rx="2.5" stroke="currentColor" strokeWidth="2.5" />
+    <rect x="28" y="10" width="14" height="28" rx="2.5" stroke="currentColor" strokeWidth="2.5" />
+    <line
+      x1="22"
+      y1="24"
+      x2="26"
+      y2="24"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+    <line
+      x1="24"
+      y1="22"
+      x2="24"
+      y2="26"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const ICON_SAME_AMOUNT = (
+  <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
+    <circle cx="12" cy="24" r="9" stroke="currentColor" strokeWidth="2.5" />
+    <line x1="12" y1="15" x2="12" y2="33" stroke="currentColor" strokeWidth="2.5" />
+    <circle cx="36" cy="24" r="9" stroke="currentColor" strokeWidth="2.5" />
+    <line x1="27" y1="24" x2="45" y2="24" stroke="currentColor" strokeWidth="2.5" />
+    <line
+      x1="19"
+      y1="22"
+      x2="29"
+      y2="22"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+    <line
+      x1="19"
+      y1="26"
+      x2="29"
+      y2="26"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const ICON_WHERE_ON_LINE = (
+  <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
+    <line
+      x1="6"
+      y1="32"
+      x2="42"
+      y2="32"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+    <line x1="10" y1="28" x2="10" y2="36" stroke="currentColor" strokeWidth="2.2" />
+    <line x1="20" y1="28" x2="20" y2="36" stroke="currentColor" strokeWidth="2.2" />
+    <line x1="30" y1="28" x2="30" y2="36" stroke="currentColor" strokeWidth="2.2" />
+    <line x1="40" y1="28" x2="40" y2="36" stroke="currentColor" strokeWidth="2.2" />
+    <path d="M28 14 L34 22 L22 22 Z" fill="currentColor" />
+    <line
+      x1="28"
+      y1="22"
+      x2="28"
+      y2="30"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 const KC_CHOICES: readonly RouteChoice[] = [
   {
     key: 'combine',
     prompt: 'Putting two fraction pieces together to see how much you have',
+    tint: 'combine',
+    icon: ICON_COMBINE,
   },
   {
     key: 'same_amount',
     prompt: 'Telling when two different-looking fractions are really the same amount',
+    tint: 'same_amount',
+    icon: ICON_SAME_AMOUNT,
   },
   {
     key: 'where_on_line',
     prompt: 'Finding where a fraction sits on a line between 0 and 1',
+    tint: 'where_on_line',
+    icon: ICON_WHERE_ON_LINE,
   },
 ] as const;
 
-// The de-emphasized default. Copy mirrors the backend's UNSURE_ROUTE.prompt with
-// ONE deliberate change: the backend uses an em dash ("I'm not sure — just show
-// me something"); the impeccable design law forbids em dashes in copy, so the
-// surface renders a comma. Flagged to the director — the backend string should
-// likely be updated to match for one source of truth.
+// Mirrors backend/app/tutor/session.py UNSURE_ROUTE.prompt verbatim (the
+// previous commit fixed the em dash so the strings match byte-for-byte).
 const UNSURE_PROMPT = "I'm not sure, just show me something";
 
 export function ColdStart({
@@ -63,38 +140,32 @@ export function ColdStart({
 }): React.JSX.Element {
   return (
     <main className="wm-coldstart">
-      <div className="wm-coldstart-inner">
+      <div className="wm-coldstart-panel">
         <header className="wm-coldstart-head">
-          <p className="wm-coldstart-eyebrow">Step 1 of 2</p>
-          <h1 className="wm-coldstart-headline">What do you want to work on?</h1>
+          <h1 className="wm-coldstart-headline">Where do you want to start?</h1>
           <p className="wm-coldstart-subhead">
-            Pick what feels closest. You can change later, and nothing here is graded.
+            Pick a path. You can change later, and nothing here is graded.
           </p>
         </header>
 
         <ul className="wm-coldstart-list">
-          {KC_CHOICES.map((choice, index) => (
-            <li key={choice.key} style={{ '--wm-stagger': `${index * 60}ms` } as CSSVarStyle}>
+          {KC_CHOICES.map((choice) => (
+            <li key={choice.key}>
               <button
                 type="button"
-                className="wm-coldstart-card"
+                className={`wm-coldstart-card wm-coldstart-card--${choice.tint}`}
                 onClick={() => {
                   onChoose(choice.key);
                 }}
               >
-                <span className="wm-coldstart-card-index" aria-hidden="true">
-                  {index + 1}
-                </span>
-                <span className="wm-coldstart-card-prompt">{choice.prompt}</span>
+                <span className="wm-coldstart-icon">{choice.icon}</span>
+                <span className="wm-coldstart-card-text">{choice.prompt}</span>
               </button>
             </li>
           ))}
         </ul>
 
-        <div
-          className="wm-coldstart-unsure-wrap"
-          style={{ '--wm-stagger': `${KC_CHOICES.length * 60}ms` } as CSSVarStyle}
-        >
+        <div className="wm-coldstart-unsure-wrap">
           <button
             type="button"
             className="wm-coldstart-unsure"

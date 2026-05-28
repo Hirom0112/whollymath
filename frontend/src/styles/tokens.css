@@ -30,6 +30,14 @@
   --wm-ink: #161616;
   --wm-ink-soft: #2a2a2a;
 
+  /* soft card tints — gentle pastel pulls from the fraction palette, used to
+     reinforce (not encode) per-option identity. Color stays a meaning signal in
+     the principled sense: card position + icon + label do the work, the tint is
+     friendly differentiation, never the only differentiator. */
+  --wm-card-warm: #f8e1d4;
+  --wm-card-mint: #d9ecdb;
+  --wm-card-sky: #d8e6f7;
+
   --wm-shadow: rgba(20, 30, 70, 0.18);
 
   /* type */
