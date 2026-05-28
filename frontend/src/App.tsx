@@ -3,14 +3,16 @@ import { useState } from 'react';
 import { startSession, type StartSessionResponse } from './api';
 import { ColdStart, type RouteKey } from './pages/ColdStart';
 import { Landing } from './pages/Landing';
+import { SignIn } from './pages/SignIn';
 import { Tutor } from './pages/Tutor';
 
-type View = 'landing' | 'cold_start' | 'starting' | 'session';
+type View = 'landing' | 'sign_in' | 'cold_start' | 'starting' | 'session';
 
-// Root view switch. Landing → cold-start routing (Turn 0, decision 0.D.2) → a real
-// session: choosing a route calls POST /session, then the Tutor surface drives the
-// reactive turn loop (ARCHITECTURE.md §10). A plain state toggle (no router until
-// there are real routes; CLAUDE.md §8.6).
+// Root view switch. Landing → sign-in (Google account or free demo) → cold-start routing
+// (Turn 0, decision 0.D.2) → a real session: choosing a route calls POST /session, then the
+// Tutor surface drives the reactive turn loop (ARCHITECTURE.md §10). A plain state toggle (no
+// router until there are real routes; CLAUDE.md §8.6). Real Google OIDC lands with slice PL.3;
+// for now the sign-in step is navigational.
 export function App(): React.JSX.Element {
   const [view, setView] = useState<View>('landing');
   const [session, setSession] = useState<StartSessionResponse | null>(null);
@@ -60,6 +62,10 @@ export function App(): React.JSX.Element {
     );
   }
 
+  if (view === 'sign_in') {
+    return <SignIn onContinue={() => setView('cold_start')} />;
+  }
+
   if (view === 'cold_start') {
     return (
       <>
@@ -92,5 +98,5 @@ export function App(): React.JSX.Element {
     );
   }
 
-  return <Landing onStart={() => setView('cold_start')} />;
+  return <Landing onStart={() => setView('sign_in')} />;
 }
