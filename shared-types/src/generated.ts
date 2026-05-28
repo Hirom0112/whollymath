@@ -29,6 +29,10 @@ export type KnowledgeComponentId =
  */
 export type Representation = "symbolic" | "area_model" | "number_line" | "word_problem";
 /**
+ * How to answer: a numeric fraction (default) or yes/no buttons.
+ */
+export type AnswerKind = "numeric" | "yes_no";
+/**
  * The starting surface state (S1, §7).
  */
 export type SurfaceState =
@@ -222,6 +226,7 @@ export interface ProblemView {
    * Kid-friendly problem text.
    */
   statement: string;
+  answer_kind?: AnswerKind;
   /**
    * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
    */
@@ -298,6 +303,7 @@ export interface ProblemView1 {
    * Kid-friendly problem text.
    */
   statement: string;
+  answer_kind?: AnswerKind;
   /**
    * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
    */

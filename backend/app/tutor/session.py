@@ -64,7 +64,7 @@ from app.domain.knowledge_components import KnowledgeComponentId, Representation
 # re-export it). Importing it from its home keeps the re-export explicit for
 # mypy --strict and points the reader at the source of truth.
 from app.domain.misconceptions import MisconceptionId
-from app.domain.problem_generators import Problem, generate_problem
+from app.domain.problem_generators import AnswerKind, Problem, generate_problem
 from app.domain.verifier import ErrorCategory, Submitted, verify
 from app.mastery.mastery_model import (
     DEFAULT_BKT_PARAMS,
@@ -212,9 +212,11 @@ def _addition_calibration() -> Problem:
 def _equivalence_calibration() -> Problem:
     """0.D.2 equivalence route (and the unsure default): 'is 2/3 = 4/6?'.
 
-    The two named fractions are equal, so the correct value is their shared
-    magnitude (2/3). Operands carry both fractions in reading order so the
-    diagnostic log and any later judgment path can see the pair the item is about.
+    A yes/no relational judgment (``answer_kind=YES_NO``): the question asks whether
+    the two amounts match, so the learner answers yes/no, NOT a fraction. The truth is
+    SymPy equality over the operands (2/3 == 4/6 → YES), computed by the verifier.
+    ``correct_value`` keeps the shared magnitude (2/3) as the anchor the diagnostic log
+    and number-line scaffold read; the operands carry both fractions in reading order.
     """
     first, second = Rational(2, 3), Rational(4, 6)
     return Problem(
@@ -222,9 +224,10 @@ def _equivalence_calibration() -> Problem:
         kc=KnowledgeComponentId.EQUIVALENCE,
         surface_format=Representation.SYMBOLIC,
         statement="Is 2/3 the same amount as 4/6?",
-        correct_value=first,  # 2/3 == 4/6; the shared magnitude
+        correct_value=first,  # 2/3 == 4/6; the shared magnitude anchor
         representations_available=get_kc(KnowledgeComponentId.EQUIVALENCE).representations,
         operands=(first, second),
+        answer_kind=AnswerKind.YES_NO,
     )
 
 

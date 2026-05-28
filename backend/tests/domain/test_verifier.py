@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.misconceptions import (
     MisconceptionId,
     add_across,
@@ -41,6 +41,7 @@ from app.domain.misconceptions import (
     subtract_across,
 )
 from app.domain.problem_generators import (
+    AnswerKind,
     Problem,
     generate_problem,
     problem_from_bank_item,
@@ -370,15 +371,78 @@ def test_verification_result_carries_the_three_fields() -> None:
     )
 
 
-def test_problem_type_is_unchanged() -> None:
-    """The verifier does not rely on a structured-answer field the Problem lacks.
+def test_problem_carries_an_answer_kind_defaulting_to_numeric() -> None:
+    """The Problem type now carries ``answer_kind`` to distinguish a numeric answer
+    from a yes/no relational judgment (the formerly-deferred Slice 1.4 extension).
 
-    Slice 1.4 verifies NUMERIC answers only and must NOT modify the committed
-    ``Problem`` type. yes/no and ordering verification (the structured/ordered bank
-    items) is a DEFERRED extension; this test documents that the Problem type still
-    carries only the numeric ``correct_value`` anchor, not a structured answer.
+    The default is NUMERIC, so every existing generator/bank item is unchanged: a
+    yes/no item opts in explicitly. The truth of a yes/no item is still computed from
+    SymPy over the operands (no separate stored answer), so the verifier — not a
+    stored string — decides correctness (ARCHITECTURE.md §9, §14 invariant 2).
     """
-    fields = {f for f in Problem.__dataclass_fields__}
-    assert "correct_value" in fields
-    # No structured-answer field exists on Problem (yes/no + ordering deferred).
-    assert "structured_answer" not in fields
+    fields = Problem.__dataclass_fields__
+    assert "answer_kind" in fields
+    # Numeric is the default — a generated problem opts into yes/no, nothing else changes.
+    assert generate_problem(KnowledgeComponentId.ADDITION_UNLIKE, seed=1).answer_kind is (
+        AnswerKind.NUMERIC
+    )
+
+
+# ───────────────── yes/no relational judgments (formerly deferred) ─────────────────
+
+
+def _yes_no_equivalence(first: Rational, second: Rational) -> Problem:
+    """A yes/no equivalence probe — 'Is `first` the same amount as `second`?'. The
+    truth is `first == second` (SymPy); the verifier computes it from the operands."""
+    return Problem(
+        problem_id=f"YESNO-{first}-{second}",
+        kc=KnowledgeComponentId.EQUIVALENCE,
+        surface_format=Representation.SYMBOLIC,
+        statement=f"Is {first} the same amount as {second}?",
+        correct_value=first,
+        representations_available=(Representation.SYMBOLIC,),
+        operands=(first, second),
+        answer_kind=AnswerKind.YES_NO,
+    )
+
+
+def test_yes_no_correct_when_the_judgment_matches_sympy() -> None:
+    """For equal operands the true answer is YES; for unequal it is NO. SymPy decides
+    the equality, the verifier maps the learner's yes/no onto it."""
+    equal = _yes_no_equivalence(Rational(2, 3), Rational(4, 6))  # truly equal
+    unequal = _yes_no_equivalence(Rational(1, 2), Rational(1, 3))  # truly unequal
+
+    assert verify(equal, "yes").is_correct is True
+    assert verify(equal, "no").is_correct is False
+    assert verify(unequal, "no").is_correct is True
+    assert verify(unequal, "yes").is_correct is False
+
+
+def test_yes_no_accepts_case_and_whitespace_variants() -> None:
+    """A kid's 'Yes', ' YES ', 'no' all parse — the verifier normalizes the answer."""
+    equal = _yes_no_equivalence(Rational(2, 3), Rational(4, 6))
+    for yes in ("yes", "Yes", " YES ", "YES"):
+        assert verify(equal, yes).is_correct is True
+    for no in ("no", "No", " NO "):
+        assert verify(equal, no).is_correct is False
+
+
+def test_yes_no_wrong_answer_is_a_magnitude_error() -> None:
+    """A wrong equivalence judgment means the learner misjudged whether the amounts
+    match — a MAGNITUDE error, which §3.6 routes to the number line (S2). We do not
+    over-claim a specific misconception match."""
+    equal = _yes_no_equivalence(Rational(2, 3), Rational(4, 6))
+    wrong = verify(equal, "no")
+    assert wrong.is_correct is False
+    assert wrong.error_category is ErrorCategory.MAGNITUDE
+    assert wrong.matched_misconception is None
+
+
+def test_yes_no_unparseable_answer_is_wrong_never_crashes() -> None:
+    """The verifier must never crash on what a kid types. A non-yes/no string on a
+    yes/no item is simply wrong (OTHER), like an unparseable numeric answer."""
+    equal = _yes_no_equivalence(Rational(2, 3), Rational(4, 6))
+    for junk in ("maybe", "", "2/3", "idk"):
+        result = verify(equal, junk)
+        assert result.is_correct is False
+        assert result.error_category is ErrorCategory.OTHER

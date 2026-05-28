@@ -1,0 +1,58 @@
+/* Yes/No answer control for relational-judgment problems (Slice 1.4 yes/no extension).
+   Calm/editorial to match the in-tutor register; two large, obvious choice buttons. */
+
+.wm-yesno {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wm-yesno-prompt {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}
+
+.wm-yesno-options {
+  display: flex;
+  gap: 14px;
+}
+
+.wm-yesno-option {
+  min-width: 132px;
+  font-family: var(--wm-font-sans);
+  font-size: 22px;
+  font-weight: 700;
+  padding: 16px 22px;
+  color: var(--wm-ink);
+  background: var(--wm-cream-2);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 -1px var(--wm-shadow, rgba(31, 44, 92, 0.18));
+  transition:
+    transform 0.08s ease,
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.wm-yesno-option:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.wm-yesno-option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-yesno-option--selected {
+  background: var(--wm-navy-deep);
+  color: var(--wm-cream);
+}
+
+.wm-yesno-option:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

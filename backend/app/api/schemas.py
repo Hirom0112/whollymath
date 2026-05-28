@@ -29,6 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # single source of truth (ARCHITECTURE.md §4). Importing the enums (not raw
 # strings) keeps the contract aligned with the domain and the generated TS types.
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
+from app.domain.problem_generators import AnswerKind
 
 # ErrorType IS the domain verifier's ErrorCategory (Slice 1.4). The verifier owns
 # the §3.6 routing alphabet; the API speaks the very same enum so the wire contract
@@ -114,6 +115,10 @@ class ProblemView(BaseModel):
     kc: KnowledgeComponentId
     surface_format: Representation = Field(description="Representation to render (§3.5).")
     statement: str = Field(min_length=1, description="Kid-friendly problem text.")
+    answer_kind: AnswerKind = Field(
+        default=AnswerKind.NUMERIC,
+        description="How to answer: a numeric fraction (default) or yes/no buttons.",
+    )
     # The number-line surface needs a candidate set to snap a drag onto BEFORE the
     # answer reaches the domain (the verifier does exact Rational equality, no
     # tolerance — verifier.py docstring). The candidate set is k/tick_segments for
@@ -407,6 +412,7 @@ class ThreeArmComparisonView(BaseModel):
 
 __all__ = [
     "ActionType",
+    "AnswerKind",
     "ArmVerdictView",
     "ErrorType",
     "InterventionKind",

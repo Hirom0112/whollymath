@@ -9,7 +9,14 @@ import {
   type TurnResponse,
 } from '../api';
 import { Mascot } from '../components/Mascot';
-import { fractionToAnswer, NumberLine, SymbolicEditor, type FractionValue } from '../workspace';
+import {
+  fractionToAnswer,
+  NumberLine,
+  SymbolicEditor,
+  YesNo,
+  yesNoToAnswer,
+  type FractionValue,
+} from '../workspace';
 import './Tutor.css';
 
 const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
@@ -54,6 +61,8 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const [surfaceState, setSurfaceState] = useState<SurfaceState>(session.surface_state);
   const [fraction, setFraction] = useState<FractionValue>(EMPTY_FRACTION);
   const [tick, setTick] = useState<number | null>(null);
+  // The yes/no selection for relational-judgment problems (true=yes, false=no, null=unset).
+  const [yesNo, setYesNo] = useState<boolean | null>(null);
   const [phase, setPhase] = useState<Phase>('answering');
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -74,10 +83,17 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // any "a/b" (including an addition sum > 1 the marker/bars couldn't show). Both
   // produce the "n/d" answer string the domain verifier parses server-side.
   const isPlacement = problem.kc === 'KC_number_line_placement' && problem.tick_segments != null;
+  // A relational-judgment problem ("Is X the same amount as Y?") is answered yes/no, not
+  // by typing a fraction — the server tells us via answer_kind so the surface matches the
+  // question (the coherence fix: a yes/no question must not land on a fraction input).
+  const isYesNo = problem.answer_kind === 'yes_no';
 
   let submittedAnswer: string;
   let canSubmit: boolean;
-  if (isPlacement) {
+  if (isYesNo) {
+    submittedAnswer = yesNoToAnswer(yesNo);
+    canSubmit = yesNo !== null;
+  } else if (isPlacement) {
     submittedAnswer = tick === null ? '' : `${String(tick)}/${String(problem.tick_segments)}`;
     canSubmit = tick !== null;
   } else {
@@ -135,6 +151,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     setSurfaceState(result.next_surface_state);
     setFraction(EMPTY_FRACTION);
     setTick(null);
+    setYesNo(null);
     setHint(null);
     setHintUsed(false);
     // Carry any proactive offer the just-finished turn produced onto this next problem.
@@ -160,7 +177,11 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     <main className="wm-tutor">
       <section className="wm-tutor-card" aria-live="polite">
         <p className="wm-tutor-mode">
-          {isPlacement ? 'Place it on the number line' : STATE_LABEL[surfaceState]}
+          {isYesNo
+            ? 'Same amount, or not?'
+            : isPlacement
+              ? 'Place it on the number line'
+              : STATE_LABEL[surfaceState]}
         </p>
         <h1 className="wm-tutor-statement">{problem.statement}</h1>
 
@@ -177,7 +198,14 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
 
         {phase !== 'feedback' ? (
           <form className="wm-tutor-form" onSubmit={handleSubmit}>
-            {isPlacement && problem.tick_segments != null ? (
+            {isYesNo ? (
+              <YesNo
+                value={yesNo}
+                onChange={setYesNo}
+                disabled={phase === 'submitting'}
+                prompt="Your answer"
+              />
+            ) : isPlacement && problem.tick_segments != null ? (
               <NumberLine
                 segments={problem.tick_segments}
                 value={tick}

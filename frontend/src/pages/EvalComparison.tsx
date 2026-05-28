@@ -108,10 +108,10 @@ export function EvalComparison(): React.JSX.Element {
         <section className="wm-eval-metrics">
           <h2 className="wm-eval-section-title">The other five pre-registered metrics</h2>
           <p className="wm-eval-section-note">
-            Each is attacked by one persona. The adaptive verdict is the rule that actually
-            blocked that learner in the run; the chat verdict is the live self-assessment (or, for
-            the learners it denied, the honest note that it lacks the mechanism); the static
-            walkthrough has no mastery construct at all.
+            Each is attacked by one persona. The adaptive verdict is the rule that actually blocked
+            that learner in the run; the chat verdict is the live self-assessment (or, for the
+            learners it denied, the honest note that it lacks the mechanism); the static walkthrough
+            has no mastery construct at all.
           </p>
           <div className="wm-eval-grid" role="table" aria-label="Per-metric comparison">
             <div className="wm-eval-row wm-eval-row--header" role="row">

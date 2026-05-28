@@ -38,6 +38,7 @@ import random
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from sympy import Rational, ilcm
@@ -45,6 +46,22 @@ from sympy import Rational, ilcm
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 
 # ─── The shared Problem type ─────────────────────────────────────────────────
+
+
+class AnswerKind(StrEnum):
+    """How a problem expects to be ANSWERED — distinct from how it is rendered.
+
+    Most items want a numeric magnitude (``a/b`` or an integer): that is ``NUMERIC``,
+    the default. A relational judgment — "Is 2/3 the same amount as 4/6?" — wants a
+    ``YES_NO``. The truth of a yes/no item is computed by SymPy over ``operands`` (the
+    two named fractions), so the verifier still decides correctness, never a stored
+    answer (ARCHITECTURE.md §9, §14 invariant 2). The surface uses this to pick the
+    answer widget (a fraction editor vs. yes/no buttons); the verifier uses it to pick
+    the correctness rule.
+    """
+
+    NUMERIC = "numeric"
+    YES_NO = "yes_no"
 
 
 @dataclass(frozen=True)
@@ -85,6 +102,9 @@ class Problem:
     correct_value: Rational
     representations_available: tuple[Representation, ...]
     operands: tuple[Rational, ...] | None = None
+    # How the learner answers: a numeric magnitude (default) or a yes/no relational
+    # judgment. A yes/no item's truth is SymPy over ``operands`` — see ``AnswerKind``.
+    answer_kind: AnswerKind = AnswerKind.NUMERIC
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), and the chosen

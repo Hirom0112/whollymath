@@ -50,7 +50,7 @@ from app.domain.misconceptions import (
     natural_number_bias_number_line,
     subtract_across,
 )
-from app.domain.problem_generators import Problem
+from app.domain.problem_generators import AnswerKind, Problem
 
 
 class ErrorCategory(StrEnum):
@@ -149,6 +149,59 @@ def _parse_to_rational(submitted: Submitted) -> Rational | None:
         return None
 
 
+_YES_TOKENS = frozenset({"yes", "y", "true"})
+_NO_TOKENS = frozenset({"no", "n", "false"})
+
+
+def _parse_to_bool(submitted: Submitted) -> bool | None:
+    """Parse a yes/no submission to a bool, or ``None`` if it is neither.
+
+    Accepts the kid-facing 'yes'/'no' (case- and whitespace-insensitive) plus the
+    in-process ``bool`` a non-UI caller might pass. Anything else (a number, blank, or
+    junk) returns ``None`` — the caller reports it wrong rather than crashing, exactly
+    as the numeric path treats an unparseable answer."""
+    if isinstance(submitted, bool):
+        return submitted
+    if not isinstance(submitted, str):
+        return None
+    token = submitted.strip().lower()
+    if token in _YES_TOKENS:
+        return True
+    if token in _NO_TOKENS:
+        return False
+    return None
+
+
+def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult:
+    """Verify a yes/no relational judgment. The truth is SymPy equality over the two
+    operands (e.g. 2/3 == 4/6 → the answer is YES); a wrong judgment is a MAGNITUDE
+    error (the learner misjudged whether the amounts match — §3.6 routes it to S2, the
+    number line). We do not over-claim a specific misconception match."""
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        # A yes/no item without a fraction pair is a CONSTRUCTION bug (not learner
+        # input): there is nothing for SymPy to judge equality over. Fail loudly
+        # (CLAUDE.md §8.5) rather than silently scoring a meaningless verdict.
+        raise ValueError(
+            f"yes/no problem {problem.problem_id!r} needs exactly two operands to verify"
+        )
+
+    answer = _parse_to_bool(submitted)
+    if answer is None:
+        return VerificationResult(
+            is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+        )
+
+    truth = bool(operands[0] == operands[1])
+    if answer == truth:
+        return VerificationResult(
+            is_correct=True, error_category=ErrorCategory.NONE, matched_misconception=None
+        )
+    return VerificationResult(
+        is_correct=False, error_category=ErrorCategory.MAGNITUDE, matched_misconception=None
+    )
+
+
 def _classify_wrong_answer(
     problem: Problem, submitted_value: Rational
 ) -> tuple[ErrorCategory, MisconceptionId | None]:
@@ -241,15 +294,16 @@ def verify(problem: Problem, submitted: Submitted) -> VerificationResult:
     On a wrong answer, ``_classify_wrong_answer`` assigns the §3.6 routing category by
     matching the submission against the misconception generators on the operands.
 
-    DEFERRED (out of Slice 1.4 scope): yes/no relational judgments and multi-point
-    ordering. Those bank items carry only a magnitude *anchor* in ``correct_value``
-    (the committed ``Problem`` type has no structured-answer field), so verifying the
-    learner's actual yes/no or ordering against the true judgment is not possible
-    without extending the ``Problem`` type — which this slice must NOT do. A later
-    slice adds a structured-answer carrier and the matching verifier path; until then
-    this function treats only the numeric magnitude, which is correct for all five
-    procedural KCs and for the fraction/point bank items.
+    yes/no relational judgments ("Is 2/3 the same amount as 4/6?") route to
+    ``_verify_yes_no``: the truth is SymPy equality over the two operands, so SymPy
+    still decides — no stored answer. A problem opts in via ``answer_kind=YES_NO``
+    (the default ``NUMERIC`` keeps every procedural generator and bank item on the
+    magnitude path). STILL DEFERRED: multi-point ordering, which needs a structured
+    ordered-answer carrier the ``Problem`` type does not yet have.
     """
+    if problem.answer_kind is AnswerKind.YES_NO:
+        return _verify_yes_no(problem, submitted)
+
     submitted_value = _parse_to_rational(submitted)
     if submitted_value is None:
         # Unparseable or undefined (n/0, blank, non-numeric): not correct, and there

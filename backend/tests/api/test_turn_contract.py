@@ -99,6 +99,33 @@ def test_start_session_returns_session_id_and_first_problem() -> None:
     assert started.problem.problem_id and started.problem.statement
 
 
+def test_equivalence_route_serves_a_yes_no_problem_answered_correctly() -> None:
+    """The equivalence cold-start probe ('Is 2/3 the same amount as 4/6?') is a YES/NO
+    item end-to-end: the wire carries answer_kind=yes_no so the surface renders buttons,
+    and submitting 'yes' verifies correct (2/3 == 4/6). This is the coherence fix — a
+    yes/no question no longer lands on a fraction input."""
+    app = create_app()
+    started = _start_session(app, route_key="same_amount")
+    problem = started.problem
+    assert problem.answer_kind.value == "yes_no"
+    assert "same amount" in problem.statement
+
+    status_code, body = post_json(
+        app,
+        "/turn",
+        {**_turn_body(started.session_id, problem.problem_id, answer="yes")},
+    )
+    assert status_code == 200, body
+    assert body["correct"] is True
+
+
+def test_numeric_problems_still_default_to_numeric_answer_kind() -> None:
+    """The addition calibration item is unchanged: answer_kind defaults to numeric."""
+    app = create_app()
+    started = _start_session(app)  # the addition route
+    assert started.problem.answer_kind.value == "numeric"
+
+
 def test_start_session_rejects_unknown_route_key_with_422() -> None:
     """A route_key outside the locked menu is a client error → 422 (no invented route)."""
     app = create_app()
