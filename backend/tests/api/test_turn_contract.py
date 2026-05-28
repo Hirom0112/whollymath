@@ -126,6 +126,23 @@ def test_numeric_problems_still_default_to_numeric_answer_kind() -> None:
     assert started.problem.answer_kind.value == "numeric"
 
 
+def test_generated_equivalence_item_carries_a_locked_denominator() -> None:
+    """After the yes/no cold-start probe, the equivalence route serves a generated
+    fill-the-top item: it carries given_denominator so the surface locks the bottom box
+    and the learner enters only the numerator (the coherence fix for that item)."""
+    app = create_app()
+    started = _start_session(app, route_key="same_amount")
+    status_code, body = post_json(
+        app, "/turn", _turn_body(started.session_id, started.problem.problem_id, answer="yes")
+    )
+    assert status_code == 200, body
+    next_problem = ProblemView.model_validate(body["next_problem"])
+    assert next_problem.kc.value == "KC_equivalence"
+    assert next_problem.answer_kind.value == "numeric"
+    assert next_problem.given_denominator is not None and next_problem.given_denominator >= 1
+    assert f"?/{next_problem.given_denominator}" in next_problem.statement
+
+
 def test_start_session_rejects_unknown_route_key_with_422() -> None:
     """A route_key outside the locked menu is a client error → 422 (no invented route)."""
     app = create_app()

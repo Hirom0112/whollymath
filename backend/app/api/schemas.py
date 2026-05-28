@@ -130,6 +130,15 @@ class ProblemView(BaseModel):
         ge=1,
         description="Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.",
     )
+    given_denominator: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Equivalence fill-the-top only: the denominator named in the question "
+            "('?/8'), pre-filled and locked so the learner enters only the numerator. "
+            "Null otherwise."
+        ),
+    )
 
 
 class RouteOptionView(BaseModel):

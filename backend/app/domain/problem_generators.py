@@ -105,6 +105,12 @@ class Problem:
     # How the learner answers: a numeric magnitude (default) or a yes/no relational
     # judgment. A yes/no item's truth is SymPy over ``operands`` — see ``AnswerKind``.
     answer_kind: AnswerKind = AnswerKind.NUMERIC
+    # For a "fill in the missing top number" equivalence item ("3/4 is the same as ?/8")
+    # the denominator is GIVEN in the question, so only the numerator is the learner's to
+    # find. The surface pre-fills and locks this denominator so the widget asks for exactly
+    # the one blank the statement names. ``None`` for every other item (a rendering hint,
+    # like the number-line ``tick_segments``; the verifier still judges value-equality).
+    given_denominator: int | None = None
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), and the chosen
@@ -227,6 +233,7 @@ def _generate_equivalence(rng: random.Random, seed: int, surface_format: Represe
         correct_value=base,  # the equivalent form names the same amount as `base`
         representations_available=get_kc(KnowledgeComponentId.EQUIVALENCE).representations,
         operands=(base,),
+        given_denominator=new_denominator,  # surface pre-fills/locks the "?/{new_denominator}"
     )
 
 

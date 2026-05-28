@@ -21,6 +21,16 @@ import './Tutor.css';
 
 const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
 
+// The starting answer state for a problem. An equivalence "fill the top" item gives the
+// denominator ("?/8"), so we seed it (locked in the editor) and the learner enters only
+// the numerator; every other item starts blank.
+function initialFraction(problem: ProblemView): FractionValue {
+  if (problem.given_denominator != null) {
+    return { numerator: '', denominator: String(problem.given_denominator) };
+  }
+  return EMPTY_FRACTION;
+}
+
 /**
  * The in-tutor problem surface (Turn 1 onward). Drives the real reactive loop
  * (ARCHITECTURE.md §10): present the current problem, take an answer, POST /turn,
@@ -59,7 +69,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const sessionId = session.session_id;
   const [problem, setProblem] = useState<ProblemView>(session.problem);
   const [surfaceState, setSurfaceState] = useState<SurfaceState>(session.surface_state);
-  const [fraction, setFraction] = useState<FractionValue>(EMPTY_FRACTION);
+  const [fraction, setFraction] = useState<FractionValue>(() => initialFraction(session.problem));
   const [tick, setTick] = useState<number | null>(null);
   // The yes/no selection for relational-judgment problems (true=yes, false=no, null=unset).
   const [yesNo, setYesNo] = useState<boolean | null>(null);
@@ -149,7 +159,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     if (!next) return;
     setProblem(next);
     setSurfaceState(result.next_surface_state);
-    setFraction(EMPTY_FRACTION);
+    setFraction(initialFraction(next));
     setTick(null);
     setYesNo(null);
     setHint(null);
@@ -218,6 +228,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
                 onChange={setFraction}
                 disabled={phase === 'submitting'}
                 prompt="Your answer"
+                lockDenominator={problem.given_denominator != null}
               />
             )}
             <div className="wm-tutor-actions">

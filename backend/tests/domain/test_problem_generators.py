@@ -239,6 +239,37 @@ def test_problem_ids_are_unique_per_seed_within_a_kc() -> None:
     assert len(distinct_ids) == len(distinct_problems)
 
 
+def test_equivalence_fill_exposes_the_given_denominator() -> None:
+    """The 'fill in the missing top number' item names a denominator in the statement
+    ('… is the same as ?/8'); the surface must pre-fill and lock it so the widget asks
+    only for the numerator. The denominator is exposed as structured data (not parsed
+    from the string), and the correct numerator over it equals the target value."""
+    from app.domain.verifier import verify
+
+    for seed in range(10):
+        problem = generate_problem(KnowledgeComponentId.EQUIVALENCE, seed=seed)
+        given = problem.given_denominator
+        assert given is not None and given > 0
+        # The statement's "?/{given}" matches the exposed denominator (no drift).
+        assert f"?/{given}" in problem.statement
+        # The correct numerator over the given denominator names the target value.
+        numerator = problem.correct_value * given
+        assert numerator == int(numerator)  # it is a whole number of those pieces
+        assert verify(problem, f"{int(numerator)}/{given}").is_correct is True
+
+
+def test_non_equivalence_items_have_no_given_denominator() -> None:
+    """``given_denominator`` is an equivalence-fill rendering hint; it is None elsewhere
+    so no other surface tries to lock a denominator."""
+    for kc in (
+        KnowledgeComponentId.ADDITION_UNLIKE,
+        KnowledgeComponentId.SUBTRACTION_UNLIKE,
+        KnowledgeComponentId.COMMON_DENOMINATOR,
+        KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
+    ):
+        assert generate_problem(kc, seed=1).given_denominator is None
+
+
 # ─── Surface format is a generator parameter (decision 0.D.1) ────────────────
 
 

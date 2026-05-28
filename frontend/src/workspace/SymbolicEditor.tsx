@@ -33,12 +33,20 @@ export function SymbolicEditor({
   onChange,
   disabled = false,
   prompt,
+  lockDenominator = false,
 }: {
   value: FractionValue;
   onChange: (next: FractionValue) => void;
   disabled?: boolean;
   /** Optional kid-friendly label above the control (e.g. the problem statement). */
   prompt?: string;
+  /**
+   * When true the denominator is GIVEN by the question (an equivalence "fill the top"
+   * item, "3/4 is the same as ?/8"): the bottom field shows the value and is not
+   * editable, so the learner enters only the numerator the statement asks for. The
+   * parent seeds `value.denominator` with the given number.
+   */
+  lockDenominator?: boolean;
 }): React.JSX.Element {
   return (
     <div className="wm-symbolic" role="group" aria-label="Enter your fraction answer">
@@ -59,7 +67,7 @@ export function SymbolicEditor({
         />
         <span className="wm-symbolic-bar" aria-hidden="true" />
         <input
-          className="wm-symbolic-field"
+          className={`wm-symbolic-field ${lockDenominator ? 'wm-symbolic-field--given' : ''}`}
           type="text"
           inputMode="numeric"
           autoComplete="off"
@@ -67,7 +75,10 @@ export function SymbolicEditor({
           placeholder="–"
           value={value.denominator}
           disabled={disabled}
+          readOnly={lockDenominator}
+          aria-readonly={lockDenominator}
           onChange={(event) => {
+            if (lockDenominator) return;
             onChange({ ...value, denominator: digitsOnly(event.target.value) });
           }}
         />

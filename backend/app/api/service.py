@@ -93,6 +93,7 @@ def _problem_view(problem: Problem) -> ProblemView:
         statement=problem.statement,
         answer_kind=problem.answer_kind,
         tick_segments=int(problem.correct_value.q) if is_number_line else None,
+        given_denominator=problem.given_denominator,
     )
 
 

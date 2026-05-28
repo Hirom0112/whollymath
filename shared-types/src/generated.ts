@@ -231,6 +231,10 @@ export interface ProblemView {
    * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
    */
   tick_segments?: number | null;
+  /**
+   * Equivalence fill-the-top only: the denominator named in the question ('?/8'), pre-filled and locked so the learner enters only the numerator. Null otherwise.
+   */
+  given_denominator?: number | null;
 }
 /**
  * One Turn-0 routing option for the cold-start menu (decision 0.D.2).
@@ -308,6 +312,10 @@ export interface ProblemView1 {
    * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
    */
   tick_segments?: number | null;
+  /**
+   * Equivalence fill-the-top only: the denominator named in the question ('?/8'), pre-filled and locked so the learner enters only the numerator. Null otherwise.
+   */
+  given_denominator?: number | null;
 }
 /**
  * The full three-arm comparison for display (Slice 5.3, PROJECT.md §3.11).

@@ -46,6 +46,14 @@
   opacity: 0.6;
 }
 
+/* A GIVEN (locked) denominator — the question supplied it ("?/8"). Reads as
+   intentional and solid, not greyed-out like a disabled field. */
+.wm-symbolic-field--given {
+  background: var(--wm-navy-deep);
+  color: var(--wm-cream);
+  cursor: default;
+}
+
 .wm-symbolic-bar {
   width: 104px;
   height: 4px;
