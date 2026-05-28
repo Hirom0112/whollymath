@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { Mascot } from '../components/Mascot';
 import './Landing.css';
 
-const ROLL_MS = 600;
+const ROLL_MS = 900;
 const ROLL_MS_REDUCED = 320;
 
 function prefersReducedMotion(): boolean {
