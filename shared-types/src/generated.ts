@@ -228,6 +228,10 @@ export interface ProblemView {
   statement: string;
   answer_kind?: AnswerKind;
   /**
+   * For a yes/no item, what it asks: 'equal' (same amount?) or 'greater' (a > b?). Lets the surface label the question accurately. 'equal' for non-yes/no items.
+   */
+  yes_no_relation?: string;
+  /**
    * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
    */
   tick_segments?: number | null;
@@ -308,6 +312,10 @@ export interface ProblemView1 {
    */
   statement: string;
   answer_kind?: AnswerKind;
+  /**
+   * For a yes/no item, what it asks: 'equal' (same amount?) or 'greater' (a > b?). Lets the surface label the question accurately. 'equal' for non-yes/no items.
+   */
+  yes_no_relation?: string;
   /**
    * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
    */

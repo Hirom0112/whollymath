@@ -246,7 +246,9 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
         ) : null}
         <p className="wm-tutor-mode">
           {isYesNo
-            ? 'Same amount, or not?'
+            ? problem.yes_no_relation === 'greater'
+              ? 'Bigger, or not?'
+              : 'Same amount, or not?'
             : isNumberLine
               ? 'Place it on the number line'
               : STATE_LABEL[surfaceState]}

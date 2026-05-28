@@ -119,6 +119,13 @@ class ProblemView(BaseModel):
         default=AnswerKind.NUMERIC,
         description="How to answer: a numeric fraction (default) or yes/no buttons.",
     )
+    yes_no_relation: str = Field(
+        default="equal",
+        description=(
+            "For a yes/no item, what it asks: 'equal' (same amount?) or 'greater' (a > b?). "
+            "Lets the surface label the question accurately. 'equal' for non-yes/no items."
+        ),
+    )
     # The number-line surface needs a candidate set to snap a drag onto BEFORE the
     # answer reaches the domain (the verifier does exact Rational equality, no
     # tolerance — verifier.py docstring). The candidate set is k/tick_segments for
