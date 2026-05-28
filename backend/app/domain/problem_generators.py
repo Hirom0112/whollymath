@@ -225,13 +225,45 @@ def _generated_id(kc: KnowledgeComponentId, seed: int, surface_format: Represent
 
 
 def _generate_equivalence(rng: random.Random, seed: int, surface_format: Representation) -> Problem:
-    """KC_equivalence: rename a fraction to an equivalent form with a bigger bottom.
+    """KC_equivalence in two REAL representations (so mastery rule 2 is reachable live):
 
-    We pick a proper fraction and a scale factor, then ask for the missing top of
-    the equivalent fraction (the bank's EQ-003/EQ-004 fill-the-blank shape). The
-    correct value is the original fraction (the equivalent form names the SAME
-    amount) — a pure equivalence question, no mult/div of fractions involved.
+    - **SYMBOLIC** (default): "fill in the missing top number so both names show the same
+      amount: a/b is the same as ?/N" (the bank's EQ-003/EQ-004 fill-the-blank shape). The
+      denominator N is given; the learner supplies the numerator. correct_value = the base.
+    - **WORD_PROBLEM**: a yes/no JUDGMENT in a story — "{Name} cut a {thing} into N pieces and
+      took k; is that the same amount as a/b?" Half the time (deterministic per seed) the story
+      amount is a genuine rename of a/b (equal → YES); otherwise a different amount (NO). The
+      truth is SymPy equality over the two operands. Translating a story to a fraction comparison
+      is a genuinely different skill from the symbolic form — a real second representation for
+      mastery rule 2, answered with the same yes/no control.
     """
+    if surface_format is Representation.WORD_PROBLEM:
+        base = _proper_fraction(rng)  # the a/b the story is compared against
+        if rng.random() < 0.5:  # the story amount is an equal rename (answer YES)
+            scale = rng.randint(2, 4)
+            taken, pieces, other = base.p * scale, base.q * scale, base
+        else:  # a genuinely different amount (answer NO)
+            other = _proper_fraction(rng)
+            while other == base:
+                other = _proper_fraction(rng)
+            taken, pieces = other.p, other.q
+        name = rng.choice(("Maria", "Sam", "Leo", "Ava", "Theo"))
+        thing = rng.choice(("pizza", "cake", "ribbon", "chocolate bar"))
+        statement = (
+            f"{name} cut a {thing} into {pieces} equal pieces and took {taken}. "
+            f"Is that the same amount as {base.p}/{base.q} of the {thing}?"
+        )
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.EQUIVALENCE, seed, surface_format),
+            kc=KnowledgeComponentId.EQUIVALENCE,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=base,  # magnitude anchor; the yes/no truth is operands[0] == operands[1]
+            representations_available=get_kc(KnowledgeComponentId.EQUIVALENCE).representations,
+            operands=(base, other),
+            answer_kind=AnswerKind.YES_NO,
+        )
+
     base = _proper_fraction(rng)
     scale = rng.randint(2, 4)  # bigger-bottom rename; keeps numbers curriculum-sized
     new_denominator = base.q * scale

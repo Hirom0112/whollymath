@@ -47,13 +47,20 @@ def test_schedule_is_deterministic() -> None:
 
 
 def test_masterable_live_is_honest_about_each_route() -> None:
-    """Arithmetic routes have 2 live representations → masterable now. Equivalence and
-    number-line placement have only one live representation → not yet (rule 2 can't be met
-    until their 2nd representation is built)."""
+    """Arithmetic routes (symbolic + number line) and equivalence (symbolic + word-problem
+    judgment) have ≥2 live representations → masterable now. Number-line placement still has
+    one live representation → not yet (rule 2 can't be met until its 2nd representation)."""
     assert is_masterable_live(_ADD) is True
     assert is_masterable_live(_SUB) is True
-    assert is_masterable_live(_EQ) is False
+    assert is_masterable_live(_EQ) is True
     assert is_masterable_live(_NL) is False
+
+
+def test_equivalence_rotates_symbolic_and_word_problem() -> None:
+    """The equivalence goal is served in BOTH its live representations across a run, so a
+    learner can be correct in 2 representations (mastery rule 2)."""
+    reps = {rep for i in range(12) for kc, rep in [next_spec(_EQ, i)] if kc == _EQ}
+    assert reps == {Representation.SYMBOLIC, Representation.WORD_PROBLEM}
 
 
 def test_negative_index_is_a_programming_error() -> None:

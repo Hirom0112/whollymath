@@ -37,7 +37,8 @@ _REP = Representation
 _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = {
     _KC.ADDITION_UNLIKE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
     _KC.SUBTRACTION_UNLIKE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
-    _KC.EQUIVALENCE: (_REP.SYMBOLIC,),
+    # SYMBOLIC = fill-the-top / yes-no; WORD_PROBLEM = a story "same amount?" yes-no judgment.
+    _KC.EQUIVALENCE: (_REP.SYMBOLIC, _REP.WORD_PROBLEM),
     _KC.NUMBER_LINE_PLACEMENT: (_REP.NUMBER_LINE,),
 }
 

@@ -35,6 +35,7 @@ import pytest
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import (
     GENERATORS,
+    AnswerKind,
     Problem,
     generate_problem,
     problem_from_bank_item,
@@ -256,6 +257,28 @@ def test_equivalence_fill_exposes_the_given_denominator() -> None:
         numerator = problem.correct_value * given
         assert numerator == int(numerator)  # it is a whole number of those pieces
         assert verify(problem, f"{int(numerator)}/{given}").is_correct is True
+
+
+def test_equivalence_word_problem_is_a_yes_no_judgment() -> None:
+    """The WORD_PROBLEM equivalence item is a yes/no story judgment over two amounts: its
+    truth (SymPy over the operands) matches the learner's yes/no — verified both ways — and
+    both yes and no cases occur across seeds (so the answer isn't trivially constant)."""
+    from app.domain.verifier import verify
+
+    saw_equal = saw_unequal = False
+    for seed in range(20):
+        p = generate_problem(
+            KnowledgeComponentId.EQUIVALENCE, seed=seed, surface_format=Representation.WORD_PROBLEM
+        )
+        assert p.answer_kind is AnswerKind.YES_NO
+        assert p.operands is not None and len(p.operands) == 2
+        assert "?" in p.statement and "same amount" in p.statement  # a real judgment prompt
+        truly_equal = p.operands[0] == p.operands[1]
+        assert verify(p, "yes").is_correct is truly_equal
+        assert verify(p, "no").is_correct is (not truly_equal)
+        saw_equal = saw_equal or truly_equal
+        saw_unequal = saw_unequal or not truly_equal
+    assert saw_equal and saw_unequal
 
 
 def test_non_equivalence_items_have_no_given_denominator() -> None:
