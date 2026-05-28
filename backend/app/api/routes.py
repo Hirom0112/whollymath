@@ -103,12 +103,21 @@ def start_session(
     request: StartSessionRequest,
     store: StoreDep,
 ) -> StartSessionResponse:
-    """Start a session from a Turn-0 route choice; return its Turn-1 problem (0.D.2).
+    """Start a session — from a Turn-0 route choice (0.D.2) or a course-map skill (§3.13).
 
-    Delegates to the store, which derives the route/prior/calibration item
-    server-side. An unknown ``route_key`` is a client error → 422 (we do not invent a
-    route, CLAUDE.md §8.5).
+    Exactly one of ``kc`` / ``route_key`` must be given. A ``kc`` starts that skill's lesson
+    directly (course map); a ``route_key`` takes the cold-start path. Both derive the
+    prior/first problem server-side. Neither-or-both given, or an unknown ``route_key``, is a
+    client error → 422 (we do not invent a route, CLAUDE.md §8.5).
     """
+    if (request.kc is None) == (request.route_key is None):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="provide exactly one of 'kc' or 'route_key'",
+        )
+    if request.kc is not None:
+        return store.start_kc(request.kc, proactive_enabled=request.proactive_enabled)
+    assert request.route_key is not None  # narrowed by the exactly-one check above
     try:
         return store.start(request.route_key, proactive_enabled=request.proactive_enabled)
     except UnknownRouteError as exc:

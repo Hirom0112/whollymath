@@ -430,18 +430,27 @@ export interface RouteOptionView {
   is_unsure_default: boolean;
 }
 /**
- * Begin a session from a Turn-0 routing choice (decision 0.D.2).
+ * Begin a session — EITHER from a Turn-0 routing choice (0.D.2) OR a course-map skill.
  *
- * Carries only the chosen ``route_key`` (a ``RouteOptionView.key``). The KC,
- * calibration item, and BKT prior are all derived server-side from the locked
- * routing table (tutor ``from_route``) — the client cannot set them, so the
- * prior-not-commitment seeding stays authoritative on the backend (0.D.2).
+ * Two mutually-exclusive entry points (exactly one of ``route_key`` / ``kc``):
+ *
+ *   - ``route_key`` — the chosen Turn-0 option key (the cold-start path). The KC, calibration
+ *     item, and BKT prior are all derived server-side from the locked routing table (tutor
+ *     ``from_route``), so the prior-not-commitment seeding stays authoritative (0.D.2).
+ *   - ``kc`` — start a lesson DIRECTLY for this knowledge component (the course-map node
+ *     launch, §3.13). The server presents a generated first problem for the KC in its first
+ *     live representation; no skill claim is seeded (studying a skill is not a claim to know
+ *     it).
  */
 export interface StartSessionRequest {
   /**
-   * The chosen Turn-0 option key (0.D.2).
+   * The chosen Turn-0 option key (0.D.2). Provide this OR kc, not both.
    */
-  route_key: string;
+  route_key?: string | null;
+  /**
+   * Start a lesson directly for this KC (course map). Provide this OR route_key.
+   */
+  kc?: KnowledgeComponentId | null;
   /**
    * Opt into the proactive HelpNeed arm for this session (Slice 4.5). Default OFF = observe-only (RESEARCH.md §7.5); set by the Slice 5.4 A/B harness or a demo. When OFF the session never sees a proactive intervention.
    */

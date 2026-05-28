@@ -67,7 +67,7 @@ from app.mastery.progression import plan_study
 from app.mastery.retention import ReviewableSkill
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
-from app.policy.scheduler import is_masterable_live, next_spec
+from app.policy.scheduler import is_masterable_live, live_representations, next_spec
 from app.tutor.hints import HintLevel, build_validated_hint, select_nudge
 from app.tutor.live_transfer_probe import build_live_probe_steps
 from app.tutor.session import (
@@ -754,6 +754,53 @@ class SessionStore:
             problem=_problem_view(live.tutor.current_problem),
         )
 
+    def start_kc(
+        self, kc: KnowledgeComponentId, *, proactive_enabled: bool = False
+    ) -> StartSessionResponse:
+        """Start a lesson DIRECTLY for a KC (the course-map node launch, Slice CP.A.2/§3.13).
+
+        Unlike ``start`` (a Turn-0 menu route), this begins a session whose goal is ``kc`` and
+        presents a generated first problem in the KC's first live representation (the one the
+        surface can render+answer — ``live_representations``). Used by the course map so every
+        node can launch its own lesson, including KCs that are not Turn-0 routes (subtraction,
+        common denominator). Persistence stores ``kc.value`` as the session's ``route_key`` so a
+        later ``resume`` re-derives the goal (``_tutor_for_route_key`` handles the KC form).
+        Identity/persistence stay off the decision path (invariant 7/8).
+        """
+        session_id = uuid.uuid4().hex
+        surface_format = live_representations(kc)[0]
+        live = _LiveSession(
+            tutor=TutorSession.for_goal_kc(kc, surface_format=surface_format),
+            proactive_enabled=proactive_enabled,
+            learner_session_id=session_id,
+        )
+        if self.session_factory is not None:
+            live.db_session_id = self._open_persisted_session(session_id, kc.value)
+        self._sessions[session_id] = live
+        return StartSessionResponse(
+            session_id=session_id,
+            surface_state=live.tutor.surface_state,
+            problem=_problem_view(live.tutor.current_problem),
+        )
+
+    @staticmethod
+    def _tutor_for_route_key(route_key: str) -> TutorSession:
+        """Rebuild a ``TutorSession`` from a persisted ``route_key`` (for ``resume``).
+
+        A Turn-0 menu key → ``from_route`` (the cold-start calibration path). A bare KC id (a
+        course-map ``start_kc`` session, which stores ``kc.value`` as the route_key) → rebuild
+        the goal-KC lesson via ``for_goal_kc``. Anything else is genuinely unknown and re-raises
+        ``UnknownRouteError`` (CLAUDE.md §8.5 — fail loudly, don't invent a route).
+        """
+        try:
+            return TutorSession.from_route(_route_for_key(route_key))
+        except UnknownRouteError:
+            try:
+                kc = KnowledgeComponentId(route_key)
+            except ValueError:
+                raise UnknownRouteError(route_key) from None
+            return TutorSession.for_goal_kc(kc, surface_format=live_representations(kc)[0])
+
     def _open_persisted_session(self, session_id: str, route_key: str) -> int | None:
         """Open the Learner + Session rows for a new session; ``None`` on any DB failure.
 
@@ -926,8 +973,7 @@ class SessionStore:
             _log.exception("could not rehydrate session %s; client should start fresh", session_id)
             return None
 
-        option = _route_for_key(route_key)
-        tutor = TutorSession.from_route(option)
+        tutor = self._tutor_for_route_key(route_key)
         tutor.seed_priors(seeded)
         return _LiveSession(
             tutor=tutor,

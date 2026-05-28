@@ -150,6 +150,42 @@ def test_start_session_rejects_unknown_route_key_with_422() -> None:
     assert status_code == 422
 
 
+# ─── Start a lesson directly for a KC (course-map node launch, Slice CP.A.2 / §3.13) ───
+
+
+def test_start_session_by_kc_launches_that_skill() -> None:
+    """POST /session with a kc starts a lesson whose first problem is for that KC.
+
+    The course map launches any node this way — including KCs that are NOT Turn-0 routes
+    (subtraction, common denominator), which have no cold-start calibration item.
+    """
+    app = create_app()
+    for kc in ("KC_subtraction_unlike", "KC_common_denominator", "KC_number_line_placement"):
+        status_code, body = post_json(app, "/session", {"kc": kc})
+        assert status_code == 200, body
+        started = StartSessionResponse.model_validate(body)
+        assert started.problem.kc.value == kc
+        assert started.problem.problem_id and started.problem.statement
+
+
+def test_start_session_requires_exactly_one_of_kc_or_route_key() -> None:
+    """Neither kc nor route_key → 422; both at once → 422 (exactly one entry point)."""
+    app = create_app()
+    neither, _ = post_json(app, "/session", {})
+    assert neither == 422
+    both, _ = post_json(
+        app, "/session", {"kc": "KC_common_denominator", "route_key": _ADDITION_ROUTE_KEY}
+    )
+    assert both == 422
+
+
+def test_start_session_by_kc_rejects_unknown_kc_with_422() -> None:
+    """A kc outside the catalog is a client error → 422 (Pydantic enum validation)."""
+    app = create_app()
+    status_code, _ = post_json(app, "/session", {"kc": "KC_teleportation"})
+    assert status_code == 422
+
+
 # ─── Turn endpoint: happy path / response shape ───
 
 

@@ -463,6 +463,29 @@ class TutorSession:
             session.current_problem = _calibration_problem(option.routes_to)
         return session
 
+    @classmethod
+    def for_goal_kc(
+        cls,
+        kc: KnowledgeComponentId,
+        *,
+        surface_format: Representation,
+        seed: int = 0,
+    ) -> TutorSession:
+        """Begin a session whose GOAL is ``kc``, presenting a generated first problem (course map).
+
+        This is the course product's "start this skill's lesson" entry (PROJECT.md §3.13), as
+        opposed to ``from_route`` (the Turn-0 cold start with its locked calibration item + a
+        self-report prior). Choosing to STUDY a skill is not a claim to KNOW it, so priors are
+        neutral (``chosen_kc=None`` — no KC seeded above the unsure default), and the first
+        problem is GENERATED for ``kc`` in the given live ``surface_format`` (the representation
+        the surface can render+answer). The scheduler interleaves from ``kc`` thereafter — the
+        service derives the goal KC from the first turn's KC, so seeding it as the first problem
+        is all that is needed. Determinism is preserved (generate_problem is seed-only).
+        """
+        session = cls.cold_start(chosen_kc=None)
+        session.current_problem = generate_problem(kc, seed, surface_format)
+        return session
+
     # ── reads ──
 
     def prior_for(self, kc: KnowledgeComponentId) -> float:
