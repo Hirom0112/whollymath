@@ -35,6 +35,8 @@ from sqlalchemy.orm import sessionmaker
 
 from app.api.schemas import (
     ActionType,
+    CourseNodeView,
+    CourseView,
     ErrorType,
     EventBatchRequest,
     InteractionEventIn,
@@ -52,13 +54,14 @@ from app.api.schemas import (
 )
 from app.db import repositories as repo
 from app.db.repositories import EventRow
-from app.domain.knowledge_components import KnowledgeComponentId, Representation
+from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 from app.domain.problem_generators import Problem
 from app.domain.verifier import verify
 from app.events.ingest import ingest_events
 from app.helpneed.live_features import LiveTurn, live_features
 from app.helpneed.predictor import HelpNeedPredictor
 from app.llm.provider import LLMProvider
+from app.mastery.course_map import build_course_map
 from app.mastery.mastery_model import Observation
 from app.mastery.progression import plan_study
 from app.mastery.retention import ReviewableSkill
@@ -958,6 +961,30 @@ class SessionStore:
                 for s in states
             ]
 
+    def _reviewable_skills_for_learner(self, learner_id: int) -> list[ReviewableSkill]:
+        """Project a learner's persisted ``MasteryState`` rows → the retention model's inputs.
+
+        Shared by the study planner and the course map (both read the same per-skill state). One
+        entry per touched KC; an empty list when there is no factory or no recorded mastery yet.
+        """
+        if self.session_factory is None:
+            return []
+        with self.session_factory() as db:
+            states = repo.load_mastery_states(db, learner_id)
+        return [
+            ReviewableSkill(
+                kc=KnowledgeComponentId(s.kc_id),
+                confirmed=s.confirmed,
+                bkt_probability=s.bkt_probability,
+                # SQLite returns naive datetimes (PL.1 note); coerce to UTC so the elapsed-time
+                # math compares like-with-like against the aware ``now`` the caller passes.
+                last_practiced=s.updated_at
+                if s.updated_at.tzinfo is not None
+                else s.updated_at.replace(tzinfo=UTC),
+            )
+            for s in states
+        ]
+
     def study_plan_for_learner(self, learner_id: int, now: datetime) -> StudyPlanView:
         """What a returning learner should do next — spaced repetition + prereq sequencing (6.x).
 
@@ -970,26 +997,36 @@ class SessionStore:
         """
         if self.session_factory is None:
             return StudyPlanView()
-        with self.session_factory() as db:
-            states = repo.load_mastery_states(db, learner_id)
-        skills = [
-            ReviewableSkill(
-                kc=KnowledgeComponentId(s.kc_id),
-                confirmed=s.confirmed,
-                bkt_probability=s.bkt_probability,
-                # SQLite returns naive datetimes (PL.1 note); coerce to UTC so the elapsed-time
-                # math compares like-with-like against the aware ``now`` the route passes.
-                last_practiced=s.updated_at
-                if s.updated_at.tzinfo is not None
-                else s.updated_at.replace(tzinfo=UTC),
-            )
-            for s in states
-        ]
-        plan = plan_study(skills, now)
+        plan = plan_study(self._reviewable_skills_for_learner(learner_id), now)
         return StudyPlanView(
             due_reviews=[kc.value for kc in plan.due_reviews],
             unlocked_next=[kc.value for kc in plan.unlocked_next],
             recommended=plan.recommended.value if plan.recommended is not None else None,
+        )
+
+    def course_map_for_learner(self, learner_id: int, now: datetime) -> CourseView:
+        """The learner's whole learning path with a status per KC (Slice CP.A.1 — course product).
+
+        The course-product home screen (PROJECT.md §3.13): a pure composition of the existing
+        engine — the prerequisite graph + the learner's persisted mastery + the retention model —
+        with NO new mastery logic. Reads the same ``MasteryState`` rows the study planner does and
+        runs ``build_course_map``, then attaches each KC's registry name/description for display.
+        Always returns the full catalog (even with no factory: a fresh path with the root
+        available, the rest locked). Off the turn loop, advisory only (invariant 8/9).
+        """
+        nodes = build_course_map(self._reviewable_skills_for_learner(learner_id), now)
+        return CourseView(
+            nodes=[
+                CourseNodeView(
+                    kc_id=node.kc,
+                    skill_name=get_kc(node.kc).skill_name,
+                    description=get_kc(node.kc).description,
+                    status=node.status,
+                    prerequisites=list(node.prerequisites),
+                    probability=node.probability,
+                )
+                for node in nodes
+            ]
         )
 
     def prior_for(self, session_id: str, kc: KnowledgeComponentId) -> float | None:

@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 
 from app.api.auth_routes import auth_router
+from app.api.course_routes import course_router
 from app.api.routes import router
 from app.api.service import SessionStore
 from app.db.engine import create_db_engine, create_session_factory, database_url_from_env
@@ -100,6 +101,9 @@ def create_app() -> FastAPI:
     # The Google-OIDC account endpoints (Slice PL.3), additive and independent of the turn loop:
     # mounting this router adds /me without touching the turn endpoints' (identity-free) contract.
     app.include_router(auth_router)
+    # The course-product endpoints (Slice CP.A.1) — also additive and on the authenticated path:
+    # /course derives the learning-path home from existing engine state, off the turn loop.
+    app.include_router(course_router)
     return app
 
 

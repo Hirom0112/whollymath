@@ -6,10 +6,6 @@
 */
 
 /**
- * Which intervention form was offered (§3.7).
- */
-export type InterventionKind = "inline_assertion" | "conceptual_prompt";
-/**
  * Stable KC identifiers, matching `diagnostic_gems.json` `_meta.kc_catalog`.
  *
  * ``StrEnum`` makes a member compare equal to and serialize as its catalog
@@ -24,6 +20,14 @@ export type KnowledgeComponentId =
   | "KC_addition_unlike"
   | "KC_subtraction_unlike"
   | "KC_number_line_placement";
+/**
+ * The node's status on the learning path.
+ */
+export type CourseNodeStatus = "locked" | "available" | "in_progress" | "mastered" | "due_review";
+/**
+ * Which intervention form was offered (§3.7).
+ */
+export type InterventionKind = "inline_assertion" | "conceptual_prompt";
 /**
  * Representation to render (§3.5).
  */
@@ -97,6 +101,50 @@ export interface ArmVerdictView {
    * One-line explanation (e.g. 'blocked at: transfer_probe').
    */
   detail: string;
+}
+/**
+ * One KC's place on the course map (Slice CP.A.1 — the course-product home screen).
+ *
+ * Each node carries enough to render a learning-path stop: its KC id + human-readable
+ * ``skill_name``/``description`` (from the KC registry), its ``status`` (the engine-derived
+ * ``CourseNodeStatus`` — locked/available/in_progress/mastered/due_review), the ``prerequisites``
+ * to draw as incoming edges, and the stored mastery ``probability`` for a progress indicator
+ * (``null`` if the learner hasn't started this skill). Derived from existing engine state only
+ * (PROJECT.md §3.13: reuse, never rebuild); off the turn loop, advisory.
+ */
+export interface CourseNodeView {
+  kc_id: KnowledgeComponentId;
+  /**
+   * Human-readable skill name (KC registry).
+   */
+  skill_name: string;
+  /**
+   * One-sentence description of the skill (KC registry).
+   */
+  description: string;
+  status: CourseNodeStatus;
+  /**
+   * KCs that must be confirmed before this one is suggested (the incoming edges).
+   */
+  prerequisites?: KnowledgeComponentId[];
+  /**
+   * Stored BKT mastery level for a touched skill; null if not yet started.
+   */
+  probability?: number | null;
+}
+/**
+ * The whole learning path for one learner (Slice CP.A.1).
+ *
+ * ``nodes`` is the full catalog of KCs in teaching (algebra-spine) order, each with its status
+ * — so the frontend can render the course map as nodes + prerequisite edges and use it as the
+ * post-sign-in home. Always contains every KC (a path needs all its stops), even for a brand-new
+ * learner (root available, rest locked).
+ */
+export interface CourseView {
+  /**
+   * Every KC as a path node, in teaching order, with its status.
+   */
+  nodes?: CourseNodeView[];
 }
 /**
  * A buffered batch of interaction events for one session (Slice PL.2).

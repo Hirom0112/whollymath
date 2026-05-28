@@ -39,6 +39,12 @@ from app.domain.problem_generators import AnswerKind
 # the local placeholder enum is gone; this is now the single source of truth.)
 from app.domain.verifier import ErrorCategory as ErrorType
 
+# CourseNodeStatus is the mastery layer's course-map status enum (Slice CP.A.1). The wire
+# reuses it as the field type — same single-source-of-truth principle as the KC/AnswerKind
+# handles above — so the API and the generated TS types speak the exact statuses the engine
+# derives, and the two can't drift.
+from app.mastery.course_map import CourseNodeStatus
+
 # SurfaceState is owned by policy/ (the adaptation policy's vocabulary — it routes
 # between the five states, ARCHITECTURE.md §7); the API imports it forward so the
 # wire speaks the same enum the policy and tutor do (single source of truth, §4).
@@ -561,6 +567,52 @@ class StudyPlanView(BaseModel):
     )
 
 
+class CourseNodeView(BaseModel):
+    """One KC's place on the course map (Slice CP.A.1 — the course-product home screen).
+
+    Each node carries enough to render a learning-path stop: its KC id + human-readable
+    ``skill_name``/``description`` (from the KC registry), its ``status`` (the engine-derived
+    ``CourseNodeStatus`` — locked/available/in_progress/mastered/due_review), the ``prerequisites``
+    to draw as incoming edges, and the stored mastery ``probability`` for a progress indicator
+    (``null`` if the learner hasn't started this skill). Derived from existing engine state only
+    (PROJECT.md §3.13: reuse, never rebuild); off the turn loop, advisory.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kc_id: KnowledgeComponentId
+    skill_name: str = Field(description="Human-readable skill name (KC registry).")
+    description: str = Field(description="One-sentence description of the skill (KC registry).")
+    status: CourseNodeStatus = Field(description="The node's status on the learning path.")
+    prerequisites: list[KnowledgeComponentId] = Field(
+        default_factory=list,
+        description="KCs that must be confirmed before this one is suggested (the incoming edges).",
+    )
+    probability: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Stored BKT mastery level for a touched skill; null if not yet started.",
+    )
+
+
+class CourseView(BaseModel):
+    """The whole learning path for one learner (Slice CP.A.1).
+
+    ``nodes`` is the full catalog of KCs in teaching (algebra-spine) order, each with its status
+    — so the frontend can render the course map as nodes + prerequisite edges and use it as the
+    post-sign-in home. Always contains every KC (a path needs all its stops), even for a brand-new
+    learner (root available, rest locked).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    nodes: list[CourseNodeView] = Field(
+        default_factory=list,
+        description="Every KC as a path node, in teaching order, with its status.",
+    )
+
+
 class MeResponse(BaseModel):
     """The authenticated learner's persistent identity handle + carried-forward mastery (PL.3).
 
@@ -599,6 +651,9 @@ __all__ = [
     "ActionType",
     "AnswerKind",
     "ArmVerdictView",
+    "CourseNodeView",
+    "CourseView",
+    "CourseNodeStatus",
     "ErrorType",
     "EventBatchRequest",
     "EventIngestResponse",

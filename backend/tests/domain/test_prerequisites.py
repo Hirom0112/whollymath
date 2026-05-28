@@ -12,6 +12,7 @@ from __future__ import annotations
 from app.domain.knowledge_components import KnowledgeComponentId
 from app.domain.prerequisites import (
     KC_PREREQUISITES,
+    SPINE_ORDER,
     prerequisites_of,
     unlocked,
 )
@@ -77,3 +78,26 @@ def test_confirming_common_denominator_unlocks_both_operations() -> None:
 def test_a_confirmed_kc_is_not_returned_as_newly_unlocked() -> None:
     """``unlocked`` returns skills available to LEARN NEXT — not ones already confirmed."""
     assert KC.NUMBER_LINE_PLACEMENT not in unlocked(frozenset({KC.NUMBER_LINE_PLACEMENT}))
+
+
+def test_spine_order_covers_every_kc_exactly_once() -> None:
+    """The canonical teaching order is a permutation of the whole catalog — no gaps, no dupes."""
+    assert set(SPINE_ORDER) == set(KC)
+    assert len(SPINE_ORDER) == len(set(SPINE_ORDER)) == len(list(KC))
+
+
+def test_spine_order_is_a_valid_topological_order() -> None:
+    """Every KC appears AFTER all of its prerequisites — the order is a DAG linearization.
+
+    This is what lets the planner and the course map share one ordering safely: a skill is never
+    presented before the skills it depends on (``prerequisites.py`` algebra-readiness rationale).
+    """
+    position = {kc: i for i, kc in enumerate(SPINE_ORDER)}
+    for kc in SPINE_ORDER:
+        for prereq in prerequisites_of(kc):
+            assert position[prereq] < position[kc], f"{prereq} must precede {kc} in SPINE_ORDER"
+
+
+def test_spine_order_starts_at_the_root() -> None:
+    """The foundational, prerequisite-free skill (a fraction is a number) comes first."""
+    assert SPINE_ORDER[0] == KC.NUMBER_LINE_PLACEMENT

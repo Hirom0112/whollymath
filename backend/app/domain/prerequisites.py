@@ -46,6 +46,20 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
 }
 
 
+# The canonical teaching order along the algebra-readiness spine — a topological linearization
+# of the DAG above (every skill follows all of its prerequisites). This is the single source of
+# truth for "in what order do these KCs come", shared by the study planner (which new skill to
+# suggest) and the course map (how to lay out the path), so the two can never drift. A test
+# pins that it stays a valid topological order covering every KC (test_prerequisites.py).
+SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
+    _KC.NUMBER_LINE_PLACEMENT,  # a fraction is a NUMBER (root, no prerequisite)
+    _KC.EQUIVALENCE,  # same number, different name
+    _KC.COMMON_DENOMINATOR,  # use equivalence to match sizes
+    _KC.ADDITION_UNLIKE,  # operate on unlike forms …
+    _KC.SUBTRACTION_UNLIKE,  # … (add/sub both gated on common denominator)
+)
+
+
 def prerequisites_of(kc: KnowledgeComponentId) -> frozenset[KnowledgeComponentId]:
     """The KCs that must be confirmed before ``kc`` is the right next skill to introduce."""
     return KC_PREREQUISITES[kc]
@@ -67,4 +81,4 @@ def unlocked(confirmed: frozenset[KnowledgeComponentId]) -> frozenset[KnowledgeC
     )
 
 
-__all__ = ["KC_PREREQUISITES", "prerequisites_of", "unlocked"]
+__all__ = ["KC_PREREQUISITES", "SPINE_ORDER", "prerequisites_of", "unlocked"]

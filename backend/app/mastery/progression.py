@@ -20,19 +20,13 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.domain.knowledge_components import KnowledgeComponentId
-from app.domain.prerequisites import unlocked
+from app.domain.prerequisites import SPINE_ORDER, unlocked
 from app.mastery.retention import ReviewableSkill, next_review
 
-# The teaching order along the algebra-readiness spine (prerequisites.py rationale). Used to
-# pick a single deterministic "recommended" new skill among those unlocked (earliest spine
-# skill first), so the suggestion is stable and pedagogically ordered.
-_SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
-    KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
-    KnowledgeComponentId.EQUIVALENCE,
-    KnowledgeComponentId.COMMON_DENOMINATOR,
-    KnowledgeComponentId.ADDITION_UNLIKE,
-    KnowledgeComponentId.SUBTRACTION_UNLIKE,
-)
+# The teaching order along the algebra-readiness spine is owned by ``prerequisites.py``
+# (``SPINE_ORDER`` — the DAG's canonical linearization), shared with the course map so the two
+# can't drift. Used here to pick a single deterministic "recommended" new skill among those
+# unlocked (earliest spine skill first), so the suggestion is stable and pedagogically ordered.
 
 
 @dataclass(frozen=True)
@@ -55,7 +49,7 @@ def plan_study(skills: list[ReviewableSkill], now: datetime) -> StudyPlan:
     confirmed = frozenset(s.kc for s in skills if s.confirmed)
     due = tuple(next_review(skills, now))
     unlocked_set = unlocked(confirmed)
-    unlocked_ordered = tuple(kc for kc in _SPINE_ORDER if kc in unlocked_set)
+    unlocked_ordered = tuple(kc for kc in SPINE_ORDER if kc in unlocked_set)
 
     if due:
         recommended: KnowledgeComponentId | None = due[0]
