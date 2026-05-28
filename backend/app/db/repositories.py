@@ -264,6 +264,41 @@ def load_mastery_states(db: OrmSession, learner_id: int) -> list[MasteryState]:
     return list(db.scalars(select(MasteryState).where(MasteryState.learner_id == learner_id)).all())
 
 
+def load_events_for_session(db: OrmSession, session_row_id: int) -> list[InteractionEvent]:
+    """Load one tutoring session's ``InteractionEvent`` rows in chronological order (Slice PL.4).
+
+    Ordered by ``server_ts`` then ``id`` — ``server_ts`` is the authoritative server-stamped
+    clock (the client clock is optional and untrusted for ordering, ``models.py``), and ``id``
+    is the deterministic tie-break for events stamped within the same instant (a busy batch can
+    share a server timestamp). This is the read the PL.4 offline derivation pipeline consumes to
+    rebuild per-problem episodes from the raw behavioral stream; it is a pure query (no business
+    logic, no commit) and is NOT on the turn loop (ARCHITECTURE.md §14 invariants 5 and 7).
+    """
+    return list(
+        db.scalars(
+            select(InteractionEvent)
+            .where(InteractionEvent.session_id == session_row_id)
+            .order_by(InteractionEvent.server_ts, InteractionEvent.id)
+        ).all()
+    )
+
+
+def load_events_for_learner(db: OrmSession, learner_id: int) -> list[InteractionEvent]:
+    """Load all of a learner's ``InteractionEvent`` rows in chronological order (Slice PL.4).
+
+    Same ordering and contract as ``load_events_for_session`` but scoped to a learner across all
+    their sessions — the grain the offline derivation uses when it wants a learner's whole
+    behavioral history. Ordered by (``server_ts``, ``id``) for the same reason.
+    """
+    return list(
+        db.scalars(
+            select(InteractionEvent)
+            .where(InteractionEvent.learner_id == learner_id)
+            .order_by(InteractionEvent.server_ts, InteractionEvent.id)
+        ).all()
+    )
+
+
 def persist_event(
     db: OrmSession,
     *,
@@ -326,6 +361,8 @@ __all__ = [
     "get_learner",
     "get_or_create_learner",
     "get_or_create_learner_by_google_sub",
+    "load_events_for_learner",
+    "load_events_for_session",
     "load_mastery_states",
     "load_open_session",
     "load_open_session_for_learner",
