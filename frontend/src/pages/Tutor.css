@@ -293,6 +293,22 @@
   background: var(--wm-green);
 }
 
+/* The S5 transfer-probe "final check" badge — frames the confirm-gate items. */
+.wm-tutor-probe-badge {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--wm-card-sky);
+  border: 2px solid var(--wm-navy-deep);
+  font-family: var(--wm-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wm-navy-deep);
+}
+
 /* The "mastered" end state — the journey's goal is reached (declared mastery). */
 .wm-tutor-mastered {
   background: var(--wm-card-mint);

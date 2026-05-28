@@ -112,6 +112,10 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // DECLARES mastery on it, the journey's goal is reached.
   const goalKc = session.problem.kc;
   const goalMastered = mastery.find((m) => m.kc_id === goalKc)?.mastered ?? false;
+  // The S5 transfer probe: the surface state is S5 while the learner answers the probe items
+  // (a different representation + an error-finding check). We frame it as a final check so
+  // the learner knows this confirms mastery — it isn't just another practice problem.
+  const isProbe = surfaceState === 'S5_transfer_probe';
 
   // When the current problem was first shown — the elapsed time is the turn's
   // latency_ms, which feeds the engagement floor (§6) and HelpNeed (§8) server-side.
@@ -243,6 +247,9 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
               </div>
             ))}
           </div>
+        ) : null}
+        {isProbe && phase !== 'feedback' ? (
+          <p className="wm-tutor-probe-badge">Final check — prove you&rsquo;ve really got it</p>
         ) : null}
         <p className="wm-tutor-mode">
           {isYesNo
