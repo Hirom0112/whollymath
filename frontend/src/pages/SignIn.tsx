@@ -8,7 +8,7 @@ import './SignIn.css';
  * actual Google auth lands with PL.3. */
 export type SignInMethod = 'google' | 'demo';
 
-const ROLL_IN_MS = 1500;
+const ROLL_IN_MS = 1100;
 const ROLL_OUT_MS = 2000;
 const REDUCED_MS = 280;
 
@@ -45,21 +45,26 @@ const GoogleG = (): React.JSX.Element => (
   </svg>
 );
 
-// A single running/jumping child for the number line — a stick figure mid-stride.
-const RunningKid = ({ x, y }: { x: number; y: number }): React.JSX.Element => (
-  <g
-    transform={`translate(${String(x)},${String(y)})`}
-    stroke="var(--wm-cream)"
-    strokeWidth="2.4"
-    strokeLinecap="round"
-    fill="none"
-  >
-    <circle cx="0" cy="-14" r="5.5" fill="var(--wm-cream)" stroke="none" />
-    <line x1="0" y1="-8" x2="0" y2="4" />
-    <line x1="0" y1="-4" x2="-8" y2="-9" />
-    <line x1="0" y1="-4" x2="8" y2="0" />
-    <line x1="0" y1="4" x2="-7" y2="14" />
-    <line x1="0" y1="4" x2="8" y2="12" />
+// A single running/jumping child for the number line — a little cartoon runner
+// (filled body + coloured shirt + peach head), mid-stride, not a bare stick figure.
+const RunningKid = ({
+  x,
+  y,
+  shirt,
+}: {
+  x: number;
+  y: number;
+  shirt: string;
+}): React.JSX.Element => (
+  <g transform={`translate(${String(x)},${String(y)})`}>
+    <g stroke="var(--wm-cream)" strokeWidth="3" strokeLinecap="round">
+      <line x1="0" y1="-2" x2="-6" y2="11" />
+      <line x1="0" y1="-2" x2="8" y2="9" />
+      <line x1="0" y1="-13" x2="-9" y2="-17" />
+      <line x1="0" y1="-13" x2="9" y2="-10" />
+    </g>
+    <rect x="-5.5" y="-16" width="11" height="15" rx="4.5" fill={shirt} />
+    <circle cx="0" cy="-21" r="5.2" fill="#f6cda1" />
   </g>
 );
 
@@ -229,9 +234,9 @@ export function SignIn({
                 1
               </text>
             </g>
-            <RunningKid x={110} y={58} />
-            <RunningKid x={190} y={54} />
-            <RunningKid x={270} y={58} />
+            <RunningKid x={110} y={62} shirt="var(--wm-coral)" />
+            <RunningKid x={190} y={58} shirt="var(--wm-yellow)" />
+            <RunningKid x={270} y={62} shirt="var(--wm-pink)" />
           </svg>
         </div>
 
