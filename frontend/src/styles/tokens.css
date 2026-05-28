@@ -1,0 +1,63 @@
+/* WhollyMath design tokens — the single source of truth for color + type across the
+   frontend. Seeded from the approved hero mock (whollymath_hero-5.html); see DESIGN.md
+   for the rationale and how brand (warm, landing) vs product (calm, tutor) registers
+   diverge. Palette values are kept faithful to the mock on purpose. */
+
+:root {
+  /* warm neutrals */
+  --wm-cream: #f7efdc;
+  --wm-cream-2: #f1e7c9;
+  --wm-page-bg: #e9e1cc;
+
+  /* blues / navy (structure + primary action) */
+  --wm-navy-deep: #1f2c5c;
+  --wm-navy: #2f43a6;
+  --wm-blue: #3a59d9;
+  --wm-blue-bright: #4a6cf0;
+  --wm-blue-press: #2f4dc9;
+  --wm-blue-tile: #b9d3ef;
+  --wm-blue-soft: #b9c8ee;
+
+  /* accents (meaning + the fraction-pie palette) */
+  --wm-coral: #d9663f;
+  --wm-pink: #f2a3b8;
+  --wm-yellow: #f5cf5b;
+  --wm-orange: #efb46a;
+  --wm-green: #9ad17c;
+  --wm-teal: #9cd5c9;
+
+  /* ink */
+  --wm-ink: #161616;
+  --wm-ink-soft: #2a2a2a;
+
+  --wm-shadow: rgba(20, 30, 70, 0.18);
+
+  /* type */
+  --wm-font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --wm-font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --wm-font-hand: 'Caveat', 'Comic Sans MS', cursive;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+}
+
+/* Shared: a slow turn for the brand pie marks (brand + starting seam). */
+@keyframes wm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

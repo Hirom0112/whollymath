@@ -45,3 +45,7 @@ coverage/
 # ─── ML artifacts (trained models / DataShop pulls live in S3, not git) ───
 *.joblib
 *.pkl
+
+# ─── Local training-data pulls (ASSISTments / DataShop traces) ───
+# Large, license-bound interaction logs; never committed (live in S3 for prod).
+backend/data/

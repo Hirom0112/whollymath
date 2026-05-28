@@ -1,0 +1,562 @@
+/* WhollyMath landing / hero (brand register). Faithful to the approved hero mock
+   (whollymath_hero-5.html), ported to React with an idle-animated mascot and a
+   jump-and-roll-off "Start learning" transition. Tokens live in styles/tokens.css.
+   Palette values from the mock are kept as-is on purpose (fidelity to the brief). */
+
+.wm-landing {
+  min-height: 100vh;
+  background: var(--wm-cream);
+}
+
+/* Full-bleed: the hero IS the page, not a card floating inside one. */
+.wm-hero {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--wm-cream);
+}
+.wm-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--wm-cream);
+  z-index: 0;
+}
+.wm-hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  background: var(--wm-navy);
+  z-index: 0;
+}
+
+/* While starting: let the pie roll past the card edge and quiet everything else. */
+.wm-landing--starting .wm-hero {
+  overflow: visible;
+}
+.wm-landing--starting .wm-hero > *:not(.wm-mascot) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+/* sparkles */
+.wm-sparkle {
+  position: absolute;
+  color: var(--wm-blue-bright);
+  z-index: 2;
+  pointer-events: none;
+}
+.wm-sparkle svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.wm-s1 {
+  top: 10%;
+  left: 13%;
+  width: 22px;
+}
+.wm-s2 {
+  top: 17%;
+  left: 8%;
+  width: 14px;
+}
+.wm-s3 {
+  top: 13%;
+  right: 7%;
+  width: 30px;
+}
+.wm-s4 {
+  bottom: 4%;
+  right: 9%;
+  width: 18px;
+  color: #6b86e8;
+}
+
+/* brand */
+.wm-brand {
+  position: absolute;
+  top: 38px;
+  left: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 3;
+}
+.wm-brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--wm-coral) 0 25%,
+    var(--wm-cream) 25% 50%,
+    var(--wm-navy) 50% 75%,
+    var(--wm-blue-tile) 75% 100%
+  );
+  border: 2px solid var(--wm-navy-deep);
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+  animation: wm-spin 14s linear infinite;
+}
+.wm-brand-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--wm-navy-deep);
+  letter-spacing: -0.5px;
+}
+
+/* headline + copy */
+.wm-copy {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  padding-top: 70px;
+}
+.wm-headline {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: clamp(40px, 6.2vw, 84px);
+  line-height: 1;
+  color: var(--wm-navy-deep);
+  letter-spacing: -2px;
+}
+.wm-headline em {
+  font-style: italic;
+  color: var(--wm-coral);
+  font-weight: 700;
+}
+.wm-subhead {
+  margin: 22px auto 0;
+  max-width: 640px;
+  color: var(--wm-ink-soft);
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+/* CTA card */
+.wm-cta-card {
+  position: relative;
+  z-index: 4;
+  margin: 44px auto 0;
+  width: min(560px, 78%);
+  background: #fff;
+  border-radius: 22px;
+  padding: 36px 40px 32px;
+  text-align: center;
+  box-shadow: 0 24px 50px rgba(20, 30, 70, 0.18);
+}
+.wm-cta-title {
+  font-family: var(--wm-font-serif);
+  font-weight: 700;
+  font-size: clamp(26px, 3vw, 34px);
+  color: var(--wm-ink);
+  line-height: 1.1;
+}
+.wm-cta-btn {
+  display: block;
+  width: 100%;
+  margin-top: 22px;
+  padding: 18px 24px;
+  border: none;
+  border-radius: 999px;
+  background: var(--wm-blue-bright);
+  color: #fff;
+  font-family: var(--wm-font-serif);
+  font-weight: 700;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow:
+    0 6px 0 var(--wm-blue-press),
+    0 14px 28px rgba(58, 89, 217, 0.35);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.wm-cta-btn:hover {
+  transform: translateY(2px);
+  box-shadow:
+    0 4px 0 var(--wm-blue-press),
+    0 10px 22px rgba(58, 89, 217, 0.4);
+}
+.wm-cta-btn:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 2px 0 var(--wm-blue-press),
+    0 6px 14px rgba(58, 89, 217, 0.4);
+}
+.wm-cta-btn:focus-visible {
+  outline: 3px solid var(--wm-navy-deep);
+  outline-offset: 3px;
+}
+
+/* number line (bottom left) */
+.wm-numberline {
+  position: absolute;
+  left: 2%;
+  bottom: 10%;
+  width: 52%;
+  z-index: 2;
+  color: var(--wm-blue-soft);
+  opacity: 0.9;
+  font-family: var(--wm-font-hand);
+}
+.wm-numberline svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  transform: rotate(-12deg);
+  transform-origin: left center;
+}
+
+/* fraction tiles (bottom right) */
+.wm-tiles {
+  position: absolute;
+  right: 2%;
+  bottom: 14%;
+  display: flex;
+  align-items: center;
+  transform: rotate(12deg);
+  transform-origin: left center;
+  z-index: 3;
+}
+.wm-tiles-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  background: #4661e6;
+  border-radius: 12px;
+  border: 2px solid var(--wm-navy-deep);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
+}
+.wm-tile {
+  width: 100px;
+  height: 118px;
+  border-radius: 10px;
+  border: 2px solid var(--wm-navy-deep);
+  box-shadow: 0 3px 0 var(--wm-navy-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--wm-font-serif);
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+  font-size: 34px;
+}
+.wm-frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.wm-frac .wm-num {
+  padding-bottom: 3px;
+  border-bottom: 2px solid var(--wm-navy-deep);
+  padding-inline: 6px;
+}
+.wm-frac .wm-den {
+  padding-top: 3px;
+}
+.wm-t1 {
+  background: var(--wm-pink);
+}
+.wm-t2 {
+  background: var(--wm-orange);
+}
+.wm-t3 {
+  background: var(--wm-orange);
+}
+
+/* mascot */
+.wm-mascot {
+  position: absolute;
+  right: 5%;
+  top: 40%;
+  width: 130px;
+  z-index: 5;
+  transform-origin: center bottom;
+  animation: wm-bob 3.2s ease-in-out infinite;
+}
+.wm-mascot--rolling {
+  animation: wm-roll 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 50;
+}
+
+/* Tuck the limbs in as the roll starts, so the silhouette becomes a clean wheel. */
+.wm-mascot--rolling .wm-mascot-arm-l {
+  transform-origin: top center;
+  animation: wm-tuck-arm-l 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.wm-mascot--rolling .wm-mascot-arm-r {
+  transform-origin: top center;
+  animation: wm-tuck-arm-r 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.wm-mascot--rolling .wm-mascot-leg-l,
+.wm-mascot--rolling .wm-mascot-leg-r {
+  transform-origin: top center;
+  animation: wm-tuck-leg 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.wm-mascot-pie {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -45deg,
+    var(--wm-pink) 0 25%,
+    var(--wm-yellow) 25% 50%,
+    var(--wm-orange) 50% 75%,
+    var(--wm-blue-tile) 75% 100%
+  );
+  border: 3px solid var(--wm-navy-deep);
+  position: relative;
+  margin: 0 auto;
+  box-shadow: 0 6px 0 var(--wm-navy-deep);
+}
+.wm-mascot-pie::before,
+.wm-mascot-pie::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--wm-navy-deep);
+  border-radius: 50%;
+  top: 42%;
+}
+.wm-mascot-pie::before {
+  left: 30%;
+}
+.wm-mascot-pie::after {
+  right: 30%;
+}
+.wm-mascot-smile {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 14px;
+  border: 3px solid var(--wm-navy-deep);
+  border-top: none;
+  border-radius: 0 0 28px 28px;
+}
+.wm-mascot-arm-l,
+.wm-mascot-arm-r {
+  position: absolute;
+  background: var(--wm-navy-deep);
+  width: 4px;
+  border-radius: 4px;
+}
+.wm-mascot-arm-l {
+  height: 28px;
+  left: 6px;
+  top: 56px;
+  transform: rotate(-30deg);
+}
+.wm-mascot-arm-r {
+  height: 28px;
+  right: 6px;
+  top: 60px;
+  transform: rotate(30deg);
+}
+.wm-mascot-leg-l,
+.wm-mascot-leg-r {
+  position: absolute;
+  background: var(--wm-navy-deep);
+  width: 4px;
+  height: 24px;
+  border-radius: 4px;
+  bottom: -22px;
+}
+.wm-mascot-leg-l {
+  left: 38%;
+}
+.wm-mascot-leg-r {
+  right: 38%;
+}
+.wm-speech {
+  position: absolute;
+  top: -10px;
+  left: -90px;
+  background: var(--wm-cream-2);
+  color: var(--wm-navy-deep);
+  font-family: var(--wm-font-hand);
+  font-size: 18px;
+  line-height: 1.05;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 2px solid var(--wm-navy-deep);
+  width: 110px;
+  text-align: center;
+  box-shadow: 0 3px 0 var(--wm-navy-deep);
+  transition: opacity 0.3s ease;
+}
+.wm-speech::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  bottom: 10px;
+  width: 0;
+  height: 0;
+  border-left: 12px solid var(--wm-cream-2);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  filter: drop-shadow(2px 0 0 var(--wm-navy-deep));
+}
+.wm-landing--starting .wm-speech {
+  opacity: 0;
+}
+
+/* motion */
+@keyframes wm-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-3deg);
+  }
+}
+@keyframes wm-roll {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  12% {
+    transform: translate(0, 10px) scaleX(1.12) scaleY(0.84) rotate(0deg);
+  }
+  30% {
+    transform: translate(-6px, -78px) scaleX(0.9) scaleY(1.14) rotate(-22deg);
+  }
+  46% {
+    transform: translate(40px, 0) scale(1) rotate(120deg);
+  }
+  100% {
+    transform: translate(135vw, -6px) rotate(2880deg);
+  }
+}
+@keyframes wm-tuck-arm-l {
+  0%,
+  25% {
+    transform: rotate(-30deg) scaleY(1);
+  }
+  44%,
+  100% {
+    transform: rotate(6deg) scaleY(0.1);
+  }
+}
+@keyframes wm-tuck-arm-r {
+  0%,
+  25% {
+    transform: rotate(30deg) scaleY(1);
+  }
+  44%,
+  100% {
+    transform: rotate(-6deg) scaleY(0.1);
+  }
+}
+@keyframes wm-tuck-leg {
+  0%,
+  25% {
+    transform: scaleY(1);
+  }
+  44%,
+  100% {
+    transform: scaleY(0.14);
+  }
+}
+@keyframes wm-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-brand-mark,
+  .wm-mascot {
+    animation: none;
+  }
+  .wm-mascot--rolling {
+    animation: wm-fade-out 0.3s ease forwards;
+  }
+  .wm-mascot--rolling .wm-mascot-arm-l,
+  .wm-mascot--rolling .wm-mascot-arm-r,
+  .wm-mascot--rolling .wm-mascot-leg-l,
+  .wm-mascot--rolling .wm-mascot-leg-r {
+    animation: none;
+  }
+  .wm-cta-btn {
+    transition: none;
+  }
+}
+
+/* responsive */
+@media (max-width: 760px) {
+  .wm-copy {
+    padding-top: 90px;
+  }
+  .wm-subhead {
+    font-size: 15px;
+    padding: 0 16px;
+  }
+  .wm-mascot {
+    right: 4%;
+    top: 36%;
+    width: 90px;
+  }
+  .wm-mascot-pie {
+    width: 70px;
+    height: 70px;
+  }
+  .wm-mascot-pie::before,
+  .wm-mascot-pie::after {
+    width: 7px;
+    height: 7px;
+    top: 40%;
+  }
+  .wm-mascot-pie::before {
+    left: 28%;
+  }
+  .wm-mascot-pie::after {
+    right: 28%;
+  }
+  .wm-mascot-smile {
+    width: 18px;
+    height: 9px;
+  }
+  .wm-speech {
+    left: -78px;
+    width: 88px;
+    font-size: 14px;
+  }
+  .wm-tiles {
+    right: 2%;
+    bottom: 6%;
+  }
+  .wm-tiles-box {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .wm-tile {
+    width: 36px;
+    height: 46px;
+    font-size: 13px;
+  }
+  .wm-numberline {
+    width: 50%;
+    bottom: 4%;
+  }
+  .wm-brand {
+    top: 20px;
+    left: 20px;
+  }
+  .wm-cta-card {
+    padding: 24px 22px;
+    width: 86%;
+  }
+}
