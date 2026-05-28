@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 
+import { Mascot } from '../components/Mascot';
 import './Landing.css';
 
 const ROLL_MS = 2200;
@@ -185,13 +186,7 @@ export function Landing({ onStart }: { onStart: () => void }): React.JSX.Element
             <br />
             guess and check!
           </div>
-          <div className="wm-mascot-pie">
-            <div className="wm-mascot-smile" />
-          </div>
-          <div className="wm-mascot-arm-l" />
-          <div className="wm-mascot-arm-r" />
-          <div className="wm-mascot-leg-l" />
-          <div className="wm-mascot-leg-r" />
+          <Mascot />
         </div>
       </div>
     </div>

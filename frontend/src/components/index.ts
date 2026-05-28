@@ -1,2 +1,2 @@
-// React components (Storybook stories alongside). Built on top of this scaffold.
-export {};
+// React components (Storybook stories alongside).
+export { Mascot } from './Mascot';

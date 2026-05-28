@@ -1,3 +1,4 @@
+import { Mascot } from '../components/Mascot';
 import './ColdStart.css';
 
 /**
@@ -181,6 +182,9 @@ export function ColdStart({
         </ul>
 
         <div className="wm-coldstart-unsure-wrap">
+          <div className="wm-coldstart-mascot" aria-hidden="true">
+            <Mascot />
+          </div>
           <button
             type="button"
             className="wm-coldstart-unsure"

@@ -303,83 +303,9 @@
   transform-origin: top center;
   animation: wm-tuck-leg 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
-.wm-mascot-pie {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: conic-gradient(
-    from -45deg,
-    var(--wm-pink) 0 25%,
-    var(--wm-yellow) 25% 50%,
-    var(--wm-orange) 50% 75%,
-    var(--wm-blue-tile) 75% 100%
-  );
-  border: 3px solid var(--wm-navy-deep);
-  position: relative;
-  margin: 0 auto;
-  box-shadow: 0 6px 0 var(--wm-navy-deep);
-}
-.wm-mascot-pie::before,
-.wm-mascot-pie::after {
-  content: '';
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: var(--wm-navy-deep);
-  border-radius: 50%;
-  top: 42%;
-}
-.wm-mascot-pie::before {
-  left: 30%;
-}
-.wm-mascot-pie::after {
-  right: 30%;
-}
-.wm-mascot-smile {
-  position: absolute;
-  left: 50%;
-  top: 60%;
-  transform: translateX(-50%);
-  width: 28px;
-  height: 14px;
-  border: 3px solid var(--wm-navy-deep);
-  border-top: none;
-  border-radius: 0 0 28px 28px;
-}
-.wm-mascot-arm-l,
-.wm-mascot-arm-r {
-  position: absolute;
-  background: var(--wm-navy-deep);
-  width: 4px;
-  border-radius: 4px;
-}
-.wm-mascot-arm-l {
-  height: 28px;
-  left: 6px;
-  top: 56px;
-  transform: rotate(-30deg);
-}
-.wm-mascot-arm-r {
-  height: 28px;
-  right: 6px;
-  top: 60px;
-  transform: rotate(30deg);
-}
-.wm-mascot-leg-l,
-.wm-mascot-leg-r {
-  position: absolute;
-  background: var(--wm-navy-deep);
-  width: 4px;
-  height: 24px;
-  border-radius: 4px;
-  bottom: -22px;
-}
-.wm-mascot-leg-l {
-  left: 38%;
-}
-.wm-mascot-leg-r {
-  right: 38%;
-}
+/* The mascot FIGURE (pie + eyes + smile + arms + legs) now lives in the shared
+   components/Mascot.css; this file keeps only the page-level wrapper animation
+   (.wm-mascot bob / roll / tuck) and the speech bubble. */
 .wm-speech {
   position: absolute;
   top: -10px;
@@ -509,25 +435,9 @@
     top: 36%;
     width: 90px;
   }
-  .wm-mascot-pie {
-    width: 70px;
-    height: 70px;
-  }
-  .wm-mascot-pie::before,
-  .wm-mascot-pie::after {
-    width: 7px;
-    height: 7px;
-    top: 40%;
-  }
-  .wm-mascot-pie::before {
-    left: 28%;
-  }
-  .wm-mascot-pie::after {
-    right: 28%;
-  }
-  .wm-mascot-smile {
-    width: 18px;
-    height: 9px;
+  .wm-mascot-figure {
+    transform: scale(0.7);
+    transform-origin: center top;
   }
   .wm-speech {
     left: -78px;
