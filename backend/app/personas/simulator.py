@@ -44,6 +44,7 @@ from sympy import Rational
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.misconceptions import (
     add_across,
+    natural_number_bias_number_line,
     subtract_across,
 )
 from app.domain.problem_generators import Problem
@@ -137,6 +138,17 @@ class SimulatedAction:
     explanation: str | None
 
 
+# A persona at or above this scaffold-dependence rate is modeled as HINT-DEPENDENT:
+# on a KC it does not genuinely understand, a requested hint lets it reproduce the
+# correct answer mechanically, while WITHOUT a hint it collapses to a wrong guess
+# (Hint-hunter Hugo, §4.2 P3: "executes hints mechanically without generalizing;
+# struggles when hints are unavailable"). The threshold is deliberately high so that
+# only a genuinely scaffold-dependent persona (Hugo's 0.9) trips it; Priya (0.15),
+# Sam (0.2), Nate (0.1) and Cleo (0.05) stay well below and are unaffected. The
+# value is the load-bearing knob; 0.7 mirrors §4.2 P3's ">70% hint dependence".
+_HINT_DEPENDENCE_THRESHOLD: float = 0.7
+
+
 # ─── Deterministic resolution of probabilistic behavioral params ─────────────
 
 
@@ -173,6 +185,18 @@ def _resolves_true(persona_id: str, problem_id: str, salt: str, probability: flo
     return _unit_draw(persona_id, problem_id, salt) < probability
 
 
+def _is_hint_dependent(persona: PersonaConfig) -> bool:
+    """Whether the persona is modeled as hint-dependent (Hint-hunter Hugo, §4.2 P3).
+
+    A persona at/above ``_HINT_DEPENDENCE_THRESHOLD`` scaffold-dependence "executes
+    hints mechanically without generalizing" and "struggles when hints are
+    unavailable": the simulator makes its routine answer correct only when it
+    requested a hint this turn. Read straight off the config (data, not behavior) so
+    the decision stays a pure function of the persona.
+    """
+    return persona.behavior.scaffold_dependence_rate >= _HINT_DEPENDENCE_THRESHOLD
+
+
 # ─── The core mapping: KnowledgeMode + format + misconception ⇒ action ───────
 
 
@@ -192,12 +216,27 @@ def _misconception_wrong_answer(problem: Problem) -> Rational | None:
     Replays the Layer-1 misconception generators (``domain/misconceptions.py``) on the
     problem's operands — the simulator chooses WHICH named error fires, the domain
     owns the arithmetic of WHAT that error produces (single source of truth,
-    ARCHITECTURE.md §4). Only the two across-errors yield a clean numeric magnitude on
-    the arithmetic KCs; anything else returns ``None`` so the caller falls back to a
-    deterministic guess rather than fabricating a value the domain doesn't model.
+    ARCHITECTURE.md §4). The two across-errors yield a clean numeric magnitude on the
+    arithmetic KCs, and the natural-number-bias number-line misplacement yields one on
+    a single-operand placement item (Natural-number Nate, §4.2 P1); anything else
+    returns ``None`` so the caller falls back to a deterministic guess rather than
+    fabricating a value the domain doesn't model.
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
+    if operands is None:
+        return None
+
+    # Number-line placement is the single-operand case: the natural-number bias reads
+    # the denominator as a whole-number POSITION, dropping the marker far from where
+    # the magnitude belongs (Nate "places bigger-denominator fractions further from
+    # zero", §4.2 P1). The verifier classifies this biased_position as MAGNITUDE /
+    # natural-number-bias (verifier.py _classify_wrong_answer). The domain owns the
+    # arithmetic; we only select that this is the error that fires.
+    if problem.kc is KnowledgeComponentId.NUMBER_LINE_PLACEMENT and len(operands) == 1:
+        (target,) = operands
+        return natural_number_bias_number_line(target.p, target.q).biased_position
+
+    if len(operands) != 2:
         return None
 
     first, second = operands
@@ -294,6 +333,14 @@ def simulate_action(
       - NEITHER            → no grip: a deterministic guess, cannot justify. Covers
                              unconfigured KCs (``mode_for`` returns NEITHER).
 
+    Cross-cutting on the no-genuine-understanding modes (NEITHER / WITH_MISCONCEPTION
+    / PROCEDURE_ONLY): a HINT-DEPENDENT persona — one whose ``scaffold_dependence_rate``
+    is at/above ``_HINT_DEPENDENCE_THRESHOLD`` — answers a routine item CORRECTLY when
+    it requested a hint this turn (executing the scaffold mechanically) and WRONG when
+    it did not (Hint-hunter Hugo, §4.2 P3). Because Hugo's hint-request probability is
+    >0.70 and his correct answers are always hinted, he can never produce an
+    unscaffolded correct — the evidence the §3.4 rule-3 gate requires.
+
     Behavioral params are resolved deterministically (``_resolves_true`` /
     ``think_time``): same (persona, problem) ⇒ same hint decision and think time.
     """
@@ -317,7 +364,9 @@ def simulate_action(
     # CONCEPT_ONLY rejection). Only BOTH and CONCEPT_ONLY carry genuine concept.
     understands = mode in (KnowledgeMode.BOTH, KnowledgeMode.CONCEPT_ONLY)
 
-    submitted, can_justify = _resolve_answer_and_justification(persona, problem, mode, ctx)
+    submitted, can_justify = _resolve_answer_and_justification(
+        persona, problem, mode, ctx, requested_hint=requested_hint
+    )
 
     explanation = _explanation_for(ctx.request, understands, mode)
 
@@ -335,11 +384,15 @@ def _resolve_answer_and_justification(
     problem: Problem,
     mode: KnowledgeMode,
     ctx: SimulationContext,
+    *,
+    requested_hint: bool,
 ) -> tuple[Rational | None, bool]:
     """The submitted answer + the can_justify flag for this (mode, request).
 
     Split out of ``simulate_action`` to keep each function under the §6 length
     guidance and to make the mode → (answer, justify) table readable in one place.
+    ``requested_hint`` is threaded in so the hint-dependent path (Hugo, §4.2 P3) can
+    make a routine answer correct only WHEN a hint was requested this turn.
     """
     # FIND_ERROR is its own path: the persona judges a claimed answer rather than
     # producing a fresh one. Whether they endorse the (typically wrong) claim is the
@@ -357,6 +410,19 @@ def _resolve_answer_and_justification(
     # ANSWER (routine solve-it) — the common case.
     if mode is KnowledgeMode.BOTH:
         return _correct_answer(problem), True
+
+    # Hint-dependent persona (Hugo, §4.2 P3) on a mode without genuine understanding:
+    # WITH a hint he reproduces the correct answer mechanically; WITHOUT one he is
+    # wrong. This sits BEFORE the per-mode branches so it overrides the routine answer
+    # for NEITHER / WITH_MISCONCEPTION / PROCEDURE_ONLY. He still cannot justify — the
+    # scaffold supplies the answer, not understanding — so can_justify is False.
+    if _is_hint_dependent(persona) and mode not in (
+        KnowledgeMode.BOTH,
+        KnowledgeMode.CONCEPT_ONLY,
+    ):
+        if requested_hint:
+            return _correct_answer(problem), False
+        return _deterministic_guess(problem, persona), False
 
     if mode is KnowledgeMode.PROCEDURE_ONLY:
         # Priya: routine answer is CORRECT, but she cannot justify it (§4.2 P2). No
