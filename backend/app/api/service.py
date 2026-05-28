@@ -38,9 +38,8 @@ from app.api.schemas import (
     TurnRequest,
     TurnResponse,
 )
-from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
+from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
-from app.policy.surface_states import SurfaceState
 from app.tutor.hints import select_nudge
 from app.tutor.session import RouteOption, TutorSession, routing_choices
 
@@ -62,18 +61,6 @@ class UnknownRouteError(LookupError):
     key outside it is a client error the route maps to a 422-style rejection rather
     than guessing a route (CLAUDE.md §8.5 — fail loudly, don't invent).
     """
-
-
-# Which representation each surface state renders a problem in (PROJECT.md §3.5,
-# ARCHITECTURE.md §7): S1 symbolic, S2 the number line (magnitude), S3 fraction bars
-# (the area model, where the operation is visible). S4 (worked example) and S5
-# (transfer probe) are not "answer-a-problem-in-this-format" states, so they are
-# absent here and fall through to the KC's default representation in ``_serve_next``.
-_STATE_REPRESENTATION: dict[SurfaceState, Representation] = {
-    SurfaceState.SYMBOLIC_FOCUS: Representation.SYMBOLIC,
-    SurfaceState.NUMBER_LINE_PRIMARY: Representation.NUMBER_LINE,
-    SurfaceState.FRACTION_BARS_PRIMARY: Representation.AREA_MODEL,
-}
 
 
 def _problem_view(problem: Problem) -> ProblemView:
@@ -124,22 +111,29 @@ def _route_for_key(route_key: str) -> RouteOption:
     raise UnknownRouteError(route_key)
 
 
-def _serve_next(session: TutorSession, kc: KnowledgeComponentId, state: SurfaceState) -> Problem:
+def _serve_next(session: TutorSession, kc: KnowledgeComponentId) -> Problem:
     """Choose and present the next problem after a turn (the MVP scheduling default).
 
     **Scope flag (CLAUDE.md §1):** the real adaptive scheduler — interleaving across
     KCs (0.D.5: 3 items / ≥2 KCs) and HelpNeed-driven selection — is Slice 4.x and is
     NOT wired here. Until then this uses a conservative, sourced default: **stay on
-    the KC just practiced**, and render it in the representation matching the new
-    surface state (``_STATE_REPRESENTATION``, grounded in §3.5/§7), falling back to
-    the KC's default representation when that KC does not support the state's format
-    (e.g. number-line placement has no symbolic form). The seed is the session's turn
-    count, so the walk is deterministic and each turn yields a fresh problem
-    (PROJECT.md §4.1). Revisit when the Slice 4.x scheduler lands.
+    the KC just practiced**, in a representation the live frontend can actually answer.
+
+    The format is chosen by the KC, not the surface state, so the served statement
+    always matches a rendered input widget: number-line placement → ``NUMBER_LINE``
+    (the draggable marker, with ``tick_segments``), everything else → ``SYMBOLIC`` (the
+    fraction editor, which expresses any ``a/b``). The S2/S3 manipulatives-as-workspace
+    morph (a number line / fraction bars that VISUALIZE an arithmetic problem while the
+    answer is entered separately) is the fuller Slice 2.5 follow-up; until it lands a
+    surface state must not pick a format with no answer widget, or the learner sees a
+    statement with no usable input. The seed is the session's turn count, so the walk
+    is deterministic and each turn yields a fresh problem (PROJECT.md §4.1).
     """
-    available = get_kc(kc).representations
-    desired = _STATE_REPRESENTATION.get(state)
-    surface_format = desired if (desired is not None and desired in available) else available[0]
+    surface_format = (
+        Representation.NUMBER_LINE
+        if kc is KnowledgeComponentId.NUMBER_LINE_PLACEMENT
+        else Representation.SYMBOLIC
+    )
     return session.present_problem(kc=kc, seed=len(session.history), surface_format=surface_format)
 
 
@@ -158,7 +152,7 @@ def _answer_response(session: TutorSession, request: TurnRequest) -> TurnRespons
         latency_ms=request.latency_ms,
         hint_used=request.hint_used,
     )
-    next_problem = _serve_next(session, answered.kc, result.surface_state)
+    next_problem = _serve_next(session, answered.kc)
     return TurnResponse(
         correct=result.correct,
         error_type=result.error_category,

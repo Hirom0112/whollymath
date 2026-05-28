@@ -7,19 +7,10 @@ import {
   type SurfaceState,
   type TurnResponse,
 } from '../api';
-import {
-  barToAnswer,
-  FractionBar,
-  fractionToAnswer,
-  NumberLine,
-  SymbolicEditor,
-  type BarValue,
-  type FractionValue,
-} from '../workspace';
+import { fractionToAnswer, NumberLine, SymbolicEditor, type FractionValue } from '../workspace';
 import './Tutor.css';
 
 const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
-const EMPTY_BAR: BarValue = { segments: 2, shaded: 0 };
 
 /**
  * The in-tutor problem surface (Turn 1 onward). Drives the real reactive loop
@@ -30,22 +21,28 @@ const EMPTY_BAR: BarValue = { segments: 2, shaded: 0 };
  * (landing + cold start); once the learner is working a problem the surface settles
  * (PRODUCT.md onboarding register arc).
  *
- * Scope: this renders the problem STATEMENT and a plain answer field — enough for a
- * real end-to-end journey. The S1–S5 SVG manipulatives (SymbolicEditor / NumberLine /
- * FractionBar — Slice 2.5) are the next frontend build; until they land, the learner
- * types the fraction (e.g. "7/12"), which the domain SymPy verifier parses server-side.
+ * Input selection: the answer widget is chosen by the ANSWER's nature (the KC), not
+ * the surface state, so the rendered widget can always express the answer the served
+ * problem wants. Number-line placement → the draggable NumberLine marker; everything
+ * else → the SymbolicEditor, which expresses any "a/b" (including improper sums > 1).
+ * The S2/S3 manipulatives-as-workspace morph (a number line / fraction bars that
+ * VISUALIZE an arithmetic problem while the answer is entered separately) is the
+ * fuller Slice 2.5 follow-up; FractionBar exists for it but is not a live answer input
+ * until that "manipulate + enter answer" design lands.
  */
 
 type Phase = 'answering' | 'submitting' | 'feedback';
 
 // Kid-friendly label per surface state, so the surface names the mode it is in
-// (refuse-rule 4 spirit: never present a state without a label). The SVG workspace
-// for each (Slice 2.5) replaces the plain input later.
+// (refuse-rule 4 spirit: never present a state without a label). These must NOT claim
+// a widget that isn't shown — the input is chosen by the KC (see ``isPlacement``), so
+// the non-placement labels describe the FRAME of mind, not a manipulative. A
+// number-line placement problem overrides these with a fixed, literal instruction.
 const STATE_LABEL: Record<SurfaceState, string> = {
   S1_symbolic_focus: 'Work it with the numbers',
-  S2_number_line_primary: 'Use the number line',
-  S3_fraction_bars_primary: 'Use the fraction bars',
-  S4_worked_example: "Let's walk through one together",
+  S2_number_line_primary: 'Picture how big it is',
+  S3_fraction_bars_primary: 'Picture the pieces',
+  S4_worked_example: "Let's take it step by step",
   S5_transfer_probe: 'Try this one a new way',
 };
 
@@ -53,10 +50,8 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const sessionId = session.session_id;
   const [problem, setProblem] = useState<ProblemView>(session.problem);
   const [surfaceState, setSurfaceState] = useState<SurfaceState>(session.surface_state);
-  const [answer, setAnswer] = useState('');
   const [fraction, setFraction] = useState<FractionValue>(EMPTY_FRACTION);
   const [tick, setTick] = useState<number | null>(null);
-  const [bar, setBar] = useState<BarValue>(EMPTY_BAR);
   const [phase, setPhase] = useState<Phase>('answering');
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -67,28 +62,21 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // latency_ms, which feeds the engagement floor (§6) and HelpNeed (§8) server-side.
   const startedAt = useRef<number>(Date.now());
 
-  // Each surface format has its own input mode; all of them ultimately produce the
-  // "n/d" answer string the domain verifier parses. Symbolic → the stacked fraction
-  // editor; number_line (with a tick hint) → the draggable marker; anything else →
-  // a plain field until its manipulative lands (FractionBar S3).
-  const isSymbolic = problem.surface_format === 'symbolic';
-  const isNumberLine = problem.surface_format === 'number_line' && problem.tick_segments != null;
-  const isAreaModel = problem.surface_format === 'area_model';
+  // The input widget is chosen by the answer's nature (the KC), so it can always
+  // express the served answer. Number-line placement → the draggable marker (its
+  // answer is k/tick_segments); everything else → the fraction editor, which expresses
+  // any "a/b" (including an addition sum > 1 the marker/bars couldn't show). Both
+  // produce the "n/d" answer string the domain verifier parses server-side.
+  const isPlacement = problem.kc === 'KC_number_line_placement' && problem.tick_segments != null;
 
   let submittedAnswer: string;
   let canSubmit: boolean;
-  if (isSymbolic) {
-    submittedAnswer = fractionToAnswer(fraction);
-    canSubmit = submittedAnswer !== '';
-  } else if (isNumberLine) {
+  if (isPlacement) {
     submittedAnswer = tick === null ? '' : `${String(tick)}/${String(problem.tick_segments)}`;
     canSubmit = tick !== null;
-  } else if (isAreaModel) {
-    submittedAnswer = barToAnswer(bar);
-    canSubmit = submittedAnswer !== '';
   } else {
-    submittedAnswer = answer;
-    canSubmit = answer.trim() !== '';
+    submittedAnswer = fractionToAnswer(fraction);
+    canSubmit = submittedAnswer !== '';
   }
 
   async function handleSubmit(event: React.FormEvent): Promise<void> {
@@ -138,10 +126,8 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     if (!next) return;
     setProblem(next);
     setSurfaceState(result.next_surface_state);
-    setAnswer('');
     setFraction(EMPTY_FRACTION);
     setTick(null);
-    setBar(EMPTY_BAR);
     setHint(null);
     setHintUsed(false);
     setResult(null);
@@ -152,46 +138,27 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   return (
     <main className="wm-tutor">
       <section className="wm-tutor-card" aria-live="polite">
-        <p className="wm-tutor-mode">{STATE_LABEL[surfaceState]}</p>
+        <p className="wm-tutor-mode">
+          {isPlacement ? 'Place it on the number line' : STATE_LABEL[surfaceState]}
+        </p>
         <h1 className="wm-tutor-statement">{problem.statement}</h1>
 
         {phase !== 'feedback' ? (
           <form className="wm-tutor-form" onSubmit={handleSubmit}>
-            {isSymbolic ? (
-              <SymbolicEditor
-                value={fraction}
-                onChange={setFraction}
-                disabled={phase === 'submitting'}
-                prompt="Your answer"
-              />
-            ) : isNumberLine && problem.tick_segments != null ? (
+            {isPlacement && problem.tick_segments != null ? (
               <NumberLine
                 segments={problem.tick_segments}
                 value={tick}
                 onChange={setTick}
                 disabled={phase === 'submitting'}
               />
-            ) : isAreaModel ? (
-              <FractionBar value={bar} onChange={setBar} disabled={phase === 'submitting'} />
             ) : (
-              <>
-                <label className="wm-tutor-label" htmlFor="wm-answer">
-                  Your answer
-                </label>
-                <input
-                  id="wm-answer"
-                  className="wm-tutor-input"
-                  type="text"
-                  inputMode="text"
-                  autoComplete="off"
-                  placeholder="e.g. 7/12"
-                  value={answer}
-                  onChange={(event) => {
-                    setAnswer(event.target.value);
-                  }}
-                  disabled={phase === 'submitting'}
-                />
-              </>
+              <SymbolicEditor
+                value={fraction}
+                onChange={setFraction}
+                disabled={phase === 'submitting'}
+                prompt="Your answer"
+              />
             )}
             <div className="wm-tutor-actions">
               <button
