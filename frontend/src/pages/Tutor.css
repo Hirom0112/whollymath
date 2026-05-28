@@ -250,3 +250,68 @@
   font-size: 15px;
   color: var(--wm-coral);
 }
+
+/* Per-KC progress strip — shows the BKT progress the backend returns each turn, so the
+   learner can see mastery building (and which skills are still in progress). */
+.wm-tutor-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 0 0 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--wm-cream-2);
+}
+.wm-tutor-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 132px;
+}
+.wm-tutor-progress-label {
+  font-family: var(--wm-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wm-ink-soft);
+}
+.wm-tutor-progress-item--goal .wm-tutor-progress-label {
+  color: var(--wm-navy-deep);
+}
+.wm-tutor-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--wm-cream-2);
+  overflow: hidden;
+}
+.wm-tutor-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--wm-blue);
+  transition: width 0.35s ease;
+}
+.wm-tutor-progress-fill--mastered {
+  background: var(--wm-green);
+}
+
+/* The "mastered" end state — the journey's goal is reached (declared mastery). */
+.wm-tutor-mastered {
+  background: var(--wm-card-mint);
+  border: 2px solid var(--wm-green);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin: 0 0 18px;
+}
+.wm-tutor-mastered-title {
+  margin: 0 0 8px;
+  font-family: var(--wm-font-serif);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+}
+.wm-tutor-mastered-sub {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--wm-ink);
+}

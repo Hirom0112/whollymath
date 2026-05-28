@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import {
   submitTurn,
   type InterventionView,
+  type MasterySnapshot,
   type ProblemView,
   type StartSessionResponse,
   type SurfaceState,
@@ -40,23 +41,22 @@ function initialFraction(problem: ProblemView): FractionValue {
  * (landing + cold start); once the learner is working a problem the surface settles
  * (PRODUCT.md onboarding register arc).
  *
- * Input selection: the answer widget is chosen by the ANSWER's nature (the KC), not
- * the surface state, so the rendered widget can always express the answer the served
- * problem wants. Number-line placement → the draggable NumberLine marker; everything
- * else → the SymbolicEditor, which expresses any "a/b" (including improper sums > 1).
- * The S2/S3 manipulatives-as-workspace morph (a number line / fraction bars that
- * VISUALIZE an arithmetic problem while the answer is entered separately) is the
- * fuller Slice 2.5 follow-up; FractionBar exists for it but is not a live answer input
- * until that "manipulate + enter answer" design lands.
+ * Input selection: the answer widget is chosen by the problem's surface_format /
+ * answer_kind, so the rendered widget always matches what the question asks — a number
+ * line for placement OR an arithmetic result that lands in 0–1, yes/no buttons for a
+ * relational judgment, the fraction editor otherwise. This is what lets the SAME KC be
+ * answered in more than one representation (e.g. addition symbolically and on the line),
+ * which the mastery model's representation-diversity rule (§3.4 rule 2) requires.
+ * The interleaving + representation rotation is the backend scheduler (policy/scheduler).
  */
 
 type Phase = 'answering' | 'submitting' | 'feedback';
 
 // Kid-friendly label per surface state, so the surface names the mode it is in
 // (refuse-rule 4 spirit: never present a state without a label). These must NOT claim
-// a widget that isn't shown — the input is chosen by the KC (see ``isPlacement``), so
-// the non-placement labels describe the FRAME of mind, not a manipulative. A
-// number-line placement problem overrides these with a fixed, literal instruction.
+// a widget that isn't shown — the input is chosen by the surface_format (see ``isNumberLine``
+// / ``isYesNo``), so the symbolic labels describe the FRAME of mind, not a manipulative. A
+// number-line or yes/no problem overrides these with a fixed, literal instruction.
 const STATE_LABEL: Record<SurfaceState, string> = {
   S1_symbolic_focus: 'Work it with the numbers',
   S2_number_line_primary: 'Picture how big it is',
@@ -64,6 +64,28 @@ const STATE_LABEL: Record<SurfaceState, string> = {
   S4_worked_example: "Let's take it step by step",
   S5_transfer_probe: 'Try this one a new way',
 };
+
+// Kid-friendly names for the per-KC progress strip (the mastery snapshot keys on KC id).
+const KC_LABEL: Record<string, string> = {
+  KC_equivalence: 'Equivalent fractions',
+  KC_common_denominator: 'Common denominator',
+  KC_addition_unlike: 'Adding fractions',
+  KC_subtraction_unlike: 'Subtracting fractions',
+  KC_number_line_placement: 'Number line',
+};
+
+// τ — the mastery probability threshold (PROJECT.md §3.4 / mastery_model). The progress
+// bar fills to full as the BKT probability approaches τ; mastery needs τ AND the §3.4 rules.
+const MASTERY_THRESHOLD = 0.85;
+
+// The backend returns the snapshot for the KC answered THIS turn only. Merge by KC id, keeping
+// the latest reading per KC, so the progress strip shows every skill the session has touched
+// (and the goal KC's mastered state persists across interleaved companion turns).
+function mergeMastery(prev: MasterySnapshot[], next: MasterySnapshot[]): MasterySnapshot[] {
+  const byKc = new Map(prev.map((m) => [m.kc_id, m]));
+  for (const m of next) byKc.set(m.kc_id, m);
+  return [...byKc.values()];
+}
 
 export function Tutor({ session }: { session: StartSessionResponse }): React.JSX.Element {
   const sessionId = session.session_id;
@@ -82,17 +104,25 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // the workspace (§3.8 refuse-rule 6). null unless the proactive arm fired (default OFF).
   const [intervention, setIntervention] = useState<InterventionView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The per-KC mastery snapshot the backend returns each turn (BKT probability + declared
+  // mastery). Merged across turns so the progress strip shows every skill touched.
+  const [mastery, setMastery] = useState<MasterySnapshot[]>([]);
+
+  // The KC this session is working toward (the cold-start route's KC). When the model
+  // DECLARES mastery on it, the journey's goal is reached.
+  const goalKc = session.problem.kc;
+  const goalMastered = mastery.find((m) => m.kc_id === goalKc)?.mastered ?? false;
 
   // When the current problem was first shown — the elapsed time is the turn's
   // latency_ms, which feeds the engagement floor (§6) and HelpNeed (§8) server-side.
   const startedAt = useRef<number>(Date.now());
 
-  // The input widget is chosen by the answer's nature (the KC), so it can always
-  // express the served answer. Number-line placement → the draggable marker (its
-  // answer is k/tick_segments); everything else → the fraction editor, which expresses
-  // any "a/b" (including an addition sum > 1 the marker/bars couldn't show). Both
-  // produce the "n/d" answer string the domain verifier parses server-side.
-  const isPlacement = problem.kc === 'KC_number_line_placement' && problem.tick_segments != null;
+  // The answer widget is chosen by what the problem asks (surface_format / answer_kind), so it
+  // always matches the question — and so the SAME KC can be answered in more than one
+  // representation (addition symbolically AND on the line), which mastery rule 2 needs. A
+  // number-line surface (placement OR an arithmetic result in 0–1) → the draggable marker;
+  // a yes/no judgment → the buttons; otherwise the fraction editor.
+  const isNumberLine = problem.surface_format === 'number_line' && problem.tick_segments != null;
   // A relational-judgment problem ("Is X the same amount as Y?") is answered yes/no, not
   // by typing a fraction — the server tells us via answer_kind so the surface matches the
   // question (the coherence fix: a yes/no question must not land on a fraction input).
@@ -103,7 +133,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   if (isYesNo) {
     submittedAnswer = yesNoToAnswer(yesNo);
     canSubmit = yesNo !== null;
-  } else if (isPlacement) {
+  } else if (isNumberLine) {
     submittedAnswer = tick === null ? '' : `${String(tick)}/${String(problem.tick_segments)}`;
     canSubmit = tick !== null;
   } else {
@@ -128,6 +158,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
         hint_used: hintUsed,
       });
       setResult(response);
+      setMastery((prev) => mergeMastery(prev, response.mastery ?? []));
       setPhase('feedback');
     } catch {
       setError('Something went wrong sending your answer. Give it another try.');
@@ -186,10 +217,37 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   return (
     <main className="wm-tutor">
       <section className="wm-tutor-card" aria-live="polite">
+        {mastery.length > 0 ? (
+          <div className="wm-tutor-progress" aria-label="Your progress so far">
+            {mastery.map((m) => (
+              <div
+                key={m.kc_id}
+                className={`wm-tutor-progress-item ${
+                  m.kc_id === goalKc ? 'wm-tutor-progress-item--goal' : ''
+                }`}
+              >
+                <span className="wm-tutor-progress-label">
+                  {KC_LABEL[m.kc_id] ?? m.kc_id}
+                  {m.mastered ? ' ✓' : ''}
+                </span>
+                <span className="wm-tutor-progress-track">
+                  <span
+                    className={`wm-tutor-progress-fill ${
+                      m.mastered ? 'wm-tutor-progress-fill--mastered' : ''
+                    }`}
+                    style={{
+                      width: `${String(Math.min(100, Math.round((m.probability / MASTERY_THRESHOLD) * 100)))}%`,
+                    }}
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <p className="wm-tutor-mode">
           {isYesNo
             ? 'Same amount, or not?'
-            : isPlacement
+            : isNumberLine
               ? 'Place it on the number line'
               : STATE_LABEL[surfaceState]}
         </p>
@@ -215,7 +273,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
                 disabled={phase === 'submitting'}
                 prompt="Your answer"
               />
-            ) : isPlacement && problem.tick_segments != null ? (
+            ) : isNumberLine && problem.tick_segments != null ? (
               <NumberLine
                 segments={problem.tick_segments}
                 value={tick}
@@ -253,14 +311,26 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
           </form>
         ) : (
           <div className="wm-tutor-feedback-block">
-            <p
-              className={`wm-tutor-feedback wm-tutor-feedback--${result?.correct ? 'right' : 'wrong'}`}
-            >
-              {result?.feedback}
-            </p>
+            {goalMastered ? (
+              <div className="wm-tutor-mastered" role="status">
+                <p className="wm-tutor-mastered-title">
+                  You mastered {KC_LABEL[goalKc] ?? 'this skill'}!
+                </p>
+                <p className="wm-tutor-mastered-sub">
+                  You got it right across different forms — that&rsquo;s real understanding, not one
+                  lucky answer.
+                </p>
+              </div>
+            ) : (
+              <p
+                className={`wm-tutor-feedback wm-tutor-feedback--${result?.correct ? 'right' : 'wrong'}`}
+              >
+                {result?.feedback}
+              </p>
+            )}
             {result?.next_problem ? (
               <button type="button" className="wm-tutor-next" onClick={handleNext}>
-                Next problem
+                {goalMastered ? 'Keep practicing' : 'Next problem'}
               </button>
             ) : null}
           </div>
