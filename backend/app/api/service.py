@@ -40,6 +40,8 @@ from app.api.schemas import (
 )
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
+from app.helpneed.live_features import LiveTurn, live_features
+from app.helpneed.predictor import HelpNeedPredictor
 from app.tutor.hints import select_nudge
 from app.tutor.session import RouteOption, TutorSession, routing_choices
 
@@ -137,7 +139,46 @@ def _serve_next(session: TutorSession, kc: KnowledgeComponentId) -> Problem:
     return session.present_problem(kc=kc, seed=len(session.history), surface_format=surface_format)
 
 
-def _answer_response(session: TutorSession, request: TurnRequest) -> TurnResponse:
+def _help_need(
+    session: TutorSession,
+    next_problem: Problem,
+    predictor: HelpNeedPredictor | None,
+) -> float | None:
+    """Observe-only P(unproductive) for the NEXT problem (Slice 4.4.1).
+
+    **Observe-only by construction (the locked 4.3 decision, RESEARCH.md §7.5):** this
+    reads ``predict_proba`` and hands the number back in the response. It NEVER feeds a
+    transition, a refuse-rule, or the next-problem choice — interventions are Slice 4.5,
+    gated on a *sustained* high-P signal (``turns_since_last_correct`` dominates the
+    model, so a single high-P turn right after a resolved error streak is not enough).
+
+    Stays on the deterministic, sub-100ms path (§8.1): the §3.3 features are built from
+    the live history by ``live_features`` and scored by XGBoost — no LLM, no SymPy, no
+    DB. Leakage-safe: the in-progress next problem is not yet in ``session.history``, so
+    every feature comes from strictly-earlier completed turns (live_features docstring).
+
+    ``None`` when no predictor is injected (a test/degraded store — ``create_app``
+    always loads the committed artifact, so production always scores).
+    """
+    if predictor is None:
+        return None
+    history = [
+        LiveTurn(
+            correct=turn.observation.correct,
+            hinted=turn.observation.hinted,
+            latency_ms=turn.observation.latency_ms,
+        )
+        for turn in session.history
+    ]
+    features = live_features(history, current_kc=next_problem.kc)
+    return predictor.predict_proba(features)
+
+
+def _answer_response(
+    session: TutorSession,
+    request: TurnRequest,
+    predictor: HelpNeedPredictor | None,
+) -> TurnResponse:
     """Run one SUBMIT_ANSWER turn end-to-end and shape the wire reply.
 
     The raw answer string is handed straight to ``submit_answer``: the domain
@@ -145,6 +186,10 @@ def _answer_response(session: TutorSession, request: TurnRequest) -> TurnRespons
     ``_parse_to_rational``) and never raises on what a kid types, so the API does not
     pre-parse or pre-validate the math (§8.2). A missing answer on a submit becomes
     the empty string, which the verifier treats as wrong (honest, never a crash).
+
+    After the deterministic turn, the HelpNeed predictor scores the next problem
+    OBSERVE-ONLY (Slice 4.4.1, ``_help_need``) — reported, never acted on. It runs
+    AFTER the verify/mastery/policy path, so it cannot perturb the turn's outcome.
     """
     answered = session.current_problem
     result = session.submit_answer(
@@ -163,6 +208,7 @@ def _answer_response(session: TutorSession, request: TurnRequest) -> TurnRespons
             MasterySnapshot(kc_id=m.kc, probability=m.probability, mastered=m.mastered)
             for m in result.mastery_snapshot
         ],
+        help_need=_help_need(session, next_problem, predictor),
         next_problem=_problem_view(next_problem),
     )
 
@@ -200,8 +246,14 @@ class SessionStore:
     routes, so tests get an isolated store and sessions never leak between apps.
     Persistence (a repository over the Slice-1.8 DB models) is a deliberately later
     slice; ``create_all`` / in-memory is the path for now (CLAUDE.md §8.6).
+
+    ``predictor`` is the boot-loaded HelpNeed model used to score each answer turn
+    observe-only (Slice 4.4.1). It is optional so contract/boundary tests can build a
+    bare store; ``create_app`` always injects the committed artifact, so production
+    always scores. When absent, ``help_need`` is simply omitted (left ``None``).
     """
 
+    predictor: HelpNeedPredictor | None = None
     _sessions: dict[str, TutorSession] = field(default_factory=dict)
 
     def start(self, route_key: str) -> StartSessionResponse:
@@ -237,7 +289,7 @@ class SessionStore:
             raise SessionNotFoundError(request.session_id)
         if request.action is ActionType.REQUEST_HINT:
             return _hint_response(session)
-        return _answer_response(session, request)
+        return _answer_response(session, request, self.predictor)
 
 
 __all__ = [

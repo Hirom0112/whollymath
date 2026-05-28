@@ -268,6 +268,10 @@ export interface TurnResponse {
    */
   mastery?: MasterySnapshot[];
   /**
+   * Observe-only P(unproductive) from the HelpNeed predictor for the NEXT problem, given this session's history (Slice 4.4.1). It is reported, not acted on: the surface must NOT branch on it yet — interventions are Slice 4.5, gated on a sustained signal (RESEARCH.md §7.5). null on a hint turn (no answer was submitted, so the history is unchanged).
+   */
+  help_need?: number | null;
+  /**
    * The next problem to present after this turn, or null when the loop has nothing further to serve (e.g. an unrecognized session). The surface renders it directly; the deterministic loop chose it (§10 step 12).
    */
   next_problem?: ProblemView | null;

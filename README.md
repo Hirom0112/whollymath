@@ -173,6 +173,31 @@ cd backend && uv run python -m app.helpneed.train_pipeline
 # optional fast pass: WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000 uv run python -m app.helpneed.train_pipeline
 ```
 
+### The committed HelpNeed model artifact
+
+The deployed turn loop needs a *fitted* predictor at boot, but the 1.44 GB EDM Cup
+training data is gitignored (too large for git, re-downloadable from source). The
+trained XGBoost model, by contrast, serializes to ~280 KB — its size is set by the tree
+count/depth, not the row count — so **the one blessed artifact is checked in** at
+`backend/app/helpneed/artifacts/helpneed_v1.joblib` and loaded once at boot by
+`app.helpneed.artifact.load_predictor` (no network fetch on the boot path; the turn loop
+stays sub-100 ms). This overrides the default `*.joblib` ignore via a single negation in
+`.gitignore` (decision 2026-05-28). S3/model-registry hosting is the upgrade path if the
+model ever grows or needs independent versioning — premature at this size.
+
+Because the data is gitignored, the binary's provenance can't show in a diff, so it lives
+in the decision log instead. **Reproduce the committed artifact** (XGBoost, fit on all
+~95.8k examples from the first 5M action rows; holdout AUC 0.893, RESEARCH.md §7.2):
+
+```bash
+cd backend && WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000 \
+  WHOLLYMATH_HELPNEED_OUT=app/helpneed/artifacts/helpneed_v1.joblib \
+  uv run python -m app.helpneed.train_pipeline
+```
+
+The predictor scores each answered turn **observe-only** — the API returns it as
+`help_need`, but nothing acts on it yet (interventions are a later slice).
+
 ---
 
 ## How this project is built

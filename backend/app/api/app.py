@@ -19,6 +19,7 @@ from fastapi import FastAPI
 
 from app.api.routes import router
 from app.api.service import SessionStore
+from app.helpneed.artifact import load_predictor
 
 
 def create_app() -> FastAPI:
@@ -28,6 +29,11 @@ def create_app() -> FastAPI:
     routes via the ``get_session_store`` dependency. One store per app keeps live
     sessions isolated between app instances — which is what lets tests construct a
     fresh, empty app each time (no cross-test session leakage).
+
+    The committed HelpNeed artifact is loaded ONCE here (Slice 4.4.1) and injected into
+    the store, so every turn scores observe-only without a per-request load and the
+    deployed image needs no network fetch on the boot path (artifact.py). Loading once
+    at boot is what keeps the turn loop sub-100ms (§8.1).
     """
     app = FastAPI(
         title="WhollyMath API",
@@ -35,7 +41,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         summary="Turn-loop API for the adaptive fraction tutor (ARCHITECTURE.md §10).",
     )
-    app.state.session_store = SessionStore()
+    app.state.session_store = SessionStore(predictor=load_predictor())
     app.include_router(router)
     return app
 

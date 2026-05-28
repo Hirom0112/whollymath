@@ -138,6 +138,21 @@ def main() -> None:
     for name, value in top_shap_features(xgb_predictor, x_all):
         print(f"    {name:28} {value:.4f}")
 
+    # Optionally persist the PRODUCTION artifact (Slice 4.4.1). The reported metrics
+    # above come from the 75/25 holdout split; the deployed model is fit on ALL
+    # examples (the holdout exists to measure quality, not to be thrown away in
+    # production). Saved only when an output path is given, so the default run stays a
+    # pure reporting pass.
+    out_path = os.environ.get("WHOLLYMATH_HELPNEED_OUT", "")
+    if out_path:
+        destination = Path(out_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        production = HelpNeedPredictor.fit(examples, kind="xgboost")
+        production.save(destination)
+        print(
+            f"  saved production artifact (fit on all {len(examples):,} examples) -> {destination}"
+        )
+
 
 if __name__ == "__main__":
     main()

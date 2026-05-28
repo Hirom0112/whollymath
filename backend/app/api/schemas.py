@@ -252,6 +252,18 @@ class TurnResponse(BaseModel):
         default_factory=list,
         description="Per-KC mastery snapshot for the affected KC(s) (§6).",
     )
+    help_need: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Observe-only P(unproductive) from the HelpNeed predictor for the NEXT "
+            "problem, given this session's history (Slice 4.4.1). It is reported, not "
+            "acted on: the surface must NOT branch on it yet — interventions are Slice "
+            "4.5, gated on a sustained signal (RESEARCH.md §7.5). null on a hint turn "
+            "(no answer was submitted, so the history is unchanged)."
+        ),
+    )
     next_problem: ProblemView | None = Field(
         default=None,
         description=(

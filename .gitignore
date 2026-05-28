@@ -42,9 +42,18 @@ coverage/
 *.tsbuildinfo
 .vite/
 
-# ─── ML artifacts (trained models / DataShop pulls live in S3, not git) ───
+# ─── ML artifacts ───
+# Trained models are gitignored by default. EXCEPTION (decision 2026-05-28): the one
+# committed HelpNeed artifact is checked in so the deployed turn loop loads it at boot
+# with no network fetch — it is ~280 KB (size set by tree count/depth, not row count),
+# and its provenance lives in the commit message + README (the 1.44 GB training data
+# is gitignored, so the binary's source can't show in a diff). S3/model-registry
+# hosting is the upgrade path if the model grows or needs independent versioning
+# (CLAUDE.md §8.6 — premature at this size). Reproduce: app.helpneed.train_pipeline
+# with WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000 + WHOLLYMATH_HELPNEED_OUT (RESEARCH.md §7.2).
 *.joblib
 *.pkl
+!backend/app/helpneed/artifacts/helpneed_v1.joblib
 
 # ─── Local training-data pulls (ASSISTments / DataShop traces) ───
 # Large, license-bound interaction logs; never committed (live in S3 for prod).
