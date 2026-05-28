@@ -59,6 +59,10 @@
   background: var(--wm-yellow);
   color: var(--wm-navy-deep);
 }
+.wm-eval-chip--bad {
+  background: var(--wm-card-warm);
+  color: var(--wm-coral);
+}
 .wm-eval-chip--neutral {
   background: var(--wm-cream-2);
   color: var(--wm-ink-soft);

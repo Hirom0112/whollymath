@@ -360,6 +360,10 @@ class ThreeArmComparisonView(BaseModel):
     rows: list[PersonaComparisonView]
     total: int = Field(description="Number of personas (arms are scored over these).")
     adaptive_false_positives: int
+    chat_false_positives: int | None = Field(
+        default=None,
+        description="Chat false positives from the live run, or null when still the prediction.",
+    )
     chat_live: bool = Field(description="True once the chat column reflects a real LLM run.")
     headline: str = Field(description="The §3.11 pitch summary for the header.")
 

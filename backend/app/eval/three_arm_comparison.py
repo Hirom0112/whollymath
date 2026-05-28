@@ -30,8 +30,11 @@ deliberate, cost-aware step, not something this import does.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from app.domain.problem_generators import Problem, generate_problem
 from app.eval.chat_baseline import CHAT_SYSTEM_PROMPT, run_chat_session
@@ -186,6 +189,20 @@ def run_comparison_offline() -> list[ComparisonRow]:
     return [compare_case_offline(case) for case in harness_cases()]
 
 
+_CHAT_RUN_PATH = Path(__file__).parent / "artifacts" / "chat_baseline_run.json"
+
+
+def load_recorded_chat_run() -> dict[str, Any] | None:
+    """The committed result of an actual chat-arm run (``artifacts/chat_baseline_run.json``),
+    or ``None`` if not present. Lets the dashboard show REAL chat numbers without re-running
+    the LLM on every page load (no per-view cost). Provenance (date, model, scope) is in the
+    file. The recorded run is the source of truth for the chat column once it exists."""
+    if not _CHAT_RUN_PATH.exists():
+        return None
+    parsed: dict[str, Any] = json.loads(_CHAT_RUN_PATH.read_text())
+    return parsed
+
+
 def run_three_arm_comparison(*, chat_provider: LLMProvider | None = None) -> list[ComparisonRow]:
     """Run the five-persona comparison across all three arms.
 
@@ -243,6 +260,7 @@ __all__ = [
     "compare_case",
     "compare_case_offline",
     "format_comparison",
+    "load_recorded_chat_run",
     "run_comparison_offline",
     "run_three_arm_comparison",
 ]

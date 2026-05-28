@@ -50,8 +50,12 @@ export function EvalComparison(): React.JSX.Element {
           <span className="wm-eval-chip wm-eval-chip--good">
             Adaptive false positives: {data.adaptive_false_positives}/{data.total}
           </span>
-          <span className="wm-eval-chip wm-eval-chip--pending">
-            Chat: {data.chat_live ? 'live run' : 'predicted (live run pending)'}
+          <span
+            className={`wm-eval-chip ${data.chat_live ? 'wm-eval-chip--bad' : 'wm-eval-chip--pending'}`}
+          >
+            {data.chat_live
+              ? `Chat false positives: ${String(data.chat_false_positives ?? 0)}/${String(data.total)} (live)`
+              : 'Chat: predicted (live run pending)'}
           </span>
           <span className="wm-eval-chip wm-eval-chip--neutral">
             Static: N/A (certifies nothing)

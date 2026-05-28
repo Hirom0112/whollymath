@@ -268,6 +268,10 @@ export interface ThreeArmComparisonView {
   total: number;
   adaptive_false_positives: number;
   /**
+   * Chat false positives from the live run, or null when still the prediction.
+   */
+  chat_false_positives?: number | null;
+  /**
    * True once the chat column reflects a real LLM run.
    */
   chat_live: boolean;

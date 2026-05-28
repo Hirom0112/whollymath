@@ -19,6 +19,7 @@ from app.eval.false_positive_harness import harness_cases
 from app.eval.three_arm_comparison import (
     ArmOutcome,
     ComparisonRow,
+    load_recorded_chat_run,
     run_comparison_offline,
 )
 
@@ -51,32 +52,68 @@ def _problems_for_persona(persona_id: str) -> list[str]:
     return [generate_problem(s.kc, s.seed, s.surface_format).statement for s in case.sequence]
 
 
-def _row_view(row: ComparisonRow) -> PersonaComparisonView:
+def _chat_outcome(row: ComparisonRow, recorded_run: dict[str, object] | None) -> ArmOutcome:
+    """The chat arm's outcome for a persona: the recorded LIVE result if we have one, else the
+    pre-registered prediction (``row.chat``)."""
+    if recorded_run is None:
+        return row.chat
+    results = recorded_run.get("results", {})
+    assert isinstance(results, dict)
+    rec = results.get(row.persona_id)
+    if rec is None:
+        return row.chat
+    return ArmOutcome(
+        arm="chat",
+        claimed_mastery=bool(rec["claimed_mastery"]),
+        note=f"live self-assessment: {rec['self_assessment']!r}",
+    )
+
+
+def _row_view(row: ComparisonRow, chat: ArmOutcome) -> PersonaComparisonView:
     return PersonaComparisonView(
         persona_name=row.persona_name,
         attacks=row.attacked_dimension,
         problems=_problems_for_persona(row.persona_id),
         adaptive=_verdict_view(row.adaptive),
-        chat=_verdict_view(row.chat),
+        chat=_verdict_view(chat),
         static=_verdict_view(row.static),
     )
 
 
 def build_three_arm_comparison_view() -> ThreeArmComparisonView:
-    """Assemble the on-screen three-arm comparison (offline: real adaptive + static, predicted
-    chat). Free to call — no LLM, deterministic."""
+    """Assemble the on-screen three-arm comparison. Adaptive + static are computed live and
+    deterministically (free, no LLM). The chat column uses the recorded LIVE run if one is
+    committed (``artifacts/chat_baseline_run.json``), otherwise the §9 prediction. Either way
+    this is free to call — it never makes an LLM call."""
     rows = run_comparison_offline()
+    recorded_run = load_recorded_chat_run()
+    chat_outcomes = [_chat_outcome(r, recorded_run) for r in rows]
+
     adaptive_fp = sum(bool(r.adaptive.claimed_mastery) for r in rows)
-    return ThreeArmComparisonView(
-        rows=[_row_view(r) for r in rows],
-        total=len(rows),
-        adaptive_false_positives=adaptive_fp,
-        chat_live=False,
-        headline=(
+    chat_live = recorded_run is not None
+    chat_fp = sum(bool(c.claimed_mastery) for c in chat_outcomes) if chat_live else None
+
+    if chat_live:
+        headline = (
+            f"Five adversarial learners, the same problems, three tutors. Our adaptive tutor "
+            f"denied false mastery to all five ({adaptive_fp}/{len(rows)}); the chat tutor "
+            f"over-claimed mastery for {chat_fp}/{len(rows)} — fooled by the learners who give "
+            f"right answers without real understanding; the static walkthrough certifies nothing."
+        )
+    else:
+        headline = (
             "Five adversarial learners, the same problems, three tutors. Our adaptive tutor "
             "denies false mastery to all five; a chat tutor is predicted to certify learners "
             "who haven't mastered the skill; a static walkthrough certifies nothing."
-        ),
+        )
+
+    return ThreeArmComparisonView(
+        rows=[_row_view(r, c) for r, c in zip(rows, chat_outcomes, strict=True)],
+        total=len(rows),
+        adaptive_false_positives=adaptive_fp,
+        chat_false_positives=chat_fp,
+        chat_live=chat_live,
+        headline=headline,
     )
 
 

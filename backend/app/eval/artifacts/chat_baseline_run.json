@@ -1,0 +1,15 @@
+{
+  "recorded": "2026-05-28",
+  "model": "claude-opus-4-7 (premium tier)",
+  "scope": "Slice 4.1 adversarial sequences (4-5 problems/persona), not yet the full 50-problem matrix",
+  "n_personas": 5,
+  "false_positives": 2,
+  "note": "Live run of the chat baseline self-assessment (MASTERED/NOT_YET). Pre-registered prediction was 4-5/5; actual 2/5 — the chat tutor denied the personas who give visibly wrong answers (Sam, Nate, Cleo) and over-claimed only for the right-answer-without-understanding personas (Hugo, Priya). See RESEARCH.md §9.",
+  "results": {
+    "surface_sam": { "claimed_mastery": false, "self_assessment": "NOT_YET" },
+    "natural_number_nate": { "claimed_mastery": false, "self_assessment": "NOT_YET" },
+    "hint_hunter_hugo": { "claimed_mastery": true, "self_assessment": "MASTERED" },
+    "click_through_cleo": { "claimed_mastery": false, "self_assessment": "NOT_YET" },
+    "procedure_priya": { "claimed_mastery": true, "self_assessment": "MASTERED" }
+  }
+}
