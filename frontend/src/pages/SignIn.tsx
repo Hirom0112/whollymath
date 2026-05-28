@@ -8,7 +8,7 @@ import './SignIn.css';
  * actual Google auth lands with PL.3. */
 export type SignInMethod = 'google' | 'demo';
 
-const ROLL_IN_MS = 1800;
+const ROLL_IN_MS = 2200;
 const ROLL_OUT_MS = 2000;
 const REDUCED_MS = 280;
 

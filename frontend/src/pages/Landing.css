@@ -283,23 +283,23 @@
   animation: wm-bob 3.2s ease-in-out infinite;
 }
 .wm-mascot--rolling {
-  animation: wm-roll 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: wm-roll 0.7s linear forwards;
   z-index: 50;
 }
 
 /* Tuck the limbs in as the roll starts, so the silhouette becomes a clean wheel. */
 .wm-mascot--rolling .wm-mascot-arm-l {
   transform-origin: top center;
-  animation: wm-tuck-arm-l 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: wm-tuck-arm-l 0.7s linear forwards;
 }
 .wm-mascot--rolling .wm-mascot-arm-r {
   transform-origin: top center;
-  animation: wm-tuck-arm-r 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: wm-tuck-arm-r 0.7s linear forwards;
 }
 .wm-mascot--rolling .wm-mascot-leg-l,
 .wm-mascot--rolling .wm-mascot-leg-r {
   transform-origin: top center;
-  animation: wm-tuck-leg 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: wm-tuck-leg 0.7s linear forwards;
 }
 /* The mascot FIGURE (pie + eyes + smile + arms + legs) now lives in the shared
    components/Mascot.css; this file keeps only the page-level wrapper animation
@@ -361,7 +361,7 @@
     transform: translate(40px, 0) scale(1) rotate(120deg);
   }
   100% {
-    transform: translate(135vw, -6px) rotate(2880deg);
+    transform: translate(40vw, -6px) rotate(900deg);
   }
 }
 @keyframes wm-tuck-arm-l {
