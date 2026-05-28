@@ -14,6 +14,17 @@ TODO.md
 # ─── Session handoff note (local-only; for picking up the build in a new terminal) ───
 HANDOFF.md
 
+# ─── Internal submission-prep / design docs (untracked per user decision 2026-05-28) ───
+# We submit these to Nerdy directly, NOT through this repo, so they don't belong in the
+# tracked tree (they were briefly tracked in de379e5; untracked here). They stay on disk.
+# KEPT TRACKED: README.md (needed to run the code), CLAUDE.md (governs the code), and
+# ARCHITECTURE.md (README points to it as the public technical reference).
+DECISION_LOG.md
+DEMO.md
+LIMITATIONS.md
+PRD_CHECKLIST.md
+PRODUCT.md
+
 # ─── Secrets / local env ───
 .env
 .env.*
