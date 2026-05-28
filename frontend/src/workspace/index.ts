@@ -1,2 +1,2 @@
 // Custom SVG manipulatives: FractionBar, NumberLine, SymbolicEditor (TECH_STACK §2).
-export {};
+export { SymbolicEditor, fractionToAnswer, type FractionValue } from './SymbolicEditor';

@@ -1,0 +1,54 @@
+/* S1 symbolic workspace — a real stacked fraction entry (Slice 2.5). Calm/editorial
+   to match the in-tutor register; the two fields read as numerator over denominator. */
+
+.wm-symbolic {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wm-symbolic-prompt {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}
+
+.wm-symbolic-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+}
+
+.wm-symbolic-field {
+  width: 92px;
+  text-align: center;
+  font-family: var(--wm-font-sans);
+  font-size: 30px;
+  font-weight: 700;
+  padding: 8px 6px;
+  color: var(--wm-ink);
+  background: var(--wm-cream-2);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.wm-symbolic-field:focus-visible {
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-symbolic-field:disabled {
+  opacity: 0.6;
+}
+
+.wm-symbolic-bar {
+  width: 104px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--wm-navy-deep);
+}

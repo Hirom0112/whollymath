@@ -7,7 +7,10 @@ import {
   type SurfaceState,
   type TurnResponse,
 } from '../api';
+import { fractionToAnswer, SymbolicEditor, type FractionValue } from '../workspace';
 import './Tutor.css';
+
+const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
 
 /**
  * The in-tutor problem surface (Turn 1 onward). Drives the real reactive loop
@@ -42,6 +45,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const [problem, setProblem] = useState<ProblemView>(session.problem);
   const [surfaceState, setSurfaceState] = useState<SurfaceState>(session.surface_state);
   const [answer, setAnswer] = useState('');
+  const [fraction, setFraction] = useState<FractionValue>(EMPTY_FRACTION);
   const [phase, setPhase] = useState<Phase>('answering');
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -52,9 +56,15 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // latency_ms, which feeds the engagement floor (§6) and HelpNeed (§8) server-side.
   const startedAt = useRef<number>(Date.now());
 
+  // The S1 symbolic state uses the stacked fraction editor; other surfaces fall back
+  // to a plain field until their manipulative lands (NumberLine S2 / FractionBar S3).
+  const isSymbolic = problem.surface_format === 'symbolic';
+  const submittedAnswer = isSymbolic ? fractionToAnswer(fraction) : answer;
+  const canSubmit = submittedAnswer.trim() !== '';
+
   async function handleSubmit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
-    if (phase !== 'answering' || answer.trim() === '') return;
+    if (phase !== 'answering' || !canSubmit) return;
     setPhase('submitting');
     setError(null);
     try {
@@ -62,7 +72,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
         session_id: sessionId,
         problem_id: problem.problem_id,
         action: 'submit_answer',
-        submitted_answer: answer,
+        submitted_answer: submittedAnswer,
         surface_state: surfaceState,
         latency_ms: Date.now() - startedAt.current,
         hint_used: hintUsed,
@@ -100,6 +110,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     setProblem(next);
     setSurfaceState(result.next_surface_state);
     setAnswer('');
+    setFraction(EMPTY_FRACTION);
     setHint(null);
     setHintUsed(false);
     setResult(null);
@@ -115,27 +126,38 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
 
         {phase !== 'feedback' ? (
           <form className="wm-tutor-form" onSubmit={handleSubmit}>
-            <label className="wm-tutor-label" htmlFor="wm-answer">
-              Your answer
-            </label>
-            <input
-              id="wm-answer"
-              className="wm-tutor-input"
-              type="text"
-              inputMode="text"
-              autoComplete="off"
-              placeholder="e.g. 7/12"
-              value={answer}
-              onChange={(event) => {
-                setAnswer(event.target.value);
-              }}
-              disabled={phase === 'submitting'}
-            />
+            {isSymbolic ? (
+              <SymbolicEditor
+                value={fraction}
+                onChange={setFraction}
+                disabled={phase === 'submitting'}
+                prompt="Your answer"
+              />
+            ) : (
+              <>
+                <label className="wm-tutor-label" htmlFor="wm-answer">
+                  Your answer
+                </label>
+                <input
+                  id="wm-answer"
+                  className="wm-tutor-input"
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  placeholder="e.g. 7/12"
+                  value={answer}
+                  onChange={(event) => {
+                    setAnswer(event.target.value);
+                  }}
+                  disabled={phase === 'submitting'}
+                />
+              </>
+            )}
             <div className="wm-tutor-actions">
               <button
                 type="submit"
                 className="wm-tutor-submit"
-                disabled={phase === 'submitting' || answer.trim() === ''}
+                disabled={phase === 'submitting' || !canSubmit}
               >
                 {phase === 'submitting' ? 'Checking…' : 'Check it'}
               </button>

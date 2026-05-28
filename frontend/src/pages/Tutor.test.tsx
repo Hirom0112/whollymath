@@ -75,7 +75,9 @@ describe('Tutor', () => {
     mockFetch();
     render(<Tutor session={SESSION} />);
 
-    fireEvent.change(screen.getByLabelText(/your answer/i), { target: { value: '7/12' } });
+    // The calibration problem is symbolic → the stacked fraction editor is shown.
+    fireEvent.change(screen.getByLabelText(/numerator/i), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText(/denominator/i), { target: { value: '12' } });
     fireEvent.click(screen.getByRole('button', { name: /check it/i }));
 
     expect(await screen.findByText(/correct/i)).toBeInTheDocument();
