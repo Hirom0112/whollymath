@@ -10,10 +10,11 @@ found the model's dominant feature (``turns_since_last_correct``, SHAP rank 1) m
 single per-turn readings noisy — a correct answer right after an error streak can still
 read high — so acting on one reading would interrupt a learner who just recovered. And
 Razzaq & Heffernan (2010) show proactive over-firing can underperform reactive help. K is
-the genuinely new parameter (threshold stays the locked-but-tunable 0.5, §3.7 initial
-tunings); **both are swept by the Slice 5.4 A/B, not hand-tuned** — the honest-reporting
-posture §3.7's Path-2 commitment requires. The provisional defaults here exist only so the
-mechanism is runnable before the sweep.
+the genuinely new parameter (threshold started at the locked 0.5, §3.7 initial tunings).
+Both were swept by the Slice 5.4 A/B (RESEARCH.md §9.3) rather than hand-tuned — the
+honest-reporting posture §3.7's Path-2 commitment requires — and the sweep uniquely
+validated K=3, threshold=0.5 (signed off 2026-05-28). The defaults below are those tuned,
+signed-off values.
 
 Pure decision logic (CLAUDE.md §7, §8.1/§8.2): no SymPy, no LLM, no DB, no model — it
 consumes probabilities the predictor already produced and never calls back into it.
@@ -25,8 +26,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-# Provisional defaults (PROJECT.md §3.7): three sustained turns, the locked 0.5 threshold.
-# Swept by the Slice 5.4 A/B — do not treat as validated.
+# Validated defaults (PROJECT.md §3.7; signed off 2026-05-28): three sustained turns at
+# the 0.5 threshold. The Slice 5.4 sweep (RESEARCH.md §9.3) scored every (K, threshold) on
+# the gate's documented design criteria and found K=3, threshold=0.5 the UNIQUE passing
+# point — K=2 over-fires on a self-recovering blip, K=4 misses a real 3-turn struggle, 0.4
+# fires on chronic-mild noise, 0.6/0.7 miss genuine-but-moderate need. So these are the
+# final tuned values, not provisional placeholders.
 DEFAULT_K = 3
 DEFAULT_THRESHOLD = 0.5
 
