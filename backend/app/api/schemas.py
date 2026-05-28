@@ -28,7 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # same KC ids and representation names as the domain model — the registry is the
 # single source of truth (ARCHITECTURE.md §4). Importing the enums (not raw
 # strings) keeps the contract aligned with the domain and the generated TS types.
-from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.knowledge_components import KnowledgeComponentId, Representation
 
 # ErrorType IS the domain verifier's ErrorCategory (Slice 1.4). The verifier owns
 # the §3.6 routing alphabet; the API speaks the very same enum so the wire contract
@@ -59,6 +59,80 @@ class ActionType(StrEnum):
 # ErrorType is imported above from the domain verifier (Slice 1.4's ErrorCategory):
 # its values are none/magnitude/operation/format/other, the closed §3.6 routing set,
 # and the verifier decides which applies. The API does not redefine it.
+
+
+class ProblemView(BaseModel):
+    """The learner-facing view of one presented problem (ARCHITECTURE.md §10 step 12).
+
+    This is what the surface needs to RENDER a problem — the readable subset of the
+    domain ``Problem`` (problem_generators.py). It deliberately carries no answer,
+    operands, or SymPy values: correctness is the domain verifier's job (CLAUDE.md
+    §8.2), so the wire never ships the answer to the client where it could leak.
+
+      - ``problem_id`` echoes back on the next ``TurnRequest`` so the loop knows
+        which problem an answer is for.
+      - ``kc`` / ``surface_format`` let the surface pick the right workspace
+        (symbolic editor / number line / fraction bars — §3.5).
+      - ``statement`` is the kid-friendly text shown to the learner.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    problem_id: str = Field(min_length=1, description="Stable id; echoed on the next turn.")
+    kc: KnowledgeComponentId
+    surface_format: Representation = Field(description="Representation to render (§3.5).")
+    statement: str = Field(min_length=1, description="Kid-friendly problem text.")
+
+
+class RouteOptionView(BaseModel):
+    """One Turn-0 routing option for the cold-start menu (decision 0.D.2).
+
+    The kid-friendly view of a tutor ``RouteOption``: the surface renders ``prompt``
+    and visually de-emphasizes the single ``is_unsure_default`` option (0.D.2: no
+    quiz/diagnostic framing — that is a presentation choice the surface makes). The
+    client sends ``key`` back on ``POST /session`` to start in that route; it never
+    sends the KC directly, so the routing menu stays the single source of truth.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1, description="Opaque option id; sent back to start a session.")
+    prompt: str = Field(min_length=1, description="Kid-friendly option text (no curriculum terms).")
+    is_unsure_default: bool = Field(
+        description="The single de-emphasized 'I'm not sure' default (0.D.2).",
+    )
+
+
+class StartSessionRequest(BaseModel):
+    """Begin a session from a Turn-0 routing choice (decision 0.D.2).
+
+    Carries only the chosen ``route_key`` (a ``RouteOptionView.key``). The KC,
+    calibration item, and BKT prior are all derived server-side from the locked
+    routing table (tutor ``from_route``) — the client cannot set them, so the
+    prior-not-commitment seeding stays authoritative on the backend (0.D.2).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    route_key: str = Field(min_length=1, description="The chosen Turn-0 option key (0.D.2).")
+
+
+class StartSessionResponse(BaseModel):
+    """The freshly-started session and its Turn-1 calibration problem (0.D.2).
+
+    Returns the opaque ``session_id`` the surface threads onto every subsequent
+    ``TurnRequest``, the starting ``surface_state`` (S1 — the default fluent state,
+    ARCHITECTURE.md §7), and the locked Turn-1 calibration ``problem`` for the route
+    (0.D.2). One round-trip puts the learner in front of their first problem.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, description="Opaque session id (TECH_STACK §9).")
+    surface_state: SurfaceState = Field(description="The starting surface state (S1, §7).")
+    problem: ProblemView = Field(
+        description="The Turn-1 calibration problem for the route (0.D.2)."
+    )
 
 
 class MasterySnapshot(BaseModel):
@@ -165,12 +239,24 @@ class TurnResponse(BaseModel):
         default_factory=list,
         description="Per-KC mastery snapshot for the affected KC(s) (§6).",
     )
+    next_problem: ProblemView | None = Field(
+        default=None,
+        description=(
+            "The next problem to present after this turn, or null when the loop has "
+            "nothing further to serve (e.g. an unrecognized session). The surface "
+            "renders it directly; the deterministic loop chose it (§10 step 12)."
+        ),
+    )
 
 
 __all__ = [
     "ActionType",
     "ErrorType",
     "MasterySnapshot",
+    "ProblemView",
+    "RouteOptionView",
+    "StartSessionRequest",
+    "StartSessionResponse",
     "SurfaceState",
     "TurnRequest",
     "TurnResponse",

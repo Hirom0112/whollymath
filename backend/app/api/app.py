@@ -18,16 +18,24 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from app.api.routes import router
+from app.api.service import SessionStore
 
 
 def create_app() -> FastAPI:
-    """Build and return the FastAPI app with the turn-loop routes mounted."""
+    """Build and return the FastAPI app with the turn-loop routes mounted.
+
+    Each app owns one in-memory ``SessionStore`` (on ``app.state``), resolved by the
+    routes via the ``get_session_store`` dependency. One store per app keeps live
+    sessions isolated between app instances — which is what lets tests construct a
+    fresh, empty app each time (no cross-test session leakage).
+    """
     app = FastAPI(
         title="WhollyMath API",
         # The turn loop is the v1 surface; version tracks the backend package.
         version="0.1.0",
         summary="Turn-loop API for the adaptive fraction tutor (ARCHITECTURE.md §10).",
     )
+    app.state.session_store = SessionStore()
     app.include_router(router)
     return app
 
