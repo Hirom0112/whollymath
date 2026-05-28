@@ -1004,17 +1004,15 @@ class SessionStore:
             recommended=plan.recommended.value if plan.recommended is not None else None,
         )
 
-    def course_map_for_learner(self, learner_id: int, now: datetime) -> CourseView:
-        """The learner's whole learning path with a status per KC (Slice CP.A.1 — course product).
+    @staticmethod
+    def _course_view(skills: list[ReviewableSkill], now: datetime) -> CourseView:
+        """Build the wire ``CourseView`` from a learner's per-skill state (Slice CP.A.1).
 
-        The course-product home screen (PROJECT.md §3.13): a pure composition of the existing
-        engine — the prerequisite graph + the learner's persisted mastery + the retention model —
-        with NO new mastery logic. Reads the same ``MasteryState`` rows the study planner does and
-        runs ``build_course_map``, then attaches each KC's registry name/description for display.
-        Always returns the full catalog (even with no factory: a fresh path with the root
-        available, the rest locked). Off the turn loop, advisory only (invariant 8/9).
+        Runs the pure ``build_course_map`` and attaches each KC's registry name/description for
+        display. Shared by the persisted (signed-in) and the live-session (anonymous demo) maps,
+        so the two sources produce the identical shape. Always returns the full catalog.
         """
-        nodes = build_course_map(self._reviewable_skills_for_learner(learner_id), now)
+        nodes = build_course_map(skills, now)
         return CourseView(
             nodes=[
                 CourseNodeView(
@@ -1028,6 +1026,47 @@ class SessionStore:
                 for node in nodes
             ]
         )
+
+    def course_map_for_learner(self, learner_id: int, now: datetime) -> CourseView:
+        """A SIGNED-IN learner's learning path with a status per KC (Slice CP.A.1 — course product).
+
+        The course-product home screen (PROJECT.md §3.13): a pure composition of the existing
+        engine — the prerequisite graph + the learner's persisted mastery + the retention model —
+        with NO new mastery logic. Reads the same ``MasteryState`` rows the study planner does.
+        Always returns the full catalog (even with no factory: a fresh path with the root
+        available, the rest locked). Off the turn loop, advisory only (invariant 8/9).
+        """
+        return self._course_view(self._reviewable_skills_for_learner(learner_id), now)
+
+    def course_map_for_session(self, session_id: str | None, now: datetime) -> CourseView:
+        """An ANONYMOUS demo learner's learning path, from their in-memory session (Slice CP.A.2).
+
+        The "Student Demo Free" path has no account, so its progress lives only in the live
+        ``_LiveSession`` (the v1 session-id flow, TECH_STACK §9), not in persisted rows. We roll
+        that session's history up (``_mastery_rollup`` — the same per-KC BKT + confirmed readout
+        the persistence layer uses) and project it into the retention model's inputs, then build
+        the same map. An unknown / ``None`` ``session_id`` (a brand-new demo learner who hasn't
+        started yet) yields the fresh default path (root available, the rest locked) rather than
+        an error — so the home screen always renders.
+
+        ``last_practiced`` is set to ``now``: a single live session has no real time gap to decay
+        over, so nothing shows ``due_review`` in-session — honest, and consistent with the
+        retention model's "spacing needs a real gap across sessions" note. Read-only, off the turn
+        loop; the session identity never feeds a turn decision (invariant 8).
+        """
+        live = self._sessions.get(session_id) if session_id is not None else None
+        if live is None:
+            return self._course_view([], now)
+        skills = [
+            ReviewableSkill(
+                kc=row.kc,
+                confirmed=row.confirmed,
+                bkt_probability=row.bkt_probability,
+                last_practiced=now,
+            )
+            for row in _mastery_rollup(live)
+        ]
+        return self._course_view(skills, now)
 
     def prior_for(self, session_id: str, kc: KnowledgeComponentId) -> float | None:
         """The seeded BKT prior for ``kc`` in a live session, or ``None`` if unknown.

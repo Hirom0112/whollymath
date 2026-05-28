@@ -62,14 +62,18 @@ def _request(
     for name, value in (headers or {}).items():
         raw_headers.append((name.lower().encode("latin-1"), value.encode("latin-1")))
 
+    # Split any query string off the path: ASGI carries them in separate scope keys, and
+    # Starlette matches routes on ``path`` alone, so a query must not stay glued to the path
+    # (otherwise the route won't match and query params won't parse).
+    path_only, _, query = path.partition("?")
     scope: dict[str, Any] = {
         "type": "http",
         "asgi": {"version": "3.0", "spec_version": "2.3"},
         "http_version": "1.1",
         "method": method,
-        "path": path,
+        "path": path_only,
         "raw_path": path.encode("utf-8"),
-        "query_string": b"",
+        "query_string": query.encode("utf-8"),
         "headers": raw_headers,
         "scheme": "http",
         "server": ("testserver", 80),

@@ -1,18 +1,26 @@
-"""Contract tests for GET /course — the course-product home (Slice CP.A.1).
+"""Contract tests for GET /course — the course-product home (Slices CP.A.1, CP.A.2).
 
-``/course`` is on the authenticated path (like ``/me``): it returns the learner's learning path
-— every KC as a node with a status derived from their persisted mastery + the prerequisite graph
-+ retention. No real network (CLAUDE.md §9): the Google verifier seam is monkeypatched to map a
-sentinel token to an identity, exactly as the /me tests do; an in-memory SQLite store holds the
-mastery. These are HTTP-level contract tests through the real ASGI stack.
+``/course`` serves the learning path — every KC as a node with a status derived from mastery +
+the prerequisite graph + retention — for BOTH kinds of learner:
+
+  - a SIGNED-IN learner (valid Bearer token) → from their persisted mastery;
+  - an ANONYMOUS demo learner (just a ``session_id``) → from their in-memory session;
+  - a brand-new visitor (neither) → the fresh default path (NOT a 401).
+
+No real network (CLAUDE.md §9): the Google verifier seam is monkeypatched to map a sentinel
+token to an identity, exactly as the /me tests do; an in-memory SQLite store holds the persisted
+mastery, and the demo path uses the in-memory session store. HTTP-level tests through the real
+ASGI stack.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 from app.api.app import create_app
+from app.api.schemas import ActionType, StartSessionResponse, SurfaceState
 from app.auth.google import GoogleIdentity, InvalidIdTokenError
 from app.db import repositories as repo
 from app.db.engine import create_all, create_session_factory
@@ -23,7 +31,11 @@ from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from tests.api.asgi_client import get
+from tests.api.asgi_client import get, post_json
+
+# The addition ("combine") route's Turn-1 calibration is "1/3 + 1/4 = ?", SymPy-correct 7/12.
+_ADDITION_ROUTE_KEY = "combine"
+_ADDITION_CORRECT_ANSWER = "7/12"
 
 _CLIENT_ID = "test-client.apps.googleusercontent.com"
 _GOOD_TOKEN = "good.id.token"
@@ -82,9 +94,55 @@ def _confirm_kc(app: FastAPI, kc: KCId) -> None:
         db.commit()
 
 
-def test_anonymous_request_is_401(app: FastAPI) -> None:
-    """No Authorization header → /course (which requires identity) returns 401."""
-    status_code, _ = get(app, "/course")
+def test_anonymous_no_session_gets_fresh_default_map(app: FastAPI) -> None:
+    """A brand-new visitor (no token, no session) gets the fresh default path — NOT a 401."""
+    status_code, body = get(app, "/course")
+    assert status_code == 200, body
+    nodes = {n["kc_id"]: n for n in body["nodes"]}
+    assert set(nodes) == {kc.value for kc in KCId}
+    assert nodes[KCId.NUMBER_LINE_PLACEMENT.value]["status"] == "available"
+    assert nodes[KCId.EQUIVALENCE.value]["status"] == "locked"
+
+
+def test_demo_session_map_reflects_in_session_progress(app: FastAPI) -> None:
+    """An anonymous demo learner's map is built from their session: a touched KC shows in_progress.
+
+    Start an addition session and answer its calibration correctly, then read /course with that
+    session_id — the addition KC, untouched it would be 'locked', now shows 'in_progress' (the
+    rollup of the live session's history, not persisted rows).
+    """
+    _, started_body = post_json(app, "/session", {"route_key": _ADDITION_ROUTE_KEY})
+    started = StartSessionResponse.model_validate(started_body)
+    turn: dict[str, Any] = {
+        "session_id": started.session_id,
+        "problem_id": started.problem.problem_id,
+        "action": ActionType.SUBMIT_ANSWER.value,
+        "submitted_answer": _ADDITION_CORRECT_ANSWER,
+        "surface_state": SurfaceState.SYMBOLIC_FOCUS.value,
+        "latency_ms": 4200,
+        "hint_used": False,
+    }
+    turn_status, _ = post_json(app, "/turn", turn)
+    assert turn_status == 200
+
+    status_code, body = get(app, f"/course?session_id={started.session_id}")
+    assert status_code == 200, body
+    statuses = [n["status"] for n in body["nodes"]]
+    assert "in_progress" in statuses
+
+
+def test_unknown_session_id_falls_back_to_default_map(app: FastAPI) -> None:
+    """An unknown session_id is not an error — it yields the fresh default path."""
+    status_code, body = get(app, "/course?session_id=never-started")
+    assert status_code == 200, body
+    nodes = {n["kc_id"]: n for n in body["nodes"]}
+    assert nodes[KCId.NUMBER_LINE_PLACEMENT.value]["status"] == "available"
+
+
+def test_bad_token_still_401(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A *bad* Bearer token is still rejected (optional auth only excuses an ABSENT token)."""
+    _patch_verify_ok(monkeypatch, GoogleIdentity(sub=_SUB, email=None))
+    status_code, _ = get(app, "/course", headers={"authorization": "Bearer not.the.good.token"})
     assert status_code == 401
 
 
