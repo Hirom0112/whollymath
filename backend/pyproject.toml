@@ -12,6 +12,8 @@ dependencies = [
     "sqlalchemy==2.0.50",      # ORM for Postgres (sessions, mastery, persona runs) (TECH_STACK §4).
     "pydantic==2.13.4",        # Typed request/response models; source of truth for generated TS types (TECH_STACK §2).
     "python-dotenv==1.2.2",    # Loads local .env (DATABASE_URL, API keys) in dev; Secrets Manager in prod (CLAUDE.md §10).
+    "xgboost==3.2.0",        # HelpNeed predictor: interpretable gradient-boosted trees, sub-100ms CPU inference, no GPU (TECH_STACK §5). Apache-2.0.
+    "scikit-learn==1.8.0",   # HelpNeed train/test split, metrics, logistic-regression baseline, joblib serialization (TECH_STACK §5). BSD-3.
 ]
 
 [dependency-groups]
@@ -21,6 +23,7 @@ dev = [
     "ruff==0.15.14",  # Linter + formatter (replaces black) (CLAUDE.md §6).
     "mypy==2.1.0",    # Static type checker run with --strict (CLAUDE.md §6).
     "pydantic-to-typescript==2.0.0",  # Generates shared-types/ TS from the Pydantic schemas — one source of truth for the API contract (TECH_STACK §2). MIT.
+    "shap==0.51.0",  # SHAP feature-attribution for the HelpNeed writeup ("why did it fire on turn 7?") (TECH_STACK §5). MIT. Analysis-only, not in the inference path.
 ]
 
 [build-system]
@@ -53,6 +56,12 @@ files = ["app", "tests"]
 # SymPy ships no type stubs; ignore missing imports for it specifically rather than globally.
 [[tool.mypy.overrides]]
 module = ["sympy.*"]
+ignore_missing_imports = true
+
+# The ML libs (HelpNeed predictor, TECH_STACK §5) ship no/partial type stubs; ignore
+# missing imports for them specifically rather than globally (same policy as sympy).
+[[tool.mypy.overrides]]
+module = ["xgboost.*", "sklearn.*", "shap.*", "joblib.*"]
 ignore_missing_imports = true
 
 # ─── Pytest: tests/ mirrors app/ (CLAUDE.md §6) ───

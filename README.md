@@ -155,13 +155,22 @@ section will carry exact steps. The intended local flow:
 ```bash
 # backend (Python + FastAPI)
 cd backend && uv sync && uv run pytest        # tests-first; see CLAUDE.md §2
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.api.app:app --reload
 
 # frontend (React + Vite)
 cd frontend && pnpm install && pnpm dev
 
 # local Postgres for parity with prod
 docker compose up -d
+```
+
+**macOS prerequisite for the HelpNeed predictor:** XGBoost needs the OpenMP runtime.
+Install it once with `brew install libomp` (Linux/CI wheels bundle it). To train the
+HelpNeed v1 model on the local EDM Cup data (gitignored under `backend/data/`):
+
+```bash
+cd backend && uv run python -m app.helpneed.train_pipeline
+# optional fast pass: WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000 uv run python -m app.helpneed.train_pipeline
 ```
 
 ---
