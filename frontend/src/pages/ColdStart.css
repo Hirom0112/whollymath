@@ -1,0 +1,224 @@
+/* Cold-start routing screen (Turn 0, decision 0.D.2). PRODUCT register — calm,
+   composed, credible, encouraging. Quiet by default; this screen is NOT a chrome
+   landing or a hero — it is the first surface of the actual product, so it carries
+   itself like a tutor, not a marketing page. Tokens only (no inline hex). */
+
+.wm-coldstart {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background: var(--wm-cream);
+  color: var(--wm-ink);
+  font-family: var(--wm-font-sans);
+}
+
+.wm-coldstart-inner {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+/* ── header: short, restrained, editorial ── */
+
+.wm-coldstart-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wm-coldstart-eyebrow {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wm-navy);
+  opacity: 0.7;
+}
+
+.wm-coldstart-headline {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 500;
+  font-size: 40px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--wm-navy-deep);
+}
+
+.wm-coldstart-subhead {
+  margin: 0;
+  max-width: 36ch;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--wm-ink-soft);
+}
+
+/* ── option list (three equal-weight KC cards) ── */
+
+.wm-coldstart-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The card is a real <button>; treat it like one. Calm rest state, navy ring on
+   focus / hover. No drop-shadow brand chrome — that belongs to the landing.
+   Position-/label-coded (not hue-coded): the numeric index on the left and the
+   prompt text carry meaning, so we do not assign one color per choice (PRODUCT.md
+   "color means something, never decoration"). */
+.wm-coldstart-card {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  background: var(--wm-cream-2);
+  color: var(--wm-ink);
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  text-align: left;
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.45;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.wm-coldstart-card:hover {
+  background: var(--wm-cream);
+  border-color: var(--wm-navy);
+}
+
+.wm-coldstart-card:active {
+  transform: translateY(1px);
+}
+
+.wm-coldstart-card:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 3px;
+}
+
+/* The numeric marker is shape + position (not hue) to keep meaning legible without
+   relying on color. Small, calm, ink — never a brand-coral chip. */
+.wm-coldstart-card-index {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--wm-navy);
+  border-radius: 50%;
+  font-family: var(--wm-font-serif);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--wm-navy-deep);
+  background: transparent;
+}
+
+.wm-coldstart-card-prompt {
+  flex: 1 1 auto;
+  color: var(--wm-ink);
+}
+
+/* ── the de-emphasized "I'm not sure" default ── */
+
+/* Visually quieter than the cards: no card chrome, smaller type, no border. It is
+   still a real <button> with full keyboard support, but it reads as a secondary,
+   text-style choice. 0.D.2 requires it visually de-emphasized — present but not
+   competing with the three equal-weight options. */
+.wm-coldstart-unsure-wrap {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
+.wm-coldstart-unsure {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 8px 4px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--wm-ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--wm-navy);
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.wm-coldstart-unsure:hover {
+  color: var(--wm-navy);
+}
+
+.wm-coldstart-unsure:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* ── entrance: opacity + small lift, transform-only (composite-safe) ── */
+
+.wm-coldstart-head,
+.wm-coldstart-list > li,
+.wm-coldstart-unsure-wrap {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: wm-coldstart-rise 360ms ease-out forwards;
+  animation-delay: var(--wm-stagger, 0ms);
+}
+
+.wm-coldstart-head {
+  /* The header rises first; the options stagger after via inline --wm-stagger. */
+  animation-delay: 0ms;
+}
+
+@keyframes wm-coldstart-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-coldstart-head,
+  .wm-coldstart-list > li,
+  .wm-coldstart-unsure-wrap {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .wm-coldstart-card {
+    transition: none;
+  }
+}
+
+/* ── responsive: keep the page comfortable on a tablet portrait ── */
+
+@media (max-width: 480px) {
+  .wm-coldstart {
+    padding: 32px 18px;
+  }
+  .wm-coldstart-headline {
+    font-size: 32px;
+  }
+  .wm-coldstart-card {
+    padding: 18px 18px;
+    font-size: 16px;
+  }
+}
