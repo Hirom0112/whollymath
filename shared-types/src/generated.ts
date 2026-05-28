@@ -99,6 +99,76 @@ export interface ArmVerdictView {
   detail: string;
 }
 /**
+ * A buffered batch of interaction events for one session (Slice PL.2).
+ *
+ * The surface accumulates events client-side and flushes them in one POST to ``/events``.
+ * ``session_id`` is the opaque session id the client already holds (the same value it threads
+ * onto every ``TurnRequest``); telemetry is lenient, so an unknown ``session_id`` is NOT an
+ * error — the server persists what it can and still accepts the batch (the endpoint never 404s).
+ * The list is capped (``max_length``) so a giant batch can't be abused.
+ */
+export interface EventBatchRequest {
+  /**
+   * Opaque session id (TECH_STACK §9).
+   */
+  session_id: string;
+  /**
+   * The buffered events to record (≤200 per batch).
+   *
+   * @maxItems 200
+   */
+  events: InteractionEventIn[];
+}
+/**
+ * One raw behavioral event the surface emits, on the wire (Slice PL.2).
+ *
+ * The fine-grained telemetry beyond the coarse ``TurnRequest``: a number-line drag, an
+ * answer edit, focus/blur, idle, problem-presented, submit, hint-request, first-interaction.
+ * Persisted OFF the turn loop (ARCHITECTURE.md §14 invariant 7) — this schema is captured and
+ * stored, never fed into verify/mastery/policy.
+ *
+ *   - ``event_type`` is the open tag (a string, not an enum) so the surface can add a kind
+ *     without a backend change; required and non-empty.
+ *   - ``payload`` is the free-form detail for the event. It is intentionally an open object —
+ *     the whole point of the capture table is to record arbitrary per-event detail PL.4 can
+ *     mine later, so a fixed schema here would defeat it. This is the one justified ``Any`` in
+ *     the contract (CLAUDE.md §6): it generates a permissive TS object, which is correct for an
+ *     open telemetry payload. Defaults to ``{}`` so a bare event (e.g. ``focus``) needs no body.
+ *   - ``client_ts`` is when the client recorded the event, if it sends one; the server stamps
+ *     its own authoritative ``server_ts`` on receipt regardless.
+ */
+export interface InteractionEventIn {
+  /**
+   * Open event tag, e.g. 'numberline_drag'.
+   */
+  event_type: string;
+  /**
+   * Free-form per-event detail (open object — see class doc, §8.6).
+   */
+  payload?: {
+    [k: string]: unknown;
+  };
+  /**
+   * When the client recorded the event; server stamps its own too.
+   */
+  client_ts?: string | null;
+}
+/**
+ * The ``/events`` reply: how many events were attempted-persisted (Slice PL.2).
+ *
+ * Returned with HTTP 202 ACCEPTED — the server has accepted the batch for best-effort
+ * persistence off the turn loop, not confirmed durable storage (invariant 7). ``accepted`` is
+ * the count the server tried to write; it is 0 when no DB is wired (the in-memory demo) or for
+ * an empty batch. A persistence failure is swallowed, so a non-zero ``accepted`` is "attempted",
+ * not a durability guarantee — which is exactly the contract telemetry needs.
+ */
+export interface EventIngestResponse {
+  /**
+   * Number of events accepted for best-effort persist.
+   */
+  accepted: number;
+}
+/**
  * A proactively-offered help nudge (Slice 4.5), or absent when none is offered.
  *
  * Distinct from the reactive ``hint`` (which answers an explicit REQUEST_HINT): this is

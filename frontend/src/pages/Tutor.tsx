@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   submitTurn,
@@ -10,6 +10,7 @@ import {
   type TurnResponse,
 } from '../api';
 import { Mascot } from '../components/Mascot';
+import { useTelemetry } from '../telemetry';
 import {
   fractionToAnswer,
   NumberLine,
@@ -51,6 +52,10 @@ function initialFraction(problem: ProblemView): FractionValue {
  */
 
 type Phase = 'answering' | 'submitting' | 'feedback';
+
+// Which input the learner edited — distinguishes a number-line drag from a typed answer in
+// the behavioral stream (Slice PL.2).
+type TelemetryEditKind = 'fraction' | 'numberline' | 'yesno';
 
 // Kid-friendly label per surface state, so the surface names the mode it is in
 // (refuse-rule 4 spirit: never present a state without a label). These must NOT claim
@@ -137,6 +142,42 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // latency_ms, which feeds the engagement floor (§6) and HelpNeed (§8) server-side.
   const startedAt = useRef<number>(Date.now());
 
+  // Behavioral telemetry (Slice PL.2): record HOW the learner works each problem, off the
+  // turn loop (fire-and-forget, never blocks the surface). `firstInteractionLogged` makes
+  // time-to-first-interaction a single edge per problem.
+  const telemetry = useTelemetry(sessionId);
+  const firstInteractionLogged = useRef(false);
+
+  // Emit problem_presented whenever a new problem mounts, and reset the first-interaction
+  // edge so the NEXT input is timed against this problem's start.
+  useEffect(() => {
+    firstInteractionLogged.current = false;
+    telemetry.track('problem_presented', {
+      problem_id: problem.problem_id,
+      kc: problem.kc,
+      surface_format: problem.surface_format,
+      surface_state: surfaceState,
+    });
+    // problem_id is the trigger; surfaceState is read at presentation time by design.
+  }, [problem.problem_id]);
+
+  // Record the learner's first touch on a problem (time-to-first-interaction) once, then the
+  // specific edit. Called from every input's onChange.
+  function noteInteraction(kind: TelemetryEditKind, detail: Record<string, unknown>): void {
+    if (!firstInteractionLogged.current) {
+      firstInteractionLogged.current = true;
+      telemetry.track('first_interaction', {
+        problem_id: problem.problem_id,
+        elapsed_ms: Date.now() - startedAt.current,
+        kind,
+      });
+    }
+    telemetry.track(kind === 'numberline' ? 'numberline_move' : 'answer_edit', {
+      problem_id: problem.problem_id,
+      ...detail,
+    });
+  }
+
   // The answer widget is chosen by what the problem asks (surface_format / answer_kind), so it
   // always matches the question — and so the SAME KC can be answered in more than one
   // representation (addition symbolically AND on the line), which mastery rule 2 needs. A
@@ -167,6 +208,11 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     setPhase('submitting');
     setError(null);
     setIntervention(null); // the offer pertained to this attempt; it is now spent
+    telemetry.track('submit', {
+      problem_id: problem.problem_id,
+      latency_ms: Date.now() - startedAt.current,
+      hint_used: hintUsed,
+    });
     try {
       const response = await submitTurn({
         session_id: sessionId,
@@ -190,6 +236,10 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   async function handleHint(): Promise<void> {
     if (phase !== 'answering') return;
     setError(null);
+    telemetry.track('hint_request', {
+      problem_id: problem.problem_id,
+      elapsed_ms: Date.now() - startedAt.current,
+    });
     try {
       const response = await submitTurn({
         session_id: sessionId,
@@ -317,7 +367,10 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
             {isYesNo ? (
               <YesNo
                 value={yesNo}
-                onChange={setYesNo}
+                onChange={(v) => {
+                  setYesNo(v);
+                  noteInteraction('yesno', { value: v });
+                }}
                 disabled={phase === 'submitting'}
                 prompt="Your answer"
               />
@@ -325,13 +378,22 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
               <NumberLine
                 segments={problem.tick_segments}
                 value={tick}
-                onChange={setTick}
+                onChange={(v) => {
+                  setTick(v);
+                  noteInteraction('numberline', { tick: v, segments: problem.tick_segments });
+                }}
                 disabled={phase === 'submitting'}
               />
             ) : (
               <SymbolicEditor
                 value={fraction}
-                onChange={setFraction}
+                onChange={(v) => {
+                  setFraction(v);
+                  noteInteraction('fraction', {
+                    numerator: v.numerator,
+                    denominator: v.denominator,
+                  });
+                }}
                 disabled={phase === 'submitting'}
                 prompt="Your answer"
                 lockDenominator={problem.given_denominator != null}

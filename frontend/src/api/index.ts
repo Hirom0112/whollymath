@@ -10,6 +10,8 @@
 // (vite.config.ts), so the browser sees one origin and there is no CORS to manage.
 
 import type {
+  EventBatchRequest,
+  InteractionEventIn,
   StartSessionResponse,
   ThreeArmComparisonView,
   TurnRequest,
@@ -20,6 +22,8 @@ export type {
   ActionType,
   ArmVerdictView,
   ErrorCategory,
+  EventBatchRequest,
+  InteractionEventIn,
   InterventionKind,
   InterventionView,
   KnowledgeComponentId,
@@ -81,6 +85,31 @@ export async function startSession(
 /** Submit one learner action (answer or hint request) and get the turn result. */
 export async function submitTurn(request: TurnRequest): Promise<TurnResponse> {
   return postJson<TurnResponse>('/turn', request);
+}
+
+/**
+ * Send a batch of raw behavioral events (Slice PL.2). Fire-and-forget: telemetry must
+ * never break the learner's experience, so this NEVER throws — a failed/blocked flush is
+ * swallowed (the server endpoint is itself lenient and off the turn loop). Returns true if
+ * the batch was accepted, false on any failure, so a caller can decide whether to re-buffer.
+ */
+export async function postEvents(
+  sessionId: string,
+  events: InteractionEventIn[],
+): Promise<boolean> {
+  if (events.length === 0) return true;
+  const body: EventBatchRequest = { session_id: sessionId, events };
+  try {
+    const response = await fetch('/events', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true, // let an in-flight flush survive a page unload
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function getJson<T>(path: string): Promise<T> {
