@@ -37,19 +37,29 @@ from app.api.schemas import (
     ProblemView,
     RouteOptionView,
     StartSessionResponse,
+    SurfaceState,
     TurnRequest,
     TurnResponse,
 )
-from app.domain.knowledge_components import Representation
+from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
+from app.domain.verifier import verify
 from app.helpneed.live_features import LiveTurn, live_features
 from app.helpneed.predictor import HelpNeedPredictor
 from app.llm.provider import LLMProvider
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
-from app.policy.scheduler import next_spec
+from app.policy.scheduler import is_masterable_live, next_spec
 from app.tutor.hints import select_nudge
-from app.tutor.session import RouteOption, TutorSession, routing_choices
+from app.tutor.live_transfer_probe import build_live_probe_steps
+from app.tutor.session import (
+    MasterySnapshot as TutorMasterySnapshot,
+)
+from app.tutor.session import (
+    RouteOption,
+    TutorSession,
+    routing_choices,
+)
 
 
 class SessionNotFoundError(LookupError):
@@ -212,6 +222,99 @@ def _maybe_intervene(
     )
 
 
+# Practice turns to wait after a FAILED probe before re-offering it: a still-provisional KC
+# would otherwise re-trigger the probe every turn. The learner practices a little more first.
+_PROBE_COOLDOWN = 3
+
+
+def _mastery_view(
+    snapshot: tuple[TutorMasterySnapshot, ...], live: _LiveSession
+) -> list[MasterySnapshot]:
+    """Per-KC snapshot for the wire, with ``mastered`` meaning CONFIRMED (passed the S5
+    transfer probe), never bare provisional — so the surface only celebrates earned mastery
+    (PROJECT.md §3.4). ``probability`` is the model's BKT value either way."""
+    return [
+        MasterySnapshot(kc_id=m.kc, probability=m.probability, mastered=m.kc in live.confirmed)
+        for m in snapshot
+    ]
+
+
+def _probe_mastery_view(
+    session: TutorSession, live: _LiveSession, kc: KnowledgeComponentId
+) -> list[MasterySnapshot]:
+    """The goal KC's snapshot during/after a probe turn (the probe doesn't run the mastery
+    model, so we read its BKT probability and report mastered = confirmed)."""
+    return [
+        MasterySnapshot(
+            kc_id=kc,
+            probability=session.mastery_probability(kc),
+            mastered=kc in live.confirmed,
+        )
+    ]
+
+
+def _probe_turn(live: _LiveSession, request: TurnRequest) -> TurnResponse:
+    """Handle one turn while the S5 transfer probe is in progress (PROJECT.md §3.9).
+
+    The submitted answer is judged DIRECTLY by the SymPy verifier against the current probe
+    step — the probe is the confirm gate, separate from the mastery model (so a probe turn
+    never updates BKT). Any wrong step fails the probe → DEMOTE (back to practice, with a
+    cooldown). Passing every step → CONFIRM the KC (mastered becomes true). Steps are served
+    as ordinary problems, so the existing widgets render them.
+    """
+    session = live.tutor
+    goal_kc = session.history[0].observation.kc
+    step = live.probe_steps[live.probe_index]
+    verdict = verify(step, request.submitted_answer or "")
+
+    if not verdict.is_correct:
+        live.probe_steps = []
+        live.probe_index = 0
+        live.probe_cooldown = _PROBE_COOLDOWN
+        next_problem = _serve_next(session)
+        return TurnResponse(
+            correct=False,
+            error_type=verdict.error_category,
+            next_surface_state=session.surface_state,
+            feedback="Not quite — let's practice a little more before the final check.",
+            hint=None,
+            mastery=_probe_mastery_view(session, live, goal_kc),
+            help_need=None,
+            intervention=None,
+            next_problem=_problem_view(next_problem),
+        )
+
+    live.probe_index += 1
+    if live.probe_index >= len(live.probe_steps):
+        live.confirmed.add(goal_kc)
+        live.probe_steps = []
+        live.probe_index = 0
+        next_problem = _serve_next(session)
+        return TurnResponse(
+            correct=True,
+            error_type=ErrorType.NONE,
+            next_surface_state=session.surface_state,
+            feedback="You showed it more than one way — that's real mastery, not a lucky answer.",
+            hint=None,
+            mastery=_probe_mastery_view(session, live, goal_kc),
+            help_need=None,
+            intervention=None,
+            next_problem=_problem_view(next_problem),
+        )
+
+    return TurnResponse(
+        correct=True,
+        error_type=ErrorType.NONE,
+        next_surface_state=SurfaceState.TRANSFER_PROBE,
+        feedback="Nice — one more, a different way.",
+        hint=None,
+        mastery=_probe_mastery_view(session, live, goal_kc),
+        help_need=None,
+        intervention=None,
+        next_problem=_problem_view(live.probe_steps[live.probe_index]),
+    )
+
+
 def _answer_response(
     live: _LiveSession,
     request: TurnRequest,
@@ -234,12 +337,46 @@ def _answer_response(
     correctness, the surface state, or the next-problem choice — they are read off the
     settled turn, so a proactive arm changes only the ``intervention`` field.
     """
+    # A probe in progress takes the turn: the learner is answering a transfer-probe item, not
+    # a practice problem (so it does not feed the mastery model — the probe is the confirm
+    # gate, judged directly by the verifier). §3.4/§3.9.
+    if live.probe_steps:
+        return _probe_turn(live, request)
+
     session = live.tutor
     result = session.submit_answer(
         request.submitted_answer or "",
         latency_ms=request.latency_ms,
         hint_used=request.hint_used,
     )
+    if live.probe_cooldown > 0:
+        live.probe_cooldown -= 1
+
+    goal_kc = session.history[0].observation.kc
+    provisional = any(m.kc == goal_kc and m.mastered for m in result.mastery_snapshot)
+    if (
+        provisional
+        and goal_kc not in live.confirmed
+        and live.probe_cooldown == 0
+        and is_masterable_live(goal_kc)
+    ):
+        # Provisional reached → present the S5 transfer probe before declaring mastery (§3.9).
+        live.probe_steps = build_live_probe_steps(
+            goal_kc, recent_format=session.current_problem.surface_format
+        )
+        live.probe_index = 0
+        return TurnResponse(
+            correct=result.correct,
+            error_type=result.error_category,
+            next_surface_state=SurfaceState.TRANSFER_PROBE,
+            feedback="Great — one last check to be sure you've really got it.",
+            hint=None,
+            mastery=_mastery_view(result.mastery_snapshot, live),
+            help_need=None,
+            intervention=None,
+            next_problem=_problem_view(live.probe_steps[0]),
+        )
+
     next_problem = _serve_next(session)
     help_need = _help_need(session, next_problem, predictor)
     if help_need is not None:
@@ -250,10 +387,7 @@ def _answer_response(
         next_surface_state=result.surface_state,
         feedback=result.feedback,
         hint=None,
-        mastery=[
-            MasterySnapshot(kc_id=m.kc, probability=m.probability, mastered=m.mastered)
-            for m in result.mastery_snapshot
-        ],
+        mastery=_mastery_view(result.mastery_snapshot, live),
         help_need=help_need,
         intervention=_maybe_intervene(live, gate, next_problem, voice_provider),
         next_problem=_problem_view(next_problem),
@@ -299,6 +433,16 @@ class _LiveSession:
     tutor: TutorSession
     proactive_enabled: bool = False
     help_need_history: list[float] = field(default_factory=list)
+    # S5 transfer-probe state (the live confirm-gate). When ``probe_steps`` is non-empty a
+    # probe is in progress: the learner is answering ``probe_steps[probe_index]``. ``confirmed``
+    # holds the KCs whose provisional mastery the learner has CONFIRMED by passing the probe —
+    # the snapshot reports mastered = confirmed, never bare provisional. ``probe_cooldown`` is
+    # the number of practice turns to wait before re-offering the probe after a failed attempt,
+    # so a still-provisional KC doesn't re-trigger the probe every turn.
+    probe_steps: list[Problem] = field(default_factory=list)
+    probe_index: int = 0
+    confirmed: set[KnowledgeComponentId] = field(default_factory=set)
+    probe_cooldown: int = 0
 
 
 @dataclass

@@ -58,7 +58,9 @@ _COMPANION: dict[KnowledgeComponentId, KnowledgeComponentId] = {
 _COMPANION_EVERY = 3
 
 
-def _live_representations(kc: KnowledgeComponentId) -> tuple[Representation, ...]:
+def live_representations(kc: KnowledgeComponentId) -> tuple[Representation, ...]:
+    """The representations the live surface can render AND answer for ``kc`` (the contract
+    with the frontend widgets). Used by the scheduler and the live transfer probe."""
     return _LIVE_REPRESENTATIONS.get(kc, (_REP.SYMBOLIC,))
 
 
@@ -77,9 +79,9 @@ def next_spec(
 
     if (served_index + 1) % _COMPANION_EVERY == 0:
         companion = _COMPANION[goal_kc]
-        return companion, _live_representations(companion)[0]
+        return companion, live_representations(companion)[0]
 
-    reps = _live_representations(goal_kc)
+    reps = live_representations(goal_kc)
     goal_items_before = sum(1 for i in range(served_index) if (i + 1) % _COMPANION_EVERY != 0)
     return goal_kc, reps[goal_items_before % len(reps)]
 
@@ -89,7 +91,7 @@ def is_masterable_live(goal_kc: KnowledgeComponentId) -> bool:
     surface — i.e. the KC has ≥2 live representations (rule 2) and a companion to interleave
     with (rule 4). Honest signal for the experience: a route that returns False can be
     practiced and shows progress, but cannot yet hit declared mastery."""
-    return len(_live_representations(goal_kc)) >= 2 and goal_kc in _COMPANION
+    return len(live_representations(goal_kc)) >= 2 and goal_kc in _COMPANION
 
 
-__all__ = ["is_masterable_live", "next_spec"]
+__all__ = ["is_masterable_live", "live_representations", "next_spec"]
