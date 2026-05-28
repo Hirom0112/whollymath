@@ -20,7 +20,9 @@ ARCHITECTURE.md §14). This module is pure data shape.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -460,11 +462,86 @@ class ThreeArmComparisonView(BaseModel):
     )
 
 
+class InteractionEventIn(BaseModel):
+    """One raw behavioral event the surface emits, on the wire (Slice PL.2).
+
+    The fine-grained telemetry beyond the coarse ``TurnRequest``: a number-line drag, an
+    answer edit, focus/blur, idle, problem-presented, submit, hint-request, first-interaction.
+    Persisted OFF the turn loop (ARCHITECTURE.md §14 invariant 7) — this schema is captured and
+    stored, never fed into verify/mastery/policy.
+
+      - ``event_type`` is the open tag (a string, not an enum) so the surface can add a kind
+        without a backend change; required and non-empty.
+      - ``payload`` is the free-form detail for the event. It is intentionally an open object —
+        the whole point of the capture table is to record arbitrary per-event detail PL.4 can
+        mine later, so a fixed schema here would defeat it. This is the one justified ``Any`` in
+        the contract (CLAUDE.md §6): it generates a permissive TS object, which is correct for an
+        open telemetry payload. Defaults to ``{}`` so a bare event (e.g. ``focus``) needs no body.
+      - ``client_ts`` is when the client recorded the event, if it sends one; the server stamps
+        its own authoritative ``server_ts`` on receipt regardless.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    event_type: str = Field(min_length=1, description="Open event tag, e.g. 'numberline_drag'.")
+    payload: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Free-form per-event detail (open object — see class doc, §8.6).",
+    )
+    client_ts: datetime | None = Field(
+        default=None, description="When the client recorded the event; server stamps its own too."
+    )
+
+
+# Cap a single batch so one POST cannot persist an unbounded number of rows (a cheap abuse
+# guard for an unauthenticated endpoint — CLAUDE.md §8.6 keeps it a simple constant, not a
+# rate-limiter). The surface flushes small buffers frequently; 200 is comfortably above a
+# normal flush and well below an abusive payload.
+_MAX_EVENTS_PER_BATCH = 200
+
+
+class EventBatchRequest(BaseModel):
+    """A buffered batch of interaction events for one session (Slice PL.2).
+
+    The surface accumulates events client-side and flushes them in one POST to ``/events``.
+    ``session_id`` is the opaque session id the client already holds (the same value it threads
+    onto every ``TurnRequest``); telemetry is lenient, so an unknown ``session_id`` is NOT an
+    error — the server persists what it can and still accepts the batch (the endpoint never 404s).
+    The list is capped (``max_length``) so a giant batch can't be abused.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, description="Opaque session id (TECH_STACK §9).")
+    events: list[InteractionEventIn] = Field(
+        max_length=_MAX_EVENTS_PER_BATCH,
+        description=f"The buffered events to record (≤{_MAX_EVENTS_PER_BATCH} per batch).",
+    )
+
+
+class EventIngestResponse(BaseModel):
+    """The ``/events`` reply: how many events were attempted-persisted (Slice PL.2).
+
+    Returned with HTTP 202 ACCEPTED — the server has accepted the batch for best-effort
+    persistence off the turn loop, not confirmed durable storage (invariant 7). ``accepted`` is
+    the count the server tried to write; it is 0 when no DB is wired (the in-memory demo) or for
+    an empty batch. A persistence failure is swallowed, so a non-zero ``accepted`` is "attempted",
+    not a durability guarantee — which is exactly the contract telemetry needs.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    accepted: int = Field(ge=0, description="Number of events accepted for best-effort persist.")
+
+
 __all__ = [
     "ActionType",
     "AnswerKind",
     "ArmVerdictView",
     "ErrorType",
+    "EventBatchRequest",
+    "EventIngestResponse",
+    "InteractionEventIn",
     "InterventionKind",
     "InterventionView",
     "MasterySnapshot",

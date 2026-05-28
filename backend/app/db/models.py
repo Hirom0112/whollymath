@@ -40,8 +40,18 @@ Defer reasons recorded so the decision log is intact (CLAUDE.md §8.4).
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -207,3 +217,61 @@ class MasteryState(Base):
     )
 
     learner: Mapped[Learner] = relationship(back_populates="mastery_states")
+
+
+class InteractionEvent(Base):
+    """One raw behavioral event captured OFF the turn loop (Slice PL.2, invariant 7).
+
+    The append-only stream of fine-grained interaction events the surface emits beyond
+    the coarse ``Turn`` row: number-line drags, answer edits, focus/blur, idle, the
+    moment a problem was presented, a submit, a hint request, the first interaction.
+    PL.4's richer HelpNeed model trains on this stream (TODO PL.2/PL.4), so the table is
+    intentionally minimal-and-wide: a typed tag plus an open JSON ``payload`` rather than
+    a column per event kind (a fixed schema would force a migration for every new event
+    type the surface starts emitting).
+
+    Append-only and decoupled by design (ARCHITECTURE.md §14 invariant 7 — "telemetry
+    never blocks a turn"): events arrive on a SEPARATE ``/events`` endpoint, are persisted
+    best-effort off the request path, and a write failure is swallowed. Nothing in the turn
+    loop reads this table, so a slow or failed event write can never perturb a turn outcome.
+
+    Nullable foreign keys on purpose. ``session_id`` and ``learner_id`` are nullable because
+    telemetry is LENIENT: an event may arrive for a ``session_id`` the server no longer holds
+    in memory (a restart) or before its Session row exists — we still record what we can rather
+    than drop it or 404 (the ``/events`` endpoint never 404s). The FKs point at the same rows the
+    turn loop uses when they ARE known, so a recorded event joins back to its session/learner.
+
+    Portable JSON column (NOT Postgres-only JSONB), deliberately. SQLAlchemy's generic ``JSON``
+    type maps to ``json`` on Postgres and to ``TEXT`` with JSON serialization on SQLite, so the
+    SAME column type works in the in-memory SQLite test DB and in prod Postgres (the §27/§4
+    portability rule the other models follow — no Postgres-only UUID/JSONB/ENUM). JSONB would
+    diverge between test and prod; we do not need its indexed-query speed for an append-only
+    capture table at this slice (CLAUDE.md §8.6 — no premature optimization).
+    """
+
+    __tablename__ = "interaction_event"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Nullable FK: an event may arrive for a session row we do not (yet) have (see class doc).
+    session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("session.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    # Nullable FK: likewise the learner may be unknown for a lenient telemetry write.
+    learner_id: Mapped[int | None] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    # The event kind as a short tag (numberline_drag / answer_edit / focus / blur / idle /
+    # problem_presented / submit / hint_request / first_interaction / ...). Kept open (a
+    # string, not an ENUM) so the surface can emit a new kind without a Postgres migration.
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # The event's free-form detail (e.g. the dragged value, the edited text, the idle ms).
+    # Portable JSON — see the class docstring for why generic JSON, not Postgres JSONB.
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    # When the CLIENT recorded the event (its clock), if it sent one. Nullable because a
+    # client may omit it; the server clock (``server_ts``) is always authoritative for ordering.
+    client_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # When the SERVER received the event — the always-present, authoritative timestamp. Same
+    # Python-side UTC default the other tables use, so it is identical on SQLite and Postgres.
+    server_ts: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )

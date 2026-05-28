@@ -20,6 +20,8 @@ from pydantic import BaseModel, ConfigDict
 
 from app.api.eval_view import build_three_arm_comparison_view
 from app.api.schemas import (
+    EventBatchRequest,
+    EventIngestResponse,
     RouteOptionView,
     StartSessionRequest,
     StartSessionResponse,
@@ -135,3 +137,30 @@ def submit_turn(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"unknown session_id: {request.session_id!r}",
         ) from exc
+
+
+@router.post(
+    "/events",
+    response_model=EventIngestResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["events"],
+)
+def ingest_events(
+    request: EventBatchRequest,
+    store: StoreDep,
+) -> EventIngestResponse:
+    """Record a batch of raw behavioral events — SEPARATE from the turn loop (Slice PL.2).
+
+    The hard invariant (ARCHITECTURE.md §14 invariant 7): "telemetry never blocks a turn —
+    event capture happens off the turn loop ... never blocking an endpoint." So this endpoint is
+    independent of ``/turn`` — it never calls ``process_turn`` and never touches
+    verify/mastery/policy — and it returns HTTP 202 ACCEPTED: the server has *accepted* the batch
+    for best-effort persistence off the request path, not confirmed durable storage.
+
+    It is LENIENT, unlike ``/turn``: an UNKNOWN ``session_id`` is NOT a 404 (the store persists
+    what it can, or no-ops, and still 202s), and a persistence failure is swallowed inside the
+    store so it can never error the client. FastAPI still validates the request shape, so a
+    malformed event or an over-long batch is rejected with a 422 before reaching the store.
+    """
+    accepted = store.ingest_events(request)
+    return EventIngestResponse(accepted=accepted)

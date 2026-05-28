@@ -23,13 +23,32 @@ SQLAlchemy 2.0 typed style (``select`` + typed ``Mapped`` columns), matching
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Learner, MasteryState, Session, Turn
+from app.db.models import InteractionEvent, Learner, MasteryState, Session, Turn
+
+
+@dataclass(frozen=True)
+class EventRow:
+    """One interaction event as the repository ingests it (Slice PL.2).
+
+    A small typed carrier for a batch ``persist_events`` write so the repository takes a
+    structured list rather than parallel arrays — the ingest service builds these from the
+    validated ``InteractionEventIn`` wire schema (the schema stays an API-layer concern; the
+    repository speaks this plain dataclass). The session/learner ids are NOT on the row because
+    every event in a batch shares them (they are passed once to ``persist_events``).
+    """
+
+    event_type: str
+    payload: dict[str, Any] = field(default_factory=dict)
+    client_ts: datetime | None = None
 
 
 def get_or_create_learner(db: OrmSession, session_id: str) -> Learner:
@@ -213,7 +232,63 @@ def load_mastery_states(db: OrmSession, learner_id: int) -> list[MasteryState]:
     return list(db.scalars(select(MasteryState).where(MasteryState.learner_id == learner_id)).all())
 
 
+def persist_event(
+    db: OrmSession,
+    *,
+    session_row_id: int | None,
+    learner_id: int | None,
+    event_type: str,
+    payload: dict[str, Any],
+    client_ts: datetime | None,
+) -> InteractionEvent:
+    """Persist one raw ``InteractionEvent`` row (Slice PL.2).
+
+    Maps the supplied event fields 1:1 onto the InteractionEvent columns (``models.py``).
+    ``session_row_id``/``learner_id`` are nullable on purpose — telemetry is lenient, so an
+    event for an unknown session/learner still records (the FKs are simply left NULL). ``server_ts``
+    is stamped by the column's Python-side UTC default. ``add``-ed, not committed (caller's
+    boundary) — and crucially this is reached OFF the turn loop (ARCHITECTURE.md §14 invariant 7),
+    so a failure here is the ingest caller's to swallow, never the turn's.
+    """
+    event = InteractionEvent(
+        session_id=session_row_id,
+        learner_id=learner_id,
+        event_type=event_type,
+        payload=payload,
+        client_ts=client_ts,
+    )
+    db.add(event)
+    return event
+
+
+def persist_events(
+    db: OrmSession,
+    *,
+    session_row_id: int | None,
+    learner_id: int | None,
+    events: Sequence[EventRow],
+) -> int:
+    """Persist a batch of ``InteractionEvent`` rows and return the number added (Slice PL.2).
+
+    Every event in the batch shares the same ``session_row_id``/``learner_id`` (they came in
+    on one ``/events`` POST for one session). Each ``EventRow`` is mapped via ``persist_event``;
+    the count returned is how many rows were ``add``-ed. ``add``-ed, not committed — the ingest
+    service commits the whole batch as one unit of work off the turn loop (invariant 7).
+    """
+    for row in events:
+        persist_event(
+            db,
+            session_row_id=session_row_id,
+            learner_id=learner_id,
+            event_type=row.event_type,
+            payload=row.payload,
+            client_ts=row.client_ts,
+        )
+    return len(events)
+
+
 __all__ = [
+    "EventRow",
     "create_session",
     "end_session",
     "get_learner",
@@ -221,6 +296,8 @@ __all__ = [
     "load_mastery_states",
     "load_open_session",
     "load_open_session_for_learner",
+    "persist_event",
+    "persist_events",
     "persist_turn",
     "upsert_mastery_state",
 ]

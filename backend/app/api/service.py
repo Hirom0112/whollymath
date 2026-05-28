@@ -35,6 +35,8 @@ from sqlalchemy.orm import sessionmaker
 from app.api.schemas import (
     ActionType,
     ErrorType,
+    EventBatchRequest,
+    InteractionEventIn,
     InterventionKind,
     InterventionView,
     MasterySnapshot,
@@ -47,9 +49,11 @@ from app.api.schemas import (
     WorkedStepView,
 )
 from app.db import repositories as repo
+from app.db.repositories import EventRow
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
 from app.domain.verifier import verify
+from app.events.ingest import ingest_events
 from app.helpneed.live_features import LiveTurn, live_features
 from app.helpneed.predictor import HelpNeedPredictor
 from app.llm.provider import LLMProvider
@@ -140,6 +144,20 @@ def _worked_example_view(problem: Problem) -> list[WorkedStepView]:
     except ValueError:
         return []
     return [WorkedStepView(shown=step.shown, why_prompt=step.why_prompt) for step in example.steps]
+
+
+def _event_row(event: InteractionEventIn) -> EventRow:
+    """Map one validated wire ``InteractionEventIn`` to the repository's ``EventRow`` (Slice PL.2).
+
+    The schema → storage carrier translation, kept in the API layer so ``app.events.ingest`` and
+    the repository never import the wire schemas (the import direction stays API → events → repo,
+    nothing back into the turn loop). Pure projection: no SymPy, no LLM, no decision (§8.1/§8.2).
+    """
+    return EventRow(
+        event_type=event.event_type,
+        payload=event.payload,
+        client_ts=event.client_ts,
+    )
 
 
 def routing_menu() -> list[RouteOptionView]:
@@ -776,6 +794,57 @@ class SessionStore:
         if self.session_factory is not None:
             _persist_turn(self.session_factory, live, request, response)
         return response
+
+    def ingest_events(self, request: EventBatchRequest) -> int:
+        """Record a batch of raw interaction events OFF the turn loop (Slice PL.2, invariant 7).
+
+        The telemetry entrypoint, deliberately INDEPENDENT of ``process_turn``: it never verifies,
+        never updates mastery, never chooses a next problem — it only persists what the surface
+        observed (ARCHITECTURE.md §14 invariant 7: "telemetry never blocks a turn"). It is LENIENT
+        by contract: an unknown ``session_id`` is NOT an error (the route returns 202 either way);
+        we link each event to the session/learner rows IF we can resolve them, and otherwise persist
+        with NULL foreign keys rather than dropping the data or 404-ing.
+
+        With no ``session_factory`` (the in-memory demo) this is a no-op returning 0. Otherwise it
+        resolves the persisted session-row id + learner-row id for the live session (best-effort,
+        swallowing any lookup failure), maps the validated wire events to repository ``EventRow``s,
+        and delegates to ``app.events.ingest`` — which opens its own short-lived session, commits
+        the batch best-effort, and swallows any failure so a telemetry write can never error the
+        client. The returned count is "attempted", not a durability guarantee (invariant 7).
+        """
+        if self.session_factory is None:
+            return 0
+        session_row_id, learner_id = self._resolve_event_linkage(request.session_id)
+        rows = [_event_row(event) for event in request.events]
+        return ingest_events(
+            self.session_factory,
+            session_id=request.session_id,
+            events=rows,
+            session_row_id=session_row_id,
+            learner_id=learner_id,
+        )
+
+    def _resolve_event_linkage(self, session_id: str) -> tuple[int | None, int | None]:
+        """Best-effort (session-row, learner-row) ids for a batch; ``(None, None)`` if unknown.
+
+        Telemetry is lenient: if the session is live in memory we already hold its persisted
+        ``db_session_id`` (set by ``start`` when a factory is wired); we then resolve the learner
+        row id by the opaque external key. Either lookup may come up empty — an event for an
+        unknown/restarted session still persists with NULL FKs (the §14 invariant-7 leniency) —
+        and any DB hiccup during resolution is swallowed so it can never break ``/events``.
+        """
+        live = self._sessions.get(session_id)
+        db_session_id = live.db_session_id if live is not None else None
+        learner_key = live.learner_session_id if live is not None else session_id
+        learner_id: int | None = None
+        if self.session_factory is not None:
+            try:
+                with self.session_factory() as db:
+                    learner = repo.get_learner(db, learner_key)
+                    learner_id = learner.id if learner is not None else None
+            except Exception:  # noqa: BLE001 — invariant 7: linkage lookup must not break /events.
+                _log.exception("could not resolve learner for events on session %s", session_id)
+        return db_session_id, learner_id
 
     def resume(self, session_id: str) -> _LiveSession | None:
         """Rehydrate a live session from an OPEN DB session after the in-memory one is gone.
