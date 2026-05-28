@@ -11,6 +11,9 @@ RESEARCH.md
 # The slice-by-slice build tracker. Working state, not a deliverable.
 TODO.md
 
+# ─── Session handoff note (local-only; for picking up the build in a new terminal) ───
+HANDOFF.md
+
 # ─── Secrets / local env ───
 .env
 .env.*
