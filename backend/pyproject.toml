@@ -16,6 +16,7 @@ dependencies = [
     "xgboost==3.2.0",        # HelpNeed predictor: interpretable gradient-boosted trees, sub-100ms CPU inference, no GPU (TECH_STACK §5). Apache-2.0.
     "scikit-learn==1.8.0",   # HelpNeed train/test split, metrics, logistic-regression baseline, joblib serialization (TECH_STACK §5). BSD-3.
     "anthropic>=0.104.1",
+    "langsmith>=0.1.0",       # Optional LLM-call tracing for the Layer-4 surface, confined to llm/ and env-gated by LANGSMITH_TRACING (Slice PL.0); no-op passthrough when off. MIT.
 ]
 
 [dependency-groups]

@@ -27,6 +27,7 @@ from app.api.routes import router
 from app.api.service import SessionStore
 from app.db.engine import create_db_engine, create_session_factory, database_url_from_env
 from app.helpneed.artifact import load_predictor
+from app.llm.tracing import traced
 from app.persona_surface.hint_renderer import default_hint_provider
 from app.persona_surface.tutor_voice import default_voice_provider
 
@@ -84,10 +85,12 @@ def create_app() -> FastAPI:
         predictor=load_predictor(),
         # Enable the mascot's voice on help moments (Slice 5.5.2); lazily creates the
         # Anthropic client on first help turn. Falls back to pre-written text if unavailable.
-        voice_provider=default_voice_provider(),
+        # Wrapped in LangSmith tracing (Slice PL.0): a no-op passthrough unless
+        # LANGSMITH_TRACING is set, so the default behavior is unchanged.
+        voice_provider=traced(default_voice_provider()),
         # Warm the escalated partial_step / worked_step hints through the LLM behind the
         # SymPy numeric gate (Slice 5.6 pipeline); falls back to canonical text if unavailable.
-        hint_provider=default_hint_provider(),
+        hint_provider=traced(default_hint_provider()),
         # Persist sessions/mastery when a DB is reachable (Slice PL.1) — None ⇒ in-memory only,
         # so the app boots with no Postgres. Writes are off the decision path (invariant 7).
         session_factory=_build_session_factory(),
