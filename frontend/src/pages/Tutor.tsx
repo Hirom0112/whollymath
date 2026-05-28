@@ -8,6 +8,7 @@ import {
   type SurfaceState,
   type TurnResponse,
 } from '../api';
+import { Mascot } from '../components/Mascot';
 import { fractionToAnswer, NumberLine, SymbolicEditor, type FractionValue } from '../workspace';
 import './Tutor.css';
 
@@ -143,6 +144,18 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     startedAt.current = Date.now();
   }
 
+  // The mascot speaks ONLY on help moments (Slice 5.5.2 scope): a requested hint or
+  // an unasked proactive nudge — never routine right/wrong feedback. Both are voiced
+  // by one character so the surface keeps a single voice; the gesture they came from
+  // (offered vs. requested) is preserved visually on the bubble. A requested hint is
+  // the most specific, freshest help, so it takes precedence over a carried-over offer.
+  const helpSpeech =
+    hint !== null
+      ? { text: hint, kind: 'hint' as const }
+      : intervention !== null
+        ? { text: intervention.text, kind: 'offer' as const }
+        : null;
+
   return (
     <main className="wm-tutor">
       <section className="wm-tutor-card" aria-live="polite">
@@ -151,13 +164,19 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
         </p>
         <h1 className="wm-tutor-statement">{problem.statement}</h1>
 
+        {helpSpeech !== null ? (
+          <div className="wm-tutor-mascot-row">
+            <div className="wm-tutor-mascot" aria-hidden="true">
+              <Mascot />
+            </div>
+            <p className={`wm-tutor-speech wm-tutor-speech--${helpSpeech.kind}`} role="note">
+              {helpSpeech.text}
+            </p>
+          </div>
+        ) : null}
+
         {phase !== 'feedback' ? (
           <form className="wm-tutor-form" onSubmit={handleSubmit}>
-            {intervention !== null ? (
-              <p className="wm-tutor-assertion" role="note">
-                {intervention.text}
-              </p>
-            ) : null}
             {isPlacement && problem.tick_segments != null ? (
               <NumberLine
                 segments={problem.tick_segments}
@@ -207,12 +226,6 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
             ) : null}
           </div>
         )}
-
-        {hint !== null ? (
-          <p className="wm-tutor-hint" role="note">
-            {hint}
-          </p>
-        ) : null}
 
         {error !== null ? (
           <p className="wm-tutor-error" role="alert">

@@ -178,33 +178,70 @@
   background: var(--wm-blue-press);
 }
 
-.wm-tutor-hint {
-  margin: 22px 0 0;
+/* Mascot speech (Slice 5.5.2-B3): on help moments the pie mascot SPEAKS the help line
+   in a bubble, inline in the workspace (§3.8 refuse-rule 6 — never a separate dialog).
+   One character voices both gestures; the bubble's spine color keeps them distinct
+   (sky = requested hint, coral = unasked proactive offer), as the prior two displays did. */
+.wm-tutor-mascot-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0 0 22px;
+}
+
+.wm-tutor-mascot {
+  flex: none;
+  width: 65px;
+  height: 50px;
+  transform: scale(0.5);
+  transform-origin: top left;
+}
+
+.wm-tutor-speech {
+  position: relative;
+  flex: 1;
+  margin: 6px 0 0;
   padding: 14px 16px;
   font-family: var(--wm-font-sans);
   font-size: 16px;
   line-height: 1.45;
   color: var(--wm-ink);
-  background: var(--wm-card-sky);
   border: 2px solid var(--wm-navy-deep);
   border-radius: 14px;
 }
 
-/* Proactive inline assertion (Slice 4.5): help offered UNASKED when the §3.7 sustained
-   gate fires, rendered inside the workspace above the input (§3.8 refuse-rule 6).
-   Warmer than the reactive hint (sky) with a coral spine, so the two read as different
-   gestures — one offered, one requested. */
-.wm-tutor-assertion {
-  margin: 0 0 18px;
-  padding: 13px 15px 13px 18px;
-  font-family: var(--wm-font-sans);
-  font-size: 15.5px;
-  line-height: 1.45;
-  color: var(--wm-ink);
+/* The bubble's tail — a small navy-outlined diamond pointing back at the mascot. */
+.wm-tutor-speech::before,
+.wm-tutor-speech::after {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 18px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 8px 9px 8px 0;
+}
+.wm-tutor-speech::before {
+  border-color: transparent var(--wm-navy-deep) transparent transparent;
+}
+.wm-tutor-speech::after {
+  left: -6px;
+  border-color: transparent var(--wm-speech-fill) transparent transparent;
+}
+
+.wm-tutor-speech--hint {
+  --wm-speech-fill: var(--wm-card-sky);
+  background: var(--wm-card-sky);
+}
+
+.wm-tutor-speech--offer {
+  --wm-speech-fill: var(--wm-card-warm);
   background: var(--wm-card-warm);
-  border: 2px solid var(--wm-coral);
-  border-left-width: 6px;
-  border-radius: 14px;
+  border-color: var(--wm-coral);
+}
+.wm-tutor-speech--offer::before {
+  border-right-color: var(--wm-coral);
 }
 
 .wm-tutor-error {

@@ -44,6 +44,16 @@ const HINT_TURN: TurnResponse = {
   mastery: [],
 };
 
+// A submitted answer whose turn carries a proactive offer for the NEXT problem (the
+// §3.7 sustained gate fired). The mascot should voice it unasked on the next problem.
+const PROACTIVE_TURN: TurnResponse = {
+  ...CORRECT_TURN,
+  intervention: {
+    kind: 'inline_assertion',
+    text: 'Remember to give both fractions the same size pieces first.',
+  },
+};
+
 function jsonResponse(data: unknown): Response {
   return { ok: true, status: 200, json: () => Promise.resolve(data) } as Response;
 }
@@ -87,7 +97,7 @@ describe('Tutor', () => {
     expect(screen.getByRole('heading', { name: /1\/2 \+ 1\/5/i })).toBeInTheDocument();
   });
 
-  it('requesting a hint surfaces the nudge without advancing', async () => {
+  it('requesting a hint surfaces the nudge (mascot speech) without advancing', async () => {
     mockFetch();
     render(<Tutor session={SESSION} />);
 
@@ -96,5 +106,27 @@ describe('Tutor', () => {
     expect(await screen.findByRole('note')).toHaveTextContent(/are the pieces the same size/i);
     // Still on the same problem — a hint does not advance.
     expect(screen.getByRole('heading', { name: /1\/3 \+ 1\/4/i })).toBeInTheDocument();
+  });
+
+  it('shows no mascot speech on a plain problem with no help', () => {
+    mockFetch();
+    render(<Tutor session={SESSION} />);
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+  });
+
+  it('voices a proactive offer (unasked) on the next problem', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(PROACTIVE_TURN))),
+    );
+    render(<Tutor session={SESSION} />);
+
+    fireEvent.change(screen.getByLabelText(/numerator/i), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText(/denominator/i), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+
+    // No offer while still on the answered problem (it pertains to the next one).
+    fireEvent.click(await screen.findByRole('button', { name: /next problem/i }));
+    expect(await screen.findByRole('note')).toHaveTextContent(/same size pieces first/i);
   });
 });
