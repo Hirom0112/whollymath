@@ -87,7 +87,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
         latency_ms: Date.now() - startedAt.current,
         hint_used: hintUsed,
       });
-      setHint(response.hint);
+      setHint(response.hint ?? null);
       setHintUsed(true);
     } catch {
       setError('Could not load a hint right now.');

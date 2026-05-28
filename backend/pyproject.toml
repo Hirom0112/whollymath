@@ -20,6 +20,7 @@ dev = [
     "pytest==9.0.3",  # Test runner; TDD is mandatory for domain/mastery/persona/helpneed (CLAUDE.md §2).
     "ruff==0.15.14",  # Linter + formatter (replaces black) (CLAUDE.md §6).
     "mypy==2.1.0",    # Static type checker run with --strict (CLAUDE.md §6).
+    "pydantic-to-typescript==2.0.0",  # Generates shared-types/ TS from the Pydantic schemas — one source of truth for the API contract (TECH_STACK §2). MIT.
 ]
 
 [build-system]

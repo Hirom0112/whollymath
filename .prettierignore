@@ -7,6 +7,8 @@ coverage/
 backend/
 # Generated lockfiles
 pnpm-lock.yaml
+# Auto-generated API types (pydantic2ts output; do not hand-format — re-run `pnpm generate`)
+shared-types/src/generated.ts
 # Repo-root docs are authored/owned outside the toolchain and are not Prettier-managed
 # (CLAUDE.md, TECH_STACK.md, etc. are governed by the source hierarchy, not a formatter).
 *.md

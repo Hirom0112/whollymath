@@ -15,6 +15,7 @@
     "test": "pnpm -r --if-present test"
   },
   "devDependencies": {
+    "json-schema-to-typescript": "^15.0.4",
     "prettier": "3.8.3"
   }
 }

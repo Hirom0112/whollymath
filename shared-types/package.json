@@ -7,8 +7,8 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "//generate": "Regenerates src/generated.ts from backend Pydantic models via pydantic-to-typescript (runs in the backend's uv env). Wire the real module path once Pydantic models exist; the schema lives in app.api.schemas (TECH_STACK §2).",
-    "generate": "cd ../backend && uv run pydantic2ts --module app.api.schemas --output ../shared-types/src/generated.ts",
+    "//generate": "Regenerates src/generated.ts from the backend Pydantic schemas (app.api.schemas) via pydantic2ts, run in the backend's uv env. pydantic2ts shells out to json2ts (json-schema-to-typescript), pinned at the workspace root, so we point --json2ts-cmd at the hoisted binary. One source of truth for the API contract (TECH_STACK §2).",
+    "generate": "cd ../backend && uv run pydantic2ts --module app.api.schemas --output ../shared-types/src/generated.ts --json2ts-cmd ../node_modules/.bin/json2ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

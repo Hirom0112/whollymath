@@ -1,78 +1,30 @@
 // Typed client for the WhollyMath turn-loop API (ARCHITECTURE.md §10).
 //
-// These types MIRROR the backend Pydantic schemas (backend/app/api/schemas.py).
-// They are hand-written for now and are the single front-end source of truth until
-// the Pydantic→TS generation (TODO 0.4.1 / 1.9.3) replaces this block with the
-// generated file. Keep them byte-aligned with the backend enum values: a drift here
-// is a silent contract break (CLAUDE.md §6 — no `any`, the contract is the point).
+// The request/response TYPES come from `@whollymath/shared-types`, which is
+// generated from the backend Pydantic schemas (TECH_STACK §2) — one source of
+// truth, so the front end cannot drift from the wire contract. This module owns
+// only the RUNTIME: the fetch wrappers and the two endpoint calls. Re-export the
+// types we use so existing `from '../api'` imports keep a stable surface.
 //
 // Requests use RELATIVE paths; in dev, Vite proxies them to the FastAPI server
 // (vite.config.ts), so the browser sees one origin and there is no CORS to manage.
 
-export type SurfaceState =
-  | 'S1_symbolic_focus'
-  | 'S2_number_line_primary'
-  | 'S3_fraction_bars_primary'
-  | 'S4_worked_example'
-  | 'S5_transfer_probe';
+import type { StartSessionResponse, TurnRequest, TurnResponse } from '@whollymath/shared-types';
 
-export type ErrorType = 'none' | 'magnitude' | 'operation' | 'format' | 'other';
-
-export type ActionType = 'submit_answer' | 'request_hint';
-
-export type KnowledgeComponentId =
-  | 'KC_equivalence'
-  | 'KC_common_denominator'
-  | 'KC_addition_unlike'
-  | 'KC_subtraction_unlike'
-  | 'KC_number_line_placement';
-
-export type Representation = 'symbolic' | 'area_model' | 'number_line' | 'word_problem';
-
-export interface ProblemView {
-  problem_id: string;
-  kc: KnowledgeComponentId;
-  surface_format: Representation;
-  statement: string;
-}
-
-export interface RouteOptionView {
-  key: string;
-  prompt: string;
-  is_unsure_default: boolean;
-}
-
-export interface StartSessionResponse {
-  session_id: string;
-  surface_state: SurfaceState;
-  problem: ProblemView;
-}
-
-export interface MasterySnapshot {
-  kc_id: KnowledgeComponentId;
-  probability: number;
-  mastered: boolean;
-}
-
-export interface TurnRequest {
-  session_id: string;
-  problem_id: string;
-  action: ActionType;
-  submitted_answer?: string | null;
-  surface_state: SurfaceState;
-  latency_ms: number;
-  hint_used: boolean;
-}
-
-export interface TurnResponse {
-  correct: boolean;
-  error_type: ErrorType;
-  next_surface_state: SurfaceState;
-  feedback: string;
-  hint: string | null;
-  mastery: MasterySnapshot[];
-  next_problem: ProblemView | null;
-}
+export type {
+  ActionType,
+  ErrorCategory,
+  KnowledgeComponentId,
+  MasterySnapshot,
+  ProblemView,
+  Representation,
+  RouteOptionView,
+  StartSessionRequest,
+  StartSessionResponse,
+  SurfaceState,
+  TurnRequest,
+  TurnResponse,
+} from '@whollymath/shared-types';
 
 /** A non-2xx response from the API, carrying the status for the caller to surface. */
 export class ApiError extends Error {
