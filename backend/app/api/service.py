@@ -28,6 +28,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
@@ -43,6 +44,7 @@ from app.api.schemas import (
     ProblemView,
     RouteOptionView,
     StartSessionResponse,
+    StudyPlanView,
     SurfaceState,
     TurnRequest,
     TurnResponse,
@@ -58,6 +60,8 @@ from app.helpneed.live_features import LiveTurn, live_features
 from app.helpneed.predictor import HelpNeedPredictor
 from app.llm.provider import LLMProvider
 from app.mastery.mastery_model import Observation
+from app.mastery.progression import plan_study
+from app.mastery.retention import ReviewableSkill
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.policy.scheduler import is_masterable_live, next_spec
@@ -953,6 +957,40 @@ class SessionStore:
                 )
                 for s in states
             ]
+
+    def study_plan_for_learner(self, learner_id: int, now: datetime) -> StudyPlanView:
+        """What a returning learner should do next — spaced repetition + prereq sequencing (6.x).
+
+        Reads the learner's persisted ``MasteryState`` rows (PL.1) and runs the study planner:
+        confirmed skills whose retention has decayed since ``updated_at`` surface as DUE REVIEWS
+        (the cross-session spacing — this is where it actually has effect, a single session has no
+        gap), and the next prerequisite-unlocked skill is suggested. Off the turn loop, advisory
+        only — identity/sequencing never feeds a turn decision (invariant 8/9). Returns an empty
+        plan when there is no factory or no recorded mastery.
+        """
+        if self.session_factory is None:
+            return StudyPlanView()
+        with self.session_factory() as db:
+            states = repo.load_mastery_states(db, learner_id)
+        skills = [
+            ReviewableSkill(
+                kc=KnowledgeComponentId(s.kc_id),
+                confirmed=s.confirmed,
+                bkt_probability=s.bkt_probability,
+                # SQLite returns naive datetimes (PL.1 note); coerce to UTC so the elapsed-time
+                # math compares like-with-like against the aware ``now`` the route passes.
+                last_practiced=s.updated_at
+                if s.updated_at.tzinfo is not None
+                else s.updated_at.replace(tzinfo=UTC),
+            )
+            for s in states
+        ]
+        plan = plan_study(skills, now)
+        return StudyPlanView(
+            due_reviews=[kc.value for kc in plan.due_reviews],
+            unlocked_next=[kc.value for kc in plan.unlocked_next],
+            recommended=plan.recommended.value if plan.recommended is not None else None,
+        )
 
     def prior_for(self, session_id: str, kc: KnowledgeComponentId) -> float | None:
         """The seeded BKT prior for ``kc`` in a live session, or ``None`` if unknown.

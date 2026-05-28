@@ -233,6 +233,24 @@ export interface MeResponse {
    * The learner's carried-forward per-KC mastery (PL.1 rows; mastered=confirmed).
    */
   mastery?: MasterySnapshot[];
+  study_plan?: StudyPlanView;
+}
+/**
+ * What to do next: due reviews (spaced repetition) + the next unlocked skill.
+ */
+export interface StudyPlanView {
+  /**
+   * Confirmed KCs due for review, most-decayed first (spaced repetition).
+   */
+  due_reviews?: string[];
+  /**
+   * New KCs whose prerequisites are confirmed, in algebra-spine order.
+   */
+  unlocked_next?: string[];
+  /**
+   * The single best next KC (due review > new skill > null if all done/fresh).
+   */
+  recommended?: string | null;
 }
 /**
  * One arm's verdict on one pre-registered metric, pre-formatted for display.
@@ -424,6 +442,30 @@ export interface ProblemView1 {
    * Equivalence fill-the-top only: the denominator named in the question ('?/8'), pre-filled and locked so the learner enters only the numerator. Null otherwise.
    */
   given_denominator?: number | null;
+}
+/**
+ * What a returning learner should do next (Slice 6.x — spaced repetition).
+ *
+ * Derived from the persisted mastery (PL.1 rows): ``due_reviews`` are confirmed skills whose
+ * retention has decayed since last practice (most-decayed first — the "space" in spaced
+ * repetition); ``unlocked_next`` are new skills whose prerequisites are confirmed, in
+ * algebra-spine order; ``recommended`` is the single best next action (a due review if any,
+ * else the earliest unlocked new skill, else null when everything is confirmed and fresh).
+ * KC ids are the catalog strings. Off the turn loop; advisory only.
+ */
+export interface StudyPlanView1 {
+  /**
+   * Confirmed KCs due for review, most-decayed first (spaced repetition).
+   */
+  due_reviews?: string[];
+  /**
+   * New KCs whose prerequisites are confirmed, in algebra-spine order.
+   */
+  unlocked_next?: string[];
+  /**
+   * The single best next KC (due review > new skill > null if all done/fresh).
+   */
+  recommended?: string | null;
 }
 /**
  * The full three-arm comparison for display (Slice 5.3, PROJECT.md §3.11).

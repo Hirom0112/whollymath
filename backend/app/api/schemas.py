@@ -534,6 +534,33 @@ class EventIngestResponse(BaseModel):
     accepted: int = Field(ge=0, description="Number of events accepted for best-effort persist.")
 
 
+class StudyPlanView(BaseModel):
+    """What a returning learner should do next (Slice 6.x — spaced repetition).
+
+    Derived from the persisted mastery (PL.1 rows): ``due_reviews`` are confirmed skills whose
+    retention has decayed since last practice (most-decayed first — the "space" in spaced
+    repetition); ``unlocked_next`` are new skills whose prerequisites are confirmed, in
+    algebra-spine order; ``recommended`` is the single best next action (a due review if any,
+    else the earliest unlocked new skill, else null when everything is confirmed and fresh).
+    KC ids are the catalog strings. Off the turn loop; advisory only.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    due_reviews: list[str] = Field(
+        default_factory=list,
+        description="Confirmed KCs due for review, most-decayed first (spaced repetition).",
+    )
+    unlocked_next: list[str] = Field(
+        default_factory=list,
+        description="New KCs whose prerequisites are confirmed, in algebra-spine order.",
+    )
+    recommended: str | None = Field(
+        default=None,
+        description="The single best next KC (due review > new skill > null if all done/fresh).",
+    )
+
+
 class MeResponse(BaseModel):
     """The authenticated learner's persistent identity handle + carried-forward mastery (PL.3).
 
@@ -562,6 +589,10 @@ class MeResponse(BaseModel):
         default_factory=list,
         description="The learner's carried-forward per-KC mastery (PL.1 rows; mastered=confirmed).",
     )
+    study_plan: StudyPlanView = Field(
+        default_factory=StudyPlanView,
+        description="What to do next: due reviews (spaced repetition) + the next unlocked skill.",
+    )
 
 
 __all__ = [
@@ -576,6 +607,7 @@ __all__ = [
     "InterventionView",
     "MasterySnapshot",
     "MeResponse",
+    "StudyPlanView",
     "MetricArmVerdictView",
     "MetricComparisonView",
     "PersonaComparisonView",

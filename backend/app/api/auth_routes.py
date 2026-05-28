@@ -13,6 +13,8 @@ handler only shapes the typed response.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter
 
 from app.api.dependencies import RequireLearnerDep
@@ -42,6 +44,7 @@ def me(learner: RequireLearnerDep, store: StoreDep) -> MeResponse:
         learner_id=learner.learner_id,
         email=learner.email,
         mastery=store.mastery_summary_for_learner(learner.learner_id),
+        study_plan=store.study_plan_for_learner(learner.learner_id, datetime.now(UTC)),
     )
 
 
