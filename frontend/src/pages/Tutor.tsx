@@ -99,6 +99,22 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [hintUsed, setHintUsed] = useState(false);
+  // S4 worked example (§3.5): the backend returns the solved steps when a transition lands
+  // in S4 (after ≥2 errors). They reveal one at a time, each with its "why did this work?"
+  // prompt — so the learner reads the reasoning, not just the answer. revealCount is how many
+  // steps are currently shown; it resets on the next problem.
+  const [revealCount, setRevealCount] = useState(1);
+  // The answer the learner submitted on the CURRENT problem (captured at submit time so the
+  // "previous work" panel can echo it once we advance). null until they submit.
+  const [lastAnswer, setLastAnswer] = useState<string | null>(null);
+  // Previous-work panel (refuse-rule 2, §3.8): when we move to a new problem we preserve a
+  // compact record of the last one — its statement, the answer given, and whether it was
+  // right — so a transition never silently throws away the learner's work.
+  const [prevWork, setPrevWork] = useState<{
+    statement: string;
+    answer: string;
+    correct: boolean;
+  } | null>(null);
   // A proactively-offered nudge for THIS problem (Slice 4.5): the previous turn's
   // sustained HelpNeed signal tripped the §3.7 gate, so help is shown unasked, inline in
   // the workspace (§3.8 refuse-rule 6). null unless the proactive arm fired (default OFF).
@@ -162,6 +178,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
         hint_used: hintUsed,
       });
       setResult(response);
+      setLastAnswer(submittedAnswer);
       setMastery((prev) => mergeMastery(prev, response.mastery ?? []));
       setPhase('feedback');
     } catch {
@@ -192,6 +209,13 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   function handleNext(): void {
     const next = result?.next_problem;
     if (!next) return;
+    // Preserve the work we are leaving behind (refuse-rule 2): the problem just finished,
+    // the answer given, and whether it was right.
+    setPrevWork({
+      statement: problem.statement,
+      answer: lastAnswer ?? '',
+      correct: result.correct,
+    });
     setProblem(next);
     setSurfaceState(result.next_surface_state);
     setFraction(initialFraction(next));
@@ -199,6 +223,8 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     setYesNo(null);
     setHint(null);
     setHintUsed(false);
+    setRevealCount(1);
+    setLastAnswer(null);
     // Carry any proactive offer the just-finished turn produced onto this next problem.
     setIntervention(result.intervention ?? null);
     setResult(null);
@@ -246,6 +272,19 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
                 </span>
               </div>
             ))}
+          </div>
+        ) : null}
+        {prevWork !== null && phase !== 'feedback' ? (
+          <div className="wm-tutor-prevwork" aria-label="Your previous answer">
+            <span className="wm-tutor-prevwork-label">Last one</span>
+            <span className="wm-tutor-prevwork-statement">{prevWork.statement}</span>
+            <span
+              className={`wm-tutor-prevwork-answer wm-tutor-prevwork-answer--${
+                prevWork.correct ? 'right' : 'wrong'
+              }`}
+            >
+              you said {prevWork.answer || '—'} {prevWork.correct ? '✓' : '✗'}
+            </span>
           </div>
         ) : null}
         {isProbe && phase !== 'feedback' ? (
@@ -337,6 +376,30 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
                 {result?.feedback}
               </p>
             )}
+            {result?.worked_example && result.worked_example.length > 0 ? (
+              <div className="wm-tutor-worked" aria-label="Worked example">
+                <p className="wm-tutor-worked-title">Here&rsquo;s one worked out, step by step:</p>
+                <ol className="wm-tutor-worked-steps">
+                  {result.worked_example.slice(0, revealCount).map((step, i) => (
+                    <li key={i} className="wm-tutor-worked-step">
+                      <span className="wm-tutor-worked-shown">{step.shown}</span>
+                      <span className="wm-tutor-worked-why">{step.why_prompt}</span>
+                    </li>
+                  ))}
+                </ol>
+                {revealCount < result.worked_example.length ? (
+                  <button
+                    type="button"
+                    className="wm-tutor-worked-more"
+                    onClick={() => {
+                      setRevealCount((c) => c + 1);
+                    }}
+                  >
+                    Show me the next step
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             {result?.next_problem ? (
               <button type="button" className="wm-tutor-next" onClick={handleNext}>
                 {goalMastered ? 'Keep practicing' : 'Next problem'}

@@ -331,3 +331,95 @@
   line-height: 1.5;
   color: var(--wm-ink);
 }
+
+/* Previous-work panel (refuse-rule 2, §3.8): a compact, low-key record of the problem we
+   just left, so a transition never silently discards the learner's work. */
+.wm-tutor-prevwork {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--wm-cream-2);
+  border: 1px dashed var(--wm-navy-deep);
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  color: var(--wm-ink-soft);
+}
+.wm-tutor-prevwork-label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  color: var(--wm-navy-deep);
+}
+.wm-tutor-prevwork-statement {
+  font-family: var(--wm-font-serif);
+  color: var(--wm-ink);
+}
+.wm-tutor-prevwork-answer {
+  margin-left: auto;
+  font-weight: 700;
+}
+.wm-tutor-prevwork-answer--right {
+  color: var(--wm-green);
+}
+.wm-tutor-prevwork-answer--wrong {
+  color: var(--wm-coral);
+}
+
+/* S4 worked example (§3.5): a solved problem revealed one step at a time, each step paired
+   with its "why did this work?" prompt. Shown in the feedback block after ≥2 errors. */
+.wm-tutor-worked {
+  margin: 4px 0 18px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--wm-card-sky);
+  border: 2px solid var(--wm-navy-deep);
+}
+.wm-tutor-worked-title {
+  margin: 0 0 12px;
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+}
+.wm-tutor-worked-steps {
+  margin: 0 0 12px;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wm-tutor-worked-step {
+  font-family: var(--wm-font-sans);
+}
+.wm-tutor-worked-shown {
+  display: block;
+  font-size: 16px;
+  color: var(--wm-ink);
+  line-height: 1.4;
+}
+.wm-tutor-worked-why {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--wm-ink-soft);
+}
+.wm-tutor-worked-more {
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 12px;
+  padding: 8px 18px;
+  cursor: pointer;
+}
+.wm-tutor-worked-more:hover {
+  background: var(--wm-cream-2);
+}

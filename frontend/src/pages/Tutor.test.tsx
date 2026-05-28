@@ -54,6 +54,33 @@ const PROACTIVE_TURN: TurnResponse = {
   },
 };
 
+// A wrong answer whose transition lands in S4 and carries the worked example (the
+// backend serves the solved steps of the problem just missed; §3.5).
+const S4_TURN: TurnResponse = {
+  correct: false,
+  error_type: 'operation',
+  next_surface_state: 'S4_worked_example',
+  feedback: "Let's take it step by step.",
+  hint: null,
+  mastery: [],
+  worked_example: [
+    {
+      shown: 'Find a common denominator for 1/3 and 1/4: the smallest is 12.',
+      why_prompt: 'Why do the pieces have to be the same size before we combine them?',
+    },
+    {
+      shown: 'Rewrite each fraction with 12 on the bottom: 1/3 = 4/12, 1/4 = 3/12.',
+      why_prompt: 'Why does renaming a fraction this way not change how much it is?',
+    },
+  ],
+  next_problem: {
+    problem_id: 'gen-9',
+    kc: 'KC_addition_unlike',
+    surface_format: 'symbolic',
+    statement: '2/5 + 1/3 = ?',
+  },
+};
+
 function jsonResponse(data: unknown): Response {
   return { ok: true, status: 200, json: () => Promise.resolve(data) } as Response;
 }
@@ -112,6 +139,41 @@ describe('Tutor', () => {
     mockFetch();
     render(<Tutor session={SESSION} />);
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
+  });
+
+  it('reveals the S4 worked example one step at a time, each with its why-prompt', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(S4_TURN))),
+    );
+    render(<Tutor session={SESSION} />);
+
+    fireEvent.change(screen.getByLabelText(/numerator/i), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText(/denominator/i), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+
+    // First step + its why-prompt are shown; the second is hidden until asked for.
+    expect(await screen.findByText(/the smallest is 12/i)).toBeInTheDocument();
+    expect(screen.getByText(/have to be the same size/i)).toBeInTheDocument();
+    expect(screen.queryByText(/1\/3 = 4\/12/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /show me the next step/i }));
+    expect(screen.getByText(/1\/3 = 4\/12/i)).toBeInTheDocument();
+  });
+
+  it('preserves the previous problem and answer in a previous-work panel', async () => {
+    mockFetch();
+    render(<Tutor session={SESSION} />);
+
+    fireEvent.change(screen.getByLabelText(/numerator/i), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText(/denominator/i), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /next problem/i }));
+
+    // The panel echoes the problem we just left and the answer given (refuse-rule 2).
+    const panel = screen.getByLabelText(/your previous answer/i);
+    expect(panel).toHaveTextContent(/1\/3 \+ 1\/4/);
+    expect(panel).toHaveTextContent(/7\/12/);
   });
 
   it('voices a proactive offer (unasked) on the next problem', async () => {
