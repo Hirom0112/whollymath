@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from app.api.schemas import (
     ArmVerdictView,
+    MetricArmVerdictView,
+    MetricComparisonView,
     PersonaComparisonView,
     ThreeArmComparisonView,
 )
@@ -19,7 +21,10 @@ from app.eval.false_positive_harness import harness_cases
 from app.eval.three_arm_comparison import (
     ArmOutcome,
     ComparisonRow,
+    MetricArmVerdict,
+    MetricComparison,
     load_recorded_chat_run,
+    per_metric_comparison,
     run_comparison_offline,
 )
 
@@ -80,6 +85,21 @@ def _row_view(row: ComparisonRow, chat: ArmOutcome) -> PersonaComparisonView:
     )
 
 
+def _metric_verdict_view(v: MetricArmVerdict) -> MetricArmVerdictView:
+    return MetricArmVerdictView(arm=v.arm, status=v.status, tone=v.tone, detail=v.detail)
+
+
+def _metric_view(m: MetricComparison) -> MetricComparisonView:
+    return MetricComparisonView(
+        key=m.key,
+        name=m.name,
+        adversary=m.adversary,
+        adaptive=_metric_verdict_view(m.adaptive),
+        chat=_metric_verdict_view(m.chat),
+        static=_metric_verdict_view(m.static),
+    )
+
+
 def build_three_arm_comparison_view() -> ThreeArmComparisonView:
     """Assemble the on-screen three-arm comparison. Adaptive + static are computed live and
     deterministically (free, no LLM). The chat column uses the recorded LIVE run if one is
@@ -107,6 +127,8 @@ def build_three_arm_comparison_view() -> ThreeArmComparisonView:
             "who haven't mastered the skill; a static walkthrough certifies nothing."
         )
 
+    metrics = per_metric_comparison(recorded_chat_run=recorded_run)
+
     return ThreeArmComparisonView(
         rows=[_row_view(r, c) for r, c in zip(rows, chat_outcomes, strict=True)],
         total=len(rows),
@@ -114,6 +136,7 @@ def build_three_arm_comparison_view() -> ThreeArmComparisonView:
         chat_false_positives=chat_fp,
         chat_live=chat_live,
         headline=headline,
+        metrics=[_metric_view(m) for m in metrics],
     )
 
 

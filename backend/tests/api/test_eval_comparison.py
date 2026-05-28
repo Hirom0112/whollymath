@@ -47,3 +47,25 @@ def test_each_arm_renders_with_a_tone() -> None:
 
     chat_false_positives = sum(1 for row in view.rows if row.chat.tone == "bad")
     assert chat_false_positives == 2
+
+
+def test_per_metric_table_is_exposed() -> None:
+    """The endpoint also carries the five remaining pre-registered metrics (Slice 5.3.3),
+    each with all three arms toned. Adaptive is enforced on all five (good); chat misses the
+    two understanding metrics (bad) and lacks the mechanism on the rest (neutral)."""
+    app = create_app()
+    _, body = get(app, "/eval/three-arm-comparison")
+    view = ThreeArmComparisonView.model_validate(body)
+
+    assert [m.key for m in view.metrics] == [
+        "hint_dependence",
+        "procedural_conceptual",
+        "format_variance",
+        "engagement_floor",
+        "transfer_at_mastery",
+    ]
+    assert all(m.adaptive.tone == "good" for m in view.metrics)
+    by_key = {m.key: m for m in view.metrics}
+    assert by_key["hint_dependence"].chat.tone == "bad"
+    assert by_key["procedural_conceptual"].chat.tone == "bad"
+    assert by_key["transfer_at_mastery"].static.tone == "neutral"

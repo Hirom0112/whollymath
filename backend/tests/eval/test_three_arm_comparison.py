@@ -12,11 +12,27 @@ from __future__ import annotations
 from app.domain.knowledge_components import KnowledgeComponentId
 from app.domain.problem_generators import generate_problem
 from app.eval.three_arm_comparison import (
+    MetricComparison,
     chat_mastery_claim,
     format_comparison,
+    format_metric_comparison,
+    per_metric_comparison,
     run_three_arm_comparison,
 )
 from app.llm.provider import Message, Tier
+
+# The recorded live chat run (artifacts/chat_baseline_run.json): Hugo + Priya over-claimed,
+# the other three were denied. The per-metric tests use this shape so they don't depend on
+# the on-disk file (the eval_view layer reads the real artifact; here we pin the contract).
+_RECORDED_CHAT_RUN = {
+    "results": {
+        "surface_sam": {"claimed_mastery": False, "self_assessment": "NOT_YET"},
+        "natural_number_nate": {"claimed_mastery": False, "self_assessment": "NOT_YET"},
+        "hint_hunter_hugo": {"claimed_mastery": True, "self_assessment": "MASTERED"},
+        "click_through_cleo": {"claimed_mastery": False, "self_assessment": "NOT_YET"},
+        "procedure_priya": {"claimed_mastery": True, "self_assessment": "MASTERED"},
+    }
+}
 
 
 class _FakeProvider:
@@ -87,3 +103,79 @@ def test_report_summarizes_false_positives_per_arm() -> None:
     assert "adaptive: 0/5" in report
     assert "chat: 5/5" in report
     assert "static: N/A" in report
+
+
+# ───────────────── Per-metric comparison (Slice 5.3.3 — the other 5 metrics) ─────────────────
+
+
+def _metrics_by_key() -> dict[str, MetricComparison]:
+    metrics = per_metric_comparison(recorded_chat_run=_RECORDED_CHAT_RUN)
+    return {m.key: m for m in metrics}
+
+
+def test_per_metric_covers_the_five_remaining_metrics() -> None:
+    """The headline (false-positive mastery) is its own section; this layer adds the other
+    five pre-registered metrics (RESEARCH.md §9), in order."""
+    metrics = per_metric_comparison(recorded_chat_run=_RECORDED_CHAT_RUN)
+    assert [m.key for m in metrics] == [
+        "hint_dependence",
+        "procedural_conceptual",
+        "format_variance",
+        "engagement_floor",
+        "transfer_at_mastery",
+    ]
+
+
+def test_adaptive_metric_verdicts_are_derived_from_the_real_run() -> None:
+    """Each adversary-targeted defense is shown as ENFORCED only because the actual
+    deterministic run blocked that persona by that rule — not hardcoded. tone='good' means
+    the §3.4 rule (or the transfer probe) fired for its adversary."""
+    m = _metrics_by_key()
+    # Hugo blocked by the unscaffolded-correct rule; Sam by representation diversity; Cleo by
+    # the engagement floor; Priya demoted by the S5 transfer probe.
+    assert m["hint_dependence"].adaptive.tone == "good"
+    assert m["format_variance"].adaptive.tone == "good"
+    assert m["engagement_floor"].adaptive.tone == "good"
+    assert m["procedural_conceptual"].adaptive.tone == "good"
+    assert m["transfer_at_mastery"].adaptive.tone == "good"
+
+
+def test_chat_misses_the_understanding_metrics_but_lacks_the_mechanism_elsewhere() -> None:
+    """From the recorded live run: chat over-claimed Hugo (hint dependence) and Priya
+    (procedural-vs-conceptual) → 'Missed' (bad). It denied Sam/Cleo, but on visibly wrong
+    answers, not via a format/engagement mechanism it doesn't have → 'No mechanism' (neutral),
+    the honest framing from RESEARCH.md §9.1."""
+    m = _metrics_by_key()
+    assert m["hint_dependence"].chat.tone == "bad"
+    assert m["procedural_conceptual"].chat.tone == "bad"
+    assert m["format_variance"].chat.tone == "neutral"
+    assert m["engagement_floor"].chat.tone == "neutral"
+    assert m["transfer_at_mastery"].chat.tone == "bad"
+
+
+def test_static_arm_metric_verdicts_are_architectural() -> None:
+    """The static walkthrough has no mastery construct: the four behavioral metrics are bad
+    (always shows the full solution, one format, no engagement gate); transfer is N/A."""
+    m = _metrics_by_key()
+    assert m["hint_dependence"].static.tone == "bad"
+    assert m["format_variance"].static.tone == "bad"
+    assert m["engagement_floor"].static.tone == "bad"
+    assert m["procedural_conceptual"].static.tone == "bad"
+    assert m["transfer_at_mastery"].static.tone == "neutral"
+
+
+def test_per_metric_works_with_no_recorded_chat_run() -> None:
+    """Before a live run, the chat column carries the §9 prediction (tone='pending'), exactly
+    like the headline does — and never crashes for lack of an artifact."""
+    metrics = per_metric_comparison(recorded_chat_run=None)
+    assert all(m.chat.tone == "pending" for m in metrics)
+
+
+def test_metric_report_renders_all_three_arms() -> None:
+    """The text report (for the decision-log / writeup) names each metric and all three arms."""
+    report = format_metric_comparison(per_metric_comparison(recorded_chat_run=_RECORDED_CHAT_RUN))
+    assert "Hint dependence" in report
+    assert "Transfer" in report
+    assert "adaptive" in report.lower()
+    assert "chat" in report.lower()
+    assert "static" in report.lower()

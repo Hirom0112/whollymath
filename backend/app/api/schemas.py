@@ -348,6 +348,39 @@ class PersonaComparisonView(BaseModel):
     static: ArmVerdictView
 
 
+class MetricArmVerdictView(BaseModel):
+    """One arm's verdict on one pre-registered metric, pre-formatted for display.
+
+    Like ``ArmVerdictView`` but for the per-metric table (Slice 5.3.3): a short status label
+    plus a tone that drives styling (``good`` enforced / ``bad`` missed / ``neutral`` no
+    mechanism / ``pending`` predicted)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    arm: str = Field(description="Adaptive | Chat | Static")
+    status: str = Field(description="Short label, e.g. 'Enforced', 'Missed ✗', 'Max ✗', 'N/A'.")
+    tone: str = Field(description="good | bad | neutral | pending — drives the surface styling.")
+    detail: str = Field(description="One-line explanation of the verdict.")
+
+
+class MetricComparisonView(BaseModel):
+    """One of the five remaining pre-registered metrics across the three arms (RESEARCH.md §9).
+
+    The adaptive verdict is derived from the actual deterministic run (the rule that blocked the
+    adversary); the chat verdict from the recorded live run (or the §9 prediction); the static
+    verdict from the arm's architecture. The headline (false-positive mastery) is the per-persona
+    table above."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(description="Stable metric id, e.g. 'hint_dependence'.")
+    name: str = Field(description="Display name, e.g. 'Hint dependence at mastery'.")
+    adversary: str = Field(description="The persona that attacks this metric.")
+    adaptive: MetricArmVerdictView
+    chat: MetricArmVerdictView
+    static: MetricArmVerdictView
+
+
 class ThreeArmComparisonView(BaseModel):
     """The full three-arm comparison for display (Slice 5.3, PROJECT.md §3.11).
 
@@ -366,6 +399,10 @@ class ThreeArmComparisonView(BaseModel):
     )
     chat_live: bool = Field(description="True once the chat column reflects a real LLM run.")
     headline: str = Field(description="The §3.11 pitch summary for the header.")
+    metrics: list[MetricComparisonView] = Field(
+        default_factory=list,
+        description="The five remaining pre-registered metrics, each across the three arms.",
+    )
 
 
 __all__ = [
@@ -375,6 +412,8 @@ __all__ = [
     "InterventionKind",
     "InterventionView",
     "MasterySnapshot",
+    "MetricArmVerdictView",
+    "MetricComparisonView",
     "PersonaComparisonView",
     "ProblemView",
     "RouteOptionView",

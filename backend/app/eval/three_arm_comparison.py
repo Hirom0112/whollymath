@@ -38,7 +38,12 @@ from typing import Any
 
 from app.domain.problem_generators import Problem, generate_problem
 from app.eval.chat_baseline import CHAT_SYSTEM_PROMPT, run_chat_session
-from app.eval.false_positive_harness import PersonaCase, harness_cases, measure_case
+from app.eval.false_positive_harness import (
+    PersonaCase,
+    PersonaMasteryResult,
+    harness_cases,
+    measure_case,
+)
 from app.eval.static_worked_example import run_static_session
 from app.llm.provider import AnthropicProvider, LLMProvider, Message, Tier
 
@@ -237,6 +242,269 @@ def format_comparison(rows: list[ComparisonRow]) -> str:
     return "\n".join(lines)
 
 
+# ───────────── Per-metric comparison (Slice 5.3.3 — the other five metrics) ─────────────
+#
+# The headline metric (false-positive mastery) is computed above. RESEARCH.md §9 pre-registers
+# five more, each attacked by a specific persona. This layer derives each arm's verdict the
+# honest way:
+#   - Adaptive: from the ACTUAL deterministic run (``measure_case``). A defense is shown as
+#     enforced only because the run blocked its adversary by that exact rule (the reason
+#     strings / the transfer-probe stage), never hardcoded. If a defense did not fire we say so.
+#   - Chat: from the recorded LIVE run (``artifacts/chat_baseline_run.json``) where we have it,
+#     else the §9 prediction. The chat tutor has none of these mechanisms by construction
+#     (Slice 5.1: no SymPy, no mastery model); where it *denied* an adversary it did so on
+#     visibly wrong answers, not via the mechanism — the §9.1 framing, reported plainly.
+#   - Static: architectural facts (Slice 5.2: a single-format worked-solution walkthrough, no
+#     assessment, no mastery model). Behavioral metrics are weak/maxed; certification is N/A.
+#
+# Pure, deterministic, FREE — it runs ``measure_case`` (no LLM) and reads the recorded chat
+# JSON; it never makes a live call (CLAUDE.md §9).
+
+# Reason-string markers proving the adaptive defense fired for an adversary. These mirror the
+# canonical reasons emitted by ``app.mastery.mastery_model.declare_mastery``; the per-metric
+# tests run the real harness and assert each marker is present, so a wording drift fails loudly.
+_HINT_REASON_MARKER = "scaffolding"
+_FORMAT_REASON_MARKER = "representation diversity"
+_ENGAGEMENT_REASON_MARKER = "engagement floor"
+
+
+@dataclass(frozen=True)
+class MetricArmVerdict:
+    """One arm's verdict on one metric, pre-shaped for display.
+
+    ``tone`` drives the surface styling and is the at-a-glance signal:
+    ``good`` = the defense is enforced, ``bad`` = the metric is missed/unenforced, ``neutral``
+    = no mechanism / not applicable, ``pending`` = the chat prediction before a live run."""
+
+    arm: str  # "adaptive" | "chat" | "static"
+    status: str  # short label, e.g. "Enforced", "Missed ✗", "Max ✗", "N/A"
+    tone: str  # "good" | "bad" | "neutral" | "pending"
+    detail: str  # one-line explanation
+
+
+@dataclass(frozen=True)
+class MetricComparison:
+    """One pre-registered metric across the three arms (RESEARCH.md §9)."""
+
+    key: str
+    name: str
+    adversary: str  # the persona that attacks this metric (or "all five" for transfer)
+    adaptive: MetricArmVerdict
+    chat: MetricArmVerdict
+    static: MetricArmVerdict
+
+
+def _adaptive_results_by_id() -> dict[str, PersonaMasteryResult]:
+    """The deterministic adaptive outcome (with blocking reasons) for every persona."""
+    return {case.persona.persona_id: measure_case(case) for case in harness_cases()}
+
+
+def _reason_fired(result: PersonaMasteryResult, marker: str) -> bool:
+    """Whether the adaptive run blocked this persona by the rule the marker identifies."""
+    return any(marker in reason for reason in result.reasons)
+
+
+def _chat_claim(recorded_chat_run: dict[str, Any] | None, persona_id: str) -> bool | None:
+    """The recorded live chat claim for a persona (True/False), or None when there is no
+    recorded run (the dashboard then shows the §9 prediction)."""
+    if recorded_chat_run is None:
+        return None
+    results = recorded_chat_run.get("results", {})
+    if not isinstance(results, dict):
+        return None
+    rec = results.get(persona_id)
+    if rec is None:
+        return None
+    return bool(rec["claimed_mastery"])
+
+
+def _adaptive_enforced(
+    *, fired: bool, status: str, detail: str, reasons: tuple[str, ...]
+) -> MetricArmVerdict:
+    """Adaptive verdict for an adversary-targeted defense: ``good`` when the rule fired in the
+    real run, else an honest ``bad`` that surfaces what actually happened."""
+    if fired:
+        return MetricArmVerdict(arm="adaptive", status=status, tone="good", detail=detail)
+    return MetricArmVerdict(
+        arm="adaptive",
+        status="Not enforced ✗",
+        tone="bad",
+        detail="expected defense did not fire in the run; reasons: "
+        + ("; ".join(reasons) if reasons else "none"),
+    )
+
+
+def _chat_adversary_verdict(
+    claim: bool | None, *, missed_detail: str, denied_detail: str, predicted_detail: str
+) -> MetricArmVerdict:
+    """Chat verdict for an adversary-targeted metric.
+
+    Chat has no mechanism for any of these by construction (Slice 5.1). So:
+      - it over-claimed the adversary  → ``Missed ✗`` (bad): the metric is genuinely missed.
+      - it denied the adversary        → ``No mechanism`` (neutral): it denied on visibly wrong
+        answers, not via this defense — the §9.1 framing, stated plainly (not credited as good).
+      - no live run yet                → ``Predicted`` (pending): the §9 prediction.
+    """
+    if claim is None:
+        return MetricArmVerdict(
+            arm="chat", status="Predicted: no mechanism", tone="pending", detail=predicted_detail
+        )
+    if claim:
+        return MetricArmVerdict(arm="chat", status="Missed ✗", tone="bad", detail=missed_detail)
+    return MetricArmVerdict(arm="chat", status="No mechanism", tone="neutral", detail=denied_detail)
+
+
+def _static(status: str, tone: str, detail: str) -> MetricArmVerdict:
+    return MetricArmVerdict(arm="static", status=status, tone=tone, detail=detail)
+
+
+def per_metric_comparison(*, recorded_chat_run: dict[str, Any] | None) -> list[MetricComparison]:
+    """The five remaining pre-registered metrics (RESEARCH.md §9), each across the three arms.
+
+    Free and deterministic: the adaptive column is derived from ``measure_case`` (no LLM), the
+    chat column from the recorded live run (or the §9 prediction when ``recorded_chat_run`` is
+    None), the static column from the arm's architecture. The headline (false-positive mastery)
+    is the separate ``compare_case`` layer above."""
+    adaptive = _adaptive_results_by_id()
+    hugo, priya = adaptive["hint_hunter_hugo"], adaptive["procedure_priya"]
+    sam, cleo = adaptive["surface_sam"], adaptive["click_through_cleo"]
+
+    hint = MetricComparison(
+        key="hint_dependence",
+        name="Hint dependence at mastery",
+        adversary="Hint-hunter Hugo",
+        adaptive=_adaptive_enforced(
+            fired=_reason_fired(hugo, _HINT_REASON_MARKER),
+            status="Blocked",
+            detail="every correct attempt was hinted → no unscaffolded-correct evidence; "
+            "can't reach mastery (§3.4 rule 3).",
+            reasons=hugo.reasons,
+        ),
+        chat=_chat_adversary_verdict(
+            _chat_claim(recorded_chat_run, "hint_hunter_hugo"),
+            missed_detail="certified Hugo (live: MASTERED) — gives steps freely, no penalty "
+            "for hint-dependence.",
+            denied_detail="denied Hugo on visible errors, not hint-dependence — no "
+            "unscaffolded-correct rule.",
+            predicted_detail="predicted High — gives steps freely and praises; no "
+            "unscaffolded-correct rule.",
+        ),
+        static=_static(
+            "Max ✗", "bad", "the full worked solution is always shown — 'success' = copying it."
+        ),
+    )
+
+    procedural = MetricComparison(
+        key="procedural_conceptual",
+        name="Procedural-vs-conceptual gap",
+        adversary="Procedure Priya",
+        adaptive=_adaptive_enforced(
+            fired=priya.blocked_at == "transfer_probe",
+            status="Detected",
+            detail="reaches provisional (fluent procedure), then the S5 transfer probe demotes "
+            "her — endorses a wrong claim she can't justify.",
+            reasons=priya.reasons,
+        ),
+        chat=_chat_adversary_verdict(
+            _chat_claim(recorded_chat_run, "procedure_priya"),
+            missed_detail="certified Priya (live: MASTERED) — grades the answer, never probes "
+            "the concept.",
+            denied_detail="denied Priya on her answers, not the concept gap — no conceptual "
+            "assessment.",
+            predicted_detail="predicted Missed — checks the answer, not the concept.",
+        ),
+        static=_static("Missed ✗", "bad", "shows the procedure, never assesses understanding."),
+    )
+
+    fmt = MetricComparison(
+        key="format_variance",
+        name="Format-variance robustness",
+        adversary="Surface Sam",
+        adaptive=_adaptive_enforced(
+            fired=_reason_fired(sam, _FORMAT_REASON_MARKER),
+            status="Enforced",
+            detail="fluent in one format only; mastery needs 2+ correct representations "
+            "(rule 2) — blocked.",
+            reasons=sam.reasons,
+        ),
+        chat=_chat_adversary_verdict(
+            _chat_claim(recorded_chat_run, "surface_sam"),
+            missed_detail="certified Sam (live: MASTERED) on single-format fluency.",
+            denied_detail="denied Sam on visibly wrong answers, not format-robustness — "
+            "single-format Q&A has no representation requirement.",
+            predicted_detail="predicted Weak — single-format Q&A passes pattern-matching.",
+        ),
+        static=_static("Weak ✗", "bad", "one canonical format (reuses the worked-example steps)."),
+    )
+
+    engagement = MetricComparison(
+        key="engagement_floor",
+        name="Engagement-floor enforcement",
+        adversary="Click-through Cleo",
+        adaptive=_adaptive_enforced(
+            fired=_reason_fired(cleo, _ENGAGEMENT_REASON_MARKER),
+            status="Enforced",
+            detail="answers below the time floor every turn → no engaged evidence; the floor "
+            "blocks mastery.",
+            reasons=cleo.reasons,
+        ),
+        chat=_chat_adversary_verdict(
+            _chat_claim(recorded_chat_run, "click_through_cleo"),
+            missed_detail="certified Cleo (live: MASTERED) despite click-through behavior.",
+            denied_detail="denied Cleo on visible errors, not engagement — no engagement gate.",
+            predicted_detail="predicted None — rushing / lucky-correct still praised.",
+        ),
+        static=_static("None ✗", "bad", "no engagement gate at all."),
+    )
+
+    n_provisional = sum(r.provisional_mastery for r in adaptive.values())
+    n_confirmed = sum(r.confirmed_mastery for r in adaptive.values())
+    chat_masters = [pid for pid in adaptive if _chat_claim(recorded_chat_run, pid) is True]
+    transfer = MetricComparison(
+        key="transfer_at_mastery",
+        name="Transfer pass rate at mastery",
+        adversary="all five (higher is better)",
+        adaptive=MetricArmVerdict(
+            arm="adaptive",
+            status="Gate holds",
+            tone="good",
+            detail=f"transfer is the gate: {n_provisional}/5 reached provisional, "
+            f"{n_confirmed} confirmed → 0 false certifications (Priya demoted by the probe).",
+        ),
+        chat=(
+            MetricArmVerdict(
+                arm="chat",
+                status="Low ✗",
+                tone="bad",
+                detail=f"self-certified {len(chat_masters)} 'masters' with no transfer check — "
+                "they would fail our probe.",
+            )
+            if recorded_chat_run is not None
+            else MetricArmVerdict(
+                arm="chat",
+                status="Predicted: Low",
+                tone="pending",
+                detail="predicted to over-certify; no transfer construct.",
+            )
+        ),
+        static=_static("N/A", "neutral", "certifies nothing — no transfer construct."),
+    )
+
+    return [hint, procedural, fmt, engagement, transfer]
+
+
+def format_metric_comparison(metrics: list[MetricComparison]) -> str:
+    """A readable side-by-side of the five per-metric verdicts (decision-log / writeup)."""
+    lines = ["Three-arm comparison — per-metric (RESEARCH.md §9):", ""]
+    for m in metrics:
+        lines.append(f"  {m.name}  (adversary: {m.adversary})")
+        lines.append(f"    adaptive: {m.adaptive.status}  [{m.adaptive.detail}]")
+        lines.append(f"    chat:     {m.chat.status}  [{m.chat.detail}]")
+        lines.append(f"    static:   {m.static.status}  [{m.static.detail}]")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def main() -> None:
     """Run the live comparison and print the report.
 
@@ -245,6 +513,10 @@ def main() -> None:
     adaptive and static arms are free/deterministic.
     """
     print(format_comparison(run_three_arm_comparison()))
+    print()
+    print(
+        format_metric_comparison(per_metric_comparison(recorded_chat_run=load_recorded_chat_run()))
+    )
 
 
 if __name__ == "__main__":
@@ -255,12 +527,16 @@ __all__ = [
     "ArmOutcome",
     "CHAT_ASSESSMENT_QUESTION",
     "ComparisonRow",
+    "MetricArmVerdict",
+    "MetricComparison",
     "PREDICTED_CHAT_NOTE",
     "chat_mastery_claim",
     "compare_case",
     "compare_case_offline",
     "format_comparison",
+    "format_metric_comparison",
     "load_recorded_chat_run",
+    "per_metric_comparison",
     "run_comparison_offline",
     "run_three_arm_comparison",
 ]

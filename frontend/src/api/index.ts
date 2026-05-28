@@ -24,6 +24,8 @@ export type {
   InterventionView,
   KnowledgeComponentId,
   MasterySnapshot,
+  MetricArmVerdictView,
+  MetricComparisonView,
   PersonaComparisonView,
   ProblemView,
   Representation,

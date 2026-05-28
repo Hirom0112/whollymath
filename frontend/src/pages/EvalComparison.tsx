@@ -40,6 +40,8 @@ export function EvalComparison(): React.JSX.Element {
     );
   }
 
+  const metrics = data.metrics ?? [];
+
   return (
     <main className="wm-eval">
       <header className="wm-eval-head">
@@ -101,6 +103,51 @@ export function EvalComparison(): React.JSX.Element {
           </div>
         ))}
       </div>
+
+      {metrics.length > 0 && (
+        <section className="wm-eval-metrics">
+          <h2 className="wm-eval-section-title">The other five pre-registered metrics</h2>
+          <p className="wm-eval-section-note">
+            Each is attacked by one persona. The adaptive verdict is the rule that actually
+            blocked that learner in the run; the chat verdict is the live self-assessment (or, for
+            the learners it denied, the honest note that it lacks the mechanism); the static
+            walkthrough has no mastery construct at all.
+          </p>
+          <div className="wm-eval-grid" role="table" aria-label="Per-metric comparison">
+            <div className="wm-eval-row wm-eval-row--header" role="row">
+              <div className="wm-eval-cell wm-eval-cell--persona" role="columnheader">
+                Metric (adversary)
+              </div>
+              <div className="wm-eval-cell" role="columnheader">
+                Adaptive (ours)
+              </div>
+              <div className="wm-eval-cell" role="columnheader">
+                Chat baseline
+              </div>
+              <div className="wm-eval-cell" role="columnheader">
+                Static baseline
+              </div>
+            </div>
+
+            {metrics.map((metric) => (
+              <div className="wm-eval-row" role="row" key={metric.key}>
+                <div className="wm-eval-cell wm-eval-cell--persona" role="cell">
+                  <p className="wm-eval-name">{metric.name}</p>
+                  <p className="wm-eval-attacks">{metric.adversary}</p>
+                </div>
+                {[metric.adaptive, metric.chat, metric.static].map((arm) => (
+                  <div className="wm-eval-cell" role="cell" key={arm.arm}>
+                    <span className={`wm-eval-verdict wm-eval-verdict--${arm.tone}`}>
+                      {arm.status}
+                    </span>
+                    <p className="wm-eval-detail">{arm.detail}</p>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

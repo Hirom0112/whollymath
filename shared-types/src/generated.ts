@@ -131,6 +131,56 @@ export interface MasterySnapshot {
   mastered: boolean;
 }
 /**
+ * One arm's verdict on one pre-registered metric, pre-formatted for display.
+ *
+ * Like ``ArmVerdictView`` but for the per-metric table (Slice 5.3.3): a short status label
+ * plus a tone that drives styling (``good`` enforced / ``bad`` missed / ``neutral`` no
+ * mechanism / ``pending`` predicted).
+ */
+export interface MetricArmVerdictView {
+  /**
+   * Adaptive | Chat | Static
+   */
+  arm: string;
+  /**
+   * Short label, e.g. 'Enforced', 'Missed ✗', 'Max ✗', 'N/A'.
+   */
+  status: string;
+  /**
+   * good | bad | neutral | pending — drives the surface styling.
+   */
+  tone: string;
+  /**
+   * One-line explanation of the verdict.
+   */
+  detail: string;
+}
+/**
+ * One of the five remaining pre-registered metrics across the three arms (RESEARCH.md §9).
+ *
+ * The adaptive verdict is derived from the actual deterministic run (the rule that blocked the
+ * adversary); the chat verdict from the recorded live run (or the §9 prediction); the static
+ * verdict from the arm's architecture. The headline (false-positive mastery) is the per-persona
+ * table above.
+ */
+export interface MetricComparisonView {
+  /**
+   * Stable metric id, e.g. 'hint_dependence'.
+   */
+  key: string;
+  /**
+   * Display name, e.g. 'Hint dependence at mastery'.
+   */
+  name: string;
+  /**
+   * The persona that attacks this metric.
+   */
+  adversary: string;
+  adaptive: MetricArmVerdictView;
+  chat: MetricArmVerdictView;
+  static: MetricArmVerdictView;
+}
+/**
  * One persona's row in the three-arm comparison: who, what it attacks, the problems it
  * saw, and each arm's verdict.
  */
@@ -279,6 +329,10 @@ export interface ThreeArmComparisonView {
    * The §3.11 pitch summary for the header.
    */
   headline: string;
+  /**
+   * The five remaining pre-registered metrics, each across the three arms.
+   */
+  metrics?: MetricComparisonView[];
 }
 /**
  * One learner action entering the turn loop (ARCHITECTURE.md §10 steps 1-2).
