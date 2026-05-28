@@ -281,6 +281,35 @@ def test_equivalence_word_problem_is_a_yes_no_judgment() -> None:
     assert saw_equal and saw_unequal
 
 
+def test_number_line_symbolic_is_a_magnitude_comparison() -> None:
+    """The SYMBOLIC placement item is a 'greater than?' yes/no comparison (the magnitude
+    skill without the line): truth (SymPy a > b) matches the learner's yes/no both ways, and
+    both yes and no occur across seeds. The default (number_line) stays the drag placement."""
+    from app.domain.verifier import verify
+
+    saw_yes = saw_no = False
+    for seed in range(20):
+        p = generate_problem(
+            KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
+            seed=seed,
+            surface_format=Representation.SYMBOLIC,
+        )
+        assert p.answer_kind is AnswerKind.YES_NO
+        assert p.yes_no_relation == "greater"
+        assert p.operands is not None and len(p.operands) == 2
+        assert "greater than" in p.statement
+        truly_greater = bool(p.operands[0] > p.operands[1])
+        assert verify(p, "yes").is_correct is truly_greater
+        assert verify(p, "no").is_correct is (not truly_greater)
+        saw_yes = saw_yes or truly_greater
+        saw_no = saw_no or not truly_greater
+    assert saw_yes and saw_no
+    # The default placement item is still the number-line drag (numeric), unchanged.
+    drag = generate_problem(KnowledgeComponentId.NUMBER_LINE_PLACEMENT, seed=1)
+    assert drag.surface_format is Representation.NUMBER_LINE
+    assert drag.answer_kind is AnswerKind.NUMERIC
+
+
 def test_non_equivalence_items_have_no_given_denominator() -> None:
     """``given_denominator`` is an equivalence-fill rendering hint; it is None elsewhere
     so no other surface tries to lock a denominator."""

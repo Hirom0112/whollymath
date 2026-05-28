@@ -446,3 +446,37 @@ def test_yes_no_unparseable_answer_is_wrong_never_crashes() -> None:
         result = verify(equal, junk)
         assert result.is_correct is False
         assert result.error_category is ErrorCategory.OTHER
+
+
+def _yes_no_comparison(first: Rational, second: Rational) -> Problem:
+    """A magnitude comparison — 'Is `first` greater than `second`?' — the symbolic
+    representation of the number-line placement KC. Truth is `first > second`."""
+    return Problem(
+        problem_id=f"CMP-{first}-{second}",
+        kc=KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
+        surface_format=Representation.SYMBOLIC,
+        statement=f"Is {first} greater than {second}?",
+        correct_value=first,
+        representations_available=(Representation.SYMBOLIC,),
+        operands=(first, second),
+        answer_kind=AnswerKind.YES_NO,
+        yes_no_relation="greater",
+    )
+
+
+def test_yes_no_greater_relation_uses_comparison_not_equality() -> None:
+    """A 'greater' yes/no judges first > second (not equality) — so the SAME yes/no
+    machinery serves a magnitude comparison. SymPy decides the order."""
+    bigger = _yes_no_comparison(Rational(3, 5), Rational(1, 2))  # 3/5 > 1/2 → YES
+    smaller = _yes_no_comparison(Rational(1, 3), Rational(1, 2))  # 1/3 > 1/2 → NO
+    assert verify(bigger, "yes").is_correct is True
+    assert verify(bigger, "no").is_correct is False
+    assert verify(smaller, "no").is_correct is True
+    assert verify(smaller, "yes").is_correct is False
+
+
+def test_equal_operands_are_not_greater() -> None:
+    """Equal amounts are not 'greater than' each other → the answer is NO."""
+    equal = _yes_no_comparison(Rational(1, 2), Rational(2, 4))  # equal value, unlike denoms
+    assert verify(equal, "no").is_correct is True
+    assert verify(equal, "yes").is_correct is False

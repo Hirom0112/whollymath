@@ -47,13 +47,20 @@ def test_schedule_is_deterministic() -> None:
 
 
 def test_masterable_live_is_honest_about_each_route() -> None:
-    """Arithmetic routes (symbolic + number line) and equivalence (symbolic + word-problem
-    judgment) have ≥2 live representations → masterable now. Number-line placement still has
-    one live representation → not yet (rule 2 can't be met until its 2nd representation)."""
+    """Every route now has ≥2 live representations → all masterable: arithmetic (symbolic +
+    number line), equivalence (symbolic + word-problem judgment), and number-line placement
+    (drag + symbolic magnitude comparison)."""
     assert is_masterable_live(_ADD) is True
     assert is_masterable_live(_SUB) is True
     assert is_masterable_live(_EQ) is True
-    assert is_masterable_live(_NL) is False
+    assert is_masterable_live(_NL) is True
+
+
+def test_placement_rotates_number_line_and_symbolic() -> None:
+    """The placement goal is served as BOTH the drag and the symbolic comparison, so a
+    learner can be correct in 2 representations (mastery rule 2)."""
+    reps = {rep for i in range(12) for kc, rep in [next_spec(_NL, i)] if kc == _NL}
+    assert reps == {Representation.NUMBER_LINE, Representation.SYMBOLIC}
 
 
 def test_equivalence_rotates_symbolic_and_word_problem() -> None:

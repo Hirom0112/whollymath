@@ -173,15 +173,16 @@ def _parse_to_bool(submitted: Submitted) -> bool | None:
 
 
 def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult:
-    """Verify a yes/no relational judgment. The truth is SymPy equality over the two
-    operands (e.g. 2/3 == 4/6 → the answer is YES); a wrong judgment is a MAGNITUDE
-    error (the learner misjudged whether the amounts match — §3.6 routes it to S2, the
-    number line). We do not over-claim a specific misconception match."""
+    """Verify a yes/no judgment over the two operands. The truth is SymPy: equality
+    ("same amount?" — 2/3 == 4/6 → YES) or, when ``yes_no_relation`` is "greater", a
+    magnitude comparison ("is a greater than b?" — the symbolic form of number-line
+    placement). A wrong judgment is a MAGNITUDE error (the learner misjudged the amounts —
+    §3.6 routes it to S2, the number line). We do not over-claim a misconception match."""
     operands = problem.operands
     if operands is None or len(operands) != 2:
         # A yes/no item without a fraction pair is a CONSTRUCTION bug (not learner
-        # input): there is nothing for SymPy to judge equality over. Fail loudly
-        # (CLAUDE.md §8.5) rather than silently scoring a meaningless verdict.
+        # input): there is nothing for SymPy to judge over. Fail loudly (CLAUDE.md §8.5)
+        # rather than silently scoring a meaningless verdict.
         raise ValueError(
             f"yes/no problem {problem.problem_id!r} needs exactly two operands to verify"
         )
@@ -192,7 +193,10 @@ def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult
             is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
         )
 
-    truth = bool(operands[0] == operands[1])
+    if problem.yes_no_relation == "greater":
+        truth = bool(operands[0] > operands[1])
+    else:
+        truth = bool(operands[0] == operands[1])
     if answer == truth:
         return VerificationResult(
             is_correct=True, error_category=ErrorCategory.NONE, matched_misconception=None

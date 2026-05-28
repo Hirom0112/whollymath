@@ -39,7 +39,8 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     _KC.SUBTRACTION_UNLIKE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
     # SYMBOLIC = fill-the-top / yes-no; WORD_PROBLEM = a story "same amount?" yes-no judgment.
     _KC.EQUIVALENCE: (_REP.SYMBOLIC, _REP.WORD_PROBLEM),
-    _KC.NUMBER_LINE_PLACEMENT: (_REP.NUMBER_LINE,),
+    # NUMBER_LINE = drag the marker; SYMBOLIC = "is a greater than b?" magnitude comparison.
+    _KC.NUMBER_LINE_PLACEMENT: (_REP.NUMBER_LINE, _REP.SYMBOLIC),
 }
 
 # The companion KC interleaved alongside each goal so a session always spans ≥2 KCs (rule 4).

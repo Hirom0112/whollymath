@@ -39,13 +39,18 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from sympy import Rational, ilcm
 
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 
 # ─── The shared Problem type ─────────────────────────────────────────────────
+
+
+# The truth rule for a yes/no item: an equality judgment ("same amount?") or a magnitude
+# comparison ("greater than?"). Default "equal" keeps every existing yes/no item unchanged.
+YesNoRelation = Literal["equal", "greater"]
 
 
 class AnswerKind(StrEnum):
@@ -111,6 +116,10 @@ class Problem:
     # the one blank the statement names. ``None`` for every other item (a rendering hint,
     # like the number-line ``tick_segments``; the verifier still judges value-equality).
     given_denominator: int | None = None
+    # For a YES_NO item: whether its truth is an equality judgment ("same amount?", the
+    # default) or a magnitude comparison ("greater than?"). The verifier reads this to pick
+    # the comparison; the surface answers both the same way (yes/no buttons).
+    yes_no_relation: YesNoRelation = "equal"
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), and the chosen
@@ -373,12 +382,33 @@ def _generate_subtraction(rng: random.Random, seed: int, surface_format: Represe
 
 
 def _generate_number_line(rng: random.Random, seed: int, surface_format: Representation) -> Problem:
-    """KC_number_line_placement: place one proper fraction on the 0–1 line.
+    """KC_number_line_placement in two REAL representations (so mastery rule 2 is reachable):
 
-    The target is a positive proper fraction (0 < n/d < 1), matching the bank's NL
-    placement items (e.g. drag the marker to 3/4). The correct value is the fraction
-    itself — its position on the unit interval.
+    - **NUMBER_LINE** (default): place one proper fraction on the 0–1 line — "drag the marker
+      to where 3/4 belongs" (the bank's NL placement shape). correct_value = the fraction.
+    - **SYMBOLIC**: a magnitude COMPARISON — "is a/b greater than c/d?" — the same
+      reason-about-magnitude-not-digits skill, without the line. Answered yes/no; truth is
+      SymPy a > b. A genuinely different surface from the drag, so a learner correct in both
+      has shown the magnitude skill two ways (rule 2).
     """
+    if surface_format is Representation.SYMBOLIC:
+        first, second = _unlike_pair(rng)
+        return Problem(
+            problem_id=_generated_id(
+                KnowledgeComponentId.NUMBER_LINE_PLACEMENT, seed, surface_format
+            ),
+            kc=KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
+            surface_format=surface_format,
+            statement=f"Is {first.p}/{first.q} greater than {second.p}/{second.q}?",
+            correct_value=first,  # magnitude anchor; the yes/no truth is operands[0] > operands[1]
+            representations_available=get_kc(
+                KnowledgeComponentId.NUMBER_LINE_PLACEMENT
+            ).representations,
+            operands=(first, second),
+            answer_kind=AnswerKind.YES_NO,
+            yes_no_relation="greater",
+        )
+
     target = _proper_fraction(rng)
     statement = f"Drag the marker to where {target.p}/{target.q} belongs on the line from 0 to 1."
     return Problem(
