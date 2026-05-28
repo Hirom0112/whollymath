@@ -14,6 +14,8 @@ import type { StartSessionResponse, TurnRequest, TurnResponse } from '@whollymat
 export type {
   ActionType,
   ErrorCategory,
+  InterventionKind,
+  InterventionView,
   KnowledgeComponentId,
   MasterySnapshot,
   ProblemView,
@@ -49,9 +51,21 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** Start a session from a Turn-0 route choice (decision 0.D.2). */
-export async function startSession(routeKey: string): Promise<StartSessionResponse> {
-  return postJson<StartSessionResponse>('/session', { route_key: routeKey });
+/**
+ * Start a session from a Turn-0 route choice (decision 0.D.2).
+ *
+ * `proactiveEnabled` opts the session into the proactive HelpNeed arm (Slice 4.5);
+ * default OFF = observe-only (RESEARCH.md §7.5). It is a demo / A/B switch, not a
+ * learner-facing control.
+ */
+export async function startSession(
+  routeKey: string,
+  proactiveEnabled = false,
+): Promise<StartSessionResponse> {
+  return postJson<StartSessionResponse>('/session', {
+    route_key: routeKey,
+    proactive_enabled: proactiveEnabled,
+  });
 }
 
 /** Submit one learner action (answer or hint request) and get the turn result. */

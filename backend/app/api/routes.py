@@ -91,7 +91,7 @@ def start_session(
     route, CLAUDE.md §8.5).
     """
     try:
-        return store.start(request.route_key)
+        return store.start(request.route_key, proactive_enabled=request.proactive_enabled)
     except UnknownRouteError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

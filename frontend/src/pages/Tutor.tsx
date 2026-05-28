@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 
 import {
   submitTurn,
+  type InterventionView,
   type ProblemView,
   type StartSessionResponse,
   type SurfaceState,
@@ -56,6 +57,10 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [hintUsed, setHintUsed] = useState(false);
+  // A proactively-offered nudge for THIS problem (Slice 4.5): the previous turn's
+  // sustained HelpNeed signal tripped the §3.7 gate, so help is shown unasked, inline in
+  // the workspace (§3.8 refuse-rule 6). null unless the proactive arm fired (default OFF).
+  const [intervention, setIntervention] = useState<InterventionView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // When the current problem was first shown — the elapsed time is the turn's
@@ -84,6 +89,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     if (phase !== 'answering' || !canSubmit) return;
     setPhase('submitting');
     setError(null);
+    setIntervention(null); // the offer pertained to this attempt; it is now spent
     try {
       const response = await submitTurn({
         session_id: sessionId,
@@ -130,6 +136,8 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     setTick(null);
     setHint(null);
     setHintUsed(false);
+    // Carry any proactive offer the just-finished turn produced onto this next problem.
+    setIntervention(result.intervention ?? null);
     setResult(null);
     setPhase('answering');
     startedAt.current = Date.now();
@@ -145,6 +153,11 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
 
         {phase !== 'feedback' ? (
           <form className="wm-tutor-form" onSubmit={handleSubmit}>
+            {intervention !== null ? (
+              <p className="wm-tutor-assertion" role="note">
+                {intervention.text}
+              </p>
+            ) : null}
             {isPlacement && problem.tick_segments != null ? (
               <NumberLine
                 segments={problem.tick_segments}

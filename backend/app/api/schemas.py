@@ -158,6 +158,14 @@ class StartSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     route_key: str = Field(min_length=1, description="The chosen Turn-0 option key (0.D.2).")
+    proactive_enabled: bool = Field(
+        default=False,
+        description=(
+            "Opt into the proactive HelpNeed arm for this session (Slice 4.5). Default "
+            "OFF = observe-only (RESEARCH.md §7.5); set by the Slice 5.4 A/B harness or a "
+            "demo. When OFF the session never sees a proactive intervention."
+        ),
+    )
 
 
 class StartSessionResponse(BaseModel):

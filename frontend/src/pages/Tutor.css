@@ -190,6 +190,23 @@
   border-radius: 14px;
 }
 
+/* Proactive inline assertion (Slice 4.5): help offered UNASKED when the §3.7 sustained
+   gate fires, rendered inside the workspace above the input (§3.8 refuse-rule 6).
+   Warmer than the reactive hint (sky) with a coral spine, so the two read as different
+   gestures — one offered, one requested. */
+.wm-tutor-assertion {
+  margin: 0 0 18px;
+  padding: 13px 15px 13px 18px;
+  font-family: var(--wm-font-sans);
+  font-size: 15.5px;
+  line-height: 1.45;
+  color: var(--wm-ink);
+  background: var(--wm-card-warm);
+  border: 2px solid var(--wm-coral);
+  border-left-width: 6px;
+  border-radius: 14px;
+}
+
 .wm-tutor-error {
   margin: 18px 0 0;
   font-family: var(--wm-font-sans);

@@ -174,6 +174,10 @@ export interface StartSessionRequest {
    * The chosen Turn-0 option key (0.D.2).
    */
   route_key: string;
+  /**
+   * Opt into the proactive HelpNeed arm for this session (Slice 4.5). Default OFF = observe-only (RESEARCH.md §7.5); set by the Slice 5.4 A/B harness or a demo. When OFF the session never sees a proactive intervention.
+   */
+  proactive_enabled?: boolean;
 }
 /**
  * The freshly-started session and its Turn-1 calibration problem (0.D.2).

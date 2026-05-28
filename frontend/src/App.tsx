@@ -20,7 +20,10 @@ export function App(): React.JSX.Element {
     setView('starting');
     setError(null);
     try {
-      const started = await startSession(route);
+      // Demo / A/B switch: ?proactive=1 opts into the proactive HelpNeed arm (Slice 4.5).
+      // Default OFF = observe-only (RESEARCH.md §7.5); not a learner-facing control.
+      const proactive = new URLSearchParams(window.location.search).get('proactive') === '1';
+      const started = await startSession(route, proactive);
       setSession(started);
       setView('session');
     } catch {
