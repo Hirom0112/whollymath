@@ -44,6 +44,8 @@ from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
 from app.helpneed.live_features import LiveTurn, live_features
 from app.helpneed.predictor import HelpNeedPredictor
+from app.llm.provider import LLMProvider
+from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.tutor.hints import select_nudge
 from app.tutor.session import RouteOption, TutorSession, routing_choices
@@ -181,6 +183,7 @@ def _maybe_intervene(
     live: _LiveSession,
     gate: SustainedHelpNeedGate,
     next_problem: Problem,
+    voice_provider: LLMProvider | None,
 ) -> InterventionView | None:
     """Decide whether to PROACTIVELY offer help before the next problem (Slice 4.5.1).
 
@@ -201,9 +204,13 @@ def _maybe_intervene(
         return None
     if not gate.should_intervene(live.help_need_history):
         return None
+    # A help moment: voice the pre-written nudge in the mascot's voice (Slice 5.5.2), or
+    # return it verbatim if voicing is disabled/fails (invariant 4). The LLM only rephrases
+    # an already-decided nudge — it never decides whether to intervene (§8.1).
+    nudge_text = select_nudge(next_problem.kc).text
     return InterventionView(
         kind=InterventionKind.INLINE_ASSERTION,
-        text=select_nudge(next_problem.kc).text,
+        text=voice_help(nudge_text, provider=voice_provider),
     )
 
 
@@ -212,6 +219,7 @@ def _answer_response(
     request: TurnRequest,
     predictor: HelpNeedPredictor | None,
     gate: SustainedHelpNeedGate,
+    voice_provider: LLMProvider | None,
 ) -> TurnResponse:
     """Run one SUBMIT_ANSWER turn end-to-end and shape the wire reply.
 
@@ -250,19 +258,21 @@ def _answer_response(
             for m in result.mastery_snapshot
         ],
         help_need=help_need,
-        intervention=_maybe_intervene(live, gate, next_problem),
+        intervention=_maybe_intervene(live, gate, next_problem, voice_provider),
         next_problem=_problem_view(next_problem),
     )
 
 
-def _hint_response(session: TutorSession) -> TurnResponse:
+def _hint_response(session: TutorSession, voice_provider: LLMProvider | None) -> TurnResponse:
     """Answer a REQUEST_HINT turn with a pre-written nudge — no state change, no advance.
 
     A hint request is not an answer: it does not verify, update mastery, or advance
     the problem. Per the refuse-rules it never changes the surface state (§3.8 rule 3:
     a pause/help is not a transition), so the state is echoed unchanged and the learner
     stays on the SAME problem. The nudge is the deterministic, pre-written conceptual
-    prompt for the current KC (Slice 3.8, ``select_nudge`` — no LLM, no SymPy, §8.1).
+    prompt for the current KC (Slice 3.8, ``select_nudge`` — which DECIDES the help; no
+    SymPy, §8.1). A hint is a help moment, so the nudge is rephrased in the mascot's voice
+    (Slice 5.5.2) when voicing is enabled, or returned verbatim otherwise (invariant 4).
     The LLM-filled ``partial_step``/``worked_step`` levels are Slice 5.6.
     """
     problem = session.current_problem
@@ -272,7 +282,7 @@ def _hint_response(session: TutorSession) -> TurnResponse:
         error_type=ErrorType.NONE,
         next_surface_state=session.surface_state,
         feedback="Here's something to think about.",
-        hint=nudge.text,
+        hint=voice_help(nudge.text, provider=voice_provider),
         mastery=[],
         next_problem=_problem_view(problem),
     )
@@ -313,10 +323,16 @@ class SessionStore:
     ``gate`` is the §3.7 sustained-signal intervention gate (Slice 4.5.1), shared across
     sessions because it is pure/stateless (the per-session P stream lives on each
     ``_LiveSession``). It only matters for sessions whose proactive arm is enabled.
+
+    ``voice_provider`` is the optional LLM backend that rephrases help text in the mascot's
+    voice on help moments (Slice 5.5.2). ``None`` (the default, and what tests use) returns
+    the pre-written help verbatim — no LLM call; ``create_app`` injects the Anthropic
+    provider to enable voicing live (invariant 4: voicing is a polish, never load-bearing).
     """
 
     predictor: HelpNeedPredictor | None = None
     gate: SustainedHelpNeedGate = field(default_factory=SustainedHelpNeedGate)
+    voice_provider: LLMProvider | None = None
     _sessions: dict[str, _LiveSession] = field(default_factory=dict)
 
     def start(self, route_key: str, *, proactive_enabled: bool = False) -> StartSessionResponse:
@@ -355,8 +371,8 @@ class SessionStore:
         if live is None:
             raise SessionNotFoundError(request.session_id)
         if request.action is ActionType.REQUEST_HINT:
-            return _hint_response(live.tutor)
-        return _answer_response(live, request, self.predictor, self.gate)
+            return _hint_response(live.tutor, self.voice_provider)
+        return _answer_response(live, request, self.predictor, self.gate, self.voice_provider)
 
 
 __all__ = [

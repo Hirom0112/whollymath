@@ -15,11 +15,21 @@ uvicorn entrypoint (``uvicorn app.api.app:app``) used in local dev (CLAUDE.md
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from app.api.routes import router
 from app.api.service import SessionStore
 from app.helpneed.artifact import load_predictor
+from app.persona_surface.tutor_voice import default_voice_provider
+
+# Load the local .env at process startup so server-side secrets (ANTHROPIC_API_KEY for the
+# mascot voice, DATABASE_URL) are in the environment (CLAUDE.md §10: python-dotenv in dev,
+# Secrets Manager in prod). The .env lives at the repo root (one level above backend/); in
+# prod there is no file and this is a silent no-op. override=False so a real env wins.
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 
 def create_app() -> FastAPI:
@@ -41,7 +51,12 @@ def create_app() -> FastAPI:
         version="0.1.0",
         summary="Turn-loop API for the adaptive fraction tutor (ARCHITECTURE.md §10).",
     )
-    app.state.session_store = SessionStore(predictor=load_predictor())
+    app.state.session_store = SessionStore(
+        predictor=load_predictor(),
+        # Enable the mascot's voice on help moments (Slice 5.5.2); lazily creates the
+        # Anthropic client on first help turn. Falls back to pre-written text if unavailable.
+        voice_provider=default_voice_provider(),
+    )
     app.include_router(router)
     return app
 
