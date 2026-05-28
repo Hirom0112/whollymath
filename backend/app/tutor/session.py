@@ -469,6 +469,22 @@ class TutorSession:
         """The seeded BKT prior P(L0) for ``kc`` (set at cold start; 0.D.2)."""
         return self._priors[kc]
 
+    def seed_priors(self, priors: dict[KnowledgeComponentId, float]) -> None:
+        """Override the BKT prior P(L0) for the given KCs (mastery-level resume, Slice PL.1.2).
+
+        Used ONLY when rehydrating a session after a server restart: the persisted per-KC
+        ``bkt_probability`` is seeded back as the prior so the learner's progress carries
+        forward instead of resetting to the cold-start seed. KCs absent from ``priors`` keep
+        their cold-start value. This sets the BKT *prior* (the same lever cold start uses via
+        ``initial_prior_from_self_report``); subsequent answers still update the estimate from
+        evidence, so a resumed session is not frozen — it resumes from the right starting point.
+
+        This does NOT reconstruct the observation history (that is the flagged exact-resume
+        gap): with an empty history, ``mastery_probability`` returns exactly these seeded
+        priors until new turns accumulate evidence.
+        """
+        self._priors.update(priors)
+
     @property
     def history(self) -> tuple[Turn, ...]:
         """The completed turns, in submission order (append-only, read-only view)."""

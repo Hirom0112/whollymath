@@ -10,6 +10,7 @@ dependencies = [
     "uvicorn[standard]==0.48.0", # ASGI server running FastAPI in local dev and Fargate (CLAUDE.md §10).
     "sympy==1.14.0",           # The ONLY thing that decides math correctness; lives in domain/ (TECH_STACK §3, ARCHITECTURE §9).
     "sqlalchemy==2.0.50",      # ORM for Postgres (sessions, mastery, persona runs) (TECH_STACK §4).
+    "alembic==1.18.4",         # DB migrations: the prod schema-change authority over models.py, retiring create_all-only (Slice PL.1, closes TODO 1.8.3). MIT; the standard SQLAlchemy migration tool, no new transitive surface beyond Mako.
     "pydantic==2.13.4",        # Typed request/response models; source of truth for generated TS types (TECH_STACK §2).
     "python-dotenv==1.2.2",    # Loads local .env (DATABASE_URL, API keys) in dev; Secrets Manager in prod (CLAUDE.md §10).
     "xgboost==3.2.0",        # HelpNeed predictor: interpretable gradient-boosted trees, sub-100ms CPU inference, no GPU (TECH_STACK §5). Apache-2.0.
@@ -39,6 +40,11 @@ packages = ["app"]
 line-length = 100
 target-version = "py311"
 src = ["app", "tests"]
+# Alembic's generated env.py / versions/*.py are templated code we do not hand-author to our
+# style (Slice PL.1); excluding them is the standard practice rather than fighting generated
+# output (the migration logic is verified by `alembic upgrade head`, not by lint). env.py we
+# DID author cleanly, but the generated migration scripts are left as-is.
+extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
 # A reasonable strict-by-default set: pyflakes, pycodestyle, isort (sorted imports), bugbear,
@@ -54,6 +60,10 @@ quote-style = "double"
 python_version = "3.11"
 strict = true
 files = ["app", "tests"]
+# Alembic's generated migration scripts (and the templated parts of env.py) are not authored
+# to --strict; excluding the migrations dir is standard rather than fighting generated code
+# (Slice PL.1). The migration is verified by applying it (`alembic upgrade head`), not by mypy.
+exclude = ["migrations/"]
 # SymPy ships no type stubs; ignore missing imports for it specifically rather than globally.
 [[tool.mypy.overrides]]
 module = ["sympy.*"]

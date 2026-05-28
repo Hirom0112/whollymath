@@ -25,8 +25,12 @@ is runtime identity, not part of the reproducible harness, so a ``uuid`` is corr
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass, field
+
+from sqlalchemy.orm import Session as OrmSession
+from sqlalchemy.orm import sessionmaker
 
 from app.api.schemas import (
     ActionType,
@@ -42,12 +46,14 @@ from app.api.schemas import (
     TurnResponse,
     WorkedStepView,
 )
+from app.db import repositories as repo
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
 from app.domain.verifier import verify
 from app.helpneed.live_features import LiveTurn, live_features
 from app.helpneed.predictor import HelpNeedPredictor
 from app.llm.provider import LLMProvider
+from app.mastery.mastery_model import Observation
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.policy.scheduler import is_masterable_live, next_spec
@@ -62,6 +68,11 @@ from app.tutor.session import (
     routing_choices,
 )
 from app.tutor.worked_example import worked_example_for
+
+# Persistence is best-effort and OFF the decision path (ARCHITECTURE.md §14 invariant 7):
+# a DB failure is logged and swallowed, never allowed to break a turn. This module-level
+# logger is the channel for those swallowed failures.
+_log = logging.getLogger(__name__)
 
 
 class SessionNotFoundError(LookupError):
@@ -492,6 +503,15 @@ class _LiveSession:
     tutor: TutorSession
     proactive_enabled: bool = False
     help_need_history: list[float] = field(default_factory=list)
+    # Persistence linkage (Slice PL.1), all OFF the decision path. ``learner_session_id`` is
+    # the opaque external key the client echoes (== the API session id), used to find/create
+    # the Learner row. ``db_session_id`` is the persisted tutoring Session row's id (``None``
+    # when no factory is wired, so the in-memory store keeps working unchanged).
+    # ``persisted_turn_count`` is the monotonic turn_index for persisted Turn rows; it counts
+    # BOTH submit and hint turns so the stored sequence matches the order they happened.
+    learner_session_id: str = ""
+    db_session_id: int | None = None
+    persisted_turn_count: int = 0
     # S5 transfer-probe state (the live confirm-gate). When ``probe_steps`` is non-empty a
     # probe is in progress: the learner is answering ``probe_steps[probe_index]``. ``confirmed``
     # holds the KCs whose provisional mastery the learner has CONFIRMED by passing the probe —
@@ -508,6 +528,127 @@ class _LiveSession:
     hints_this_problem: int = 0
 
 
+@dataclass(frozen=True)
+class _KcMastery:
+    """The per-KC mastery readout the persistence layer writes (Slice PL.1).
+
+    Computed from the live session's history (the counts the §3.4 rules range over) plus
+    the BKT probability and the live confirmed flag — packaged here so ``_persist_turn``
+    can hand each to ``upsert_mastery_state`` without the repository knowing how the counts
+    were derived (CLAUDE.md §7: counting is service logic, the row shape is the repo's).
+    """
+
+    kc: KnowledgeComponentId
+    bkt_probability: float
+    attempt_count: int
+    hint_count: int
+    unscaffolded_correct_count: int
+    confirmed: bool
+
+
+def _mastery_rollup(live: _LiveSession) -> list[_KcMastery]:
+    """Roll the live session's history up into a per-KC mastery readout for persistence.
+
+    Pure, read-only over the already-settled session — it runs AFTER the response is built
+    (invariant 7), never feeds a decision. For each KC the learner has answered, it tallies
+    the §3.4 evidence counts straight from the ``Observation`` log:
+
+      - ``attempt_count``               every observation for the KC.
+      - ``hint_count``                  observations that used a hint.
+      - ``unscaffolded_correct_count``  correct, engaged, NON-hinted attempts — the rule-3
+        evidence (mirrors ``mastery_model._has_unscaffolded_correct`` at the row level; we
+        re-tally here rather than import private logic, and use the same engagement floor via
+        ``Observation.is_low_engagement``).
+
+    ``bkt_probability`` is read from the tutor (the mastery model's value, not re-derived
+    here), and ``confirmed`` from the live confirmed-KC set (the S5 probe verdict). KCs with
+    no history are skipped — there is nothing to persist for an untouched KC.
+    """
+    observations: list[Observation] = [t.observation for t in live.tutor.history]
+    by_kc: dict[KnowledgeComponentId, list[Observation]] = {}
+    for obs in observations:
+        by_kc.setdefault(obs.kc, []).append(obs)
+
+    rollup: list[_KcMastery] = []
+    for kc, obs_list in by_kc.items():
+        hint_count = sum(1 for o in obs_list if o.hinted)
+        unscaffolded_correct = sum(
+            1 for o in obs_list if o.correct and not o.hinted and not o.is_low_engagement()
+        )
+        rollup.append(
+            _KcMastery(
+                kc=kc,
+                bkt_probability=live.tutor.mastery_probability(kc),
+                attempt_count=len(obs_list),
+                hint_count=hint_count,
+                unscaffolded_correct_count=unscaffolded_correct,
+                confirmed=kc in live.confirmed,
+            )
+        )
+    return rollup
+
+
+def _persist_turn(
+    factory: sessionmaker[OrmSession],
+    live: _LiveSession,
+    request: TurnRequest,
+    response: TurnResponse,
+) -> None:
+    """Record a just-completed turn + the affected mastery rows — AFTER the response (inv 7).
+
+    Called ONLY once the deterministic verify/mastery/policy decision is already made and the
+    ``TurnResponse`` is built, so it can never perturb the turn outcome (the equivalence
+    property). It opens its own short-lived session from ``factory``, persists the Turn row
+    from the settled response, upserts every touched KC's MasteryState from the history
+    rollup, and commits. Any failure is logged and swallowed (invariant 7: persistence never
+    breaks a turn) — the caller has already returned the response to the learner in spirit;
+    this is the after-write.
+
+    ``db_session_id`` is ``None`` only if ``start`` could not open a Session row (a DB hiccup
+    at start that we also swallowed); in that case there is nothing to hang a turn off, so we
+    skip — the in-memory turn already succeeded.
+    """
+    if live.db_session_id is None:
+        return
+    turn_index = live.persisted_turn_count
+    live.persisted_turn_count += 1
+    try:
+        with factory() as db:
+            repo.persist_turn(
+                db,
+                session_id=live.db_session_id,
+                turn_index=turn_index,
+                problem_id=request.problem_id,
+                action=request.action.value,
+                correct=response.correct,
+                error_type=response.error_type.value if not response.correct else None,
+                surface_state=request.surface_state.value,
+                state_transition=live.tutor.last_turn.result.transition.label
+                if request.action is ActionType.SUBMIT_ANSWER and live.tutor.last_turn
+                else None,
+                latency_ms=request.latency_ms,
+                hint_used=request.hint_used,
+            )
+            learner = repo.get_or_create_learner(db, live.learner_session_id)
+            db.flush()
+            for m in _mastery_rollup(live):
+                repo.upsert_mastery_state(
+                    db,
+                    learner_id=learner.id,
+                    kc_id=m.kc.value,
+                    bkt_probability=m.bkt_probability,
+                    attempt_count=m.attempt_count,
+                    hint_count=m.hint_count,
+                    unscaffolded_correct_count=m.unscaffolded_correct_count,
+                    confirmed=m.confirmed,
+                )
+            db.commit()
+    except Exception:  # noqa: BLE001 — invariant 7: a persistence failure never breaks a turn.
+        _log.exception(
+            "persistence failed for session %s; turn outcome unaffected", live.db_session_id
+        )
+
+
 @dataclass
 class SessionStore:
     """In-memory ``session_id -> _LiveSession`` map — the live-session boundary.
@@ -516,8 +657,15 @@ class SessionStore:
     identified by an opaque id the client echoes onto each turn (TECH_STACK §9 — no
     auth in v1). One store is created per app (``create_app``) and injected into the
     routes, so tests get an isolated store and sessions never leak between apps.
-    Persistence (a repository over the Slice-1.8 DB models) is a deliberately later
-    slice; ``create_all`` / in-memory is the path for now (CLAUDE.md §8.6).
+
+    ``session_factory`` (Slice PL.1) is the optional persistence channel. ``None`` (the
+    default, and what every existing test uses) means pure in-memory — no rows written,
+    nothing to resume. When present, ``start`` records the Learner + Session rows and each
+    ``process_turn`` records the Turn + upserts the affected MasteryState — but always AFTER
+    the deterministic response is computed, never on the decision path (ARCHITECTURE.md §14
+    invariant 7). Persistence is observe/record-only: a turn's ``TurnResponse`` is identical
+    whether or not a factory is wired, and any DB failure is logged and swallowed so it can
+    never break a turn.
 
     ``predictor`` is the boot-loaded HelpNeed model used to score each answer turn
     observe-only (Slice 4.4.1). It is optional so contract/boundary tests can build a
@@ -547,6 +695,7 @@ class SessionStore:
     gate: SustainedHelpNeedGate = field(default_factory=SustainedHelpNeedGate)
     voice_provider: LLMProvider | None = None
     hint_provider: LLMProvider | None = None
+    session_factory: sessionmaker[OrmSession] | None = None
     _sessions: dict[str, _LiveSession] = field(default_factory=dict)
 
     def start(self, route_key: str, *, proactive_enabled: bool = False) -> StartSessionResponse:
@@ -558,19 +707,47 @@ class SessionStore:
         session is stored under a freshly minted opaque id the client threads onto
         every subsequent turn. ``proactive_enabled`` is the session's A/B arm (default
         OFF = observe-only); the Slice 5.4 harness sets it, not the client.
+
+        When a ``session_factory`` is wired (Slice PL.1) we also open the Learner +
+        Session rows so turns have something to hang off — best-effort: a DB failure
+        here is logged and swallowed (``db_session_id`` stays ``None``) so the live
+        session still boots in-memory and the demo runs with no Postgres (invariant 7).
         """
         option = _route_for_key(route_key)
+        session_id = uuid.uuid4().hex
         live = _LiveSession(
             tutor=TutorSession.from_route(option),
             proactive_enabled=proactive_enabled,
+            learner_session_id=session_id,
         )
-        session_id = uuid.uuid4().hex
+        if self.session_factory is not None:
+            live.db_session_id = self._open_persisted_session(session_id, route_key)
         self._sessions[session_id] = live
         return StartSessionResponse(
             session_id=session_id,
             surface_state=live.tutor.surface_state,
             problem=_problem_view(live.tutor.current_problem),
         )
+
+    def _open_persisted_session(self, session_id: str, route_key: str) -> int | None:
+        """Open the Learner + Session rows for a new session; ``None`` on any DB failure.
+
+        Best-effort and OFF the decision path: a missing/unreachable DB must not crash a
+        ``start`` (invariant 7 / the live demo boots with no Postgres). The learner is keyed
+        by the opaque ``session_id`` (idempotent ``get_or_create_learner``); the Session row
+        carries the ``route_key`` so a later ``resume`` can re-derive the goal KC.
+        """
+        assert self.session_factory is not None
+        try:
+            with self.session_factory() as db:
+                learner = repo.get_or_create_learner(db, session_id)
+                db.flush()
+                session = repo.create_session(db, learner_id=learner.id, route_key=route_key)
+                db.commit()
+                return session.id
+        except Exception:  # noqa: BLE001 — invariant 7: a DB hiccup at start must not crash.
+            _log.exception("could not open persisted session for %s; running in-memory", session_id)
+            return None
 
     def process_turn(self, request: TurnRequest) -> TurnResponse:
         """Process one learner action against its session (the route's entrypoint).
@@ -580,13 +757,120 @@ class SessionStore:
         without advancing; a submitted answer runs the full deterministic turn and
         serves the next problem. All turn-loop composition happens behind this seam so
         the route stays thin (CLAUDE.md §7).
+
+        Persistence happens AFTER the response is computed (Slice PL.1, invariant 7): the
+        deterministic verify/mastery/policy decision and the ``TurnResponse`` are fixed
+        first, then ``_persist_turn`` records the turn + mastery. Because the write is
+        observe-only and its failures are swallowed, the returned response is byte-identical
+        to a no-factory run.
         """
         live = self._sessions.get(request.session_id)
         if live is None:
             raise SessionNotFoundError(request.session_id)
         if request.action is ActionType.REQUEST_HINT:
-            return _hint_response(live, self.voice_provider, self.hint_provider)
-        return _answer_response(live, request, self.predictor, self.gate, self.voice_provider)
+            response = _hint_response(live, self.voice_provider, self.hint_provider)
+        else:
+            response = _answer_response(
+                live, request, self.predictor, self.gate, self.voice_provider
+            )
+        if self.session_factory is not None:
+            _persist_turn(self.session_factory, live, request, response)
+        return response
+
+    def resume(self, session_id: str) -> _LiveSession | None:
+        """Rehydrate a live session from an OPEN DB session after the in-memory one is gone.
+
+        The resume contract for Slice PL.1 is MASTERY-LEVEL (PL.1.2): when a server restart
+        has dropped the in-memory ``_LiveSession`` but the client still holds its
+        ``session_id`` and the DB Session row is still open, we rebuild a working session
+        that CARRIES THE LEARNER'S MASTERY FORWARD — per-KC BKT priors and the confirmed-KC
+        set are seeded from the persisted ``MasteryState`` rows, so progress is not lost — and
+        serve a FRESH problem in the session's route KC.
+
+        Returns the rehydrated ``_LiveSession`` (also re-registered in the store), or ``None``
+        when there is no factory, no open session for the id, or the open session has no
+        recoverable route. The exact in-progress problem and the full turn-by-turn history are
+        deliberately NOT reconstructed (see ``_rehydrate`` — flagged as a known gap, not a
+        hack); "continue at the mastery level / start the next problem fresh" is the accepted
+        behavior for this slice.
+
+        Idempotent-ish: if the session is already live in memory we return it as-is rather
+        than re-reading the DB.
+        """
+        if session_id in self._sessions:
+            return self._sessions[session_id]
+        if self.session_factory is None:
+            return None
+        live = self._rehydrate(session_id)
+        if live is not None:
+            self._sessions[session_id] = live
+        return live
+
+    def _rehydrate(self, session_id: str) -> _LiveSession | None:
+        """Build a mastery-level ``_LiveSession`` from the persisted open session, or ``None``.
+
+        MASTERY-LEVEL RESUME (Slice PL.1.2), the deliberate scope of this slice:
+
+          - We re-find the learner by ``session_id`` and load their ``MasteryState`` rows and
+            the open Session row (with its persisted ``route_key``).
+          - We rebuild a ``TutorSession`` via ``from_route`` (the same path ``start`` uses), so
+            the session's goal KC and a valid current problem come from the single-source-of-
+            truth routing table — no fragile reconstruction from stored problem ids.
+          - We then SEED the rebuilt session's per-KC BKT priors from the persisted
+            ``bkt_probability`` and add every ``confirmed`` KC to the live confirmed set, so the
+            learner's earned progress carries forward and a confirmed KC is not re-probed.
+
+        WHAT IS NOT RESTORED (known gap, flagged honestly per the slice brief): the EXACT
+        in-progress problem and the full turn-by-turn ``history`` are not reconstructed. Doing
+        so cleanly would need a ``TutorSession.from_persisted`` constructor that re-hydrates
+        the observation log and counters from stored turns — invasive surgery on the tutor's
+        internals (its history is built only by ``submit_answer``). Rather than fake a fragile
+        history (which would corrupt the §3.6 counters and the mastery evidence), we serve a
+        fresh problem in the route KC and carry mastery forward. Follow-up: add
+        ``TutorSession.from_persisted`` to restore exact problem + history when PL.2's full
+        event stream lands (it will store the per-turn detail this needs).
+        """
+        assert self.session_factory is not None
+        try:
+            with self.session_factory() as db:
+                learner = repo.get_learner(db, session_id)
+                if learner is None:
+                    return None
+                open_session = repo.load_open_session_for_learner(db, learner.id)
+                if open_session is None or open_session.route_key is None:
+                    return None
+                states = repo.load_mastery_states(db, learner.id)
+                # Read everything we need off the rows while the session is open.
+                seeded = {KnowledgeComponentId(s.kc_id): s.bkt_probability for s in states}
+                confirmed = {KnowledgeComponentId(s.kc_id) for s in states if s.confirmed}
+                route_key = open_session.route_key
+                db_session_id = open_session.id
+                persisted_turns = len(open_session.turns)
+        except Exception:  # noqa: BLE001 — a failed rehydrate degrades to "start fresh", never crashes.
+            _log.exception("could not rehydrate session %s; client should start fresh", session_id)
+            return None
+
+        option = _route_for_key(route_key)
+        tutor = TutorSession.from_route(option)
+        tutor.seed_priors(seeded)
+        return _LiveSession(
+            tutor=tutor,
+            learner_session_id=session_id,
+            db_session_id=db_session_id,
+            persisted_turn_count=persisted_turns,
+            confirmed=confirmed,
+        )
+
+    def prior_for(self, session_id: str, kc: KnowledgeComponentId) -> float | None:
+        """The seeded BKT prior for ``kc`` in a live session, or ``None`` if unknown.
+
+        A thin read used by the resume path's callers (and tests) to confirm a rehydrated
+        session carried persisted mastery forward, without reaching into ``_LiveSession``.
+        """
+        live = self._sessions.get(session_id)
+        if live is None:
+            return None
+        return live.tutor.prior_for(kc)
 
 
 __all__ = [

@@ -100,6 +100,12 @@ class Session(Base):
     learner_id: Mapped[int] = mapped_column(
         ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
     )
+    # The Turn-0 route key this session started in (a tutor ``RouteOption.key``, e.g.
+    # "combine"). Stored so a resume after a server restart can re-derive the session's
+    # goal KC and serve a fresh problem in it (Slice PL.1.2) — the routing table is the
+    # single source of truth (tutor ``routing_choices``), so the key is enough to rebuild.
+    # Nullable so older rows (pre-PL.1) and any non-routed session load without breaking.
+    route_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
@@ -191,6 +197,11 @@ class MasteryState(Base):
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     hint_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     unscaffolded_correct_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Whether this KC's PROVISIONAL mastery has been CONFIRMED by the S5 transfer probe
+    # ("mastered means CONFIRMED", PROJECT.md §3.4 / the live confirm-gate). This is real
+    # mastery state, not a transient: it must survive a restart so a resumed session does
+    # not re-demand a probe the learner already passed. Default False (provisional/none).
+    confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
