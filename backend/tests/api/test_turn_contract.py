@@ -197,6 +197,7 @@ def test_turn_response_has_exactly_the_contract_keys() -> None:
         "help_need",
         "intervention",
         "next_problem",
+        "worked_example",
     }
 
 

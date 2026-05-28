@@ -40,6 +40,7 @@ from app.api.schemas import (
     SurfaceState,
     TurnRequest,
     TurnResponse,
+    WorkedStepView,
 )
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
@@ -50,7 +51,7 @@ from app.llm.provider import LLMProvider
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.policy.scheduler import is_masterable_live, next_spec
-from app.tutor.hints import select_nudge
+from app.tutor.hints import HintLevel, build_validated_hint, select_nudge
 from app.tutor.live_transfer_probe import build_live_probe_steps
 from app.tutor.session import (
     MasterySnapshot as TutorMasterySnapshot,
@@ -60,6 +61,7 @@ from app.tutor.session import (
     TutorSession,
     routing_choices,
 )
+from app.tutor.worked_example import worked_example_for
 
 
 class SessionNotFoundError(LookupError):
@@ -107,6 +109,26 @@ def _problem_view(problem: Problem) -> ProblemView:
         tick_segments=int(problem.correct_value.q) if is_number_line else None,
         given_denominator=problem.given_denominator,
     )
+
+
+def _worked_example_view(problem: Problem) -> list[WorkedStepView]:
+    """Project the S4 worked example of ``problem`` to the wire — empty if not buildable.
+
+    Builds the worked solution via ``worked_example_for`` (the domain S4 builder; no SymPy
+    or LLM reached here — the verifier boundary stays in ``domain/``, §8.2) and maps each
+    ``WorkedStep`` to its renderable ``shown`` / ``why_prompt`` (the ``revealed_value`` is
+    internal and never crosses the wire). ``worked_example_for`` raises ``ValueError`` for a
+    problem whose KC procedure needs operands it does not carry (e.g. some yes/no or
+    word-problem items); on that we return ``[]`` so an S4 turn degrades to "show S4 without
+    a walkthrough" rather than 500-ing (CLAUDE.md §8.5 caller side — fail soft on the surface,
+    never crash the turn loop). This is OFF the sub-100ms path: it runs only on an S4
+    transition (a help moment), like the voice/hint code.
+    """
+    try:
+        example = worked_example_for(problem)
+    except ValueError:
+        return []
+    return [WorkedStepView(shown=step.shown, why_prompt=step.why_prompt) for step in example.steps]
 
 
 def routing_menu() -> list[RouteOptionView]:
@@ -378,9 +400,21 @@ def _answer_response(
         )
 
     next_problem = _serve_next(session)
+    # A fresh practice problem was just served → reset the per-problem hint-escalation
+    # counter so the next REQUEST_HINT on it starts again at a NUDGE (Feature B). The probe
+    # paths above return before here, so entering/leaving the probe never touches the counter.
+    live.hints_this_problem = 0
     help_need = _help_need(session, next_problem, predictor)
     if help_need is not None:
         live.help_need_history.append(help_need)
+    # When the policy routed to S4 (≥2 consecutive errors, §3.6 row 4), serve the worked
+    # solution of the problem the learner JUST got stuck on — history[-1] is that answered
+    # problem (submit_answer appended it). NOT next_problem: that is the fresh practice item,
+    # and revealing its worked solution would hand over its answer (§3.5 S4). Other states
+    # leave worked_example empty (the default). Non-buildable stuck problems yield [].
+    worked_example: list[WorkedStepView] = []
+    if result.surface_state is SurfaceState.WORKED_EXAMPLE:
+        worked_example = _worked_example_view(session.history[-1].problem)
     return TurnResponse(
         correct=result.correct,
         error_type=result.error_category,
@@ -391,29 +425,54 @@ def _answer_response(
         help_need=help_need,
         intervention=_maybe_intervene(live, gate, next_problem, voice_provider),
         next_problem=_problem_view(next_problem),
+        worked_example=worked_example,
     )
 
 
-def _hint_response(session: TutorSession, voice_provider: LLMProvider | None) -> TurnResponse:
-    """Answer a REQUEST_HINT turn with a pre-written nudge — no state change, no advance.
+def _hint_response(
+    live: _LiveSession,
+    voice_provider: LLMProvider | None,
+    hint_provider: LLMProvider | None,
+) -> TurnResponse:
+    """Answer a REQUEST_HINT turn with an ESCALATING hint — no state change, no advance.
 
-    A hint request is not an answer: it does not verify, update mastery, or advance
-    the problem. Per the refuse-rules it never changes the surface state (§3.8 rule 3:
-    a pause/help is not a transition), so the state is echoed unchanged and the learner
-    stays on the SAME problem. The nudge is the deterministic, pre-written conceptual
-    prompt for the current KC (Slice 3.8, ``select_nudge`` — which DECIDES the help; no
-    SymPy, §8.1). A hint is a help moment, so the nudge is rephrased in the mascot's voice
-    (Slice 5.5.2) when voicing is enabled, or returned verbatim otherwise (invariant 4).
-    The LLM-filled ``partial_step``/``worked_step`` levels are Slice 5.6.
+    A hint request is not an answer: it does not verify, update mastery, or advance the
+    problem. Per the refuse-rules it never changes the surface state (§3.8 rule 3: a
+    pause/help is not a transition), so the state is echoed unchanged and the learner stays
+    on the SAME problem.
+
+    Escalation by ``live.hints_this_problem`` — how many hints have been requested on the
+    CURRENT problem (the counter resets when an answer serves a fresh problem, §3.5/0.D.3):
+
+      - 0 → NUDGE: the deterministic, pre-written conceptual prompt for the KC (Slice 3.8
+        ``select_nudge`` — no SymPy/LLM decision, §8.1), rephrased in the mascot's voice
+        (Slice 5.5.2) when voicing is enabled, or verbatim otherwise (invariant 4).
+      - 1 → PARTIAL_STEP, 2+ → WORKED_STEP: the validated worked-example hint
+        (``build_validated_hint`` — the locked 5.6 pipeline: canonical worked text → LLM
+        rephrase → SymPy numeric gate → ≤2 retries → canonical fallback). We use its
+        ``natural_language`` directly and do NOT also run it through ``voice_help``: the
+        hint pipeline already does its own LLM rephrase behind the SymPy gate, so a second
+        voicing would bypass that numeric gate. With ``hint_provider=None`` (tests, degraded
+        store) the pipeline returns the deterministic canonical text — escalation is still
+        real, just not LLM-warmed.
+
+    The counter is incremented AFTER selecting, so the first request on a problem is the
+    nudge. A hint never advances the problem (refuse-rule 3), so the count only grows here.
     """
-    problem = session.current_problem
-    nudge = select_nudge(problem.kc)
+    problem = live.tutor.current_problem
+    requests_so_far = live.hints_this_problem
+    if requests_so_far == 0:
+        hint_text = voice_help(select_nudge(problem.kc).text, provider=voice_provider)
+    else:
+        level = HintLevel.PARTIAL_STEP if requests_so_far == 1 else HintLevel.WORKED_STEP
+        hint_text = build_validated_hint(problem, level, provider=hint_provider).natural_language
+    live.hints_this_problem += 1
     return TurnResponse(
         correct=False,
         error_type=ErrorType.NONE,
-        next_surface_state=session.surface_state,
+        next_surface_state=live.tutor.surface_state,
         feedback="Here's something to think about.",
-        hint=voice_help(nudge.text, provider=voice_provider),
+        hint=hint_text,
         mastery=[],
         next_problem=_problem_view(problem),
     )
@@ -443,6 +502,10 @@ class _LiveSession:
     probe_index: int = 0
     confirmed: set[KnowledgeComponentId] = field(default_factory=set)
     probe_cooldown: int = 0
+    # How many hints have been REQUESTED on the current problem (Feature B, §8 0.D.3). Drives
+    # the reactive hint escalation nudge → partial_step → worked_step in ``_hint_response``;
+    # reset to 0 in ``_answer_response`` when a submitted answer serves a fresh practice item.
+    hints_this_problem: int = 0
 
 
 @dataclass
@@ -469,11 +532,21 @@ class SessionStore:
     voice on help moments (Slice 5.5.2). ``None`` (the default, and what tests use) returns
     the pre-written help verbatim — no LLM call; ``create_app`` injects the Anthropic
     provider to enable voicing live (invariant 4: voicing is a polish, never load-bearing).
+
+    ``hint_provider`` is the optional LLM backend the escalated ``partial_step`` /
+    ``worked_step`` hints rephrase through, behind the SymPy numeric gate (Slice 5.6 pipeline,
+    ``build_validated_hint``). ``None`` (the default, and what tests use) makes the pipeline
+    return the deterministic canonical worked text — escalation is still real, just not
+    LLM-warmed; ``create_app`` injects the Anthropic provider to warm hints live. Distinct
+    from ``voice_provider`` because the hint pipeline runs its own LLM rephrase under the
+    numeric gate, so escalated hints are NOT also passed through the mascot voice (that would
+    bypass the gate).
     """
 
     predictor: HelpNeedPredictor | None = None
     gate: SustainedHelpNeedGate = field(default_factory=SustainedHelpNeedGate)
     voice_provider: LLMProvider | None = None
+    hint_provider: LLMProvider | None = None
     _sessions: dict[str, _LiveSession] = field(default_factory=dict)
 
     def start(self, route_key: str, *, proactive_enabled: bool = False) -> StartSessionResponse:
@@ -512,7 +585,7 @@ class SessionStore:
         if live is None:
             raise SessionNotFoundError(request.session_id)
         if request.action is ActionType.REQUEST_HINT:
-            return _hint_response(live.tutor, self.voice_provider)
+            return _hint_response(live, self.voice_provider, self.hint_provider)
         return _answer_response(live, request, self.predictor, self.gate, self.voice_provider)
 
 

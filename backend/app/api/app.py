@@ -23,6 +23,7 @@ from fastapi import FastAPI
 from app.api.routes import router
 from app.api.service import SessionStore
 from app.helpneed.artifact import load_predictor
+from app.persona_surface.hint_renderer import default_hint_provider
 from app.persona_surface.tutor_voice import default_voice_provider
 
 # Load the local .env at process startup so server-side secrets (ANTHROPIC_API_KEY for the
@@ -56,6 +57,9 @@ def create_app() -> FastAPI:
         # Enable the mascot's voice on help moments (Slice 5.5.2); lazily creates the
         # Anthropic client on first help turn. Falls back to pre-written text if unavailable.
         voice_provider=default_voice_provider(),
+        # Warm the escalated partial_step / worked_step hints through the LLM behind the
+        # SymPy numeric gate (Slice 5.6 pipeline); falls back to canonical text if unavailable.
+        hint_provider=default_hint_provider(),
     )
     app.include_router(router)
     return app

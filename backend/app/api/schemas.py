@@ -148,6 +148,27 @@ class ProblemView(BaseModel):
     )
 
 
+class WorkedStepView(BaseModel):
+    """One revealed step of an S4 worked example, on the wire (Slice 3.6 → API).
+
+    The renderable subset of a domain ``WorkedStep`` (``tutor/worked_example.py``): the
+    kid-facing ``shown`` step content and the one-line conceptual ``why_prompt`` that
+    accompanies it. The §3.5 S4 requirement is that EVERY revealed step carries a "why did
+    this work?" prompt, so both fields are required. The domain ``WorkedStep`` also carries
+    a SymPy ``revealed_value`` for self-consistency; that is internal and never crosses the
+    wire (it would leak intermediate magnitudes — the surface reveals steps one at a time,
+    §3.5 S4).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    shown: str = Field(min_length=1, description="The kid-facing step content (§3.5 S4).")
+    why_prompt: str = Field(
+        min_length=1,
+        description="The one-line 'why did this work?' prompt for this step (§3.5 S4).",
+    )
+
+
 class RouteOptionView(BaseModel):
     """One Turn-0 routing option for the cold-start menu (decision 0.D.2).
 
@@ -339,6 +360,19 @@ class TurnResponse(BaseModel):
             "renders it directly; the deterministic loop chose it (§10 step 12)."
         ),
     )
+    worked_example: list[WorkedStepView] = Field(
+        default_factory=list,
+        description=(
+            "The ordered worked steps to reveal when ``next_surface_state`` is "
+            "S4_worked_example; empty otherwise. This is the worked solution of the "
+            "problem the learner JUST got stuck on — NOT ``next_problem`` (which is the "
+            "fresh practice item and whose answer must not be revealed). The surface "
+            "reveals these one step at a time, each with its 'why?' prompt (§3.5 S4). "
+            "May be empty even on an S4 turn when the stuck problem's KC procedure has no "
+            "buildable worked example (e.g. a yes/no item with no operand pair) — the "
+            "surface then shows S4 without a walkthrough rather than the loop failing."
+        ),
+    )
 
 
 class ArmVerdictView(BaseModel):
@@ -445,4 +479,5 @@ __all__ = [
     "ThreeArmComparisonView",
     "TurnRequest",
     "TurnResponse",
+    "WorkedStepView",
 ]
