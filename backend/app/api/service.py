@@ -930,6 +930,30 @@ class SessionStore:
             confirmed=confirmed,
         )
 
+    def mastery_summary_for_learner(self, learner_id: int) -> list[MasterySnapshot]:
+        """The carried-forward per-KC mastery for a persisted learner (Slice PL.3, for /me).
+
+        Reads the learner's persisted ``MasteryState`` rows (the PL.1 store) and projects each
+        to the wire ``MasterySnapshot`` with ``mastered`` meaning CONFIRMED — the same "earned
+        mastery, not bare provisional" contract the live snapshot uses (PROJECT.md §3.4): a row's
+        ``confirmed`` flag is the S5-probe verdict that survived persistence. This is the auth
+        path's read-only continuity view (the "same login → same state" proof); it is OFF the
+        turn loop and never feeds a decision. Returns ``[]`` when there is no factory or the
+        learner has no recorded mastery yet.
+        """
+        if self.session_factory is None:
+            return []
+        with self.session_factory() as db:
+            states = repo.load_mastery_states(db, learner_id)
+            return [
+                MasterySnapshot(
+                    kc_id=KnowledgeComponentId(s.kc_id),
+                    probability=s.bkt_probability,
+                    mastered=s.confirmed,
+                )
+                for s in states
+            ]
+
     def prior_for(self, session_id: str, kc: KnowledgeComponentId) -> float | None:
         """The seeded BKT prior for ``kc`` in a live session, or ``None`` if unknown.
 

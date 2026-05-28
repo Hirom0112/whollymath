@@ -82,6 +82,38 @@ def get_learner(db: OrmSession, session_id: str) -> Learner | None:
     return db.scalars(select(Learner).where(Learner.session_id == session_id)).first()
 
 
+def get_or_create_learner_by_google_sub(
+    db: OrmSession, sub: str, *, email: str | None = None
+) -> Learner:
+    """Return the learner for a Google account ``sub``, creating it if new (Slice PL.3).
+
+    ``sub`` is the stable Google account id (the OIDC ``sub`` claim) — the unique key an
+    authenticated learner is mapped to (we store NO password). The lookup is by the unique
+    ``Learner.google_sub`` column, so calling this twice for the same ``sub`` returns the same
+    learner: this is exactly the "same Google login anywhere → same learner row (→ same carried
+    mastery)" property (PROJECT.md §3.12). Idempotent in the same sense as
+    ``get_or_create_learner`` is for an anonymous session id.
+
+    ``email`` is recorded when supplied and NEVER blanked: a later call that omits it leaves a
+    previously-known email intact, and a call that supplies one when none was stored fills it
+    in. The email is a convenience handle, not an auth secret (invariant 8).
+
+    A new authed learner still needs the non-null, unique ``session_id`` column the model
+    requires; we mint a synthetic, namespaced one (``"google:<sub>"``) so it cannot collide
+    with a browser session id and so the row is well-formed. ``add``-ed but NOT committed — the
+    caller owns the transaction boundary (same contract as the other ``get_or_create``).
+    """
+    existing = db.scalars(select(Learner).where(Learner.google_sub == sub)).first()
+    if existing is not None:
+        # Fill in an email we did not have before, but never blank a known one.
+        if email is not None and existing.email is None:
+            existing.email = email
+        return existing
+    learner = Learner(session_id=f"google:{sub}", google_sub=sub, email=email)
+    db.add(learner)
+    return learner
+
+
 def create_session(db: OrmSession, *, learner_id: int, route_key: str | None = None) -> Session:
     """Open a new tutoring ``Session`` row for a learner and return it.
 
@@ -293,6 +325,7 @@ __all__ = [
     "end_session",
     "get_learner",
     "get_or_create_learner",
+    "get_or_create_learner_by_google_sub",
     "load_mastery_states",
     "load_open_session",
     "load_open_session_for_learner",

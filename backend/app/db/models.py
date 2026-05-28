@@ -83,6 +83,20 @@ class Learner(Base):
     # The externally-visible session id the frontend sends in place of auth. Unique
     # so the same browser session maps to exactly one learner row (TECH_STACK §9).
     session_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # The Google account id (OIDC ``sub``) when this learner has signed in (Slice PL.3).
+    # NULLABLE: anonymous, session-id-keyed learners (the v1 default flow) leave it None; an
+    # authenticated learner has their stable Google ``sub`` here. UNIQUE so the same Google
+    # login maps to exactly one learner row anywhere (the "same login → same state" property,
+    # PROJECT.md §3.12). We store NO password — the learner is keyed to ``sub`` alone. Identity
+    # never reaches the mastery model/policy/LLM (ARCHITECTURE.md §14 invariant 8); this column
+    # only lets persistence/continuity find the right learner row.
+    google_sub: Mapped[str | None] = mapped_column(
+        String(255), unique=True, index=True, nullable=True
+    )
+    # The Google account email, if the verified token carried one (Slice PL.3). Nullable: a
+    # token may omit it and we never require it. It is a convenience handle for the learner, NOT
+    # an auth secret and NOT consumed by any turn-loop decision (invariant 8).
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

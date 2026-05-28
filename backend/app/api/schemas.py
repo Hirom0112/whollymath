@@ -534,6 +534,36 @@ class EventIngestResponse(BaseModel):
     accepted: int = Field(ge=0, description="Number of events accepted for best-effort persist.")
 
 
+class MeResponse(BaseModel):
+    """The authenticated learner's persistent identity handle + carried-forward mastery (PL.3).
+
+    Returned by ``GET /me`` for a request bearing a valid Google ID token. This is the
+    "same login anywhere → same state" proof: the ``learner_id`` is the stable persistence
+    handle the Google ``sub`` maps to (idempotently — the same login always resolves to the
+    same row), and ``mastery`` is that learner's persisted per-KC state (reusing the PL.1
+    ``MasteryState`` rows), so a learner signing in on a new device sees their prior progress.
+
+    What is deliberately NOT here: the Google ``sub`` itself. The ``sub`` is an auth-layer
+    secret-ish identifier we key on but never re-expose; the wire handle is the internal
+    ``learner_id``. ``email`` is included only as the convenience label the surface greets the
+    learner with. Neither field is consumed by any turn-loop decision — identity never reaches
+    the mastery model, policy, or LLM (ARCHITECTURE.md §14 invariant 8); this payload exists
+    purely for persistence/continuity on the auth path.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    learner_id: int = Field(description="Stable persistence handle the Google sub maps to (PL.3).")
+    email: str | None = Field(
+        default=None,
+        description="The learner's Google email, if the token carried one — a display label only.",
+    )
+    mastery: list[MasterySnapshot] = Field(
+        default_factory=list,
+        description="The learner's carried-forward per-KC mastery (PL.1 rows; mastered=confirmed).",
+    )
+
+
 __all__ = [
     "ActionType",
     "AnswerKind",
@@ -545,6 +575,7 @@ __all__ = [
     "InterventionKind",
     "InterventionView",
     "MasterySnapshot",
+    "MeResponse",
     "MetricArmVerdictView",
     "MetricComparisonView",
     "PersonaComparisonView",

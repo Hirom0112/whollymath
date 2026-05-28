@@ -30,8 +30,20 @@ from fastapi import FastAPI
 AsgiMessage = MutableMapping[str, Any]
 
 
-def _request(app: FastAPI, method: str, path: str, body: Any | None) -> tuple[int, Any]:
-    """Send one request to the ASGI ``app`` in-process; return (status, json|None)."""
+def _request(
+    app: FastAPI,
+    method: str,
+    path: str,
+    body: Any | None,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, Any]:
+    """Send one request to the ASGI ``app`` in-process; return (status, json|None).
+
+    ``headers`` lets a contract test attach extra request headers (e.g. an
+    ``Authorization: Bearer <token>`` for the Slice PL.3 auth dependency). They are
+    appended to the default ``content-type``; header names are lower-cased per the ASGI
+    spec (HTTP header names are case-insensitive and the spec sends them lower-cased).
+    """
     body_bytes = b"" if body is None else json.dumps(body).encode("utf-8")
     captured: dict[str, Any] = {}
     chunks: list[bytes] = []
@@ -46,6 +58,10 @@ def _request(app: FastAPI, method: str, path: str, body: Any | None) -> tuple[in
         elif message["type"] == "http.response.body":
             chunks.append(message.get("body", b""))
 
+    raw_headers: list[tuple[bytes, bytes]] = [(b"content-type", b"application/json")]
+    for name, value in (headers or {}).items():
+        raw_headers.append((name.lower().encode("latin-1"), value.encode("latin-1")))
+
     scope: dict[str, Any] = {
         "type": "http",
         "asgi": {"version": "3.0", "spec_version": "2.3"},
@@ -54,7 +70,7 @@ def _request(app: FastAPI, method: str, path: str, body: Any | None) -> tuple[in
         "path": path,
         "raw_path": path.encode("utf-8"),
         "query_string": b"",
-        "headers": [(b"content-type", b"application/json")],
+        "headers": raw_headers,
         "scheme": "http",
         "server": ("testserver", 80),
         "client": ("testclient", 12345),
@@ -71,11 +87,13 @@ def _request(app: FastAPI, method: str, path: str, body: Any | None) -> tuple[in
     return captured["status"], parsed
 
 
-def post_json(app: FastAPI, path: str, body: Any) -> tuple[int, Any]:
+def post_json(
+    app: FastAPI, path: str, body: Any, headers: dict[str, str] | None = None
+) -> tuple[int, Any]:
     """POST ``body`` as JSON to ``path``; return (status_code, parsed_json)."""
-    return _request(app, "POST", path, body)
+    return _request(app, "POST", path, body, headers)
 
 
-def get(app: FastAPI, path: str) -> tuple[int, Any]:
+def get(app: FastAPI, path: str, headers: dict[str, str] | None = None) -> tuple[int, Any]:
     """GET ``path``; return (status_code, parsed_json)."""
-    return _request(app, "GET", path, None)
+    return _request(app, "GET", path, None, headers)

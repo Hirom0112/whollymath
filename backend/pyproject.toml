@@ -17,6 +17,7 @@ dependencies = [
     "scikit-learn==1.8.0",   # HelpNeed train/test split, metrics, logistic-regression baseline, joblib serialization (TECH_STACK §5). BSD-3.
     "anthropic>=0.104.1",
     "langsmith>=0.1.0",       # Optional LLM-call tracing for the Layer-4 surface, confined to llm/ and env-gated by LANGSMITH_TRACING (Slice PL.0); no-op passthrough when off. MIT.
+    "google-auth==2.43.0",    # Google's OFFICIAL ID-token verifier (oauth2.id_token.verify_oauth2_token): fetches Google's JWKS and checks the RS256 signature, issuer, audience, and expiry for us. Confined to app/auth/ (Slice PL.3). Apache-2.0. Justified per CLAUDE.md §8.7 + PROJECT.md §3.12 "don't build your own auth": delegating token verification to Google's maintained library is materially safer than hand-rolling JWT/JWKS/crypto.
 ]
 
 [dependency-groups]
@@ -75,6 +76,19 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["xgboost.*", "sklearn.*", "shap.*", "joblib.*"]
 ignore_missing_imports = true
+
+# google-auth (Slice PL.3) is installed but its public verifier surface is untyped
+# (google.oauth2.id_token.verify_oauth2_token / google.auth.transport.requests.Request lack
+# annotations), so under --strict a typed caller trips `no-untyped-call`. We scope the relief
+# to google.* alone — ``follow_imports = skip`` makes the package resolve to ``Any`` so calling
+# its untyped functions is allowed — rather than scattering per-line `# type: ignore` across
+# app/auth/google.py (same narrow, module-scoped policy as sympy/the ML libs; that module's
+# behavior is covered by tests/auth/). ``ignore_missing_imports`` is kept for robustness if the
+# package is ever absent at type-check time.
+[[tool.mypy.overrides]]
+module = ["google.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
 
 # ─── Pytest: tests/ mirrors app/ (CLAUDE.md §6) ───
 [tool.pytest.ini_options]

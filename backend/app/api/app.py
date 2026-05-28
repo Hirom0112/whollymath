@@ -23,6 +23,7 @@ from fastapi import FastAPI
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 
+from app.api.auth_routes import auth_router
 from app.api.routes import router
 from app.api.service import SessionStore
 from app.db.engine import create_db_engine, create_session_factory, database_url_from_env
@@ -96,6 +97,9 @@ def create_app() -> FastAPI:
         session_factory=_build_session_factory(),
     )
     app.include_router(router)
+    # The Google-OIDC account endpoints (Slice PL.3), additive and independent of the turn loop:
+    # mounting this router adds /me without touching the turn endpoints' (identity-free) contract.
+    app.include_router(auth_router)
     return app
 
 
