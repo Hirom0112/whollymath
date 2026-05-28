@@ -1,9 +1,8 @@
 /* Cold-start routing screen (Turn 0, decision 0.D.2). The "world" surface —
    a stylized fantasy-landscape backdrop with a centered cream panel holding
-   three chunky polymath-style option cards. This is a deliberate register
-   shift from the earlier calm/editorial cold-start: the warmth and game-feel
-   here form an arc with the brand landing's mascot, so the kid moves from
-   playful → focused (the in-tutor surfaces) without a jarring tone drop. */
+   three big, chunky option cards that illustrate each path. Deliberate warmer
+   register (the onboarding "register arc" in PRODUCT.md): playful here, calm in
+   the in-problem surfaces. */
 
 .wm-coldstart {
   min-height: 100vh;
@@ -12,7 +11,6 @@
   justify-content: center;
   padding: 32px 24px;
   background:
-    /* subtle dark overlay for panel contrast against the busy landscape */
     linear-gradient(rgba(31, 44, 92, 0.35), rgba(31, 44, 92, 0.35)),
     url('/cold-start-bg.avif') center / cover no-repeat var(--wm-navy-deep);
   color: var(--wm-ink);
@@ -23,11 +21,11 @@
 
 .wm-coldstart-panel {
   width: 100%;
-  max-width: 920px;
+  max-width: 1040px;
   background: var(--wm-cream-2);
   border: 2px solid var(--wm-navy-deep);
-  border-radius: 24px;
-  padding: 40px 36px 28px;
+  border-radius: 26px;
+  padding: 44px 40px 32px;
   box-shadow:
     0 8px 0 var(--wm-navy-deep),
     0 32px 60px rgba(0, 0, 0, 0.35);
@@ -37,14 +35,14 @@
 
 .wm-coldstart-head {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 .wm-coldstart-headline {
   margin: 0;
   font-family: var(--wm-font-serif);
   font-weight: 700;
-  font-size: clamp(28px, 4vw, 38px);
+  font-size: clamp(30px, 4vw, 40px);
   line-height: 1.1;
   letter-spacing: -0.02em;
   color: var(--wm-navy-deep);
@@ -52,13 +50,13 @@
 
 .wm-coldstart-subhead {
   margin: 12px auto 0;
-  max-width: 44ch;
-  font-size: 15px;
+  max-width: 46ch;
+  font-size: 16px;
   line-height: 1.5;
   color: var(--wm-ink-soft);
 }
 
-/* ── three side-by-side cards (responsive) ── */
+/* ── three big side-by-side cards (responsive) ── */
 
 .wm-coldstart-list {
   list-style: none;
@@ -66,31 +64,36 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 20px;
 }
 
-/* Each card is a real <button>; chunky tactile chrome. Meaning is carried by
-   icon + label + position; the soft per-card tint reinforces identity without
-   being the sole signal (PRODUCT.md design principle 1). */
+.wm-coldstart-list > li {
+  display: flex;
+}
+
+/* Each card is a real <button>; big, chunky tactile chrome. Meaning is carried
+   by the illustration + label + position; the soft per-card tint reinforces
+   identity without being the sole signal (PRODUCT.md design principle 1). */
 .wm-coldstart-card {
   appearance: none;
   width: 100%;
-  height: 100%;
+  min-height: 244px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 26px 18px 22px;
+  justify-content: flex-start;
+  gap: 20px;
+  padding: 32px 22px 28px;
   background: var(--wm-cream);
   color: var(--wm-navy-deep);
   border: 2px solid var(--wm-navy-deep);
-  border-radius: 16px;
+  border-radius: 18px;
   text-align: center;
   font: inherit;
-  font-size: 15px;
-  line-height: 1.4;
+  font-size: 16px;
+  line-height: 1.45;
   cursor: pointer;
-  box-shadow: 0 5px 0 var(--wm-navy-deep);
+  box-shadow: 0 6px 0 var(--wm-navy-deep);
   transition:
     transform 140ms ease,
     box-shadow 140ms ease,
@@ -99,12 +102,12 @@
 
 .wm-coldstart-card:hover {
   transform: translateY(2px);
-  box-shadow: 0 3px 0 var(--wm-navy-deep);
-  filter: brightness(1.02);
+  box-shadow: 0 4px 0 var(--wm-navy-deep);
+  filter: brightness(1.03);
 }
 
 .wm-coldstart-card:active {
-  transform: translateY(5px);
+  transform: translateY(6px);
   box-shadow: 0 0 0 var(--wm-navy-deep);
 }
 
@@ -124,16 +127,21 @@
   background: var(--wm-card-sky);
 }
 
-.wm-coldstart-icon {
-  display: inline-flex;
-  width: 44px;
-  height: 44px;
+/* the illustration sits in a white "frame" so the shaded fraction art reads
+   clearly on top of the tinted card */
+.wm-coldstart-art {
+  display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--wm-navy-deep);
-}
-.wm-coldstart-icon svg {
   width: 100%;
+  height: 92px;
+  padding: 8px 12px;
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+}
+.wm-coldstart-art svg {
+  width: auto;
   height: 100%;
   display: block;
 }
@@ -144,38 +152,47 @@
   color: var(--wm-navy-deep);
 }
 
-/* ── the de-emphasized "I'm not sure" default (below the cards) ── */
+/* ── the de-emphasized "get me started" default — a real rounded button ── */
 
 .wm-coldstart-unsure-wrap {
   display: flex;
   justify-content: center;
-  padding-top: 22px;
+  padding-top: 28px;
 }
 
+/* Rounded pill button. Lighter than the colored cards (cream, smaller, single
+   line) so it stays de-emphasized per 0.D.2, but it is unmistakably a button
+   with the same chunky tactile language as the rest of the world surface. */
 .wm-coldstart-unsure {
   appearance: none;
-  background: transparent;
-  border: none;
-  padding: 8px 6px;
-  font: inherit;
-  font-size: 14px;
-  color: var(--wm-ink-soft);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  text-decoration-thickness: 1px;
-  text-decoration-color: var(--wm-navy);
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 999px;
+  padding: 13px 28px;
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wm-navy-deep);
   cursor: pointer;
-  transition: color 160ms ease;
+  box-shadow: 0 4px 0 var(--wm-navy-deep);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .wm-coldstart-unsure:hover {
-  color: var(--wm-navy);
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+}
+
+.wm-coldstart-unsure:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--wm-navy-deep);
 }
 
 .wm-coldstart-unsure:focus-visible {
   outline: 3px solid var(--wm-blue);
   outline-offset: 4px;
-  border-radius: 4px;
 }
 
 /* ── motion: subtle entrance, reduced-motion bypass ── */
@@ -199,7 +216,8 @@
     opacity: 1;
     transform: none;
   }
-  .wm-coldstart-card {
+  .wm-coldstart-card,
+  .wm-coldstart-unsure {
     transition: none;
   }
 }
@@ -209,11 +227,22 @@
 @media (max-width: 720px) {
   .wm-coldstart-list {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .wm-coldstart-card {
+    min-height: 0;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 16px;
+    text-align: left;
+    padding: 18px 20px;
+  }
+  .wm-coldstart-art {
+    width: 110px;
+    flex: 0 0 auto;
+    height: 64px;
   }
   .wm-coldstart-panel {
-    padding: 28px 22px 22px;
-  }
-  .wm-coldstart-headline {
-    font-size: 26px;
+    padding: 28px 22px 24px;
   }
 }

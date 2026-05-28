@@ -161,7 +161,7 @@ _NUMBER_LINE_ROUTE = RouteOption(
 # which option is "I'm not sure" without string-matching.
 UNSURE_ROUTE = RouteOption(
     key="not_sure",
-    prompt="I'm not sure, just show me something",
+    prompt="Not sure yet? Just get me started!",
     routes_to=KnowledgeComponentId.EQUIVALENCE,
     is_unsure_default=True,
 )

@@ -37,7 +37,7 @@ describe('ColdStart', () => {
     const onChoose = vi.fn();
     render(<ColdStart onChoose={onChoose} />);
 
-    const unsure = screen.getByRole('button', { name: /i'm not sure, just show me something/i });
+    const unsure = screen.getByRole('button', { name: /not sure yet\? just get me started/i });
     expect(unsure).toBeInTheDocument();
     // Lives outside the KC list (which is a <ul>); the visual de-emphasis is
     // class-based, but at the structural level the unsure button is NOT a list
@@ -51,7 +51,7 @@ describe('ColdStart', () => {
 
   it('uses no em dash in the unsure copy (impeccable copy law)', () => {
     render(<ColdStart onChoose={vi.fn()} />);
-    const unsure = screen.getByRole('button', { name: /i'm not sure/i });
+    const unsure = screen.getByRole('button', { name: /not sure yet/i });
     expect(unsure.textContent ?? '').not.toContain('—');
   });
 });
