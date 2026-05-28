@@ -31,6 +31,7 @@ from dataclasses import dataclass
 
 from app.domain.problem_generators import Problem
 from app.llm.provider import AnthropicProvider, LLMProvider, Message, Tier
+from app.persona_surface.learner_voice import voice_learner_turn
 from app.personas.persona_config import PersonaConfig
 from app.personas.simulator import simulate_action
 
@@ -71,6 +72,7 @@ def run_chat_session(
     *,
     provider: LLMProvider | None = None,
     tier: Tier = "premium",
+    learner_voice_provider: LLMProvider | None = None,
 ) -> list[ChatTurn]:
     """Conduct a chat-baseline tutoring session and return its transcript.
 
@@ -83,6 +85,13 @@ def run_chat_session(
 
     ``provider`` defaults to the Anthropic backend (0.D.4 ``premium`` tier = Opus 4.7 for
     tutor explanations); inject a fake in tests so no live call is made (CLAUDE.md §9).
+
+    ``learner_voice_provider`` is the OPTIONAL Slice-5.5.2 Layer-4 hook: when wired, the
+    student's message is rephrased in the persona's natural voice (``voice_learner_turn``,
+    knowledge-state-blind). It defaults to ``None`` — the recorded 5.3 run sends the plain
+    ``My answer: …`` line and stays deterministic — so this changes nothing unless a demo
+    opts in. The persona's submitted answer (the evidence) is identical either way; only the
+    surface wording of the student's chat turn changes.
     """
     backend: LLMProvider = provider if provider is not None else AnthropicProvider()
     history: list[Message] = []
@@ -91,7 +100,16 @@ def run_chat_session(
     for problem in problems:
         action = simulate_action(persona, problem)
         student_answer = _format_answer(action.submitted_answer)
-        student_message = f"Problem: {problem.statement}\nMy answer: {student_answer}"
+        if learner_voice_provider is not None:
+            utterance = voice_learner_turn(
+                None if action.submitted_answer is None else str(action.submitted_answer),
+                explanation=action.explanation,
+                requested_hint=action.requested_hint,
+                provider=learner_voice_provider,
+            )
+            student_message = f"Problem: {problem.statement}\n{utterance}"
+        else:
+            student_message = f"Problem: {problem.statement}\nMy answer: {student_answer}"
 
         conversation = [*history, Message("user", student_message)]
         reply = backend.complete(conversation, tier=tier, system=CHAT_SYSTEM_PROMPT)

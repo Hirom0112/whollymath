@@ -113,6 +113,36 @@ def test_no_answer_renders_as_a_plain_chat_message() -> None:
     assert _format_answer("7/12") == "7/12"
 
 
+def test_learner_voice_hook_defaults_off_and_sends_plain_answer_line() -> None:
+    """Slice 5.5.2 hook: with no learner_voice_provider the student turn is the plain line.
+
+    This is the property that keeps the recorded 5.3 run deterministic and unchanged.
+    """
+    provider = _RecordingProvider()
+    run_chat_session(get_persona("procedure_priya"), [_two_problems()[0]], provider=provider)
+    sent = str(provider.calls[0]["messages"][-1].content)  # type: ignore[index]
+    assert "My answer:" in sent
+
+
+def test_learner_voice_hook_rephrases_the_student_turn_when_wired() -> None:
+    """When a learner_voice_provider is wired, the student turn is voiced (not 'My answer:').
+
+    The persona's submitted answer (the evidence) is unchanged; only the surface wording is.
+    """
+    tutor = _RecordingProvider(reply="ok")
+    learner = _RecordingProvider(reply="ooh i think it's 7/12!")
+    run_chat_session(
+        get_persona("procedure_priya"),
+        [_two_problems()[0]],
+        provider=tutor,
+        learner_voice_provider=learner,
+    )
+    sent = str(tutor.calls[0]["messages"][-1].content)  # type: ignore[index]
+    assert "ooh i think it's 7/12!" in sent
+    assert "My answer:" not in sent
+    assert len(learner.calls) == 1  # the learner voice was actually consulted
+
+
 def test_chat_baseline_imports_no_verifier_or_mastery_model() -> None:
     """Structural guard: the baseline never imports the SymPy verifier or the mastery model
     — that absence is what makes it the control arm (RESEARCH.md §1.6, §3.11). It grades and
