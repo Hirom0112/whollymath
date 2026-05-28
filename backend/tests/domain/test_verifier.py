@@ -153,6 +153,44 @@ def test_integer_answer_accepts_int_and_string() -> None:
     assert verify(problem, str(integer_value)).is_correct is True
 
 
+def test_common_denominator_accepts_any_common_multiple_not_only_least() -> None:
+    """A valid common denominator that is NOT the least is still correct (PROJECT.md §3.4.1).
+
+    The skill is "find A common denominator", satisfied by any positive common multiple of
+    the two denominators. Grading a valid non-least answer (e.g. 2x the LCD, or the product
+    of the denominators) as wrong would measure LCM/efficiency — a different construct.
+    """
+    problem = generate_problem(KnowledgeComponentId.COMMON_DENOMINATOR, seed=4)
+    assert problem.operands is not None
+    d1, d2 = problem.operands[0].q, problem.operands[1].q
+    least = int(problem.correct_value)
+    # Twice the LCD and the product of the denominators are both valid common denominators.
+    assert verify(problem, str(2 * least)).is_correct is True
+    assert verify(problem, str(d1 * d2)).is_correct is True
+
+
+def test_common_denominator_rejects_a_non_common_multiple() -> None:
+    """A number that is NOT a multiple of both denominators is wrong (the 'add the
+    denominators' error, d1+d2, is rejected unless it happens to be a common multiple)."""
+    problem = generate_problem(KnowledgeComponentId.COMMON_DENOMINATOR, seed=4)
+    assert problem.operands is not None
+    d1, d2 = problem.operands[0].q, problem.operands[1].q
+    least = int(problem.correct_value)
+    bad = least + 1  # least+1 cannot also be a multiple of both (gcd argument)
+    result = verify(problem, str(bad))
+    assert result.is_correct is False
+    # The added-denominators answer is rejected whenever it isn't itself a common multiple.
+    if (d1 + d2) % d1 != 0 or (d1 + d2) % d2 != 0:
+        assert verify(problem, str(d1 + d2)).is_correct is False
+
+
+def test_common_denominator_rejects_zero_and_fraction() -> None:
+    """Zero is not a piece-size, and a fraction is not a denominator — both wrong."""
+    problem = generate_problem(KnowledgeComponentId.COMMON_DENOMINATOR, seed=4)
+    assert verify(problem, "0").is_correct is False
+    assert verify(problem, "1/2").is_correct is False
+
+
 def test_rational_answer_accepts_rational_object() -> None:
     """A SymPy Rational submission is accepted directly."""
     problem = generate_problem(KnowledgeComponentId.SUBTRACTION_UNLIKE, seed=5)

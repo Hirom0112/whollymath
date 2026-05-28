@@ -206,6 +206,47 @@ def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult
     )
 
 
+def _verify_common_denominator(problem: Problem, submitted: Submitted) -> VerificationResult:
+    """Verify a common-denominator answer: ANY positive common multiple is correct (§3.4.1).
+
+    The skill is "find A common denominator", which is satisfied by any positive integer that
+    both denominators divide — 12 AND 24 are both correct common denominators for 3/4 and 1/6.
+    Accepting only the LEAST would measure LCM/efficiency, a different construct (a validity
+    error per the §3.4.1 learning-science decision). SymPy still decides: we parse the
+    submission to a Rational and check it is a positive integer that is a multiple of BOTH
+    operand denominators. ``correct_value`` (the LCD) stays as the canonical least anchor the
+    worked example / hints teach, but it is NOT the only accepted answer.
+
+    A wrong answer is an OPERATION error (the procedure for matching piece-sizes broke — §3.6
+    routes OPERATION to S3, the area model, which is exactly the right remediation: show the
+    pieces). A non-numeric / non-integer / non-positive submission is OTHER (no procedure to
+    route on). We do not claim a specific misconception match here.
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        # A construction bug, not learner input: no denominator pair to judge against.
+        raise ValueError(
+            f"common-denominator problem {problem.problem_id!r} needs exactly two operands"
+        )
+
+    value = _parse_to_rational(submitted)
+    # Must be a positive WHOLE number (a denominator/piece-count). A fraction or n/0 is not.
+    if value is None or value <= 0 or value.q != 1:
+        return VerificationResult(
+            is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+        )
+
+    candidate = int(value)
+    d1, d2 = int(operands[0].q), int(operands[1].q)
+    if candidate % d1 == 0 and candidate % d2 == 0:
+        return VerificationResult(
+            is_correct=True, error_category=ErrorCategory.NONE, matched_misconception=None
+        )
+    return VerificationResult(
+        is_correct=False, error_category=ErrorCategory.OPERATION, matched_misconception=None
+    )
+
+
 def _classify_wrong_answer(
     problem: Problem, submitted_value: Rational
 ) -> tuple[ErrorCategory, MisconceptionId | None]:
@@ -298,6 +339,10 @@ def verify(problem: Problem, submitted: Submitted) -> VerificationResult:
     On a wrong answer, ``_classify_wrong_answer`` assigns the §3.6 routing category by
     matching the submission against the misconception generators on the operands.
 
+    Common denominator (``kc == COMMON_DENOMINATOR``) routes to
+    ``_verify_common_denominator``: ANY positive common multiple of the two operand
+    denominators is correct, not only the least (§3.4.1) — SymPy checks the divisibility.
+
     yes/no relational judgments ("Is 2/3 the same amount as 4/6?") route to
     ``_verify_yes_no``: the truth is SymPy equality over the two operands, so SymPy
     still decides — no stored answer. A problem opts in via ``answer_kind=YES_NO``
@@ -307,6 +352,9 @@ def verify(problem: Problem, submitted: Submitted) -> VerificationResult:
     """
     if problem.answer_kind is AnswerKind.YES_NO:
         return _verify_yes_no(problem, submitted)
+
+    if problem.kc is KnowledgeComponentId.COMMON_DENOMINATOR:
+        return _verify_common_denominator(problem, submitted)
 
     submitted_value = _parse_to_rational(submitted)
     if submitted_value is None:

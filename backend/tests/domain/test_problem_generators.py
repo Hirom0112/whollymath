@@ -377,6 +377,28 @@ def test_format_does_not_change_the_math() -> None:
     assert symbolic.surface_format != area.surface_format
 
 
+@pytest.mark.parametrize("seed", range(10))
+def test_common_denominator_area_model_is_an_alignment_item(seed: int) -> None:
+    """The AREA_MODEL common-denominator item frames the skill as repartitioning to align
+    (§3.4.1): same operands + same answer as the symbolic form, NUMERIC answer, alignment text."""
+    symbolic = generate_problem(
+        KnowledgeComponentId.COMMON_DENOMINATOR, seed=seed, surface_format=Representation.SYMBOLIC
+    )
+    area = generate_problem(
+        KnowledgeComponentId.COMMON_DENOMINATOR, seed=seed, surface_format=Representation.AREA_MODEL
+    )
+    # Same underlying math, two representations (the multi-representation mastery surface).
+    assert symbolic.operands == area.operands
+    assert symbolic.correct_value == area.correct_value
+    assert area.surface_format is Representation.AREA_MODEL
+    assert area.answer_kind is AnswerKind.NUMERIC
+    # The area-model framing is about cutting/lining up pieces, not "the smallest number".
+    assert "pieces" in area.statement.lower()
+    # Neither representation prescribes "smallest" any more (any common denominator is accepted).
+    assert "smallest" not in symbolic.statement.lower()
+    assert "smallest" not in area.statement.lower()
+
+
 # ─── The bank adapter: a gem item maps onto Problem (decision 0.D.1) ─────────
 
 

@@ -295,18 +295,34 @@ def _generate_equivalence(rng: random.Random, seed: int, surface_format: Represe
 def _generate_common_denominator(
     rng: random.Random, seed: int, surface_format: Representation
 ) -> Problem:
-    """KC_common_denominator: the smallest shared piece-size for two fractions.
+    """KC_common_denominator: a shared piece-size for two fractions (§3.4.1).
 
-    The answer is the LCM of the two denominators (the bank's CD items, e.g.
-    lcm(3,4)=12) — an integer piece-size, computed by SymPy, never a product of the
-    fractions. Returned as a ``Rational`` for type uniformity with the other KCs.
+    The answer is ANY positive common multiple of the two denominators — the verifier accepts
+    any (e.g. 12 OR 24 for 3/4 and 1/6), not only the least (§3.4.1: "find A common
+    denominator", not "find the LEAST"). ``correct_value`` carries the LCD (the canonical least
+    anchor the worked example / hints teach), computed by SymPy; verification does the
+    accept-any divisibility check. Two construction representations so the skill is masterable
+    across representations (PROJECT.md §3.4 rule 2):
+
+      - SYMBOLIC   — "what piece-size works for both?" (a whole-number answer);
+      - AREA_MODEL — repartition two bars until their pieces align; the shared partition count
+        IS the common denominator (the visual, magnitude-grounded form).
+
+    Both are answered with the SAME whole-number value (NUMERIC), so the simulator/verifier are
+    representation-agnostic; only the framing and the surface widget differ.
     """
     first, second = _unlike_pair(rng)
     shared = ilcm(first.q, second.q)
-    statement = (
-        "What is the smallest size of piece (bottom number) that works for BOTH "
-        f"{first.p}/{first.q} and {second.p}/{second.q}?"
-    )
+    if surface_format is Representation.AREA_MODEL:
+        statement = (
+            f"Cut both bars into the same size pieces so {first.p}/{first.q} and "
+            f"{second.p}/{second.q} line up. How many equal pieces should each bar have?"
+        )
+    else:
+        statement = (
+            "What size of piece (bottom number) works for BOTH "
+            f"{first.p}/{first.q} and {second.p}/{second.q}?"
+        )
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.COMMON_DENOMINATOR, seed, surface_format),
         kc=KnowledgeComponentId.COMMON_DENOMINATOR,
