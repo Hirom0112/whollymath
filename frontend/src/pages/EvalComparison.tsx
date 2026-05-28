@@ -1,0 +1,102 @@
+import { useEffect, useState } from 'react';
+
+import { fetchThreeArmComparison, type ThreeArmComparisonView } from '../api';
+import './EvalComparison.css';
+
+/**
+ * The Slice 5.3 three-arm comparison, on screen (PROJECT.md §3.11). A researcher/demo view
+ * reached at `?eval=1` — not part of the student flow. Shows the five adversarial personas,
+ * the problems each was given, and how each of the three tutors (Adaptive / Chat / Static)
+ * verdicts their mastery. The adaptive + static columns are real and deterministic; the chat
+ * column is the pre-registered prediction until the cost-gated live LLM run (server says so).
+ */
+export function EvalComparison(): React.JSX.Element {
+  const [data, setData] = useState<ThreeArmComparisonView | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchThreeArmComparison()
+      .then(setData)
+      .catch(() => {
+        setError('Could not load the comparison. Is the API running on :8000?');
+      });
+  }, []);
+
+  if (error !== null) {
+    return (
+      <main className="wm-eval">
+        <p className="wm-eval-error" role="alert">
+          {error}
+        </p>
+      </main>
+    );
+  }
+
+  if (data === null) {
+    return (
+      <main className="wm-eval">
+        <p className="wm-eval-loading">Loading the comparison…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="wm-eval">
+      <header className="wm-eval-head">
+        <p className="wm-eval-kicker">Slice 5.3 · three-arm comparison</p>
+        <h1 className="wm-eval-title">What we&rsquo;re testing</h1>
+        <p className="wm-eval-headline">{data.headline}</p>
+        <div className="wm-eval-tally">
+          <span className="wm-eval-chip wm-eval-chip--good">
+            Adaptive false positives: {data.adaptive_false_positives}/{data.total}
+          </span>
+          <span className="wm-eval-chip wm-eval-chip--pending">
+            Chat: {data.chat_live ? 'live run' : 'predicted (live run pending)'}
+          </span>
+          <span className="wm-eval-chip wm-eval-chip--neutral">
+            Static: N/A (certifies nothing)
+          </span>
+        </div>
+      </header>
+
+      <div className="wm-eval-grid" role="table" aria-label="Three-arm comparison">
+        <div className="wm-eval-row wm-eval-row--header" role="row">
+          <div className="wm-eval-cell wm-eval-cell--persona" role="columnheader">
+            Adversarial learner
+          </div>
+          <div className="wm-eval-cell" role="columnheader">
+            Adaptive (ours)
+          </div>
+          <div className="wm-eval-cell" role="columnheader">
+            Chat baseline
+          </div>
+          <div className="wm-eval-cell" role="columnheader">
+            Static baseline
+          </div>
+        </div>
+
+        {data.rows.map((row) => (
+          <div className="wm-eval-row" role="row" key={row.persona_name}>
+            <div className="wm-eval-cell wm-eval-cell--persona" role="cell">
+              <p className="wm-eval-name">{row.persona_name}</p>
+              <p className="wm-eval-attacks">attacks: {row.attacks}</p>
+              <ul className="wm-eval-problems">
+                {row.problems.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            </div>
+            {[row.adaptive, row.chat, row.static].map((arm) => (
+              <div className="wm-eval-cell" role="cell" key={arm.arm}>
+                <span className={`wm-eval-verdict wm-eval-verdict--${arm.tone}`}>
+                  {arm.verdict}
+                </span>
+                <p className="wm-eval-detail">{arm.detail}</p>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}

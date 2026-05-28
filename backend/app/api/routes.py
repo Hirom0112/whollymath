@@ -18,10 +18,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 
+from app.api.eval_view import build_three_arm_comparison_view
 from app.api.schemas import (
     RouteOptionView,
     StartSessionRequest,
     StartSessionResponse,
+    ThreeArmComparisonView,
     TurnRequest,
     TurnResponse,
 )
@@ -77,6 +79,21 @@ def routing_choices() -> list[RouteOptionView]:
     ``POST /session``. Pure data; no session is created by viewing the menu.
     """
     return routing_menu()
+
+
+@router.get(
+    "/eval/three-arm-comparison",
+    response_model=ThreeArmComparisonView,
+    tags=["eval"],
+)
+def three_arm_comparison() -> ThreeArmComparisonView:
+    """The Slice 5.3 three-arm comparison for the on-screen dashboard (PROJECT.md §3.11).
+
+    Free and deterministic: the adaptive and static columns are computed live; the chat
+    column is the pre-registered prediction until the cost-gated live LLM run. No LLM call
+    is made here, so viewing the dashboard never spends money (CLAUDE.md §8.1 spirit).
+    """
+    return build_three_arm_comparison_view()
 
 
 @router.post("/session", response_model=StartSessionResponse, tags=["session"])

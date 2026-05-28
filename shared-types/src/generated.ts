@@ -71,6 +71,30 @@ export type SurfaceState2 =
   | "S5_transfer_probe";
 
 /**
+ * One arm's mastery verdict for one persona, pre-formatted for display.
+ *
+ * The view layer (``api/eval_view``) maps the raw eval outcome to a label + a tone the
+ * surface can render directly — the frontend stays presentation-only (CLAUDE.md §7).
+ */
+export interface ArmVerdictView {
+  /**
+   * Adaptive | Chat | Static
+   */
+  arm: string;
+  /**
+   * Short display label, e.g. 'Denied ✓' or 'N/A'.
+   */
+  verdict: string;
+  /**
+   * good | bad | neutral | pending — drives the surface styling.
+   */
+  tone: string;
+  /**
+   * One-line explanation (e.g. 'blocked at: transfer_probe').
+   */
+  detail: string;
+}
+/**
  * A proactively-offered help nudge (Slice 4.5), or absent when none is offered.
  *
  * Distinct from the reactive ``hint`` (which answers an explicit REQUEST_HINT): this is
@@ -105,6 +129,21 @@ export interface MasterySnapshot {
    * Whether the mastery model has *declared* mastery (§6).
    */
   mastered: boolean;
+}
+/**
+ * One persona's row in the three-arm comparison: who, what it attacks, the problems it
+ * saw, and each arm's verdict.
+ */
+export interface PersonaComparisonView {
+  persona_name: string;
+  attacks: string;
+  /**
+   * The problem statements this persona was given.
+   */
+  problems: string[];
+  adaptive: ArmVerdictView;
+  chat: ArmVerdictView;
+  static: ArmVerdictView;
 }
 /**
  * The learner-facing view of one presented problem (ARCHITECTURE.md §10 step 12).
@@ -213,6 +252,29 @@ export interface ProblemView1 {
    * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
    */
   tick_segments?: number | null;
+}
+/**
+ * The full three-arm comparison for display (Slice 5.3, PROJECT.md §3.11).
+ *
+ * The adaptive and static columns are computed live and deterministically; the chat
+ * column is the pre-registered prediction until the cost-gated live LLM run
+ * (``chat_live`` says which).
+ */
+export interface ThreeArmComparisonView {
+  rows: PersonaComparisonView[];
+  /**
+   * Number of personas (arms are scored over these).
+   */
+  total: number;
+  adaptive_false_positives: number;
+  /**
+   * True once the chat column reflects a real LLM run.
+   */
+  chat_live: boolean;
+  /**
+   * The §3.11 pitch summary for the header.
+   */
+  headline: string;
 }
 /**
  * One learner action entering the turn loop (ARCHITECTURE.md §10 steps 1-2).

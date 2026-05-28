@@ -1,0 +1,187 @@
+/* The Slice 5.3 three-arm comparison dashboard (researcher/demo view at ?eval=1).
+   Calm/editorial register; reuses the design tokens. Unique wm-eval-* class names so
+   nothing collides app-wide (global CSS). */
+
+.wm-eval {
+  min-height: 100vh;
+  background: var(--wm-page-bg, var(--wm-cream));
+  padding: 48px 24px 64px;
+  box-sizing: border-box;
+}
+
+.wm-eval-head {
+  max-width: 1080px;
+  margin: 0 auto 28px;
+}
+.wm-eval-kicker {
+  margin: 0 0 8px;
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wm-ink-soft);
+}
+.wm-eval-title {
+  margin: 0 0 12px;
+  font-family: var(--wm-font-serif);
+  font-size: clamp(30px, 4vw, 46px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--wm-navy-deep);
+}
+.wm-eval-headline {
+  margin: 0 0 18px;
+  max-width: 760px;
+  font-family: var(--wm-font-sans);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--wm-ink);
+}
+.wm-eval-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.wm-eval-chip {
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--wm-navy-deep);
+}
+.wm-eval-chip--good {
+  background: var(--wm-card-mint, #cdebd6);
+  color: var(--wm-navy-deep);
+}
+.wm-eval-chip--pending {
+  background: var(--wm-yellow);
+  color: var(--wm-navy-deep);
+}
+.wm-eval-chip--neutral {
+  background: var(--wm-cream-2);
+  color: var(--wm-ink-soft);
+}
+
+/* the comparison grid */
+.wm-eval-grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.wm-eval-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+.wm-eval-row--header .wm-eval-cell {
+  background: var(--wm-navy);
+  color: var(--wm-cream);
+  font-family: var(--wm-font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  padding: 12px;
+  border: none;
+}
+.wm-eval-row--header .wm-eval-cell--persona {
+  text-align: left;
+  background: var(--wm-navy-deep);
+}
+
+.wm-eval-cell {
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 0 -1px var(--wm-shadow, rgba(31, 44, 92, 0.18));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+  justify-content: center;
+}
+.wm-eval-cell--persona {
+  text-align: left;
+  background: #fff;
+}
+.wm-eval-name {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+}
+.wm-eval-attacks {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  color: var(--wm-coral);
+  font-weight: 600;
+}
+.wm-eval-problems {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-family: var(--wm-font-mono, monospace);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--wm-ink-soft);
+}
+
+.wm-eval-verdict {
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 2px solid var(--wm-navy-deep);
+}
+.wm-eval-verdict--good {
+  background: var(--wm-card-mint, #cdebd6);
+  color: #1f6b3a;
+}
+.wm-eval-verdict--bad {
+  background: var(--wm-card-warm);
+  color: var(--wm-coral);
+}
+.wm-eval-verdict--pending {
+  background: var(--wm-yellow);
+  color: var(--wm-navy-deep);
+}
+.wm-eval-verdict--neutral {
+  background: var(--wm-cream-2);
+  color: var(--wm-ink-soft);
+}
+.wm-eval-detail {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--wm-ink-soft);
+}
+
+.wm-eval-loading,
+.wm-eval-error {
+  max-width: 1080px;
+  margin: 80px auto;
+  font-family: var(--wm-font-sans);
+  font-size: 18px;
+  text-align: center;
+  color: var(--wm-ink-soft);
+}
+.wm-eval-error {
+  color: var(--wm-coral);
+}
+
+@media (max-width: 820px) {
+  .wm-eval-row {
+    grid-template-columns: 1fr;
+  }
+  .wm-eval-row--header {
+    display: none;
+  }
+}

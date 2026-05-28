@@ -2,9 +2,14 @@ import { useState } from 'react';
 
 import { startSession, type StartSessionResponse } from './api';
 import { ColdStart, type RouteKey } from './pages/ColdStart';
+import { EvalComparison } from './pages/EvalComparison';
 import { Landing } from './pages/Landing';
 import { SignIn } from './pages/SignIn';
 import { Tutor } from './pages/Tutor';
+
+// Researcher/demo view: ?eval=1 shows the Slice 5.3 three-arm comparison dashboard,
+// outside the student flow (no router; a query-param check keeps it zero-cost to wire).
+const SHOW_EVAL = new URLSearchParams(window.location.search).get('eval') === '1';
 
 type View = 'landing' | 'sign_in' | 'cold_start' | 'starting' | 'session';
 
@@ -17,6 +22,10 @@ export function App(): React.JSX.Element {
   const [view, setView] = useState<View>('landing');
   const [session, setSession] = useState<StartSessionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  if (SHOW_EVAL) {
+    return <EvalComparison />;
+  }
 
   async function handleChoose(route: RouteKey): Promise<void> {
     setView('starting');

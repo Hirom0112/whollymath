@@ -320,17 +320,64 @@ class TurnResponse(BaseModel):
     )
 
 
+class ArmVerdictView(BaseModel):
+    """One arm's mastery verdict for one persona, pre-formatted for display.
+
+    The view layer (``api/eval_view``) maps the raw eval outcome to a label + a tone the
+    surface can render directly — the frontend stays presentation-only (CLAUDE.md §7)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    arm: str = Field(description="Adaptive | Chat | Static")
+    verdict: str = Field(description="Short display label, e.g. 'Denied ✓' or 'N/A'.")
+    tone: str = Field(description="good | bad | neutral | pending — drives the surface styling.")
+    detail: str = Field(description="One-line explanation (e.g. 'blocked at: transfer_probe').")
+
+
+class PersonaComparisonView(BaseModel):
+    """One persona's row in the three-arm comparison: who, what it attacks, the problems it
+    saw, and each arm's verdict."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    persona_name: str
+    attacks: str
+    problems: list[str] = Field(description="The problem statements this persona was given.")
+    adaptive: ArmVerdictView
+    chat: ArmVerdictView
+    static: ArmVerdictView
+
+
+class ThreeArmComparisonView(BaseModel):
+    """The full three-arm comparison for display (Slice 5.3, PROJECT.md §3.11).
+
+    The adaptive and static columns are computed live and deterministically; the chat
+    column is the pre-registered prediction until the cost-gated live LLM run
+    (``chat_live`` says which)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rows: list[PersonaComparisonView]
+    total: int = Field(description="Number of personas (arms are scored over these).")
+    adaptive_false_positives: int
+    chat_live: bool = Field(description="True once the chat column reflects a real LLM run.")
+    headline: str = Field(description="The §3.11 pitch summary for the header.")
+
+
 __all__ = [
     "ActionType",
+    "ArmVerdictView",
     "ErrorType",
     "InterventionKind",
     "InterventionView",
     "MasterySnapshot",
+    "PersonaComparisonView",
     "ProblemView",
     "RouteOptionView",
     "StartSessionRequest",
     "StartSessionResponse",
     "SurfaceState",
+    "ThreeArmComparisonView",
     "TurnRequest",
     "TurnResponse",
 ]

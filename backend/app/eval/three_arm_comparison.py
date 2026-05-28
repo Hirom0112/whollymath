@@ -144,6 +144,48 @@ def compare_case(case: PersonaCase, *, chat_provider: LLMProvider) -> Comparison
     )
 
 
+# The chat arm's pre-registered prediction (RESEARCH.md §9), used when we show the comparison
+# WITHOUT spending money on a live run. claimed_mastery is left None (not measured) and the
+# note carries the prediction; the view layer renders it as "predicted / pending".
+PREDICTED_CHAT_NOTE = "predicted (pre-reg §9): over-claims mastery; live LLM run pending"
+
+
+def compare_case_offline(case: PersonaCase) -> ComparisonRow:
+    """Like ``compare_case`` but with NO LLM call: the adaptive and static arms are computed
+    live/deterministically and the chat arm carries its pre-registered prediction. This is
+    what the on-screen dashboard uses so viewing it costs nothing."""
+    problems = _problems_for(case)
+
+    adaptive_result = measure_case(case)
+    adaptive = ArmOutcome(
+        arm="adaptive",
+        claimed_mastery=adaptive_result.confirmed_mastery,
+        note=f"blocked at: {adaptive_result.blocked_at}",
+    )
+    static_turns = run_static_session(case.persona, problems)
+    static = ArmOutcome(
+        arm="static",
+        claimed_mastery=None,
+        note=f"no mastery construct (N/A); showed {len(static_turns)} walkthroughs",
+    )
+    chat = ArmOutcome(arm="chat", claimed_mastery=None, note=PREDICTED_CHAT_NOTE)
+
+    return ComparisonRow(
+        persona_id=case.persona.persona_id,
+        persona_name=case.persona.name,
+        attacked_dimension=case.attacked_dimension,
+        adaptive=adaptive,
+        chat=chat,
+        static=static,
+    )
+
+
+def run_comparison_offline() -> list[ComparisonRow]:
+    """The five-persona comparison with the real adaptive + static arms and a predicted chat
+    arm — no LLM, no cost. Used to render the dashboard before the live run."""
+    return [compare_case_offline(case) for case in harness_cases()]
+
+
 def run_three_arm_comparison(*, chat_provider: LLMProvider | None = None) -> list[ComparisonRow]:
     """Run the five-persona comparison across all three arms.
 
@@ -196,8 +238,11 @@ __all__ = [
     "ArmOutcome",
     "CHAT_ASSESSMENT_QUESTION",
     "ComparisonRow",
+    "PREDICTED_CHAT_NOTE",
     "chat_mastery_claim",
     "compare_case",
+    "compare_case_offline",
     "format_comparison",
+    "run_comparison_offline",
     "run_three_arm_comparison",
 ]

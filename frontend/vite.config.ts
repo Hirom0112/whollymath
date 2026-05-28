@@ -16,6 +16,7 @@ export default defineConfig({
       '/routing-choices': API_TARGET,
       '/session': API_TARGET,
       '/turn': API_TARGET,
+      '/eval': API_TARGET,
     },
   },
   test: {

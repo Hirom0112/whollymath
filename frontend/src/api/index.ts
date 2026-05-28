@@ -9,21 +9,29 @@
 // Requests use RELATIVE paths; in dev, Vite proxies them to the FastAPI server
 // (vite.config.ts), so the browser sees one origin and there is no CORS to manage.
 
-import type { StartSessionResponse, TurnRequest, TurnResponse } from '@whollymath/shared-types';
+import type {
+  StartSessionResponse,
+  ThreeArmComparisonView,
+  TurnRequest,
+  TurnResponse,
+} from '@whollymath/shared-types';
 
 export type {
   ActionType,
+  ArmVerdictView,
   ErrorCategory,
   InterventionKind,
   InterventionView,
   KnowledgeComponentId,
   MasterySnapshot,
+  PersonaComparisonView,
   ProblemView,
   Representation,
   RouteOptionView,
   StartSessionRequest,
   StartSessionResponse,
   SurfaceState,
+  ThreeArmComparisonView,
   TurnRequest,
   TurnResponse,
 } from '@whollymath/shared-types';
@@ -71,4 +79,21 @@ export async function startSession(
 /** Submit one learner action (answer or hint request) and get the turn result. */
 export async function submitTurn(request: TurnRequest): Promise<TurnResponse> {
   return postJson<TurnResponse>('/turn', request);
+}
+
+async function getJson<T>(path: string): Promise<T> {
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new ApiError(response.status, `GET ${path} failed (${String(response.status)})`);
+  }
+  return (await response.json()) as T;
+}
+
+/**
+ * The Slice 5.3 three-arm comparison for the on-screen eval dashboard (PROJECT.md §3.11).
+ * Free/deterministic on the server: adaptive + static are computed live, the chat column is
+ * the pre-registered prediction until the cost-gated live LLM run.
+ */
+export async function fetchThreeArmComparison(): Promise<ThreeArmComparisonView> {
+  return getJson<ThreeArmComparisonView>('/eval/three-arm-comparison');
 }
