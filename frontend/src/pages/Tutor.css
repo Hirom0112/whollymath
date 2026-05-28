@@ -1,0 +1,198 @@
+/* The in-tutor problem surface — calm / editorial register (PRODUCT.md arc).
+   Quieter than the landing/cold-start "world": a single centered card on a soft
+   page, generous space, one clear action. */
+
+.wm-tutor {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wm-page-bg);
+  padding: 32px 20px;
+  box-sizing: border-box;
+}
+
+.wm-tutor-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 22px;
+  box-shadow: 0 18px 0 -6px var(--wm-shadow);
+  padding: 40px 36px 36px;
+  box-sizing: border-box;
+}
+
+.wm-tutor-mode {
+  margin: 0 0 14px;
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wm-ink-soft);
+}
+
+.wm-tutor-statement {
+  margin: 0 0 28px;
+  font-family: var(--wm-font-serif);
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--wm-ink);
+}
+
+.wm-tutor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wm-tutor-label {
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}
+
+.wm-tutor-input {
+  font-family: var(--wm-font-sans);
+  font-size: 22px;
+  padding: 14px 16px;
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  background: var(--wm-cream-2);
+  color: var(--wm-ink);
+  outline: none;
+}
+
+.wm-tutor-input:focus-visible {
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-tutor-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.wm-tutor-submit {
+  font-family: var(--wm-font-sans);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wm-cream);
+  background: var(--wm-blue);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  padding: 12px 26px;
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    background 0.12s ease;
+}
+
+.wm-tutor-submit:hover:not(:disabled) {
+  background: var(--wm-blue-bright);
+}
+
+.wm-tutor-submit:active:not(:disabled) {
+  transform: translateY(2px);
+  background: var(--wm-blue-press);
+}
+
+.wm-tutor-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wm-tutor-hint-btn {
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+  background: transparent;
+  border: none;
+  padding: 8px 4px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.wm-tutor-hint-btn:hover:not(:disabled) {
+  color: var(--wm-ink);
+}
+
+.wm-tutor-hint-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wm-tutor-feedback-block {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.wm-tutor-feedback {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.2px;
+}
+
+.wm-tutor-feedback--right {
+  color: var(--wm-green);
+}
+
+.wm-tutor-feedback--wrong {
+  color: var(--wm-coral);
+}
+
+.wm-tutor-next {
+  align-self: flex-start;
+  font-family: var(--wm-font-sans);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wm-cream);
+  background: var(--wm-blue);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  padding: 12px 26px;
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    background 0.12s ease;
+}
+
+.wm-tutor-next:hover {
+  background: var(--wm-blue-bright);
+}
+
+.wm-tutor-next:active {
+  transform: translateY(2px);
+  background: var(--wm-blue-press);
+}
+
+.wm-tutor-hint {
+  margin: 22px 0 0;
+  padding: 14px 16px;
+  font-family: var(--wm-font-sans);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--wm-ink);
+  background: var(--wm-card-sky);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+}
+
+.wm-tutor-error {
+  margin: 18px 0 0;
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  color: var(--wm-coral);
+}

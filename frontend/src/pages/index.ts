@@ -2,3 +2,4 @@
 export { ColdStart } from './ColdStart';
 export type { RouteKey } from './ColdStart';
 export { Landing } from './Landing';
+export { Tutor } from './Tutor';
