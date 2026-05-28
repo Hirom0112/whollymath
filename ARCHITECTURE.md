@@ -28,6 +28,7 @@ the invariants that hold them together.
 12. [Technology choices](#12-technology-choices)
 13. [Repository layout](#13-repository-layout)
 14. [Architectural invariants (never break these)](#14-architectural-invariants-never-break-these)
+15. [The persistent learner: identity, continuity & behavioral capture](#15-the-persistent-learner-identity-continuity--behavioral-capture)
 
 ---
 
@@ -376,6 +377,9 @@ actuals is itself part of the evidence.
 | ML | **scikit-learn / XGBoost** | Interpretable (SHAP), fast inference, no GPU |
 | LLM | **Claude** (Opus for hard generation, Sonnet/Haiku for cheap surface calls) behind a provider abstraction | Strong constrained instruction-following; swappable |
 | Deploy | **AWS via CDK (TypeScript)** — S3 + CloudFront, ECS Fargate, RDS | Reproducible IaC; single always-on container avoids demo cold-starts |
+| Auth / identity | **Google Sign-In (OAuth 2.0 / OIDC)** — backend verifies Google ID tokens; no passwords stored | Delegating to Google is safer than rolling our own (no credential storage, MFA + recovery handled); Workspace-for-Education accounts anchor the under-13 consent story |
+| Behavioral capture | **Append-only `interaction_event` (Postgres JSONB) + async `/events` ingest** | Full raw interaction stream (keystrokes, drags, dwell) off the turn loop; derived offline into HelpNeed-v2 features |
+| LLM tracing | **LangSmith** (wraps the `llm/` provider) | Per-call cost/latency/prompt observability at the one provider seam; tracing-only, no LangChain adoption |
 
 Type contracts are generated from the backend Pydantic schemas into TypeScript, so the API
 shape is enforced on both sides from one source of truth.
@@ -394,8 +398,10 @@ backend/
     policy/           # State transitions, refuse-rules, interleaving logic
     helpneed/         # HelpNeed predictor: training + inference
     tutor/            # Session loop, problem presentation
+    auth/             # Google OIDC token verification + current-learner resolution
+    events/           # Behavioral-event schema + async ingestion service (telemetry)
     api/              # FastAPI routes (thin; call services)
-    db/               # SQLAlchemy models + migrations
+    db/               # SQLAlchemy models + migrations + repositories
     llm/              # Provider abstraction (the ONLY place LLMs are called)
   tests/              # Mirrors app/
 
@@ -404,6 +410,8 @@ frontend/
     components/       # React components (+ Storybook stories)
     workspace/        # Custom SVG: FractionBar, NumberLine, SymbolicEditor
     state/            # State machines for surface transitions
+    telemetry/        # Raw-interaction instrumentation: buffers + flushes to /events
+    auth/             # Google Sign-In button + ID-token handling
     api/              # API client (generated from Pydantic types)
     pages/            # Top-level routes
 
@@ -430,6 +438,108 @@ These are the rules that keep the system honest and fast. Breaking one is a bug,
    route handlers; DB queries stay in repositories.
 6. **The UI obeys the refuse-rules** (Section 7): no mid-problem state change, no silent removal
    of learner work, always-labeled transitions, no auto-help in the first 60 seconds.
+7. **Telemetry and persistence never block a turn.** Behavioral event capture and
+   session/mastery writes happen alongside or after the response, never on the sub-100 ms
+   decision path. The `/events` stream is fire-and-forget; a lost or slow event must never
+   break, delay, or change a turn's outcome.
+8. **Identity is verified at the boundary and never reaches the reasoning core.** Google ID
+   tokens are verified in `auth/` and resolved to a learner in the API layer; identity does
+   not flow into the mastery model, the policy, or the LLM (extends invariant 3 — the system
+   reasons over *knowledge state*, not over *who* the learner is).
+9. **Capture richly, act conservatively.** The full behavioral stream exists to improve
+   *understanding* (HelpNeed, mastery, evaluation). It does not widen what the UI does
+   automatically: interventions remain governed by the refuse-rules and the sustained-signal
+   gate (Section 8). "Hyperresponsive" means the model understands deeply — not that the
+   interface twitches on every signal.
+
+---
+
+## 15. The persistent learner: identity, continuity & behavioral capture
+
+The sections above describe one session in isolation. This section describes how a learner
+becomes *continuous* — recognized across devices and across time — and how we capture the
+full picture of *how* they work, not just whether they were right. The motivating goal: to
+help a student well, the system needs to understand what they need and when they need it,
+across a phone, a tablet, and a return after days away. The governing constraint is invariant
+9 — **capture richly, act conservatively**: everything here feeds *understanding*, never a
+twitchier interface.
+
+### 15.1 Identity — Google Sign-In (OIDC)
+
+Authentication is delegated to Google. The frontend uses Google Identity Services to obtain an
+**ID token**; the backend's `auth/` module verifies that token (signature against Google's
+JWKS, audience = our client ID, issuer + expiry) and resolves it to a learner keyed by the
+Google account id (the `sub` claim). **We never store passwords** — delegating to Google means
+no credential storage, no reset flows, and Google handles MFA, recovery, and breach detection.
+This is deliberately safer than a hand-rolled auth system (OWASP's "don't build your own auth").
+
+The learner profile we keep is minimal: the Google `sub`, a display name, an optional email,
+and `created_at`. Identity stops at the API boundary: per invariant 8, `sub` never flows into
+the mastery model, the policy, or the LLM.
+
+**Under-13 / COPPA.** Personal Google accounts require age 13+. The intended path for 6th–7th
+graders is **Google Workspace for Education** (school-issued accounts), where the *school* is
+the consent authority under COPPA's school-consent provision — a cleaner posture than us
+collecting parental consent directly. The exact consent posture (Workspace-only vs. also
+allowing 13+ personal accounts with a notice) is a flagged decision recorded in `PROJECT.md`,
+not silently locked here. Data minimization and a stated retention policy apply regardless,
+because this is children's data.
+
+### 15.2 Continuity — server-side session persistence & resumption
+
+Today the session lives in an in-memory store; for a continuous learner it must be durable.
+The existing `Session` / `Turn` / `MasteryState` tables become the source of truth via a
+repository in `db/`, keyed to `learner_id`:
+
+- **Mastery persists across sessions.** `MasteryState` (BKT per KC) is per-learner, so progress
+  carries over no matter which device the learner returns on or how long they were away.
+- **Sessions are resumable.** An open session (`ended_at` null) can be rehydrated into a live
+  `TutorSession` from its persisted turns + mastery; on login the learner can continue where
+  they left off or start fresh.
+- **Cross-device is automatic.** The same Google login on any device resolves to the same
+  `learner_id` and therefore the same persisted state.
+
+Persistence is a write that happens alongside or after the response, never on the sub-100 ms
+decision path (invariant 7). Routes stay thin; the repository is called from services.
+
+### 15.3 Full raw behavioral capture
+
+We capture the **full raw interaction stream**, not just per-turn outcomes, because *how* a
+learner works a problem is the signal that distinguishes confident-wrong from struggling, and
+genuine understanding from lucky wandering — signals a chat box or a static walkthrough
+physically cannot collect.
+
+- **What.** Keystrokes with timing, edits/backspaces, number-line drag paths (oscillation /
+  overshoot around the target), fraction-bar interactions, focus/blur, idle, hint open + dwell,
+  and submit — instrumented in the frontend `telemetry/` layer.
+- **Transport.** Events are buffered client-side and flushed asynchronously to a new `/events`
+  endpoint — **off the turn loop** (invariant 7). Fire-and-forget with retry; never blocking an
+  answer.
+- **Storage.** An append-only `interaction_event` table (`learner_id`, `session_id`,
+  `turn_index`, `event_type`, `payload` JSONB, `client_ts`, `server_ts`), write-optimized for
+  volume. Payloads are interaction telemetry only — no free-text or PII.
+- **Use.** Features are derived from the stream **offline / async** into a tutor-native
+  **HelpNeed v2** (retiring the proxied columns the EDM-Cup-trained v1 leans on). Derived signal
+  feeds the *gated, observe-then-act* HelpNeed path (Section 8) — it never drives a live turn
+  decision directly.
+
+### 15.4 Where this sits in the loop (and where it must not)
+
+```mermaid
+flowchart LR
+    L((Learner)) -->|Google ID token| AUTH["auth/ · verify OIDC"]
+    AUTH -->|learner_id| API["Turn Loop / API"]
+    API <-->|persist / rehydrate| REPO["db/ repositories<br/>Session · Turn · MasteryState"]
+    L -. "raw interactions (async, off-path)" .-> EV["/events ingest · events/"]
+    EV --> IE[("interaction_event")]
+    IE -. "offline derivation" .-> HN["HelpNeed v2 features"]
+    HN -. "observe → gated" .-> POL["Policy (refuse-rules + sustained gate)"]
+```
+
+The solid path (auth → turn loop → persistence) is request-time but kept off the sub-100 ms
+decision critical path; the dotted paths (event capture, offline feature derivation) are
+explicitly asynchronous. Nothing in this section may move what the UI does *automatically*
+mid-problem — that remains the refuse-rules' and the sustained-signal gate's job.
 
 ---
 
