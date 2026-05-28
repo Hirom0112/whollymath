@@ -1,0 +1,82 @@
+/* S3 fraction-bar workspace — partition + shade an area model (Slice 2.5).
+   Unique `wm-fbar` prefix (plain global CSS — names must not collide). */
+
+.wm-fbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.wm-fbar-partition {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wm-fbar-partition-label {
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}
+
+.wm-fbar-step {
+  width: 34px;
+  height: 34px;
+  font-family: var(--wm-font-sans);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--wm-ink);
+  background: var(--wm-cream-2);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.wm-fbar-step:hover:not(:disabled) {
+  background: var(--wm-blue-soft);
+}
+
+.wm-fbar-step:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wm-fbar-count {
+  min-width: 24px;
+  text-align: center;
+  font-family: var(--wm-font-sans);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--wm-ink);
+}
+
+.wm-fbar-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.wm-fbar-cell {
+  fill: var(--wm-cream-2);
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: fill 0.1s ease;
+}
+
+.wm-fbar-cell:hover {
+  fill: var(--wm-blue-soft);
+}
+
+.wm-fbar-cell--filled {
+  fill: var(--wm-blue-bright);
+}
+
+.wm-fbar-cell:focus-visible {
+  outline: none;
+  stroke-width: 4;
+}

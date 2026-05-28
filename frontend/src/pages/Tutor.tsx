@@ -7,10 +7,19 @@ import {
   type SurfaceState,
   type TurnResponse,
 } from '../api';
-import { fractionToAnswer, NumberLine, SymbolicEditor, type FractionValue } from '../workspace';
+import {
+  barToAnswer,
+  FractionBar,
+  fractionToAnswer,
+  NumberLine,
+  SymbolicEditor,
+  type BarValue,
+  type FractionValue,
+} from '../workspace';
 import './Tutor.css';
 
 const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
+const EMPTY_BAR: BarValue = { segments: 2, shaded: 0 };
 
 /**
  * The in-tutor problem surface (Turn 1 onward). Drives the real reactive loop
@@ -47,6 +56,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const [answer, setAnswer] = useState('');
   const [fraction, setFraction] = useState<FractionValue>(EMPTY_FRACTION);
   const [tick, setTick] = useState<number | null>(null);
+  const [bar, setBar] = useState<BarValue>(EMPTY_BAR);
   const [phase, setPhase] = useState<Phase>('answering');
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -63,6 +73,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // a plain field until its manipulative lands (FractionBar S3).
   const isSymbolic = problem.surface_format === 'symbolic';
   const isNumberLine = problem.surface_format === 'number_line' && problem.tick_segments != null;
+  const isAreaModel = problem.surface_format === 'area_model';
 
   let submittedAnswer: string;
   let canSubmit: boolean;
@@ -72,6 +83,9 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   } else if (isNumberLine) {
     submittedAnswer = tick === null ? '' : `${String(tick)}/${String(problem.tick_segments)}`;
     canSubmit = tick !== null;
+  } else if (isAreaModel) {
+    submittedAnswer = barToAnswer(bar);
+    canSubmit = submittedAnswer !== '';
   } else {
     submittedAnswer = answer;
     canSubmit = answer.trim() !== '';
@@ -127,6 +141,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     setAnswer('');
     setFraction(EMPTY_FRACTION);
     setTick(null);
+    setBar(EMPTY_BAR);
     setHint(null);
     setHintUsed(false);
     setResult(null);
@@ -156,6 +171,8 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
                 onChange={setTick}
                 disabled={phase === 'submitting'}
               />
+            ) : isAreaModel ? (
+              <FractionBar value={bar} onChange={setBar} disabled={phase === 'submitting'} />
             ) : (
               <>
                 <label className="wm-tutor-label" htmlFor="wm-answer">
