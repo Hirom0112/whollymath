@@ -1,15 +1,19 @@
-"""The tutor session loop + two-step cold start (Slice 1.7).
+"""The tutor session loop + two-step cold start (Slices 1.7, 2.6).
 
-This is the tutor scaffolding for Week 1 (PROJECT.md §6): the in-memory session
-orchestrator that "walks a hardcoded session correctly". It is a *service* — it
-ORCHESTRATES the already-built, already-tested Layer-1 domain and the mastery
-model; it never re-implements their jobs (CLAUDE.md §7 boundaries). Concretely:
+This is the tutor scaffolding (PROJECT.md §6): the in-memory session orchestrator
+that walks a session correctly. It is a *service* — it ORCHESTRATES the
+already-built, already-tested Layer-1 domain, the mastery model, and the §3.6
+adaptation policy; it never re-implements their jobs (CLAUDE.md §7 boundaries).
+Concretely:
 
   - SymPy correctness is the verifier's job, called via ``domain.verifier.verify``
     — there is NO direct SymPy here beyond carrying the ``Rational`` values the
     domain hands back (CLAUDE.md §8.2, ARCHITECTURE.md §14 invariant 2/5);
   - the mastery probability and the §3.4 rules are the mastery model's job, called
     via ``mastery.mastery_model`` — no BKT math is re-derived here;
+  - the next surface state is the policy's job, called via
+    ``policy.transitions.next_transition`` and GATED by ``policy.refuse_rules`` —
+    no transition table is re-derived here (ARCHITECTURE.md §7);
   - there is NO LLM anywhere on this path (CLAUDE.md §8.1, ARCHITECTURE.md §14
     invariant 1: nothing in the turn loop calls a model provider);
   - there is NO DB persistence — the session lives in memory. Repositories /
@@ -17,7 +21,7 @@ model; it never re-implements their jobs (CLAUDE.md §7 boundaries). Concretely:
     deterministic so the persona harness can drive it reproducibly (PROJECT.md
     §4.1).
 
-What this slice DOES implement:
+What this module implements:
 
   1. **The two-step cold start, locked in decision 0.D.2.** Turn 0 is a
      kid-friendly routing question (three equal-weight KC options + a
@@ -27,17 +31,25 @@ What this slice DOES implement:
      problem in the chosen route, built from the LOCKED 0.D.2 items. The
      self-report is never echoed to the learner; predicted-vs-actual is logged as
      a metacognitive-calibration signal only and is NOT acted on.
-  2. **The session loop, S1 only.** Present a problem in S1 (symbolic focus, the
-     default fluent state — ARCHITECTURE.md §7), accept a submitted answer, call
-     the domain verifier, build a mastery ``Observation`` from the turn, update
-     the in-session mastery view, append the turn to an in-memory history, and
-     return a result. The surface stays S1 for the whole week: state TRANSITIONS
-     and the reactive policy are Slice 2.4 (PROJECT.md §3.6 NOTE), explicitly out
-     of scope here. This module does not import or touch any policy logic.
+  2. **The reactive session loop (Slice 2.6).** Present a problem, accept a
+     submitted answer, call the domain verifier, build a mastery ``Observation``,
+     update the in-session mastery view, append the turn to history, and APPLY the
+     §3.6 policy BETWEEN problems. The surface may now move S1↔S2↔S3↔S4: the loop
+     maintains the two counters ``next_transition`` routes on
+     (``consecutive_correct_no_hint_in_state``, ``consecutive_errors``), asks the
+     policy for the next transition on each answer's ``AnswerOutcome``, and applies
+     the resulting ``StateChange`` to ``surface_state`` — but ONLY when the
+     refuse-rules permit it (refuse-rule 1: state changes happen BETWEEN problems,
+     not mid-problem; refuse-rule 3: idle never changes state, structurally
+     enforced by ``next_transition``; refuse-rule 4: every applied transition
+     carries a non-empty label). S5/the transfer probe is deliberately NOT wired
+     here — that is Slice 3.7. An ``interleaved_set_passed`` hook is exposed so the
+     later slice can feed the mastery signal in, but it does not build or run the
+     probe.
 
-Determinism: ``TutorSession`` owns all its state (history + per-KC priors); there
-is no module-global mutable state. Generated problems are seeded. Same inputs ⇒
-same walk (PROJECT.md §4.1, CLAUDE.md §8.1).
+Determinism: ``TutorSession`` owns all its state (history + per-KC priors +
+counters + surface state); there is no module-global mutable state. Generated
+problems are seeded. Same inputs ⇒ same walk (PROJECT.md §4.1, CLAUDE.md §8.1).
 """
 
 from __future__ import annotations
@@ -63,16 +75,25 @@ from app.mastery.mastery_model import (
     kc_mastery_probability,
 )
 
-# SurfaceState is the canonical, closed UI-state vocabulary, owned by policy/
-# (ARCHITECTURE.md §4, §7 — the adaptation policy's vocabulary). The tutor imports
-# it forward (not backward from the API), so it and the API speak the same five
-# states. Week 1 only ever uses S1 (no transitions — Slice 2.4).
+# The §3.6 reactive policy (Slice 2.4) decides the next surface state from a turn's
+# outcome; the refuse-rules (§3.8) gate WHEN an applied transition is allowed. The
+# tutor consumes both — it never re-derives the transition table (CLAUDE.md §7;
+# ARCHITECTURE.md §7). ``InterleavedSetPassed`` is imported only so the
+# ``interleaved_set_passed`` hook can hand the mastery signal to the policy; the
+# transfer probe itself (S5) is Slice 3.7 and is NOT built here.
+from app.policy.refuse_rules import is_state_change_allowed
 from app.policy.surface_states import SurfaceState
+from app.policy.transitions import (
+    AnswerOutcome,
+    InterleavedSetPassed,
+    StateChange,
+    Transition,
+    next_transition,
+)
 
-# The surface this week is always S1 (the default fluent symbolic-focus state,
-# ARCHITECTURE.md §7). Naming it once makes the "S1 only, no transitions" scope
-# (PROJECT.md §3.6 NOTE) explicit and the day-Slice-2.4 change a single edit.
-_WEEK_ONE_SURFACE: SurfaceState = SurfaceState.SYMBOLIC_FOCUS
+# The surface starts in S1 (the default fluent symbolic-focus state,
+# ARCHITECTURE.md §7). From Slice 2.6 the loop may move it via the §3.6 policy.
+_INITIAL_SURFACE: SurfaceState = SurfaceState.SYMBOLIC_FOCUS
 
 
 # ─────────────────── Turn 0: the kid-friendly routing question (0.D.2) ───────────────────
@@ -269,8 +290,15 @@ class TurnResult:
     - ``feedback``                      one-line, label-shaped learner feedback. It
       never echoes the self-report/route (0.D.2). Rich LLM feedback is a later,
       off-path concern (ARCHITECTURE.md §14 invariant 1).
-    - ``surface_state``                 the surface AFTER the turn — S1 every time
-      this week (no transitions, Slice 2.4).
+    - ``surface_state``                 the surface AFTER the turn, AFTER the §3.6
+      policy has been applied between problems (Slice 2.6). May differ from the
+      state the turn happened in when a transition fired and the refuse-rules
+      allowed applying it.
+    - ``transition``                    the policy's decision for this turn — the
+      ``StateChange`` / ``NoChange`` / ``Nudge`` ``next_transition`` returned. Its
+      ``label`` is the §3.8-rule-4 one-line transition copy (always non-empty for a
+      ``StateChange``); the caller / log can read *why* the surface moved (or did
+      not). Frozen, carried straight through from the policy.
     - ``matched_misconception``         which named misconception fired, if any
       (passed straight through from the verifier for the diagnostic log).
     - ``mastery_snapshot``              per-KC mastery readout after the update.
@@ -280,6 +308,7 @@ class TurnResult:
     error_category: ErrorCategory
     feedback: str
     surface_state: SurfaceState
+    transition: Transition
     matched_misconception: MisconceptionId | None
     mastery_snapshot: tuple[MasterySnapshot, ...]
 
@@ -304,10 +333,11 @@ class MasterySnapshot:
 class Turn:
     """One recorded turn in the in-memory session history.
 
-    Holds everything the Week-1 checkpoint needs to "read the log and see expected
+    Holds everything the §6 checkpoint needs to "read the log and see expected
     behavior" (PROJECT.md §6): the ``Problem`` presented, the raw answer, the
     mastery ``Observation`` the loop built, the ``TurnResult`` returned, and the
-    surface the turn happened in (S1 this week). Frozen — history is append-only.
+    surface state the turn HAPPENED in (the state before this turn's §3.6
+    transition applied). Frozen — history is append-only.
     """
 
     problem: Problem
@@ -322,7 +352,7 @@ class Turn:
 
 @dataclass
 class TutorSession:
-    """An in-memory, deterministic tutor session (Slice 1.7).
+    """An in-memory, deterministic tutor session (Slices 1.7, 2.6).
 
     Owns ALL its state — there is no module-global mutable state, so two sessions
     never interfere and a persona harness can run many in parallel reproducibly
@@ -333,7 +363,12 @@ class TutorSession:
       modestly higher, everything else at the unsure default, all far below τ.
     - ``current_problem`` the problem currently presented (Turn 1 = the calibration
       item; later turns = whatever ``present_problem`` set).
-    - ``surface_state``  always S1 this week (transitions are Slice 2.4).
+    - ``surface_state``  the current UI surface state. Starts S1; from Slice 2.6 the
+      §3.6 policy may move it between problems (S1↔S2↔S3↔S4).
+    - ``_consecutive_correct_no_hint_in_state`` / ``_consecutive_errors`` the two
+      running counters the §3.6 rate rules route on (transitions.py
+      ``AnswerOutcome``). The tutor owns and maintains them; the policy is stateless
+      and reads them off the ``AnswerOutcome`` it is handed.
     - ``_history``       append-only list of completed ``Turn`` records.
     - ``calibration_signal`` the 0.D.2 metacognitive signal, set when the FIRST
       turn after cold start is answered; logged, never acted on.
@@ -346,9 +381,14 @@ class TutorSession:
     _priors: dict[KnowledgeComponentId, float]
     _self_reported_kc: KnowledgeComponentId | None
     _params: BktParams = DEFAULT_BKT_PARAMS
-    surface_state: SurfaceState = _WEEK_ONE_SURFACE
+    surface_state: SurfaceState = _INITIAL_SURFACE
     calibration_signal: CalibrationSignal | None = None
     _history: list[Turn] = field(default_factory=list)
+    # The §3.6 counters (transitions.py AnswerOutcome). "In state" means since the
+    # last state change: a state change resets the unhinted-correct streak because
+    # the fade rule (§3.6 row 3) is about fluency in the CURRENT representation.
+    _consecutive_correct_no_hint_in_state: int = 0
+    _consecutive_errors: int = 0
 
     # ── construction: the two-step cold start (0.D.2) ──
 
@@ -367,7 +407,8 @@ class TutorSession:
              ``chosen_kc`` is None (unsure default), that is the equivalence
              calibration (0.D.2).
 
-        The surface starts in S1 (the only state this week).
+        The surface starts in S1 (the default fluent state); from Slice 2.6 the
+        §3.6 policy may move it between problems.
         """
         priors = {
             kc: initial_prior_from_self_report(kc, chosen_kc=chosen_kc)
@@ -419,6 +460,24 @@ class TutorSession:
         """
         return self._history[-1] if self._history else None
 
+    @property
+    def consecutive_correct_no_hint_in_state(self) -> int:
+        """The current run of correct, unhinted answers in the CURRENT state (§3.6).
+
+        Read-only view of the counter the §3.6 fade rule (row 3) routes on. Resets
+        to 0 on a wrong answer, on a hinted answer, or on a state change.
+        """
+        return self._consecutive_correct_no_hint_in_state
+
+    @property
+    def consecutive_errors(self) -> int:
+        """The current run of consecutive wrong answers across the session (§3.6).
+
+        Read-only view of the counter the §3.6 stuck rule (row 4: 2+ errors → S4)
+        routes on. Resets to 0 on any correct answer.
+        """
+        return self._consecutive_errors
+
     def mastery_probability(self, kc: KnowledgeComponentId) -> float:
         """The current in-session BKT probability for ``kc``.
 
@@ -435,7 +494,7 @@ class TutorSession:
         params = self._params_with_prior(kc)
         return kc_mastery_probability(kc, observations, params=params)
 
-    # ── the session loop (S1 only) ──
+    # ── the reactive session loop (Slice 2.6) ──
 
     def present_problem(
         self,
@@ -444,11 +503,14 @@ class TutorSession:
         seed: int,
         surface_format: Representation = Representation.SYMBOLIC,
     ) -> Problem:
-        """Present a fresh generated problem for ``kc`` in S1, deterministically.
+        """Present a fresh generated problem for ``kc``, deterministically.
 
         Delegates problem construction to the Layer-1 generator (seeded ⇒
-        reproducible). The surface stays S1: this slice never changes state
-        (transitions are Slice 2.4, PROJECT.md §3.6 NOTE). Returns the problem now
+        reproducible). Presenting a problem does NOT change ``surface_state``: state
+        transitions are applied at ANSWER time, between problems (refuse-rule 1,
+        §3.8). The caller chooses which KC/format to present next (the harness
+        interleaves KCs and formats here); the surface state the learner sees is
+        whatever the last applied transition left it in. Returns the problem now
         showing so a caller can read its correct value.
         """
         problem = generate_problem(kc, seed, surface_format)
@@ -462,24 +524,30 @@ class TutorSession:
         latency_ms: int,
         hint_used: bool = False,
     ) -> TurnResult:
-        """Process one learner answer to the current problem (the turn loop, S1).
+        """Process one learner answer to the current problem (the reactive turn loop).
 
-        The orchestration, in the order ARCHITECTURE.md §10 prescribes — minus the
-        policy/LLM steps that belong to later slices:
+        The orchestration, in the order ARCHITECTURE.md §10 prescribes (minus the
+        LLM surface step, which is off-path — §8.1):
 
           1. **verify** the answer against the current problem with the DOMAIN
              verifier (SymPy decides; this service never judges math — §8.2);
           2. build a mastery **Observation** from the turn (kc, correct,
              representation = the problem's surface format, hinted, latency_ms);
-          3. **update the in-session mastery view** by appending the observation to
+          3. **update the in-session mastery view** by folding the observation into
              history and asking the mastery model for the fresh probability and
              declaration (no BKT re-derivation here — §7);
-          4. **append** the completed turn to the in-memory history;
-          5. return a ``TurnResult`` — correct?, error category, a one-line
-             feedback label, and the per-KC mastery snapshot.
+          4. **update the §3.6 counters** from this answer, then ask the policy for
+             the next transition and APPLY it between problems, gated by the
+             refuse-rules (see ``_apply_policy``);
+          5. **append** the completed turn to history (recording the state the turn
+             HAPPENED in), and return a ``TurnResult`` carrying the verdict, the
+             one-line feedback, the policy ``transition``, and the per-KC mastery
+             snapshot.
 
-        The surface state returned is S1 (unchanged) every time: NO transition this
-        week (Slice 2.4). The feedback never echoes the self-report (0.D.2).
+        The ``TurnResult.surface_state`` is the state AFTER the policy applied
+        (Slice 2.6): it equals the pre-turn state when the policy did not move, or
+        the new state when a ``StateChange`` fired and the refuse-rules allowed it.
+        The feedback never echoes the self-report (0.D.2).
 
         Side effect besides history: on the FIRST answered turn it records the
         0.D.2 ``calibration_signal`` (predicted-vs-actual) — logged, never acted on.
@@ -495,17 +563,31 @@ class TutorSession:
             latency_ms=latency_ms,
         )
 
-        # Append BEFORE computing the snapshot so the mastery view reflects this
-        # turn (the update step). History is the session's mastery evidence.
-        # We build the Turn after the snapshot so it can carry the result.
+        # The mastery view reflects this turn: fold the new observation into history
+        # before computing the snapshot (the update step). History is the session's
+        # mastery evidence; we build the Turn after, so it can carry the result.
         provisional_history = [t.observation for t in self._history] + [observation]
         snapshot = self._mastery_snapshot(problem.kc, provisional_history)
+
+        # The state the turn HAPPENED in — recorded on the Turn, and the "current"
+        # state the policy routes FROM. The transition (if any) applies AFTER, so the
+        # learner answered this problem entirely in one state (refuse-rule 1).
+        state_during_turn = self.surface_state
+
+        # §3.6: update the two counters from this answer, then apply the policy
+        # between problems (gated by the refuse-rules). This mutates surface_state.
+        transition = self._apply_policy(
+            is_correct=verdict.is_correct,
+            error_category=verdict.error_category,
+            hint_used=hint_used,
+        )
 
         result = TurnResult(
             correct=verdict.is_correct,
             error_category=verdict.error_category,
             feedback=_feedback_line(verdict.is_correct, verdict.error_category),
-            surface_state=self.surface_state,  # S1, unchanged (no transitions)
+            surface_state=self.surface_state,  # the state AFTER the policy applied
+            transition=transition,
             matched_misconception=verdict.matched_misconception,
             mastery_snapshot=snapshot,
         )
@@ -516,7 +598,7 @@ class TutorSession:
                 submitted=submitted,
                 observation=observation,
                 result=result,
-                surface_state=self.surface_state,
+                surface_state=state_during_turn,
             )
         )
 
@@ -530,6 +612,103 @@ class TutorSession:
             )
 
         return result
+
+    def interleaved_set_passed(self, kc: KnowledgeComponentId) -> Transition:
+        """Hand the mastery model's interleaved-set-passed signal to the policy (§3.6 row 6).
+
+        Slice 2.6 wires the S1↔S2↔S3↔S4 reactive loop. The S5 transfer probe is
+        Slice 3.7; this hook exists so that later slice can feed the
+        ``InterleavedSetPassed`` mastery signal in and let the policy route to S5,
+        WITHOUT this slice building or running the probe. The mastery model decides
+        when the set is passed (ARCHITECTURE.md §6); the tutor does not re-derive
+        that here — it forwards the verdict as the policy's ``InterleavedSetPassed``
+        input. The resulting ``StateChange`` is applied between problems via the same
+        refuse-rule gate as any other transition.
+        """
+        transition = next_transition(self.surface_state, InterleavedSetPassed(kc=kc))
+        self._apply_transition(transition)
+        return transition
+
+    # ── internals: the reactive policy step (Slice 2.6) ──
+
+    def _apply_policy(
+        self,
+        *,
+        is_correct: bool,
+        error_category: ErrorCategory,
+        hint_used: bool,
+    ) -> Transition:
+        """Update the §3.6 counters from this answer, route, and apply the transition.
+
+        The order matters and follows the ``AnswerOutcome`` contract (transitions.py):
+        the counters describe the session AFTER this answer, so we update them FIRST,
+        then build the outcome the policy routes on:
+
+          - ``_consecutive_errors``: +1 on a wrong answer, reset to 0 on a correct one
+            (§3.6 row 4: "2+ consecutive errors → S4 from any state").
+          - ``_consecutive_correct_no_hint_in_state``: +1 only on a correct, UNHINTED
+            answer; reset to 0 on a wrong answer OR a hinted one. This is how "2
+            correct without hints" (§3.6 row 3) is enforced — a hinted turn never
+            advances the streak, so a hinted run never fades the scaffold.
+
+        ``next_transition`` then decides the move from the CURRENT state. Applying it
+        is gated by ``_apply_transition`` on the refuse-rules. Returns the policy's
+        decision (a ``StateChange`` / ``NoChange`` / ``Nudge``) so the caller can put
+        it on the ``TurnResult`` and the log can read why the surface moved.
+        """
+        if is_correct:
+            self._consecutive_errors = 0
+            if not hint_used:
+                self._consecutive_correct_no_hint_in_state += 1
+            else:
+                self._consecutive_correct_no_hint_in_state = 0
+        else:
+            self._consecutive_errors += 1
+            self._consecutive_correct_no_hint_in_state = 0
+
+        outcome = AnswerOutcome(
+            is_correct=is_correct,
+            error_category=error_category,
+            hint_used=hint_used,
+            consecutive_correct_no_hint_in_state=self._consecutive_correct_no_hint_in_state,
+            consecutive_errors=self._consecutive_errors,
+        )
+        transition = next_transition(self.surface_state, outcome)
+        self._apply_transition(transition)
+        return transition
+
+    def _apply_transition(self, transition: Transition) -> None:
+        """Apply a policy transition to ``surface_state``, gated by the refuse-rules (§3.8).
+
+        Refuse-rule 1 (transitions.py / refuse_rules.py): a state change applies only
+        BETWEEN problems, never mid-problem. ``submit_answer`` calls this AFTER the
+        current problem has been answered, so the problem is no longer in progress and
+        ``is_state_change_allowed`` is satisfied here — but we route the decision
+        through the guard explicitly so the rule is enforced in one place and a future
+        mid-problem caller cannot bypass it.
+
+        Only a ``StateChange`` moves the surface. A ``NoChange`` / ``Nudge`` leaves
+        the state put (refuse-rule 3: idle never changes state — structurally
+        guaranteed upstream because an ``IdleNudge`` can only yield a ``Nudge`` /
+        ``NoChange``). Refuse-rule 4 (every applied transition carries a non-empty
+        label) is upheld by ``StateChange`` always carrying one; we assert it as a
+        guard rather than trusting it silently.
+
+        Applying a state change resets the unhinted-correct streak: "2 correct without
+        hints in the CURRENT state" (§3.6 row 3) is per-state, so a fresh state starts
+        the count over. The error counter is NOT reset here — "2+ consecutive errors"
+        (row 4) spans states and is reset only by a correct answer.
+        """
+        if not isinstance(transition, StateChange):
+            return
+        # The problem that triggered this transition has been answered, so no problem
+        # is in progress at the point of application (refuse-rule 1).
+        if not is_state_change_allowed(problem_in_progress=False):
+            return  # pragma: no cover — defensive; submit_answer always applies post-answer
+        assert transition.label, "refuse-rule 4: a state change must carry a label"
+        self.surface_state = transition.to_state
+        # Per-state streak resets on entering a new state (§3.6 row 3 is in-state).
+        self._consecutive_correct_no_hint_in_state = 0
 
     # ── internals ──
 
@@ -579,8 +758,10 @@ def _feedback_line(correct: bool, error_category: ErrorCategory) -> str:
     render it as the transition label.
 
     The wrong-answer copy is non-judgmental and points at the workspace rather than
-    revealing the answer (protects productive struggle, refuse-rule 5). It does not
-    name a state change because there is none this week (S1 only).
+    revealing the answer (protects productive struggle, refuse-rule 5). This is the
+    per-answer verdict line; the SEPARATE one-line transition copy (when the §3.6
+    policy moves the surface) is the ``Transition.label`` carried on the
+    ``TurnResult`` (refuse-rule 4 lives there — see ``_apply_transition``).
     """
     if correct:
         return "Correct — nice work."
