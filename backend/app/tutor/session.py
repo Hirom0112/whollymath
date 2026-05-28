@@ -75,6 +75,11 @@ from app.mastery.mastery_model import (
     kc_mastery_probability,
 )
 
+# A persona config is the synthetic learner the probe evaluates against in the harness
+# (the production surface would supply a real learner's S5 answers; the harness drives
+# the deterministic Layer-3 simulator — ARCHITECTURE.md §5, §11).
+from app.personas.persona_config import PersonaConfig
+
 # The §3.6 reactive policy (Slice 2.4) decides the next surface state from a turn's
 # outcome; the refuse-rules (§3.8) gate WHEN an applied transition is allowed. The
 # tutor consumes both — it never re-derives the transition table (CLAUDE.md §7;
@@ -87,9 +92,18 @@ from app.policy.transitions import (
     AnswerOutcome,
     InterleavedSetPassed,
     StateChange,
+    TransferProbeFailed,
     Transition,
     next_transition,
 )
+
+# Slice 3.7: the S5 transfer probe. The tutor consumes it — when the surface reaches
+# S5 (the interleaved set passed, §3.6 row 6), it runs the probe and routes the
+# verdict: on PASS it confirms mastery; on FAIL it emits the policy's
+# ``TransferProbeFailed`` signal, which demotes the learner to S2/S3 (§3.6 row 7).
+# The probe itself owns item generation and evaluation (CLAUDE.md §7 boundaries); the
+# tutor never re-derives transfer-item logic here.
+from app.tutor.transfer_probe import TransferProbeResult, run_transfer_probe
 
 # The surface starts in S1 (the default fluent symbolic-focus state,
 # ARCHITECTURE.md §7). From Slice 2.6 the loop may move it via the §3.6 policy.
@@ -384,6 +398,12 @@ class TutorSession:
     surface_state: SurfaceState = _INITIAL_SURFACE
     calibration_signal: CalibrationSignal | None = None
     _history: list[Turn] = field(default_factory=list)
+    # Slice 3.7: the KCs whose PROVISIONAL mastery the S5 transfer probe has CONFIRMED
+    # (PROJECT.md §3.4: mastery is provisional until the probe is passed). A KC enters
+    # this set only when ``run_transfer_probe`` passes both §3.9 transfer items; a
+    # failed probe never adds it (and routes a demotion instead). Owned by the session
+    # so two sessions never share confirmation state (reproducibility, PROJECT.md §4.1).
+    _confirmed_kcs: set[KnowledgeComponentId] = field(default_factory=set)
     # The §3.6 counters (transitions.py AnswerOutcome). "In state" means since the
     # last state change: a state change resets the unhinted-correct streak because
     # the fade rule (§3.6 row 3) is about fluency in the CURRENT representation.
@@ -628,6 +648,93 @@ class TutorSession:
         transition = next_transition(self.surface_state, InterleavedSetPassed(kc=kc))
         self._apply_transition(transition)
         return transition
+
+    def is_confirmed(self, kc: KnowledgeComponentId) -> bool:
+        """Whether ``kc``'s provisional mastery has been CONFIRMED by the S5 probe.
+
+        PROJECT.md §3.4: mastery is provisional until the transfer probe (S5) is
+        passed. A KC is confirmed only after ``run_transfer_probe`` passed BOTH §3.9
+        transfer items for it; a failed probe leaves it unconfirmed (and demoted).
+        """
+        return kc in self._confirmed_kcs
+
+    def run_transfer_probe(
+        self,
+        persona: PersonaConfig,
+        kc: KnowledgeComponentId,
+        *,
+        representation_seed: int = 0,
+        error_finding_seed: int = 0,
+    ) -> TransferProbeResult:
+        """Run the S5 transfer probe for ``kc`` and route its verdict (Slice 3.7).
+
+        This is the S5 step the reactive loop reaches after the interleaved set passes
+        (``interleaved_set_passed`` moved the surface to S5, §3.6 row 6). It is the
+        moment of truth that turns PROVISIONAL mastery into CONFIRMED — or demotes it
+        (PROJECT.md §3.4, §3.9; ARCHITECTURE.md §6).
+
+        The surface MUST be in S5 to run the probe: S5 IS the transfer test (§3.5), so
+        running it from any other state would be out of sequence. We fail loudly rather
+        than silently probe from the wrong state (CLAUDE.md §8.5).
+
+        The probe is presented in a representation DIFFERENT from the learner's recent
+        work on this KC (§3.9 representation transfer). We read that recent format from
+        the session history (the format of the most recent answered item for ``kc``),
+        defaulting to the KC's primary representation if the KC has not been seen — so
+        the transfer item is, by construction, not the format the learner just drilled.
+
+        Routing the verdict (the wiring §3.6 row 6 → S5 → probe → confirm/demote):
+          - BOTH items passed → mark ``kc`` CONFIRMED. (No state change here: S5 ends
+            the run for this KC; the policy's S5 → mastery-confirmed edge is the end of
+            the §3.6 walk, ARCHITECTURE.md §7.)
+          - either item failed → emit the policy ``TransferProbeFailed(kc)`` signal and
+            APPLY the resulting demotion (to S2 for a magnitude KC, S3 for an operation
+            KC), gated by the refuse-rules like any transition. ``kc`` is NOT confirmed.
+
+        Deterministic: the probe's items are seeded and the simulator is deterministic,
+        so the same (persona, KC, recent format, seeds) yields the same verdict and the
+        same routing every call (PROJECT.md §4.1).
+        """
+        if self.surface_state is not SurfaceState.TRANSFER_PROBE:
+            raise ValueError(
+                "the transfer probe runs only in S5 (TRANSFER_PROBE); current state is "
+                f"{self.surface_state.value}. Reach S5 via interleaved_set_passed first."
+            )
+
+        recent_format = self._recent_format_for(kc)
+        result = run_transfer_probe(
+            persona,
+            kc,
+            recent_format=recent_format,
+            representation_seed=representation_seed,
+            error_finding_seed=error_finding_seed,
+        )
+
+        if result.passed:
+            # CONFIRMED: provisional mastery becomes confirmed (§3.4). The §3.6 S5 →
+            # mastery-confirmed edge ends the walk for this KC; no demotion transition.
+            self._confirmed_kcs.add(kc)
+        else:
+            # FAIL → demote. The policy owns the S5 → S2/S3 routing by the failed KC
+            # (§3.6 row 7); we forward the signal and apply the move between problems.
+            transition = next_transition(self.surface_state, TransferProbeFailed(failed_kc=kc))
+            self._apply_transition(transition)
+
+        return result
+
+    def _recent_format_for(self, kc: KnowledgeComponentId) -> Representation:
+        """The representation of the most recent answered item for ``kc`` in history.
+
+        Used to choose a DIFFERENT representation for the §3.9 representation-transfer
+        item ("a problem from a different representation than recent work", §3.5 S5).
+        Falls back to the KC's primary (first advertised) representation when the KC has
+        no history yet — so the probe still presents a format the learner has not just
+        worked in, by construction (the transfer item generator then picks another).
+        """
+        for turn in reversed(self._history):
+            if turn.problem.kc == kc:
+                return turn.problem.surface_format
+        return get_kc(kc).representations[0]
 
     # ── internals: the reactive policy step (Slice 2.6) ──
 
