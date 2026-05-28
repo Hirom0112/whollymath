@@ -30,7 +30,12 @@ class _RecordingProvider:
         self.calls: list[tuple[list[Message], Tier, str | None]] = []
 
     def complete(
-        self, messages: list[Message], *, tier: Tier = "standard", system: str | None = None
+        self,
+        messages: list[Message],
+        *,
+        tier: Tier = "standard",
+        system: str | None = None,
+        max_tokens: int = 1024,
     ) -> str:
         self.calls.append((messages, tier, system))
         return self.reply
@@ -38,7 +43,12 @@ class _RecordingProvider:
 
 class _FailingProvider:
     def complete(
-        self, messages: list[Message], *, tier: Tier = "standard", system: str | None = None
+        self,
+        messages: list[Message],
+        *,
+        tier: Tier = "standard",
+        system: str | None = None,
+        max_tokens: int = 1024,
     ) -> str:
         raise RuntimeError("model unavailable")
 
