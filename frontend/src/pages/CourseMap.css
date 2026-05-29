@@ -1,25 +1,48 @@
-/* Course map — the post-sign-in / demo home (Slice CP.A.2). Calm/product register (like the
-   tutor), warm cream page, navy ink, a vertical connected rail of skill nodes. Status color
-   reinforces the label + lock state (never the sole signal). Class names unique app-wide. */
+/* Course map — the post-sign-in / demo home (Slice CP.A.2). Themed to match the cold-start
+   "world": the fantasy-landscape backdrop with a navy wash, a dark translucent header plate so
+   the cream type reads on the busy scene, and cream skill cards standing on the world. The
+   mascot rolls in like a wheel (reusing the cold-start roll-in motion). Class names unique
+   app-wide. */
 
 .wm-coursemap {
   min-height: 100vh;
-  background: var(--wm-page-bg);
-  padding: 40px 20px 64px;
+  padding: 40px 20px 72px;
   display: flex;
   justify-content: center;
+  background:
+    linear-gradient(rgba(31, 44, 92, 0.5), rgba(31, 44, 92, 0.5)),
+    url('/cold-start-bg.avif') center / cover no-repeat fixed var(--wm-navy-deep);
+  color: var(--wm-ink);
+  font-family: var(--wm-font-sans);
 }
 
 .wm-coursemap-panel {
   width: 100%;
   max-width: 640px;
+  /* subtle entrance, like the cold-start panel */
+  opacity: 0;
+  transform: translateY(12px);
+  animation: wm-coursemap-rise 420ms ease-out 80ms forwards;
 }
 
+@keyframes wm-coursemap-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* A contained translucent plate behind the header text, so the cream type reads clearly on the
+   busy world (mirrors the cold-start head plate). */
 .wm-coursemap-head {
   display: flex;
   align-items: center;
   gap: 18px;
-  margin-bottom: 28px;
+  margin-bottom: 30px;
+  background: rgba(16, 23, 48, 0.62);
+  border-radius: 22px;
+  padding: 20px 26px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32);
 }
 
 .wm-coursemap-mascot {
@@ -27,6 +50,12 @@
   position: relative;
   width: 78px;
   height: 60px;
+  /* The wheel rolls in from the left, then a gentle idle bob (reuses the cold-start motion
+     language). Rotating the whole box around its centre reads as a rolling wheel. */
+  transform-origin: center;
+  animation:
+    wm-coursemap-rollin 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both,
+    wm-coursemap-bob 3.4s ease-in-out 2.1s infinite;
 }
 
 /* The shared Mascot is a 130x100 figure; scale it to a predictable footprint anchored
@@ -39,13 +68,48 @@
   transform-origin: top left;
 }
 
+@keyframes wm-coursemap-rollin {
+  0% {
+    transform: translateX(-115vw) rotate(-1080deg);
+  }
+  82% {
+    transform: translateX(10px) rotate(28deg);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+@keyframes wm-coursemap-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-coursemap-panel,
+  .wm-coursemap-mascot {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .wm-coursemap-card {
+    transition: none;
+  }
+}
+
 .wm-coursemap-headline {
   margin: 0 0 4px;
   font-family: var(--wm-font-serif);
   font-size: 30px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.4px;
-  color: var(--wm-navy-deep);
+  color: var(--wm-cream);
+  text-shadow: 0 2px 14px rgba(15, 22, 46, 0.55);
 }
 
 .wm-coursemap-subhead {
@@ -53,20 +117,21 @@
   font-family: var(--wm-font-sans);
   font-size: 15px;
   line-height: 1.45;
-  color: var(--wm-ink-soft);
+  color: var(--wm-cream-2);
 }
 
 .wm-coursemap-loading,
 .wm-coursemap-error {
   font-family: var(--wm-font-sans);
   font-size: 15px;
-  color: var(--wm-ink-soft);
-  padding: 12px 0;
+  color: var(--wm-cream);
+  padding: 12px 2px;
+  text-shadow: 0 1px 8px rgba(15, 22, 46, 0.6);
 }
 
 .wm-coursemap-error {
-  color: var(--wm-coral);
-  font-weight: 600;
+  color: var(--wm-yellow);
+  font-weight: 700;
 }
 
 .wm-coursemap-list {
@@ -148,35 +213,35 @@
   background: var(--wm-cream);
   border: 2px solid var(--wm-navy-deep);
   border-radius: 16px;
-  box-shadow: 0 6px 0 var(--wm-shadow);
+  box-shadow: 0 6px 0 var(--wm-navy-deep);
   cursor: pointer;
   font: inherit;
   transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease;
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    filter 0.14s ease;
 }
 
 .wm-coursemap-card:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 0 var(--wm-shadow);
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 var(--wm-navy-deep);
+  filter: brightness(1.03);
 }
 .wm-coursemap-card:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 3px 0 var(--wm-shadow);
+  transform: translateY(6px);
+  box-shadow: 0 0 0 var(--wm-navy-deep);
 }
 .wm-coursemap-card:focus-visible {
-  outline: none;
-  box-shadow:
-    0 6px 0 var(--wm-shadow),
-    0 0 0 4px var(--wm-blue-soft);
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 3px;
 }
 
 .wm-coursemap-card:disabled {
   cursor: default;
   background: var(--wm-cream-2);
-  border-color: #c9c0a6;
-  box-shadow: none;
-  opacity: 0.85;
+  border-color: #6b6750;
+  box-shadow: 0 4px 0 #6b6750;
+  opacity: 0.92;
 }
 
 .wm-coursemap-card-top {
