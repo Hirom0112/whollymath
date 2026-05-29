@@ -236,12 +236,32 @@
   outline-offset: 3px;
 }
 
+/* Per-skill soft tints (skill IDENTITY, not status — the badge carries status). Friendly,
+   varied, in the cold-start palette spirit. */
+.wm-coursemap-card--sky {
+  background: var(--wm-card-sky);
+}
+.wm-coursemap-card--mint {
+  background: var(--wm-card-mint);
+}
+.wm-coursemap-card--butter {
+  background: var(--wm-card-butter);
+}
+.wm-coursemap-card--warm {
+  background: var(--wm-card-warm);
+}
+.wm-coursemap-card--lavender {
+  background: var(--wm-card-lavender);
+}
+
+/* A locked card KEEPS a faded hint of its tint (so the path stays friendly + colorful), but
+   recedes: desaturated, dimmed, flatter, no press. The "Locked" badge + CTA carry the state. */
 .wm-coursemap-card:disabled {
   cursor: default;
-  background: var(--wm-cream-2);
   border-color: #6b6750;
   box-shadow: 0 4px 0 #6b6750;
-  opacity: 0.92;
+  filter: saturate(0.5);
+  opacity: 0.8;
 }
 
 .wm-coursemap-card-top {

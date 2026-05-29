@@ -36,6 +36,17 @@ const STATUS_META: Record<CourseNodeStatus, { label: string; cta: string | null 
   due_review: { label: 'Time to review', cta: 'Review' },
 };
 
+// A friendly soft tint per skill, by KC (stable — each skill always wears the same color), in
+// the cold-start palette spirit. The tint is skill IDENTITY, not status (the badge carries
+// status); it just makes the path warm and varied rather than five identical cards.
+const KC_TINT: Record<string, string> = {
+  KC_number_line_placement: 'sky',
+  KC_equivalence: 'mint',
+  KC_common_denominator: 'butter',
+  KC_addition_unlike: 'warm',
+  KC_subtraction_unlike: 'lavender',
+};
+
 function StatusBadge({ status }: { status: CourseNodeStatus }): React.JSX.Element {
   return (
     <span className={`wm-coursemap-badge wm-coursemap-badge--${status}`}>
@@ -64,7 +75,7 @@ function CourseNode({
       </span>
       <button
         type="button"
-        className="wm-coursemap-card"
+        className={`wm-coursemap-card wm-coursemap-card--${KC_TINT[node.kc_id] ?? 'sky'}`}
         disabled={locked}
         aria-disabled={locked}
         onClick={() => {
