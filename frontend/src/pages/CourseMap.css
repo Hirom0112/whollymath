@@ -24,9 +24,19 @@
 
 .wm-coursemap-mascot {
   flex: 0 0 auto;
-  width: 64px;
+  position: relative;
+  width: 78px;
+  height: 60px;
+}
+
+/* The shared Mascot is a 130x100 figure; scale it to a predictable footprint anchored
+   top-left so it sits beside the headline instead of overlapping it. */
+.wm-coursemap-mascot .wm-mascot-figure {
+  position: absolute;
+  top: 0;
+  left: 0;
   transform: scale(0.6);
-  transform-origin: center;
+  transform-origin: top left;
 }
 
 .wm-coursemap-headline {
