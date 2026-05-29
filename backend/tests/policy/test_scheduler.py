@@ -15,6 +15,7 @@ _ADD = KnowledgeComponentId.ADDITION_UNLIKE
 _SUB = KnowledgeComponentId.SUBTRACTION_UNLIKE
 _EQ = KnowledgeComponentId.EQUIVALENCE
 _NL = KnowledgeComponentId.NUMBER_LINE_PLACEMENT
+_CD = KnowledgeComponentId.COMMON_DENOMINATOR
 
 
 def test_schedule_is_not_one_kc_forever() -> None:
@@ -54,6 +55,19 @@ def test_masterable_live_is_honest_about_each_route() -> None:
     assert is_masterable_live(_SUB) is True
     assert is_masterable_live(_EQ) is True
     assert is_masterable_live(_NL) is True
+
+
+def test_common_denominator_is_schedulable_but_practice_only_for_now() -> None:
+    """A common-denominator lesson runs end-to-end (it has a companion, so the cadence turn never
+    KeyErrors), but is PRACTICE-ONLY: one live representation, so not yet masterable. The
+    AREA_MODEL alignment representation (which would make it masterable) lands with its widget."""
+    # The cadence turn (every 3rd item) must resolve a companion, not crash.
+    assert next_spec(_CD, 2)[0] == _EQ
+    # The goal turns are the common-denominator skill itself.
+    assert next_spec(_CD, 0)[0] == _CD
+    assert next_spec(_CD, 1)[0] == _CD
+    # Honest: one live representation today → not masterable until the second rep exists.
+    assert is_masterable_live(_CD) is False
 
 
 def test_placement_rotates_number_line_and_symbolic() -> None:

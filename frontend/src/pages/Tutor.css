@@ -23,6 +23,30 @@
   box-sizing: border-box;
 }
 
+.wm-tutor-back {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 14px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-blue-press);
+}
+
+.wm-tutor-back:hover {
+  text-decoration: underline;
+}
+
+.wm-tutor-back:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--wm-blue-soft);
+  border-radius: 6px;
+}
+
 .wm-tutor-mode {
   margin: 0 0 14px;
   font-family: var(--wm-font-sans);

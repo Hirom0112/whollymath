@@ -17,6 +17,9 @@ export default defineConfig({
       '/session': API_TARGET,
       '/turn': API_TARGET,
       '/eval': API_TARGET,
+      '/course': API_TARGET,
+      '/me': API_TARGET,
+      '/events': API_TARGET,
     },
   },
   test: {

@@ -10,8 +10,10 @@
 // (vite.config.ts), so the browser sees one origin and there is no CORS to manage.
 
 import type {
+  CourseView,
   EventBatchRequest,
   InteractionEventIn,
+  KnowledgeComponentId,
   MeResponse,
   StartSessionResponse,
   ThreeArmComparisonView,
@@ -37,6 +39,9 @@ function authHeaders(): Record<string, string> {
 export type {
   ActionType,
   ArmVerdictView,
+  CourseNodeStatus,
+  CourseNodeView,
+  CourseView,
   ErrorCategory,
   EventBatchRequest,
   InteractionEventIn,
@@ -99,6 +104,20 @@ export async function startSession(
   });
 }
 
+/**
+ * Start a lesson DIRECTLY for a knowledge component — the course-map node launch (CP.A.2).
+ *
+ * Unlike `startSession` (a Turn-0 menu route), this begins the lesson for `kc` itself; the
+ * server presents a generated first problem in the KC's first live representation. Used so
+ * every course-map node can launch its own lesson, including KCs that are not Turn-0 routes.
+ */
+export async function startLesson(
+  kc: KnowledgeComponentId,
+  proactiveEnabled = false,
+): Promise<StartSessionResponse> {
+  return postJson<StartSessionResponse>('/session', { kc, proactive_enabled: proactiveEnabled });
+}
+
 /** Submit one learner action (answer or hint request) and get the turn result. */
 export async function submitTurn(request: TurnRequest): Promise<TurnResponse> {
   return postJson<TurnResponse>('/turn', request);
@@ -145,6 +164,18 @@ async function getJson<T>(path: string): Promise<T> {
  */
 export async function fetchMe(): Promise<MeResponse> {
   return getJson<MeResponse>('/me');
+}
+
+/**
+ * Fetch the learner's course map — every KC as a path node with a status (CP.A.1/CP.A.2).
+ * A signed-in learner (auth token set) gets it from their persisted mastery; an anonymous demo
+ * learner passes their `sessionId` to get it from their in-session progress; a brand-new visitor
+ * (neither) gets the fresh default path. The server always returns the full set of nodes.
+ */
+export async function fetchCourse(sessionId?: string | null): Promise<CourseView> {
+  const query =
+    sessionId != null && sessionId !== '' ? `?session_id=${encodeURIComponent(sessionId)}` : '';
+  return getJson<CourseView>(`/course${query}`);
 }
 
 /**

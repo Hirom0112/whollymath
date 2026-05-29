@@ -1,0 +1,54 @@
+/* Whole-number entry (Slice CP.A.2 — the common-denominator answer). Calm/editorial to
+   match the in-tutor register; one field + an optional unit word, so the answer reads as a
+   count (a shared piece-size), never a fraction. Class names unique app-wide (global CSS). */
+
+.wm-numentry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wm-numentry-prompt {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}
+
+.wm-numentry-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+}
+
+.wm-numentry-field {
+  width: 92px;
+  text-align: center;
+  font-family: var(--wm-font-sans);
+  font-size: 30px;
+  font-weight: 700;
+  padding: 8px 6px;
+  color: var(--wm-ink);
+  background: var(--wm-cream-2);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.wm-numentry-field:focus-visible {
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-numentry-field:disabled {
+  opacity: 0.6;
+}
+
+.wm-numentry-unit {
+  font-family: var(--wm-font-sans);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}

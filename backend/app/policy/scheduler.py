@@ -41,6 +41,10 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     _KC.EQUIVALENCE: (_REP.SYMBOLIC, _REP.WORD_PROBLEM),
     # NUMBER_LINE = drag the marker; SYMBOLIC = "is a greater than b?" magnitude comparison.
     _KC.NUMBER_LINE_PLACEMENT: (_REP.NUMBER_LINE, _REP.SYMBOLIC),
+    # SYMBOLIC = the whole-number "shared piece-size" entry (§3.4.1). PRACTICE-ONLY for now: only
+    # one live representation, so is_masterable_live is False — the AREA_MODEL alignment form (the
+    # second representation that makes it masterable) is added once its surface widget exists.
+    _KC.COMMON_DENOMINATOR: (_REP.SYMBOLIC,),
 }
 
 # The companion KC interleaved alongside each goal so a session always spans ≥2 KCs (rule 4).
@@ -50,6 +54,9 @@ _COMPANION: dict[KnowledgeComponentId, KnowledgeComponentId] = {
     _KC.SUBTRACTION_UNLIKE: _KC.ADDITION_UNLIKE,
     _KC.EQUIVALENCE: _KC.ADDITION_UNLIKE,
     _KC.NUMBER_LINE_PLACEMENT: _KC.EQUIVALENCE,
+    # Common denominator interleaves with equivalence (it IS applied equivalence — §3.4.1) so a
+    # CD lesson spans ≥2 KCs and next_spec never lacks a companion on the cadence turn.
+    _KC.COMMON_DENOMINATOR: _KC.EQUIVALENCE,
 }
 
 # Every third served problem is the companion KC; the other two are the goal. This keeps the

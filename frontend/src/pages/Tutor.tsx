@@ -13,6 +13,7 @@ import { Mascot } from '../components/Mascot';
 import { useTelemetry } from '../telemetry';
 import {
   fractionToAnswer,
+  NumberEntry,
   NumberLine,
   SymbolicEditor,
   YesNo,
@@ -55,7 +56,7 @@ type Phase = 'answering' | 'submitting' | 'feedback';
 
 // Which input the learner edited — distinguishes a number-line drag from a typed answer in
 // the behavioral stream (Slice PL.2).
-type TelemetryEditKind = 'fraction' | 'numberline' | 'yesno';
+type TelemetryEditKind = 'fraction' | 'numberline' | 'yesno' | 'number';
 
 // Kid-friendly label per surface state, so the surface names the mode it is in
 // (refuse-rule 4 spirit: never present a state without a label). These must NOT claim
@@ -92,7 +93,14 @@ function mergeMastery(prev: MasterySnapshot[], next: MasterySnapshot[]): Mastery
   return [...byKc.values()];
 }
 
-export function Tutor({ session }: { session: StartSessionResponse }): React.JSX.Element {
+export function Tutor({
+  session,
+  onExit,
+}: {
+  session: StartSessionResponse;
+  /** Optional "back to the course map" affordance (Slice CP.A.2 navigation). */
+  onExit?: () => void;
+}): React.JSX.Element {
   const sessionId = session.session_id;
   const [problem, setProblem] = useState<ProblemView>(session.problem);
   const [surfaceState, setSurfaceState] = useState<SurfaceState>(session.surface_state);
@@ -100,6 +108,8 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   const [tick, setTick] = useState<number | null>(null);
   // The yes/no selection for relational-judgment problems (true=yes, false=no, null=unset).
   const [yesNo, setYesNo] = useState<boolean | null>(null);
+  // The whole-number answer for a common-denominator item (a shared piece-size, not a fraction).
+  const [numberAnswer, setNumberAnswer] = useState('');
   const [phase, setPhase] = useState<Phase>('answering');
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -188,6 +198,10 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   // by typing a fraction — the server tells us via answer_kind so the surface matches the
   // question (the coherence fix: a yes/no question must not land on a fraction input).
   const isYesNo = problem.answer_kind === 'yes_no';
+  // Common denominator's answer is a single WHOLE number (a shared piece-size), not a
+  // fraction — so it gets the one-box number entry, never the two-box fraction editor
+  // (§3.4.1: matching the input to the construct). It is the only KC answered this way.
+  const isNumberEntry = problem.kc === 'KC_common_denominator';
 
   let submittedAnswer: string;
   let canSubmit: boolean;
@@ -197,6 +211,9 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   } else if (isNumberLine) {
     submittedAnswer = tick === null ? '' : `${String(tick)}/${String(problem.tick_segments)}`;
     canSubmit = tick !== null;
+  } else if (isNumberEntry) {
+    submittedAnswer = numberAnswer;
+    canSubmit = numberAnswer !== '';
   } else {
     submittedAnswer = fractionToAnswer(fraction);
     canSubmit = submittedAnswer !== '';
@@ -271,6 +288,7 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
     setFraction(initialFraction(next));
     setTick(null);
     setYesNo(null);
+    setNumberAnswer('');
     setHint(null);
     setHintUsed(false);
     setRevealCount(1);
@@ -297,6 +315,11 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
   return (
     <main className="wm-tutor">
       <section className="wm-tutor-card" aria-live="polite">
+        {onExit !== undefined ? (
+          <button type="button" className="wm-tutor-back" onClick={onExit}>
+            ← Course path
+          </button>
+        ) : null}
         {mastery.length > 0 ? (
           <div className="wm-tutor-progress" aria-label="Your progress so far">
             {mastery.map((m) => (
@@ -347,7 +370,9 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
               : 'Same amount, or not?'
             : isNumberLine
               ? 'Place it on the number line'
-              : STATE_LABEL[surfaceState]}
+              : isNumberEntry
+                ? 'Find the shared piece size'
+                : STATE_LABEL[surfaceState]}
         </p>
         <h1 className="wm-tutor-statement">{problem.statement}</h1>
 
@@ -383,6 +408,17 @@ export function Tutor({ session }: { session: StartSessionResponse }): React.JSX
                   noteInteraction('numberline', { tick: v, segments: problem.tick_segments });
                 }}
                 disabled={phase === 'submitting'}
+              />
+            ) : isNumberEntry ? (
+              <NumberEntry
+                value={numberAnswer}
+                onChange={(v) => {
+                  setNumberAnswer(v);
+                  noteInteraction('number', { value: v });
+                }}
+                disabled={phase === 'submitting'}
+                prompt="Your answer"
+                unit="equal pieces"
               />
             ) : (
               <SymbolicEditor

@@ -1,0 +1,264 @@
+/* Course map — the post-sign-in / demo home (Slice CP.A.2). Calm/product register (like the
+   tutor), warm cream page, navy ink, a vertical connected rail of skill nodes. Status color
+   reinforces the label + lock state (never the sole signal). Class names unique app-wide. */
+
+.wm-coursemap {
+  min-height: 100vh;
+  background: var(--wm-page-bg);
+  padding: 40px 20px 64px;
+  display: flex;
+  justify-content: center;
+}
+
+.wm-coursemap-panel {
+  width: 100%;
+  max-width: 640px;
+}
+
+.wm-coursemap-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.wm-coursemap-mascot {
+  flex: 0 0 auto;
+  width: 64px;
+  transform: scale(0.6);
+  transform-origin: center;
+}
+
+.wm-coursemap-headline {
+  margin: 0 0 4px;
+  font-family: var(--wm-font-serif);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--wm-navy-deep);
+}
+
+.wm-coursemap-subhead {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--wm-ink-soft);
+}
+
+.wm-coursemap-loading,
+.wm-coursemap-error {
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  color: var(--wm-ink-soft);
+  padding: 12px 0;
+}
+
+.wm-coursemap-error {
+  color: var(--wm-coral);
+  font-weight: 600;
+}
+
+.wm-coursemap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Each node: a left rail (number/check dot + the connecting line) + a card. */
+.wm-coursemap-node {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 16px;
+}
+
+.wm-coursemap-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* The connecting line between dots (drawn behind, spanning the full node height). */
+.wm-coursemap-rail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--wm-blue-soft);
+}
+
+/* No line above the first dot / below the last — trim the rail ends. */
+.wm-coursemap-node:first-child .wm-coursemap-rail::before {
+  top: 18px;
+}
+.wm-coursemap-node:last-child .wm-coursemap-rail::before {
+  bottom: calc(100% - 36px);
+}
+
+.wm-coursemap-dot {
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wm-cream);
+  background: var(--wm-navy);
+  border: 2px solid var(--wm-navy-deep);
+}
+
+.wm-coursemap-node--mastered .wm-coursemap-dot,
+.wm-coursemap-node--due_review .wm-coursemap-dot {
+  background: var(--wm-green);
+  color: var(--wm-navy-deep);
+}
+.wm-coursemap-node--locked .wm-coursemap-dot {
+  background: var(--wm-cream-2);
+  color: #9a937f;
+  border-color: #c9c0a6;
+}
+
+/* The card is a button (clickable to start), full-width, calm card styling. */
+.wm-coursemap-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 16px;
+  box-shadow: 0 6px 0 var(--wm-shadow);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.wm-coursemap-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 var(--wm-shadow);
+}
+.wm-coursemap-card:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 3px 0 var(--wm-shadow);
+}
+.wm-coursemap-card:focus-visible {
+  outline: none;
+  box-shadow:
+    0 6px 0 var(--wm-shadow),
+    0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-coursemap-card:disabled {
+  cursor: default;
+  background: var(--wm-cream-2);
+  border-color: #c9c0a6;
+  box-shadow: none;
+  opacity: 0.85;
+}
+
+.wm-coursemap-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wm-coursemap-skill {
+  font-family: var(--wm-font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--wm-navy-deep);
+}
+
+.wm-coursemap-desc {
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--wm-ink-soft);
+}
+
+/* Status pill — colored chip, with the label always present (not color-only). */
+.wm-coursemap-badge {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--wm-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1.5px solid var(--wm-navy-deep);
+}
+.wm-coursemap-badge--available {
+  background: var(--wm-blue-tile);
+  color: var(--wm-navy-deep);
+}
+.wm-coursemap-badge--in_progress {
+  background: var(--wm-blue-soft);
+  color: var(--wm-navy-deep);
+}
+.wm-coursemap-badge--mastered {
+  background: var(--wm-green);
+  color: var(--wm-navy-deep);
+}
+.wm-coursemap-badge--due_review {
+  background: var(--wm-yellow);
+  color: var(--wm-navy-deep);
+}
+.wm-coursemap-badge--locked {
+  background: var(--wm-cream-2);
+  color: #6f6852;
+  border-color: #c9c0a6;
+}
+
+/* Thin mastery-progress bar (probability of the touched skill). */
+.wm-coursemap-progress {
+  display: block;
+  height: 7px;
+  width: 100%;
+  background: var(--wm-cream-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.wm-coursemap-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--wm-blue);
+  border-radius: 4px;
+  transition: width 0.35s ease;
+}
+.wm-coursemap-node--mastered .wm-coursemap-progress-fill,
+.wm-coursemap-node--due_review .wm-coursemap-progress-fill {
+  background: var(--wm-green);
+}
+
+.wm-coursemap-cta {
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wm-blue-press);
+}
+.wm-coursemap-card:disabled .wm-coursemap-cta {
+  color: #6f6852;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .wm-coursemap-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
