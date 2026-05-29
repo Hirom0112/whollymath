@@ -67,15 +67,18 @@ function CourseNode({
   const locked = node.status === 'locked';
   const meta = STATUS_META[node.status];
   const pct = node.probability != null ? Math.round(node.probability * 100) : null;
+  const tint = KC_TINT[node.kc_id] ?? 'sky';
 
   return (
     <li className={`wm-coursemap-node wm-coursemap-node--${node.status}`}>
       <span className="wm-coursemap-rail" aria-hidden="true">
-        <span className="wm-coursemap-dot">{node.status === 'mastered' ? '✓' : index + 1}</span>
+        <span className={`wm-coursemap-dot wm-coursemap-dot--${tint}`}>
+          {node.status === 'mastered' ? '✓' : index + 1}
+        </span>
       </span>
       <button
         type="button"
-        className={`wm-coursemap-card wm-coursemap-card--${KC_TINT[node.kc_id] ?? 'sky'}`}
+        className={`wm-coursemap-card wm-coursemap-card--${tint}`}
         disabled={locked}
         aria-disabled={locked}
         onClick={() => {

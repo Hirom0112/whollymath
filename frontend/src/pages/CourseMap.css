@@ -25,17 +25,18 @@
   inset: 0;
   z-index: -1;
   background: url('/cold-start-bg.avif') center / cover no-repeat var(--wm-navy-deep);
-  filter: blur(8px) brightness(0.6) saturate(0.85);
-  transform: scale(1.08);
+  /* Just a touch of softening so the world shows through clearly, without the glare. */
+  filter: blur(2px) brightness(0.86);
+  transform: scale(1.03);
 }
 
-/* A soft navy wash on top of the blurred world, deeper toward the edges, to settle contrast. */
+/* A light navy wash to settle contrast a little, deeper toward the bottom. */
 .wm-coursemap::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(rgba(18, 26, 56, 0.52), rgba(18, 26, 56, 0.74));
+  background: linear-gradient(rgba(20, 28, 60, 0.28), rgba(20, 28, 60, 0.46));
 }
 
 .wm-coursemap-panel {
@@ -207,20 +208,27 @@
   font-family: var(--wm-font-sans);
   font-size: 14px;
   font-weight: 700;
-  color: var(--wm-cream);
-  background: var(--wm-navy);
+  /* Each dot wears its column's tint (matching its card), with a navy numeral + ring for
+     contrast — so the 1–5 march down the path in their own colors. */
+  color: var(--wm-navy-deep);
   border: 2px solid var(--wm-navy-deep);
+  background: var(--wm-card-sky);
 }
 
-.wm-coursemap-node--mastered .wm-coursemap-dot,
-.wm-coursemap-node--due_review .wm-coursemap-dot {
-  background: var(--wm-green);
-  color: var(--wm-navy-deep);
+.wm-coursemap-dot--sky {
+  background: var(--wm-card-sky);
 }
-.wm-coursemap-node--locked .wm-coursemap-dot {
-  background: var(--wm-cream-2);
-  color: #9a937f;
-  border-color: #c9c0a6;
+.wm-coursemap-dot--mint {
+  background: var(--wm-card-mint);
+}
+.wm-coursemap-dot--butter {
+  background: var(--wm-card-butter);
+}
+.wm-coursemap-dot--warm {
+  background: var(--wm-card-warm);
+}
+.wm-coursemap-dot--lavender {
+  background: var(--wm-card-lavender);
 }
 
 /* The card is a button (clickable to start), full-width, calm card styling. */
