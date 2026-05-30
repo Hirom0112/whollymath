@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import time
 
+import numpy as np
 from app.domain.knowledge_components import KnowledgeComponentId
-from app.helpneed.features import HelpNeedFeatures, TrainingExample
+from app.helpneed.features import FEATURE_NAMES, HelpNeedFeatures, TrainingExample
 from app.helpneed.predictor import HelpNeedPredictor
 
 _KC = KnowledgeComponentId.ADDITION_UNLIKE
@@ -108,3 +109,64 @@ def test_save_load_round_trip(tmp_path) -> None:  # type: ignore[no-untyped-def]
     reloaded = HelpNeedPredictor.load(path)
     assert reloaded.predict_proba(_STRUGGLING) == predictor.predict_proba(_STRUGGLING)
     assert reloaded.kind == "xgboost"
+
+
+# ─── Width-guard (T1↔T2 coordination): degrade-safe on artifact↔one-hot width drift ───
+# When the KC enum widens (KC_ORDER grows the one-hot) before the model is re-fit, the
+# live to_vector() is wider than the committed artifact expects. The predictor must NOT
+# crash the turn loop on that mismatch — it returns a neutral observe-only score (never
+# trips the §3.7 gate) until a re-fit artifact at the new width lands. See
+# T1_T2_COORDINATION.md §2.
+
+
+class _ExplodingModel:
+    """A stand-in estimator that fails if ``predict_proba`` is ever called.
+
+    Proves the width-guard SHORT-CIRCUITS before touching the model — a real width-13
+    model would raise a feature-count error on a wider vector; this makes "the guard
+    fired" unambiguous instead of relying on which exception sklearn happens to throw.
+    """
+
+    n_features_in_ = 99  # deliberately != the live FEATURE_NAMES width
+
+    def fit(self, x: np.ndarray, y: np.ndarray) -> _ExplodingModel:
+        return self
+
+    def predict_proba(self, x: np.ndarray) -> np.ndarray:
+        raise AssertionError("guard must short-circuit; predict_proba must not be called")
+
+
+def test_predict_proba_neutral_on_feature_name_mismatch() -> None:
+    """feature_names that don't match the live FEATURE_NAMES → neutral, model untouched."""
+    predictor = HelpNeedPredictor(
+        model=_ExplodingModel(), kind="xgboost", feature_names=("only", "two")
+    )
+    assert predictor.predict_proba(_STRUGGLING) == 0.0  # neutral; the gate can never trip on it
+
+
+def test_predict_proba_neutral_on_width_mismatch_via_n_features() -> None:
+    """No stamped feature_names → fall back to the model's n_features_in_; mismatch → neutral."""
+    predictor = HelpNeedPredictor(model=_ExplodingModel(), kind="xgboost")  # n_features_in_ == 99
+    assert predictor.predict_proba(_STRUGGLING) == 0.0
+
+
+def test_fit_stamps_feature_names_and_save_load_preserves_them(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A freshly fit predictor carries the live FEATURE_NAMES, and they survive a round-trip."""
+    predictor = HelpNeedPredictor.fit(_dataset(), kind="xgboost", random_state=0)
+    assert predictor.feature_names == FEATURE_NAMES
+    path = tmp_path / "stamped.joblib"
+    predictor.save(path)
+    assert HelpNeedPredictor.load(path).feature_names == FEATURE_NAMES
+
+
+def test_load_tolerates_legacy_artifact_without_feature_names(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """An old {model, kind} payload (no feature_names) still loads; width matches → scores."""
+    import joblib
+
+    predictor = HelpNeedPredictor.fit(_dataset(), kind="xgboost", random_state=0)
+    path = tmp_path / "legacy.joblib"
+    joblib.dump({"model": predictor.model, "kind": predictor.kind}, path)  # pre-stamp payload shape
+    reloaded = HelpNeedPredictor.load(path)
+    assert reloaded.feature_names is None
+    # Same width as today → compatible → still produces a real score (degrades only when widened).
+    assert 0.0 <= reloaded.predict_proba(_STRUGGLING) <= 1.0

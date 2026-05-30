@@ -17,8 +17,9 @@ Determinism: ``fit`` takes a ``random_state`` so training is reproducible
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
@@ -26,9 +27,18 @@ import numpy as np
 
 from app.helpneed.features import FEATURE_NAMES, HelpNeedFeatures, TrainingExample
 
+_LOGGER = logging.getLogger(__name__)
+
 # The model kinds this wrapper supports. "xgboost" is the production model; "logistic"
 # is the interpretable baseline for the writeup comparison (TECH_STACK §5).
 ModelKind = str
+
+# The observe-only fallback score returned when the loaded artifact's input width no
+# longer matches the live one-hot (the KC enum widened ahead of a re-fit — see
+# T1_T2_COORDINATION.md §2). 0.0 = "no help needed", so it can NEVER trip the §3.7
+# intervention gate (P ≥ threshold): scoring degrades to silent, never to a crash or a
+# spurious intervention, until a re-fit artifact at the new width lands.
+_NEUTRAL_PROBA = 0.0
 
 
 class _ProbaEstimator(Protocol):
@@ -93,6 +103,14 @@ class HelpNeedPredictor:
 
     model: _ProbaEstimator
     kind: ModelKind
+    # The feature columns the model was TRAINED on, in order (== FEATURE_NAMES at fit time).
+    # Stamped by ``fit`` and persisted by ``save`` so the width-guard can detect when the live
+    # one-hot has drifted from the artifact (the KC enum widened ahead of a re-fit). ``None`` for a
+    # legacy artifact saved before stamping — the guard then falls back to ``model.n_features_in_``.
+    feature_names: tuple[str, ...] | None = None
+    # Log the width-mismatch warning at most once per predictor (the turn loop calls predict_proba
+    # every turn; we don't want a log line per turn). Not part of the saved state.
+    _width_mismatch_logged: bool = field(default=False, init=False, repr=False)
 
     @classmethod
     def fit(
@@ -106,30 +124,88 @@ class HelpNeedPredictor:
         x, y = examples_to_matrix(examples)
         model = _build_model(kind, random_state)
         model.fit(x, y)
-        return cls(model=model, kind=kind)
+        return cls(model=model, kind=kind, feature_names=FEATURE_NAMES)
+
+    def _is_width_compatible(self, live_len: int) -> bool:
+        """Whether this model can score the current live feature vector.
+
+        Prefers an exact ``feature_names`` match (catches a re-ORDERING of columns, not just a
+        width change); falls back to the model's ``n_features_in_`` count for a legacy artifact
+        that carries no names. If neither is available we proceed best-effort (real estimators
+        always expose ``n_features_in_`` after fit, so this only spares a hand-built fake).
+        """
+        if self.feature_names is not None:
+            return tuple(self.feature_names) == FEATURE_NAMES
+        expected = getattr(self.model, "n_features_in_", None)
+        return expected is None or int(expected) == live_len
 
     def predict_proba(self, features: HelpNeedFeatures) -> float:
-        """P(unproductive) for one turn — the single-row, sub-100ms inference path."""
-        x = np.asarray([features.to_vector()], dtype=float)
+        """P(unproductive) for one turn — the single-row, sub-100ms inference path.
+
+        Width-guarded: if the artifact was trained on a different feature width than the live
+        one-hot (KC enum widened ahead of a re-fit), return a neutral observe-only score instead
+        of feeding a mismatched vector into the model and crashing the turn loop (§2 of the T1↔T2
+        coordination note). The guard self-heals: a re-fit artifact at the new width compares
+        equal again and full scoring resumes with no code change.
+        """
+        vector = features.to_vector()
+        if not self._is_width_compatible(len(vector)):
+            self._log_width_mismatch_once(len(vector))
+            return _NEUTRAL_PROBA
+        x = np.asarray([vector], dtype=float)
         return float(self.model.predict_proba(x)[0, 1])
+
+    def _log_width_mismatch_once(self, live_len: int) -> None:
+        """Warn (once) that the model is stale-width and scoring is degraded to observe-only."""
+        if self._width_mismatch_logged:
+            return
+        trained = (
+            len(self.feature_names)
+            if self.feature_names is not None
+            else getattr(self.model, "n_features_in_", "unknown")
+        )
+        _LOGGER.warning(
+            "HelpNeed predictor feature-width mismatch (trained on %s, live FEATURE_NAMES has %s); "
+            "returning a neutral observe-only score (the intervention gate cannot fire) until a "
+            "re-fit artifact at the new width lands.",
+            trained,
+            live_len,
+        )
+        self._width_mismatch_logged = True
 
     def predict_proba_matrix(self, x: np.ndarray) -> np.ndarray:
         """P(unproductive) for a batch (column 1 of predict_proba) — for evaluation."""
         return np.asarray(self.model.predict_proba(x)[:, 1], dtype=float)
 
     def save(self, path: Path) -> None:
-        """Persist the fitted model + kind via joblib (TECH_STACK §5)."""
+        """Persist the fitted model + kind + the trained feature names via joblib (TECH_STACK §5).
+
+        ``feature_names`` is stamped so the width-guard can compare the artifact against the live
+        one-hot on reload (the T1↔T2 artifact-metadata contract). A re-fit at a wider width stamps
+        the wider names automatically through ``fit``.
+        """
         import joblib
 
-        joblib.dump({"model": self.model, "kind": self.kind}, path)
+        names = list(self.feature_names) if self.feature_names is not None else None
+        joblib.dump({"model": self.model, "kind": self.kind, "feature_names": names}, path)
 
     @classmethod
     def load(cls, path: Path) -> HelpNeedPredictor:
-        """Reload a predictor saved by :meth:`save`."""
+        """Reload a predictor saved by :meth:`save`.
+
+        Tolerant of a legacy payload that predates the ``feature_names`` stamp (``.get`` → ``None``)
+        so the committed width-13 artifact still loads; the width-guard then falls back to the
+        model's own ``n_features_in_``.
+        """
         import joblib
 
         payload = joblib.load(path)
-        return cls(model=payload["model"], kind=payload["kind"])
+        stamped = payload.get("feature_names")
+        return cls(
+            model=payload["model"],
+            kind=payload["kind"],
+            feature_names=tuple(stamped) if stamped is not None else None,
+        )
 
 
 def top_shap_features(
