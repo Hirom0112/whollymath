@@ -14,6 +14,7 @@ import { Homework } from './pages/Homework';
 import { HomeworkUpload } from './pages/HomeworkUpload';
 import { Landing } from './pages/Landing';
 import { SignIn } from './pages/SignIn';
+import { TeacherApp } from './pages/TeacherApp';
 import { Tutor } from './pages/Tutor';
 
 // Researcher/demo view: ?eval=1 shows the Slice 5.3 three-arm comparison dashboard,
@@ -23,6 +24,12 @@ const SHOW_EVAL = new URLSearchParams(window.location.search).get('eval') === '1
 // Teaching view: ?theater=1 shows the same comparison run step-by-step (the "benchmark
 // theater") — one persona through all three arms, turn by turn. Same zero-router wiring.
 const SHOW_THEATER = new URLSearchParams(window.location.search).get('theater') === '1';
+
+// Teacher surface: ?teacher=1 opens the teacher dashboard (roster + per-student drill-in),
+// the #1-priority visibility lane (TODO TCH.F0). Outside the student flow; same zero-router,
+// query-param wiring as the eval / theater views, and the "I'm a teacher" link on the landing
+// deep-links here.
+const SHOW_TEACHER = new URLSearchParams(window.location.search).get('teacher') === '1';
 
 // Mobile homework capture: ?hwupload=<token> is the URL the desktop's QR encodes (PROJECT.md
 // §3.4 two-star model). On a phone it opens the camera/upload screen; the token pairs the photos
@@ -55,6 +62,10 @@ export function App(): React.JSX.Element {
 
   if (HW_UPLOAD_TOKEN !== null && HW_UPLOAD_TOKEN !== '') {
     return <HomeworkUpload token={HW_UPLOAD_TOKEN} />;
+  }
+
+  if (SHOW_TEACHER) {
+    return <TeacherApp />;
   }
 
   if (SHOW_THEATER) {

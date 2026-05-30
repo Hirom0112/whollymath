@@ -1,0 +1,142 @@
+/* Teacher sign-in gate (TODO TCH.F0). Calm professional register: a navy field with one cream
+   card. Unique classes app-wide (.wm-tsignin-*). */
+
+.wm-tsignin {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--wm-navy-deep);
+  font-family: var(--wm-font-sans);
+}
+
+.wm-tsignin-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--wm-cream);
+  border-radius: var(--wm-r-xl);
+  padding: 36px 34px 30px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+}
+
+.wm-tsignin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+.wm-tsignin-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--wm-yellow) 0 25%,
+    var(--wm-coral) 25% 50%,
+    var(--wm-blue-bright) 50% 75%,
+    var(--wm-teal) 75% 100%
+  );
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+.wm-tsignin-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: -0.3px;
+  color: var(--wm-ink);
+}
+.wm-tsignin-role {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: var(--wm-r-pill);
+  background: var(--wm-navy);
+  color: var(--wm-cream);
+}
+
+.wm-tsignin-headline {
+  margin: 0 0 10px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-h1);
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  color: var(--wm-ink);
+}
+.wm-tsignin-sub {
+  margin: 0 0 26px;
+  font-size: var(--wm-fs-body);
+  line-height: 1.55;
+  color: var(--wm-ink-soft);
+}
+
+.wm-tsignin-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wm-tsignin-google,
+.wm-tsignin-demo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-body);
+  font-weight: 700;
+  border-radius: var(--wm-r-pill);
+  padding: 14px 20px;
+  cursor: pointer;
+  transition:
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease,
+    background var(--wm-motion-press) ease;
+}
+
+.wm-tsignin-google {
+  color: var(--wm-cream);
+  background: var(--wm-navy);
+  border: none;
+}
+.wm-tsignin-google:hover {
+  background: var(--wm-blue);
+  transform: translateY(-1px);
+}
+.wm-tsignin-gicon {
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.wm-tsignin-demo {
+  color: var(--wm-navy);
+  background: transparent;
+  border: 2px solid rgba(47, 67, 166, 0.35);
+}
+.wm-tsignin-demo:hover {
+  background: rgba(47, 67, 166, 0.08);
+  border-color: var(--wm-navy);
+}
+
+.wm-tsignin-note {
+  margin: 18px 0 0;
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-tsignin-google,
+  .wm-tsignin-demo {
+    transition: none;
+  }
+  .wm-tsignin-google:hover {
+    transform: none;
+  }
+}

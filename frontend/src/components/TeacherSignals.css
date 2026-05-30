@@ -1,0 +1,205 @@
+/* Teacher alert + category visual system (TODO TCH.F4). Severity/category tints come from the
+   semantic --wm-mean-* tokens; every chip/badge also carries a drawn icon + a word, so color is
+   never the sole signal (TEACHER_NEEDS.md B). Unique class names app-wide (.wm-teacher-*). */
+
+/* ── Category chip ── */
+
+.wm-teacher-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--wm-font-sans);
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  border-radius: var(--wm-r-pill);
+  white-space: nowrap;
+}
+
+.wm-teacher-chip--md {
+  font-size: var(--wm-fs-ui);
+  padding: 6px 13px 6px 10px;
+}
+
+.wm-teacher-chip--sm {
+  font-size: var(--wm-fs-meta);
+  padding: 4px 10px 4px 8px;
+}
+
+.wm-teacher-chip-ico {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+.wm-teacher-chip-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+.wm-teacher-chip--wrong {
+  color: #8f3a22;
+  background: #f6ddd2;
+  box-shadow: inset 0 0 0 1.5px rgba(143, 58, 34, 0.28);
+}
+.wm-teacher-chip--attention {
+  color: var(--wm-mean-attention-ink);
+  background: #f8e9c8;
+  box-shadow: inset 0 0 0 1.5px rgba(154, 106, 18, 0.28);
+}
+.wm-teacher-chip--correct {
+  color: var(--wm-mean-correct-ink);
+  background: #d9ecdb;
+  box-shadow: inset 0 0 0 1.5px rgba(63, 122, 58, 0.28);
+}
+
+/* ── Progress bar ── */
+
+.wm-teacher-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--wm-font-sans);
+}
+
+.wm-teacher-progress-track {
+  position: relative;
+  width: 120px;
+  height: 8px;
+  border-radius: var(--wm-r-pill);
+  background: rgba(20, 30, 70, 0.12);
+  overflow: hidden;
+}
+
+.wm-teacher-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--wm-r-pill);
+  transition: width var(--wm-motion-morph) var(--wm-ease-morph);
+}
+.wm-teacher-progress-fill--neutral {
+  background: var(--wm-blue);
+}
+.wm-teacher-progress-fill--on_track {
+  background: var(--wm-mean-correct);
+}
+.wm-teacher-progress-fill--needs_attention {
+  background: var(--wm-mean-attention);
+}
+.wm-teacher-progress-fill--struggling {
+  background: var(--wm-mean-wrong);
+}
+
+.wm-teacher-progress-label {
+  font-size: var(--wm-fs-meta);
+  font-weight: 700;
+  color: var(--wm-ink-soft);
+  min-width: 34px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-teacher-progress-fill {
+    transition: none;
+  }
+}
+
+/* ── Alert badge ── */
+
+.wm-teacher-alert {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-family: var(--wm-font-sans);
+  border-radius: var(--wm-r-md);
+}
+
+.wm-teacher-alert-ico {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+.wm-teacher-alert-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+.wm-teacher-alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wm-teacher-alert-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 700;
+  font-size: var(--wm-fs-ui);
+  letter-spacing: -0.1px;
+}
+
+/* The severity word is a small uppercase tag so it reads as a label, not a duplicate of the
+   rule name. Present for assistive tech + grayscale; it never relies on color alone. */
+.wm-teacher-alert-sev {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 1px 5px;
+  border-radius: var(--wm-r-pill);
+  background: currentColor;
+}
+.wm-teacher-alert-sev {
+  color: #fff; /* the pill fill is currentColor; the word sits in white on it */
+}
+/* Restore the tint for the word itself by layering: the tag uses the tint as background via a
+   mix; simplest robust approach is a tinted background with white text per severity below. */
+
+.wm-teacher-alert-msg {
+  font-size: var(--wm-fs-meta);
+  line-height: 1.4;
+  color: var(--wm-ink-soft);
+}
+
+/* Compact: a small pill with just the label (roster badge cluster). */
+.wm-teacher-alert--compact {
+  align-items: center;
+  padding: 4px 10px 4px 8px;
+}
+.wm-teacher-alert--compact .wm-teacher-alert-ico {
+  width: 15px;
+  height: 15px;
+}
+.wm-teacher-alert--compact .wm-teacher-alert-label {
+  font-size: var(--wm-fs-meta);
+}
+
+/* Full: a row in the drill-in banner, with the plain-language message under the label. */
+.wm-teacher-alert--full {
+  padding: 12px 14px;
+  width: 100%;
+}
+
+/* Severity tints. Each sets the icon/label color and a soft surface; the uppercase sev tag gets
+   a solid tint background with white text (a second, shape-distinct color cue). */
+.wm-teacher-alert--wrong {
+  color: #8f3a22;
+  background: #f7e0d6;
+}
+.wm-teacher-alert--wrong .wm-teacher-alert-sev {
+  background: var(--wm-mean-wrong);
+}
+.wm-teacher-alert--attention {
+  color: var(--wm-mean-attention-ink);
+  background: #f9ecca;
+}
+.wm-teacher-alert--attention .wm-teacher-alert-sev {
+  background: var(--wm-mean-attention);
+}
+.wm-teacher-alert--info {
+  color: #1f5b86;
+  background: #d8e6f7;
+}
+.wm-teacher-alert--info .wm-teacher-alert-sev {
+  background: #3a7bb0;
+}

@@ -1,0 +1,319 @@
+/* Teacher roster dashboard (TODO TCH.F2). A calm, professional working surface — the adult
+   counterpart to the kid "world": light page background, generous whitespace, dense-but-legible
+   rows. Reuses the brand tokens + the shared TeacherSignals primitives. Unique classes app-wide. */
+
+.wm-teacher {
+  min-height: 100vh;
+  background: var(--wm-page-bg);
+  color: var(--wm-ink);
+  font-family: var(--wm-font-sans);
+}
+
+/* ── Top bar ── */
+
+.wm-teacher-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--wm-navy-deep);
+  color: var(--wm-cream);
+}
+
+.wm-teacher-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wm-teacher-brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--wm-yellow) 0 25%,
+    var(--wm-coral) 25% 50%,
+    var(--wm-blue-bright) 50% 75%,
+    var(--wm-teal) 75% 100%
+  );
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.wm-teacher-brand-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.3px;
+}
+
+.wm-teacher-brand-role {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: var(--wm-r-pill);
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--wm-cream);
+}
+
+.wm-teacher-exit {
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  color: var(--wm-cream);
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: var(--wm-r-pill);
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background var(--wm-motion-press) ease;
+}
+.wm-teacher-exit:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ── Main ── */
+
+.wm-teacher-main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+.wm-teacher-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.wm-teacher-title {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-h1);
+  letter-spacing: -0.5px;
+}
+
+.wm-teacher-subtitle {
+  margin: 4px 0 0;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-ink-soft);
+}
+
+.wm-teacher-summary {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.wm-teacher-summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wm-teacher-summary-count {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+
+/* ── Search ── */
+
+.wm-teacher-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: var(--wm-r-lg);
+  padding: 0 16px;
+  margin-bottom: 28px;
+  box-shadow: 0 2px 0 rgba(20, 30, 70, 0.08), inset 0 0 0 1.5px rgba(20, 30, 70, 0.08);
+}
+.wm-teacher-search-ico {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  color: var(--wm-ink-soft);
+  flex: 0 0 auto;
+}
+.wm-teacher-search-ico svg {
+  width: 100%;
+  height: 100%;
+}
+.wm-teacher-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-body);
+  color: var(--wm-ink);
+  padding: 13px 0;
+}
+
+/* ── Category sections ── */
+
+.wm-teacher-section {
+  margin-bottom: 30px;
+}
+
+.wm-teacher-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.wm-teacher-section-count {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-h2);
+  letter-spacing: -0.5px;
+}
+.wm-teacher-section-blurb {
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+}
+
+.wm-teacher-roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Student row ── */
+
+.wm-teacher-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: none;
+  border-radius: var(--wm-r-lg);
+  padding: 16px 18px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(20, 30, 70, 0.08), inset 0 0 0 1.5px rgba(20, 30, 70, 0.06);
+  transition:
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease;
+}
+.wm-teacher-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 0 rgba(20, 30, 70, 0.1), inset 0 0 0 1.5px rgba(20, 30, 70, 0.1);
+}
+.wm-teacher-row:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+
+.wm-teacher-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 40%;
+  min-width: 0;
+}
+.wm-teacher-row-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-lead);
+  letter-spacing: -0.3px;
+}
+.wm-teacher-row-reason {
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+  line-height: 1.4;
+}
+.wm-teacher-row-where {
+  font-size: var(--wm-fs-meta);
+  margin-top: 2px;
+}
+.wm-teacher-row-lesson {
+  font-weight: 700;
+  color: var(--wm-navy);
+}
+.wm-teacher-row-unit {
+  color: var(--wm-ink-soft);
+}
+
+.wm-teacher-row-signals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.wm-teacher-row-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 280px;
+}
+
+.wm-teacher-row-chev {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: var(--wm-ink-soft);
+  flex: 0 0 auto;
+}
+.wm-teacher-row-chev svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── States ── */
+
+.wm-teacher-loading,
+.wm-teacher-empty {
+  font-size: var(--wm-fs-body);
+  color: var(--wm-ink-soft);
+  padding: 24px 4px;
+}
+.wm-teacher-error {
+  font-size: var(--wm-fs-body);
+  color: #8f3a22;
+  background: #f7e0d6;
+  border-radius: var(--wm-r-md);
+  padding: 14px 16px;
+}
+
+/* ── Responsive: stack the row signals under the name on narrow screens ── */
+
+@media (max-width: 640px) {
+  .wm-teacher-row {
+    flex-wrap: wrap;
+  }
+  .wm-teacher-row-main {
+    flex: 1 1 100%;
+  }
+  .wm-teacher-row-signals {
+    flex: 1 1 100%;
+    align-items: flex-start;
+  }
+  .wm-teacher-row-alerts {
+    justify-content: flex-start;
+  }
+  .wm-teacher-headline {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-teacher-row,
+  .wm-teacher-exit {
+    transition: none;
+  }
+  .wm-teacher-row:hover {
+    transform: none;
+  }
+}

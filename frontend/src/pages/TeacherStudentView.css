@@ -1,0 +1,417 @@
+/* Teacher student drill-in (TODO TCH.F3). Same calm working surface as the roster. Sections are
+   stacked cards in the spec order; the ALERTS banner leads and is the only loud element. Unique
+   classes app-wide (.wm-tstudent-*). */
+
+.wm-tstudent {
+  min-height: 100vh;
+  background: var(--wm-page-bg);
+  color: var(--wm-ink);
+  font-family: var(--wm-font-sans);
+}
+
+/* ── Top bar ── */
+
+.wm-tstudent-topbar {
+  padding: 14px 24px;
+  background: var(--wm-navy-deep);
+}
+.wm-tstudent-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  color: var(--wm-cream);
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: var(--wm-r-pill);
+  padding: 7px 16px 7px 12px;
+  cursor: pointer;
+  transition: background var(--wm-motion-press) ease;
+}
+.wm-tstudent-back:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.wm-tstudent-back-ico {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+.wm-tstudent-back-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Main ── */
+
+.wm-tstudent-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+.wm-tstudent-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.wm-tstudent-name {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-h1);
+  letter-spacing: -0.5px;
+}
+.wm-tstudent-reason {
+  margin: 6px 0 20px;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-ink-soft);
+}
+
+/* ── Cards ── */
+
+.wm-tstudent-card {
+  background: #fff;
+  border-radius: var(--wm-r-lg);
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 0 rgba(20, 30, 70, 0.08), inset 0 0 0 1.5px rgba(20, 30, 70, 0.06);
+}
+.wm-tstudent-h2 {
+  margin: 0 0 12px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-h2);
+  letter-spacing: -0.3px;
+}
+
+/* ── (1) Alerts banner ── */
+
+.wm-tstudent-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.wm-tstudent-noalerts {
+  margin: 0;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-mean-correct-ink);
+  background: #d9ecdb;
+  border-radius: var(--wm-r-md);
+  padding: 14px 16px;
+}
+
+/* ── (2) Why ── */
+
+.wm-tstudent-why-headline {
+  margin: 0 0 8px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-lead);
+  line-height: 1.35;
+  letter-spacing: -0.3px;
+}
+.wm-tstudent-why-detail {
+  margin: 0 0 14px;
+  font-size: var(--wm-fs-body);
+  line-height: 1.55;
+  color: var(--wm-ink-soft);
+}
+.wm-tstudent-why-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.wm-tstudent-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--wm-fs-meta);
+  font-weight: 700;
+  border-radius: var(--wm-r-pill);
+  padding: 5px 12px;
+}
+.wm-tstudent-tag-key {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  opacity: 0.8;
+}
+.wm-tstudent-tag--misconception {
+  color: #8f3a22;
+  background: #f6ddd2;
+}
+.wm-tstudent-tag--trend {
+  color: var(--wm-mean-attention-ink);
+  background: #f8e9c8;
+}
+.wm-tstudent-tag--rate {
+  color: var(--wm-ink-soft);
+  background: rgba(20, 30, 70, 0.08);
+}
+
+/* ── (3) Current ── */
+
+.wm-tstudent-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.wm-tstudent-current-lesson {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--wm-fs-lead);
+  color: var(--wm-navy);
+}
+.wm-tstudent-current-unit {
+  margin: 2px 0 0;
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+}
+
+/* ── (4) Skills ── */
+
+.wm-tstudent-skills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.wm-tstudent-skillcol-title {
+  margin: 0 0 10px;
+  font-size: var(--wm-fs-ui);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.wm-tstudent-skillcol--strong .wm-tstudent-skillcol-title {
+  color: var(--wm-mean-correct-ink);
+}
+.wm-tstudent-skillcol--weak .wm-tstudent-skillcol-title {
+  color: #8f3a22;
+}
+.wm-tstudent-skillcol-empty {
+  margin: 0;
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+}
+.wm-tstudent-skilllist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wm-tstudent-skill {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+}
+.wm-tstudent-skill-name {
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  grid-column: 1 / -1;
+}
+.wm-tstudent-skill-bar {
+  position: relative;
+  height: 7px;
+  border-radius: var(--wm-r-pill);
+  background: rgba(20, 30, 70, 0.1);
+  overflow: hidden;
+}
+.wm-tstudent-skill-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--wm-r-pill);
+}
+.wm-tstudent-skill-fill--strong {
+  background: var(--wm-mean-correct);
+}
+.wm-tstudent-skill-fill--weak {
+  background: var(--wm-mean-attention);
+}
+.wm-tstudent-skill-pct {
+  font-size: var(--wm-fs-meta);
+  font-weight: 700;
+  color: var(--wm-ink-soft);
+  min-width: 34px;
+  text-align: right;
+}
+
+/* ── (5) Timeline ── */
+
+.wm-tstudent-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wm-tstudent-tl-item {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 14px;
+  position: relative;
+}
+.wm-tstudent-tl-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 2px;
+  background: rgba(20, 30, 70, 0.12);
+}
+.wm-tstudent-tl-dot {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 50%;
+  z-index: 1;
+  box-shadow: 0 0 0 3px #fff;
+}
+.wm-tstudent-tl-dot--correct {
+  background: var(--wm-mean-correct);
+}
+.wm-tstudent-tl-dot--incorrect {
+  background: var(--wm-mean-wrong);
+}
+.wm-tstudent-tl-dot--neutral {
+  background: var(--wm-blue-soft);
+}
+.wm-tstudent-tl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.wm-tstudent-tl-label {
+  font-size: var(--wm-fs-ui);
+  line-height: 1.4;
+}
+.wm-tstudent-tl-time {
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+}
+
+/* ── (6) Assign ── */
+
+.wm-tstudent-assign-hint {
+  margin: -4px 0 14px;
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+}
+.wm-tstudent-assign-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wm-tstudent-assign-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--wm-r-md);
+  background: var(--wm-cream);
+  box-shadow: inset 0 0 0 1.5px rgba(20, 30, 70, 0.06);
+}
+.wm-tstudent-assign-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wm-tstudent-assign-title {
+  font-weight: 700;
+  font-size: var(--wm-fs-body);
+}
+.wm-tstudent-assign-lock {
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+}
+.wm-tstudent-assign-btn {
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-ui);
+  font-weight: 700;
+  color: var(--wm-cream);
+  background: var(--wm-blue);
+  border: none;
+  border-radius: var(--wm-r-pill);
+  padding: 9px 20px;
+  cursor: pointer;
+  transition:
+    background var(--wm-motion-press) ease,
+    transform var(--wm-motion-press) ease;
+}
+.wm-tstudent-assign-btn:hover:not(:disabled) {
+  background: var(--wm-blue-bright);
+  transform: translateY(-1px);
+}
+.wm-tstudent-assign-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.wm-tstudent-assign-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--wm-fs-ui);
+  font-weight: 700;
+  color: var(--wm-mean-correct-ink);
+}
+.wm-tstudent-assign-star {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  color: var(--wm-gold);
+}
+.wm-tstudent-assign-star svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── States ── */
+
+.wm-tstudent-loading {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-ink-soft);
+}
+.wm-tstudent-error {
+  max-width: 760px;
+  margin: 16px auto;
+  padding: 14px 16px;
+  font-size: var(--wm-fs-body);
+  color: #8f3a22;
+  background: #f7e0d6;
+  border-radius: var(--wm-r-md);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 560px) {
+  .wm-tstudent-skills {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-tstudent-back,
+  .wm-tstudent-assign-btn {
+    transition: none;
+  }
+  .wm-tstudent-assign-btn:hover:not(:disabled) {
+    transform: none;
+  }
+}

@@ -83,6 +83,13 @@ export function Landing({ onStart }: { onStart: () => void }): React.JSX.Element
               Start learning as a student
             </button>
           </div>
+
+          {/* Secondary entry to the teacher dashboard (TODO TCH.F0). A quiet link, not a second
+              CTA — the student path stays the hero. Deep-links to the ?teacher=1 surface. */}
+          <a className="wm-teacher-link" href="?teacher=1">
+            I’m a teacher
+            <span aria-hidden="true"> →</span>
+          </a>
         </div>
 
         <div className="wm-numberline" aria-hidden="true">
