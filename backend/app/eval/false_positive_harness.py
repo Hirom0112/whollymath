@@ -191,6 +191,12 @@ def harness_cases() -> list[PersonaCase]:
                 ProblemSpec(kc=_KC_ADD, seed=3, surface_format=_AREA),
                 ProblemSpec(kc=_KC_ADD, seed=4, surface_format=_NL),
                 ProblemSpec(kc=_KC_ADD, seed=5, surface_format=_SYM),
+                # Fifth ADD attempt (interleaved with another SUB) so Priya clears
+                # the minimum-attempts floor (MIN_ATTEMPTS_FOR_MASTERY=5) and still
+                # reaches PROVISIONAL — the point is that only the transfer probe,
+                # not the attempt floor, denies her confirmed mastery.
+                ProblemSpec(kc=_KC_SUB, seed=6, surface_format=_SYM),
+                ProblemSpec(kc=_KC_ADD, seed=7, surface_format=_AREA),
             ],
             recent_format=_SYM,
         ),
