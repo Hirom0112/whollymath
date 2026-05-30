@@ -109,19 +109,42 @@ def test_map_ccss_to_kc_addition_family() -> None:
 
 
 def test_map_ccss_to_kc_out_of_scope_codes_return_none() -> None:
-    """Decimals (4.NF.C), mult-by-whole (4.NF.B.4), mult/div (5.NF.B), and
-    non-NF standards must be EXCLUDED — they are not in the five-KC scope.
+    """Genuinely out-of-scope codes must still be EXCLUDED after the Grade-6 widening:
+    Gr-4 mult-by-whole (4.NF.B.4), Gr-4 decimals (4.NF.C), the fraction-as-division
+    concept (5.NF.B.3), bare codes with no sub-letter we map, and non-content strings.
     """
-    assert map_ccss_to_kc("4.NF.B.4") is None  # multiplying fraction × whole
+    assert map_ccss_to_kc("4.NF.B.4") is None  # multiplying fraction × whole (Gr 4)
     assert map_ccss_to_kc("4.NF.B.4a") is None
     assert map_ccss_to_kc("4.NF.C.5") is None  # decimal notation
     assert map_ccss_to_kc("4.NF.C.6") is None
-    assert map_ccss_to_kc("5.NF.B.3") is None  # interpret a fraction as division
-    assert map_ccss_to_kc("5.NF.B.4") is None  # multiplication
-    assert map_ccss_to_kc("6.NS.A.1") is None  # 6th-grade rational ops
-    assert map_ccss_to_kc("6.RP.A.3") is None  # ratios/proportions
+    assert map_ccss_to_kc("5.NF.B.3") is None  # interpret a fraction as division (concept)
+    assert map_ccss_to_kc("6.RP.A.3") is None  # bare cluster code, no sub-letter in our map
     assert map_ccss_to_kc("") is None
     assert map_ccss_to_kc("not.a.code") is None
+
+
+def test_map_ccss_to_kc_grade6_and_adjacent_grade_codes() -> None:
+    """The cross-topic widening: real Grade-6 cluster-letter codes (with the corpus's
+    ``-N`` suffix splits) and the adjacent-grade recovery rows map to the right KC.
+    Pins the contract T2's training harness mirrors (T1_T2_COORDINATION.md §4)."""
+    KC = KnowledgeComponentId  # noqa: N806 — local alias keeps the assertions readable
+    # Suffix split is covered by startswith.
+    assert map_ccss_to_kc("6.RP.A.3c-1") == KC.PERCENT
+    assert map_ccss_to_kc("6.NS.A.1") == KC.DIVIDE_FRACTIONS
+    # 6.EE.6 lives in cluster B, not A — the bug T2 caught.
+    assert map_ccss_to_kc("6.EE.B.6") == KC.WRITE_EXPRESSIONS
+    assert map_ccss_to_kc("6.EE.A.2c") == KC.EVALUATE_EXPRESSIONS
+    # 6.NS.6 split: 6c → number line, 6b → coordinate plane (per CURRICULUM_STANDARD U3 L2/L6).
+    assert map_ccss_to_kc("6.NS.C.6c") == KC.RATIONALS_ON_LINE
+    assert map_ccss_to_kc("6.NS.C.6b") == KC.COORDINATE_PLANE
+    # Order-sensitive: 6.SP.B.5c (MAD) must win over the broader 6.SP.B.5 (summary stats).
+    assert map_ccss_to_kc("6.SP.B.5c") == KC.MEAN_ABSOLUTE_DEVIATION
+    assert map_ccss_to_kc("6.SP.B.5a") == KC.SUMMARY_STATISTICS
+    # Adjacent-grade recovery: integers (CCSS Gr 7) and multiply/divide fractions (CCSS Gr 5).
+    assert map_ccss_to_kc("7.NS.A.1") == KC.INTEGER_ADD_SUBTRACT
+    assert map_ccss_to_kc("7.NS.A.2") == KC.INTEGER_MULTIPLY_DIVIDE
+    assert map_ccss_to_kc("5.NF.B.4") == KC.MULTIPLY_FRACTIONS
+    assert map_ccss_to_kc("5.NF.B.7") == KC.DIVIDE_FRACTIONS  # division precursor
 
 
 # ─── load_fraction_problems ───────────────────────────────────────────────────

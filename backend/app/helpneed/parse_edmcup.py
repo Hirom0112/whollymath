@@ -3,7 +3,9 @@
 This is the first step of the HelpNeed predictor's training pipeline (PROJECT.md
 §3.7; ARCHITECTURE.md §8). It reads the public **EDM Cup 2023** dataset's
 action-level clickstream (mirrored on OSF; collected via ASSISTments, ~2019–2023),
-filters to FRACTION problems via the Common Core ``problem_skill_code``, and
+filters to the problems we teach via the Common Core ``problem_skill_code`` (the full
+Grade-6 KC scope + the foundation-fraction and adjacent-grade codes — see the CCSS→KC
+map; originally fraction-only, widened for the cross-topic model), and
 collapses each (assignment, problem) attempt sequence into one ``EdmCupTurn``
 carrying the four PROJECT.md §3.7 signals — correctness, response latency, hint
 usage, attempt count.
@@ -39,15 +41,14 @@ deterministic (PROJECT.md §4.1).
 (latency-windowed rates, recent-error counts, the §3.7 feature list) is **Slice
 3.3**. Keeping the cut sharp is what lets each slice be reviewed independently.
 
-**CCSS → KC mapping** (PROJECT.md §3.1 five-KC scope). Only the codes the tutor
-actually teaches are kept; everything else (decimals, mult-by-whole, mult/div,
-6.RP/6.NS) is excluded outright. ``5.NF.A.1`` (add) and ``5.NF.A.2`` (subtract)
-both code unlike-denominator add/sub — the CCSS code alone cannot distinguish
-them, so both map to ``ADDITION_UNLIKE``. Pulling them apart would need the
-problem-text BERT vector (a future slice if SUBTRACTION_UNLIKE training cases run
-short); flagged here so the director can review the choice. ``COMMON_DENOMINATOR``
-and ``SUBTRACTION_UNLIKE`` will not get direct EDM Cup labels — that is fine,
-they get labels from our own tutor's KC tracking, not the training data.
+**CCSS → KC mapping** (the full Grade-6 KC scope; T1_T2_COORDINATION.md §4). Only the
+codes we teach are kept; non-content standards are excluded outright. ``5.NF.A.1`` (add)
+and ``5.NF.A.2`` (subtract) both code unlike-denominator add/sub — the CCSS code alone
+cannot distinguish them, so both map to ``ADDITION_UNLIKE`` (pulling them apart would need
+the problem-text BERT vector, a future slice). A handful of KCs get no direct EDM label —
+``COMMON_DENOMINATOR``/``SUBTRACTION_UNLIKE`` (filled by our own tutor's KC tracking) and
+the TEKS-only KCs with no CCSS code (persona-calibrated). The cross-topic widening (Grade-6
+6.* codes + adjacent-grade 7.NS/5.NF.B) lives in the ``_CCSS_PREFIX_TO_KC`` table below.
 """
 
 from __future__ import annotations
@@ -76,7 +77,7 @@ class EdmCupTurn:
     - ``problem_id``         the problem within the session.
     - ``ccss_code``          the raw Common Core code (kept for traceability).
     - ``kc``                 the mapped ``KnowledgeComponentId`` — the join key
-      back into our five-KC scope.
+      back into our KC scope.
     - ``correct``            the turn ended with a ``correct_response`` event.
     - ``first_attempt_correct``  the FIRST response on this problem was correct,
       with no prior hint and no ``answer_requested``. This is the strict
@@ -195,30 +196,26 @@ class _OpenTurn:
 
 # ─── CCSS → KC mapping ────────────────────────────────────────────────────────
 
-# The five-KC scope (PROJECT.md §3.1) maps onto Common Core codes as follows.
-# Each entry is a (prefix, KC) pair; we match by ``startswith`` so trailing
-# letters (3.NF.A.2a, 3.NF.A.2b, 5.NF.A.1a) all hit the right family. ORDER
-# MATTERS: more-specific prefixes must come before broader ones, and EXCLUSION
-# prefixes (4.NF.B.4, 4.NF.C, 5.NF.B, etc.) are handled by the "not matched →
-# None" default — there is no positive entry for them.
+# The KC scope maps onto Common Core codes as follows. Each entry is a (prefix, KC)
+# pair matched by ``startswith`` so trailing letters and the corpus's ``-1/-2`` suffix
+# splits (3.NF.A.2a, 6.RP.A.3c-1, …) all hit the right family. ORDER MATTERS only where
+# one prefix is a prefix of another (6.SP.B.5c before 6.SP.B.5); everything else is
+# disjoint. Anything with no positive entry returns ``None`` and is filtered out.
 #
-# Why these and not others:
-#   3.NF.A.2 → number-line placement: directly the KC.
-#   3.NF.A.1, 3.NF.A.3, 4.NF.A.* → equivalence family (3.NF.A.1 defines a
-#     fraction; 3.NF.A.3 covers equivalence + comparison; 4.NF.A extends it).
-#   4.NF.B.3 → like-denominator add/sub (a precursor to KC3/KC4). We treat it as
-#     ADDITION_UNLIKE training signal because the procedural skill (combine
-#     numerators, keep denominator) is the same shape, just with the
-#     common-denominator step trivialized.
-#   5.NF.A.1, 5.NF.A.2 → unlike-denominator add/sub: the exact KC3/KC4 surface.
-#     The CCSS code does NOT distinguish add from subtract here; both map to
-#     ADDITION_UNLIKE. (SUBTRACTION_UNLIKE is filled in by our own tutor's KC
-#     system, not by this training set.)
+# Two tiers (T1_T2_COORDINATION.md §4):
+#   - the five FOUNDATION fraction KCs, from below-grade NF codes:
+#       3.NF.A.2 → number-line placement; 3.NF.A.1/3.NF.A.3/4.NF.A.* → equivalence;
+#       4.NF.B.3 → like-denom add/sub and 5.NF.A.* → unlike-denom add/sub, both as
+#       ADDITION_UNLIKE training signal (the CCSS code can't split add from subtract;
+#       SUBTRACTION_UNLIKE is filled by our own tutor's KC system, not this set).
+#   - the GRADE-6 ontology, from the 6.* codes (one prefix per CURRICULUM_STANDARD.md
+#     §3–§7 lesson), PLUS adjacent-grade rows for the same skill: 7.NS.A.* (integers —
+#     CCSS Gr 7, TEKS Gr 6) and 5.NF.B.4/5/6 multiply + 5.NF.B.7 divide (CCSS Gr 5).
 #
-# Explicitly excluded (return ``None``): 4.NF.B.4 (multiplying a fraction by a
-# whole number), 4.NF.C.* (decimals), 5.NF.B.* (multiplication/division of
-# fractions), and every non-NF standard (3.OA, 4.OA, 6.NS, 6.RP, …). We do not
-# teach those.
+# Still excluded (return ``None``): 4.NF.B.4 (× by a whole number), 4.NF.C.* (decimals),
+# 5.NF.B.3 (fraction-as-division concept), and any non-math-content standard. TEKS-only
+# KCs (classify-number-sets, triangle-properties, categorical-data, financial-literacy,
+# multiply via TEKS 6.3B) have no CCSS code in the corpus → no entry → persona-calibrated.
 _CCSS_PREFIX_TO_KC: tuple[tuple[str, KnowledgeComponentId], ...] = (
     ("3.NF.A.2", KnowledgeComponentId.NUMBER_LINE_PLACEMENT),
     ("3.NF.A.1", KnowledgeComponentId.EQUIVALENCE),
@@ -233,20 +230,88 @@ _CCSS_PREFIX_TO_KC: tuple[tuple[str, KnowledgeComponentId], ...] = (
     # CCSS code alone cannot distinguish them, so both map to ADDITION_UNLIKE
     # (see module docstring).
     ("5.NF.A.", KnowledgeComponentId.ADDITION_UNLIKE),
+    # ── Grade-6 cross-topic expansion (T1_T2_COORDINATION.md §4) ──
+    # One prefix per Grade-6 lesson (CURRICULUM_STANDARD.md §3–§7), keyed on the REAL
+    # cluster-letter codes in the EDM corpus (verified by T2's grep), matched by
+    # ``startswith`` so the data's ``-1/-2`` suffix splits (e.g. ``6.RP.A.3c-1``) are
+    # covered for free. ORDER MATTERS only where one prefix is a prefix of another:
+    # ``6.SP.B.5c`` (MAD) MUST precede ``6.SP.B.5`` (summary stats); all other entries
+    # are disjoint at this specificity.
+    # U1 — Ratios & Rates (6.RP)
+    ("6.RP.A.1", KnowledgeComponentId.RATIO_LANGUAGE),
+    ("6.RP.A.2", KnowledgeComponentId.UNIT_RATE),
+    ("6.RP.A.3a", KnowledgeComponentId.EQUIVALENT_RATIOS),
+    ("6.RP.A.3b", KnowledgeComponentId.RATE_PROBLEMS),
+    ("6.RP.A.3c", KnowledgeComponentId.PERCENT),
+    ("6.RP.A.3d", KnowledgeComponentId.UNIT_CONVERSION),
+    # U2 — Fractions & Decimals (6.NS.1–4)
+    ("6.NS.A.1", KnowledgeComponentId.DIVIDE_FRACTIONS),
+    ("6.NS.B.2", KnowledgeComponentId.MULTI_DIGIT_DIVISION),
+    ("6.NS.B.3", KnowledgeComponentId.DECIMAL_OPERATIONS),
+    ("6.NS.B.4", KnowledgeComponentId.GCF_LCM),
+    # U3 — Rational Numbers (6.NS.5–8). 6.NS.6: per CURRICULUM_STANDARD.md U3 L2/L6,
+    # 6a + 6c are number-line (rationals_on_line), 6b is the coordinate plane.
+    ("6.NS.C.5", KnowledgeComponentId.SIGNED_NUMBERS),
+    ("6.NS.C.6a", KnowledgeComponentId.RATIONALS_ON_LINE),
+    ("6.NS.C.6b", KnowledgeComponentId.COORDINATE_PLANE),
+    ("6.NS.C.6c", KnowledgeComponentId.RATIONALS_ON_LINE),
+    ("6.NS.C.7a", KnowledgeComponentId.ORDERING_INEQUALITIES),
+    ("6.NS.C.7b", KnowledgeComponentId.ORDERING_INEQUALITIES),
+    ("6.NS.C.7c", KnowledgeComponentId.ABSOLUTE_VALUE),
+    ("6.NS.C.7d", KnowledgeComponentId.ABSOLUTE_VALUE),
+    ("6.NS.C.8", KnowledgeComponentId.COORDINATE_PLANE),
+    # U4 — Expressions (6.EE.1–4, 6). NOTE: 6.EE.6 lives in cluster B, not A.
+    ("6.EE.A.1", KnowledgeComponentId.EXPONENTS),
+    ("6.EE.A.2a", KnowledgeComponentId.WRITE_EXPRESSIONS),
+    ("6.EE.A.2b", KnowledgeComponentId.EXPRESSION_PARTS),
+    ("6.EE.A.2c", KnowledgeComponentId.EVALUATE_EXPRESSIONS),
+    ("6.EE.A.3", KnowledgeComponentId.EQUIVALENT_EXPRESSIONS),
+    ("6.EE.A.4", KnowledgeComponentId.EQUIVALENT_EXPRESSIONS),
+    ("6.EE.B.6", KnowledgeComponentId.WRITE_EXPRESSIONS),
+    # U5 — Equations & Inequalities (6.EE.5–9)
+    ("6.EE.B.5", KnowledgeComponentId.EQUATION_SOLUTIONS),
+    ("6.EE.B.7", KnowledgeComponentId.ONE_STEP_EQUATIONS),
+    ("6.EE.B.8", KnowledgeComponentId.INEQUALITIES),
+    ("6.EE.C.9", KnowledgeComponentId.DEPENDENT_VARS),
+    # U6 — Geometry (6.G)
+    ("6.G.A.1", KnowledgeComponentId.AREA_POLYGONS),
+    ("6.G.A.2", KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES),
+    ("6.G.A.3", KnowledgeComponentId.POLYGONS_COORDINATE_PLANE),
+    ("6.G.A.4", KnowledgeComponentId.SURFACE_AREA_NETS),
+    # U7 — Statistics (6.SP). 6.SP.B.5c (MAD) MUST precede 6.SP.B.5 (summary stats).
+    ("6.SP.A.1", KnowledgeComponentId.STATISTICAL_QUESTIONS),
+    ("6.SP.A.2", KnowledgeComponentId.CENTER_SPREAD_SHAPE),
+    ("6.SP.A.3", KnowledgeComponentId.SUMMARY_STATISTICS),
+    ("6.SP.B.4", KnowledgeComponentId.DATA_DISPLAYS),
+    ("6.SP.B.5c", KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION),
+    ("6.SP.B.5", KnowledgeComponentId.SUMMARY_STATISTICS),
+    # ── Adjacent-grade data recovery (T1_T2_COORDINATION.md, owner-raised) ──
+    # The same SKILL coded under a different grade: TEKS pulls integer arithmetic to
+    # Gr 6 but CCSS codes it 7.NS; fraction multiply/divide is CCSS Gr 5 (5.NF.B).
+    # We keep these rows and label them with our Gr-6 KC — the behavioral signal is
+    # grade-agnostic (the shared-signal thesis); flagged as adjacent-grade in the writeup.
+    ("7.NS.A.1", KnowledgeComponentId.INTEGER_ADD_SUBTRACT),
+    ("7.NS.A.2", KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE),
+    ("7.NS.A.3", KnowledgeComponentId.INTEGER_ADD_SUBTRACT),
+    ("5.NF.B.4", KnowledgeComponentId.MULTIPLY_FRACTIONS),
+    ("5.NF.B.5", KnowledgeComponentId.MULTIPLY_FRACTIONS),
+    ("5.NF.B.6", KnowledgeComponentId.MULTIPLY_FRACTIONS),
+    # 5.NF.B.7 is DIVISION of unit fractions — the Gr-5 precursor of 6.NS.1 divide.
+    ("5.NF.B.7", KnowledgeComponentId.DIVIDE_FRACTIONS),
 )
 
 
 def map_ccss_to_kc(ccss_code: str) -> KnowledgeComponentId | None:
-    """Map a Common Core ``problem_skill_code`` to one of our five KCs, or None.
+    """Map a Common Core ``problem_skill_code`` to one of our KCs, or None.
 
-    Returns ``None`` for any code outside the five-KC scope — decimals, mult/div,
-    non-NF standards, blank — so the caller can filter them out wholesale. The
-    match is by prefix (``startswith``) against the table above; the first
-    matching prefix wins, so the table is ordered with the most specific entries
-    first.
+    Returns ``None`` for any code outside our KC scope — non-content standards, blank,
+    and the deliberately-excluded NF subsets — so the caller can filter them out
+    wholesale. The match is by prefix (``startswith``) against the table above; the first
+    matching prefix wins, so the table is ordered so a more-specific prefix precedes any
+    broader one it shares a stem with (e.g. ``6.SP.B.5c`` before ``6.SP.B.5``).
 
     Pure / deterministic / cheap — called once per problem at index time, then
-    the result is cached in the fraction-problems map.
+    the result is cached in the mapped-problems index.
     """
     if not ccss_code:
         return None
@@ -262,18 +327,20 @@ def map_ccss_to_kc(ccss_code: str) -> KnowledgeComponentId | None:
 def load_fraction_problems(
     problem_details_path: Path,
 ) -> dict[str, tuple[str, KnowledgeComponentId]]:
-    """Index ``problem_details.csv`` by problem_id → (ccss_code, kc), fraction-only.
+    """Index ``problem_details.csv`` by problem_id → (ccss_code, kc), in-scope only.
 
     Reads the file once (it's small — ~62 MB), keeps only the rows whose
-    ``problem_skill_code`` maps to one of our five KCs via :func:`map_ccss_to_kc`,
+    ``problem_skill_code`` maps to one of our KCs via :func:`map_ccss_to_kc`,
     and returns a dict the action-logs parser uses to (a) filter the 24M-row
-    stream and (b) attach the KC label to each emitted turn.
+    stream and (b) attach the KC label to each emitted turn. Originally fraction-only;
+    now keeps the full Grade-6 KC scope (the cross-topic widening). The name is kept
+    for its existing caller (``train_pipeline``); the contents are the in-scope set.
 
     Why a dict and not a set: the turn carries both ``ccss_code`` (raw, for
     traceability into the decision log) and ``kc`` (the join key), so we need
     both at flush time without re-parsing the CSV.
     """
-    fraction_problems: dict[str, tuple[str, KnowledgeComponentId]] = {}
+    mapped_problems: dict[str, tuple[str, KnowledgeComponentId]] = {}
     with problem_details_path.open(newline="") as handle:
         reader = csv.DictReader(handle)
         for row in reader:
@@ -284,8 +351,8 @@ def load_fraction_problems(
             kc = map_ccss_to_kc(ccss_code)
             if kc is None:
                 continue
-            fraction_problems[problem_id] = (ccss_code, kc)
-    return fraction_problems
+            mapped_problems[problem_id] = (ccss_code, kc)
+    return mapped_problems
 
 
 # ─── parse_action_logs (the streaming aggregator) ─────────────────────────────
