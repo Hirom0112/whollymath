@@ -237,6 +237,17 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
     ),
+    # Equivalent ratios: scale a ratio MULTIPLICATIVELY to a target term (6.RP.3a). Numeric
+    # answer (the missing term), practice-only like UNIT_RATE.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.EQUIVALENT_RATIOS,
+        skill_name="Find an equivalent ratio",
+        description=(
+            "Find the missing term of an equivalent ratio by multiplying both terms by the "
+            "same number (e.g. 3:4 = 9:12), reasoning multiplicatively rather than additively."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
 )
 
 

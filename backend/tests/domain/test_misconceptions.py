@@ -61,6 +61,7 @@ EXPECTED_MISCONCEPTION_IDS = {
 # check stays scoped to the five bank ids above.
 EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "rate-inversion",  # KC_unit_rate
+    "additive-ratio",  # KC_equivalent_ratios
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

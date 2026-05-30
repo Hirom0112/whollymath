@@ -49,6 +49,7 @@ from app.domain.misconceptions import (
     MisconceptionId,
     WrongFraction,
     add_across,
+    additive_ratio,
     invert_rate,
     natural_number_bias_number_line,
     subtract_across,
@@ -318,6 +319,15 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.RATE_INVERSION,
         predict=lambda ops: invert_rate(int(ops[0]), int(ops[1])),
+    ),
+    # additive ratio: scaled a:b -> ?:target_den by adding instead of multiplying (operands are
+    # (a, b, target_den)). A wrong OPERATION (additive vs multiplicative reasoning).
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.EQUIVALENT_RATIOS,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.ADDITIVE_RATIO,
+        predict=lambda ops: additive_ratio(int(ops[0]), int(ops[1]), int(ops[2])),
     ),
 )
 

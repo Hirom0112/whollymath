@@ -564,6 +564,40 @@ def _generate_unit_rate(
     )
 
 
+def _generate_equivalent_ratios(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_equivalent_ratios: find the missing term of an equivalent ratio (multiplicative).
+
+    Builds ``a:b = ?:(b*k)`` and asks for the missing term ``a*k``. The scale factor ``k`` is
+    ≥3 so the additive answer (``a + (b*k - b)``) is always DISTINCT from the correct ``a*k``
+    (they coincide only at k=2), keeping the misconception diagnostic. ``operands = (a, b,
+    b*k)`` so the verifier can replay the additive-ratio error. Numeric, rendered symbolically.
+    """
+    scale_pool = {1: (3, 4), 2: (3, 4, 5), 3: (4, 5, 6), 4: (5, 6, 7)}.get(
+        difficulty or 0, (3, 4, 5)
+    )
+    a = rng.randint(1, 6)
+    b = rng.randint(1, 6)
+    # a != b keeps the additive misconception (a + (b*k - b)) DISTINCT from the multiplicative
+    # answer (a*k): the two coincide exactly when a == b (then both equal k), which would make the
+    # error non-diagnostic. With a != b and k >= 3 they always differ.
+    while b == a:
+        b = rng.randint(1, 6)
+    k = rng.choice(scale_pool)
+    target_den = b * k
+    statement = f"{a} : {b} = ? : {target_den}. Find the missing number that keeps the ratio equal."
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.EQUIVALENT_RATIOS, seed, surface_format),
+        kc=KnowledgeComponentId.EQUIVALENT_RATIOS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(a * k),
+        representations_available=get_kc(KnowledgeComponentId.EQUIVALENT_RATIOS).representations,
+        operands=(Rational(a), Rational(b), Rational(target_den)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -573,6 +607,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.SUBTRACTION_UNLIKE: _generate_subtraction,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _generate_number_line,
     KnowledgeComponentId.UNIT_RATE: _generate_unit_rate,
+    KnowledgeComponentId.EQUIVALENT_RATIOS: _generate_equivalent_ratios,
 }
 
 

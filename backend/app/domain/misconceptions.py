@@ -66,6 +66,7 @@ class MisconceptionId(StrEnum):
     # fraction-only diagnostic_gems bank — they enter with their lesson (the bank's verbatim
     # match holds only for the five fraction misconceptions above).
     RATE_INVERSION = "rate-inversion"
+    ADDITIVE_RATIO = "additive-ratio"
 
 
 @dataclass(frozen=True)
@@ -183,6 +184,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "the ratio but loses track of which quantity is 'per 1'."
         ),
         applicable_kcs=(KnowledgeComponentId.UNIT_RATE,),
+    ),
+    Misconception(
+        id=MisconceptionId.ADDITIVE_RATIO,
+        name="Additive ratio reasoning",
+        description=(
+            "Scales a ratio by ADDING the same amount to both terms instead of "
+            "MULTIPLYING — so 3:4 = ?:12 becomes 11 (add 8 to each) rather than 9 "
+            "(multiply by 3). The classic additive-vs-multiplicative error: the learner "
+            "preserves the difference instead of the multiplicative relationship."
+        ),
+        applicable_kcs=(KnowledgeComponentId.EQUIVALENT_RATIOS,),
     ),
 )
 
@@ -327,6 +339,17 @@ def add_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:
     sum, and exactly the diagnostic tell).
     """
     return WrongFraction(numerator=num1 + num2, denominator=den1 + den2)
+
+
+def additive_ratio(known_num: int, known_den: int, target_den: int) -> Rational:
+    """additive-ratio: scale a:b -> ?:target_den by ADDING (target_den - b) to a, not multiplying.
+
+    The learner preserves the DIFFERENCE instead of the multiplicative relationship, so
+    3:4 -> ?:12 gives 3 + (12 - 4) = 11 rather than 3 * 3 = 9. Returned as a Rational so the
+    verifier compares values directly (it equals the correct multiplicative answer only in the
+    degenerate target_den == 2*b case, which the generator avoids).
+    """
+    return Rational(known_num + (target_den - known_den))
 
 
 def invert_rate(total: int, count: int) -> Rational:

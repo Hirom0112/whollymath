@@ -49,6 +49,7 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # representation, like COMMON_DENOMINATOR) until a numeric word-problem widget lands (T3),
     # at which point adding WORD_PROBLEM here makes it masterable with no other change.
     _KC.UNIT_RATE: (_REP.SYMBOLIC,),
+    _KC.EQUIVALENT_RATIOS: (_REP.SYMBOLIC,),  # numeric missing-term entry; practice-only
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

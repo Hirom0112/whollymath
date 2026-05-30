@@ -369,6 +369,37 @@ def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _equivalent_ratios_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'multiply both terms by the same factor' steps for an equivalent ratio.
+
+    ``operands = (a, b, target_den)``; the scale factor is ``target_den / b`` and the missing
+    term is ``a * factor``, which equals ``problem.correct_value`` by construction. Raises if
+    the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"equivalent-ratios problem {problem.problem_id} needs (a, b, target)")
+    a, b, target_den = int(operands[0]), int(operands[1]), int(operands[2])
+    factor = target_den // b
+    return (
+        WorkedStep(
+            shown=f"The bottom went from {b} to {target_den} — that is times {factor}.",
+            why_prompt="Why must both terms grow by the same factor to stay an equal ratio?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Do the same to the top: {a} times {factor}.",
+            why_prompt="Why multiply (not add) to keep the ratio equal?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"The missing number is {a * factor}.",
+            why_prompt="Why does this keep the two ratios naming the same comparison?",
+            revealed_value=problem.correct_value,
+        ),
+    )
+
+
 # ─── The public builder ───────────────────────────────────────────────────────
 
 
@@ -404,6 +435,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.EQUIVALENCE: _equivalence_steps,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _number_line_steps,
     KnowledgeComponentId.UNIT_RATE: _unit_rate_steps,
+    KnowledgeComponentId.EQUIVALENT_RATIOS: _equivalent_ratios_steps,
 }
 
 

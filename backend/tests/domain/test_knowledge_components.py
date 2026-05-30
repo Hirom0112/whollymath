@@ -40,9 +40,9 @@ EXPECTED_CATALOG_IDS = {
     "KC_addition_unlike",
     "KC_subtraction_unlike",
     "KC_number_line_placement",
-    # Grade-6 content build (2026-05-30) — Unit 1: the first non-fraction KC made
-    # content-complete (registry + generator + spec + hints + worked example).
+    # Grade-6 content build (2026-05-30) — Unit 1 (numeric, on the existing infra).
     "KC_unit_rate",
+    "KC_equivalent_ratios",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -50,6 +50,7 @@ EXPECTED_CATALOG_IDS = {
 # subtracts them. Grows with each Grade-6 KC built on the procedural generators (no gem items).
 GRADE6_BUILT_NOT_IN_BANK = {
     "KC_unit_rate",
+    "KC_equivalent_ratios",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -58,9 +59,9 @@ GRADE6_BUILT_NOT_IN_BANK = {
 # — no generator/spec/hints — so they are absent from the registry, the gem catalog, and
 # LIVE_KCS until their content is built. The full enum is exactly CATALOG ∪ GRADE6.
 EXPECTED_GRADE6_KCS = {
-    # U1 — Ratios & Rates (6.RP). KC_unit_rate moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
+    # U1 — Ratios & Rates (6.RP). KC_unit_rate + KC_equivalent_ratios moved to
+    # EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_ratio_language",
-    "KC_equivalent_ratios",
     "KC_rate_problems",
     "KC_percent",
     "KC_unit_conversion",
@@ -118,7 +119,7 @@ def test_registry_contains_exactly_the_content_complete_kcs() -> None:
     """
     registry_ids = {kc.id.value for kc in KC_REGISTRY.all()}
     assert registry_ids == EXPECTED_CATALOG_IDS
-    assert len(KC_REGISTRY.all()) == 6
+    assert len(KC_REGISTRY.all()) == len(EXPECTED_CATALOG_IDS)
 
 
 def test_enum_is_the_full_grade6_ontology() -> None:

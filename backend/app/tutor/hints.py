@@ -194,6 +194,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Split the total evenly into that many equal shares. How big is a single share?",
         ),
     ),
+    # index 0 (operation) orients toward multiplying both parts by the same number; index 1
+    # (magnitude) toward keeping the ratio's size.
+    KnowledgeComponentId.EQUIVALENT_RATIOS: (
+        _nudge(
+            KnowledgeComponentId.EQUIVALENT_RATIOS,
+            "To keep a ratio equal, do the SAME thing to both numbers. What did you do below?",
+        ),
+        _nudge(
+            KnowledgeComponentId.EQUIVALENT_RATIOS,
+            "Did you ADD the same amount, or MULTIPLY by the same amount? Only one keeps it equal.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EQUIVALENT_RATIOS,
+            "How many times bigger is the new second number? Grow the first by that same many.",
+        ),
+    ),
 }
 
 
