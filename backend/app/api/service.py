@@ -34,6 +34,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 
+from app.api.live_adaptation import propose_adaptation_view
 from app.api.schemas import (
     ActionType,
     CourseNodeView,
@@ -84,6 +85,7 @@ from app.policy.scheduler import (
     live_representations,
     next_spec_after_outcome,
 )
+from app.policy.state_classifier import classify_state
 from app.tutor.hints import HintLevel, build_validated_hint, select_nudge
 from app.tutor.live_transfer_probe import build_live_probe_steps
 from app.tutor.session import (
@@ -348,6 +350,28 @@ def _maybe_intervene(
         kind=InterventionKind.INLINE_ASSERTION,
         text=voice_help(nudge_text, provider=voice_provider),
     )
+
+
+# How many recent turns the live-adaptation representation-diversity read spans (HR.B4 Beat 3).
+_ADAPT_REP_WINDOW = 5
+
+
+def _streak_and_distinct_reps(session: TutorSession) -> tuple[int, int]:
+    """The unassisted correct streak + distinct recent representations, from the session history.
+
+    The two session facts the live state classifier (HR.B2) needs beyond the behavioral window —
+    they separate fluent-ready (a clean streak across ≥2 representations) from pattern-matching (a
+    streak stuck in one). Both read from ``history`` (each turn's ``Observation``), so the
+    classifier stays a pure function of values the caller hands it.
+    """
+    streak = 0
+    for turn in reversed(session.history):
+        if turn.observation.correct and not turn.observation.hinted:
+            streak += 1
+        else:
+            break
+    recent = session.history[-_ADAPT_REP_WINDOW:]
+    return streak, len({turn.observation.representation for turn in recent})
 
 
 # Practice turns to wait after a FAILED probe before re-offering it: a still-provisional KC
@@ -977,6 +1001,8 @@ class SessionStore:
             response = _answer_response(
                 live, request, self.predictor, self.gate, self.voice_provider
             )
+            # Beat 3: attach the live between-problem adaptation (observe-then-act, gated).
+            response = self._with_live_adaptation(live, response)
         if self.session_factory is not None:
             _persist_turn(self.session_factory, live, request, response)
         return response
@@ -1053,6 +1079,51 @@ class SessionStore:
             kind=InterventionKind.INLINE_ASSERTION,
             text=voice_help(nudge_text, provider=self.voice_provider),
         )
+
+    def _with_live_adaptation(self, live: _LiveSession, response: TurnResponse) -> TurnResponse:
+        """Attach the live-loop between-problem adaptation to an answer response (HR.B4 Beat 3).
+
+        Observe-then-act, AFTER the graded verdict is fixed (so the sub-100ms decision is untouched
+        — this only adds to assembling the response, like the existing HelpNeed/intervention reads).
+        Gated on the proactive arm (default OFF): reads the session's behavioral stream (HR.B1
+        features) + the HelpNeed score + the streak/representation facts, classifies the sustained
+        state (HR.B2), and proposes a labeled morph (HR.B3). The result rides on
+        ``TurnResponse.adaptation`` (with the morph target on ``to_surface``) — ADVISORY: the
+        per-answer routing on ``next_surface_state`` is left intact and the session is not mutated;
+        the surface applies the morph. Returns the response unchanged when off, without persistence,
+        or when nothing fires. Any DB hiccup is swallowed (invariant 7)."""
+        if (
+            not live.proactive_enabled
+            or self.session_factory is None
+            or live.db_session_id is None
+            or response.next_problem is None
+        ):
+            return response
+        try:
+            with self.session_factory() as db:
+                events = repo.load_events_for_session(db, live.db_session_id)
+        except Exception:  # noqa: BLE001 — invariant 7: a telemetry read must not break /turn.
+            _log.exception(
+                "could not read events for live adaptation on session %s", live.db_session_id
+            )
+            return response
+
+        episodes = build_episodes(events)
+        if not episodes:
+            return response
+        streak, distinct_reps = _streak_and_distinct_reps(live.tutor)
+        state = classify_state(
+            compute_live_features(episodes),
+            helpneed_score=response.help_need or 0.0,
+            correct_streak_no_hint=streak,
+            distinct_recent_representations=distinct_reps,
+        )
+        adaptation = propose_adaptation_view(
+            state, response.next_problem.kc, response.next_surface_state
+        )
+        if adaptation is None:
+            return response
+        return response.model_copy(update={"adaptation": adaptation})
 
     def _resolve_event_linkage(self, session_id: str) -> tuple[int | None, int | None]:
         """Best-effort (session-row, learner-row) ids for a batch; ``(None, None)`` if unknown.

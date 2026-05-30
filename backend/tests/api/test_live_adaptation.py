@@ -16,6 +16,8 @@ def test_confused_projects_a_morph_view() -> None:
     assert view.state == "confused"
     assert view.is_morph is True
     assert view.reason.strip()
+    # The morph target is carried for the surface to apply (addition → fraction bars / S3).
+    assert view.to_surface == SurfaceState.FRACTION_BARS_PRIMARY.value
 
 
 def test_idle_projects_a_nudge_only_view() -> None:
@@ -23,6 +25,7 @@ def test_idle_projects_a_nudge_only_view() -> None:
     assert view is not None
     assert view.state == "idle_avoiding"
     assert view.is_morph is False  # a nudge never changes the surface (refuse-rule 3)
+    assert view.to_surface is None
 
 
 def test_productive_struggle_projects_no_view() -> None:

@@ -41,10 +41,12 @@ def propose_adaptation_view(
     transition = next_transition(current_surface, AdaptationProposed(state=state, kc=kc))
     if isinstance(transition, NoChange):
         return None
+    is_morph = isinstance(transition, StateChange)
     return AdaptationView(
         state=state.value,
         reason=transition.label,
-        is_morph=isinstance(transition, StateChange),
+        is_morph=is_morph,
+        to_surface=transition.to_state.value if is_morph else None,
     )
 
 

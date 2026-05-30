@@ -165,9 +165,13 @@ export interface AdaptationView {
    */
   reason: string;
   /**
-   * True if the surface changed (see next_surface_state); False for a nudge-only.
+   * True if it proposes a surface change; False for a nudge-only (refuse-rule 3).
    */
   is_morph: boolean;
+  /**
+   * The surface state the morph proposes (e.g. 'S2_number_line_primary'), or null for a nudge-only. Advisory: the surface applies it; the per-answer routing on next_surface_state is unchanged by the observe-then-act adaptation.
+   */
+  to_surface?: string | null;
 }
 /**
  * One adaptive-arm turn, display-ready (Slice 5.3 theater). The verified path: the
@@ -1336,6 +1340,10 @@ export interface TurnResponse {
    * The ordered worked steps to reveal when ``next_surface_state`` is S4_worked_example; empty otherwise. This is the worked solution of the problem the learner JUST got stuck on — NOT ``next_problem`` (which is the fresh practice item and whose answer must not be revealed). The surface reveals these one step at a time, each with its 'why?' prompt (§3.5 S4). May be empty even on an S4 turn when the stuck problem's KC procedure has no buildable worked example (e.g. a yes/no item with no operand pair) — the surface then shows S4 without a walkthrough rather than the loop failing.
    */
   worked_example?: WorkedStepView[];
+  /**
+   * The worked steps of the problem the learner JUST SOLVED, present only after a CORRECT answer so the surface can affirm WHY it works ('Nice — here's why 1/2 + 1/4 = 3/4') before the next problem (live loop Beat 2). Distinct from ``worked_example`` (the stuck-path S4 walkthrough): this is a celebrate-and-consolidate beat, not a rescue. Empty on a wrong answer, a hint turn, or when the solved problem has no buildable walkthrough. The mascot may voice it; no LLM decides correctness (§8.1).
+   */
+  explanation?: WorkedStepView[];
   /**
    * True on the turn that FINISHES the lesson — i.e. the goal KC just became CONFIRMED (the S5 transfer probe passed). The bounded-lesson terminal signal (CP.B; PROJECT.md §3.13): the surface shows the 'you finished it' screen and routes the learner home instead of presenting yet another practice problem. ``next_problem`` may still be populated as an optional 'keep practicing' item, but a complete lesson must not silently loop on. False on every other turn.
    */

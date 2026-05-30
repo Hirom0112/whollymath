@@ -121,7 +121,15 @@ class AdaptationView(BaseModel):
     state: str = Field(description="The triggering LearnerState, e.g. 'confused' (HR.B2).")
     reason: str = Field(min_length=1, description="The one-line on-screen reason for the change.")
     is_morph: bool = Field(
-        description="True if the surface changed (see next_surface_state); False for a nudge-only."
+        description="True if it proposes a surface change; False for a nudge-only (refuse-rule 3)."
+    )
+    to_surface: str | None = Field(
+        default=None,
+        description=(
+            "The surface state the morph proposes (e.g. 'S2_number_line_primary'), or null for a "
+            "nudge-only. Advisory: the surface applies it; the per-answer routing on "
+            "next_surface_state is unchanged by the observe-then-act adaptation."
+        ),
     )
 
 
