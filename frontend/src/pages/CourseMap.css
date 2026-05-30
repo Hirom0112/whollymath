@@ -68,22 +68,33 @@
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32);
 }
 
-.wm-coursemap-mascot {
+/* Pi is the nav trigger here; the wrap holds the mascot-menu + the "Got homework?" bubble. */
+.wm-coursemap-mascot-wrap {
   flex: 0 0 auto;
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* The shared Mascot is a 130x100 figure; in the header it sits at a predictable smaller
+   footprint (~78x60). We scale the PiMenu trigger's figure down and shrink the trigger box to
+   match, so the clickable area tracks what's visible and the fanned popover anchors correctly. */
+.wm-coursemap-mascot-wrap .wm-pimenu-fig {
   width: 78px;
   height: 60px;
+}
+.wm-coursemap-mascot-wrap .wm-pimenu-trigger,
+.wm-coursemap-mascot-wrap .wm-coursemap-mascot-solo {
   /* The wheel rolls in from the left, then a gentle idle bob (reuses the cold-start motion
-     language). Rotating the whole box around its centre reads as a rolling wheel. */
+     language). Rotating around its centre reads as a rolling wheel. Applies whether Pi is the
+     PiMenu trigger (when a menu is wired) or the plain mascot (the default learning-path case). */
+  display: inline-block;
   transform-origin: center;
   animation:
     wm-coursemap-rollin 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both,
     wm-coursemap-bob 3.4s ease-in-out 2.1s infinite;
 }
-
-/* The shared Mascot is a 130x100 figure; scale it to a predictable footprint anchored
-   top-left so it sits beside the headline instead of overlapping it. */
-.wm-coursemap-mascot .wm-mascot-figure {
+.wm-coursemap-mascot-wrap .wm-pimenu-fig .wm-mascot-figure {
   position: absolute;
   top: 0;
   left: 0;
@@ -115,7 +126,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wm-coursemap-panel,
-  .wm-coursemap-mascot {
+  .wm-coursemap-mascot-wrap .wm-pimenu-trigger,
+  .wm-coursemap-mascot-wrap .wm-coursemap-mascot-solo {
     animation: none;
     opacity: 1;
     transform: none;
@@ -302,10 +314,31 @@
 }
 
 .wm-coursemap-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--wm-font-serif);
   font-size: 19px;
   font-weight: 600;
   color: var(--wm-navy-deep);
+}
+
+/* Gold mastery star beside a mastered skill's name — the drawn brand spark (never an emoji),
+   tinted with the reward hue and given a navy outline so the gold reads on the cream card.
+   Additive to the "Mastered" badge + check dot: color is reinforcing, never the only cue. */
+.wm-coursemap-star {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: var(--wm-mean-spark);
+}
+.wm-coursemap-star svg {
+  width: 100%;
+  height: 100%;
+  stroke: var(--wm-navy-deep);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
 }
 
 .wm-coursemap-desc {
@@ -378,6 +411,94 @@
 .wm-coursemap-card:disabled .wm-coursemap-cta {
   color: #6f6852;
   font-weight: 600;
+}
+
+/* Homework entry — Pi at the top with a tappable "Got homework?" speech bubble. Matches the world
+   aesthetic (cream bubble, navy outline, chunky shadow) and sits in the header plate where the
+   mascot already is, so it adds in without disturbing the skill path. */
+.wm-coursemap-hw {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.wm-coursemap-hw-bubble {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 14px;
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  box-shadow: 0 4px 0 var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--wm-navy-deep);
+  white-space: nowrap;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+/* a little tail pointing left toward Pi (navy border + cream fill, two stacked triangles) */
+.wm-coursemap-hw-bubble::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 9px solid var(--wm-navy-deep);
+}
+.wm-coursemap-hw-bubble::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 6px solid var(--wm-cream);
+}
+
+.wm-coursemap-hw-tap {
+  font-family: var(--wm-font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--wm-blue-press);
+}
+
+.wm-coursemap-hw:hover .wm-coursemap-hw-bubble {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--wm-navy-deep);
+}
+.wm-coursemap-hw:active .wm-coursemap-hw-bubble {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+}
+.wm-coursemap-hw:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 3px;
+  border-radius: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-coursemap-hw-bubble {
+    transition: none;
+  }
 }
 
 @media (max-width: 480px) {

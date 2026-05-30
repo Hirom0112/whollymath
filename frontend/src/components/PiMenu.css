@@ -1,0 +1,192 @@
+/* Pi's tap-to-open nav menu — the colorful pie mascot is the trigger; tapping it fans out a
+   neat stacked popover of cream speech-bubble buttons (Dashboard / Homework / Save & exit).
+   Matches the world aesthetic shared with the CourseMap "Got homework?" bubble: cream fill,
+   2px navy outline, chunky navy shadow. Positioning of the whole unit is left to the caller's
+   header; this file owns only the trigger + popover's intrinsic look. */
+
+.wm-pimenu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* The trigger wraps the shared <Mascot> — a real button so it is tappable, focusable, and
+   announces aria-haspopup/aria-expanded. The mascot's own 130x100 box sets the size. */
+.wm-pimenu-trigger {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  /* a generous hit target around the figure */
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  transition: transform 0.14s ease;
+}
+.wm-pimenu-fig {
+  position: relative;
+  width: 130px;
+  height: 100px;
+}
+.wm-pimenu-trigger:hover {
+  transform: translateY(-2px);
+}
+.wm-pimenu-trigger:active {
+  transform: translateY(1px);
+}
+.wm-pimenu-trigger:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 4px;
+}
+
+/* The popover: a stacked column of bubble buttons beside the mascot. Absolutely positioned so
+   it overlays without reflowing the header; sits to the mascot's right and is centered on it. */
+.wm-pimenu-pop {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: wm-pimenu-in var(--wm-motion-press, 140ms) var(--wm-ease-morph, ease) both;
+}
+
+@keyframes wm-pimenu-in {
+  from {
+    opacity: 0;
+    transform: translate(-6px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+/* narrow-screen variant: the popover drops below Pi, so it rises up rather than from the left */
+@keyframes wm-pimenu-in-down {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.wm-pimenu-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  box-shadow: 0 4px 0 var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--wm-navy-deep);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+/* a little tail pointing left toward Pi (navy border + cream fill, two stacked triangles) —
+   the same tail language as the CourseMap homework bubble, so the unit reads as one product. */
+.wm-pimenu-item::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 9px solid var(--wm-navy-deep);
+}
+.wm-pimenu-item::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 6px solid var(--wm-cream);
+}
+
+.wm-pimenu-item-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  color: var(--wm-blue-press);
+}
+.wm-pimenu-item-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.wm-pimenu-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--wm-navy-deep);
+}
+.wm-pimenu-item:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+}
+.wm-pimenu-item:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 3px;
+}
+
+/* Honor reduced-motion: no rise/fade, no press travel — the menu just appears (Principle:
+   the labeled morph is the only motion we insist on; nav is quiet). */
+@media (prefers-reduced-motion: reduce) {
+  .wm-pimenu-pop {
+    animation: none;
+  }
+  .wm-pimenu-trigger,
+  .wm-pimenu-item {
+    transition: none;
+  }
+}
+
+/* On narrow screens, drop the popover BELOW the mascot so it never runs off-screen. */
+@media (max-width: 480px) {
+  .wm-pimenu-pop {
+    left: 50%;
+    top: calc(100% + 8px);
+    transform: translateX(-50%);
+    align-items: center;
+    animation-name: wm-pimenu-in-down;
+  }
+  /* the tail points up toward Pi instead of left */
+  .wm-pimenu-item::before {
+    left: 50%;
+    top: -9px;
+    transform: translateX(-50%);
+    border-top: none;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 9px solid var(--wm-navy-deep);
+  }
+  .wm-pimenu-item::after {
+    left: 50%;
+    top: -6px;
+    transform: translateX(-50%);
+    border-top: none;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 6px solid var(--wm-cream);
+  }
+}

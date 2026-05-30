@@ -1,0 +1,120 @@
+/* Lesson-progress tracker — the three-stage lesson arc (Practice → Final check → Got it!).
+   Designed to sit on the dark wooden banner, so marks are parchment/gold with a teal "current"
+   accent and read in grayscale (glyph + fill + weight, not colour alone). Plain global CSS,
+   wm-lt- prefixed so it never collides app-wide. */
+
+.wm-lt {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-family: var(--wm-font-sans);
+  user-select: none;
+}
+
+/* A stage: dot stacked over its label. */
+.wm-lt-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--wm-sp-1);
+  flex: 0 0 auto;
+  cursor: default;
+}
+
+.wm-lt-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--wm-gold);
+  background: rgba(40, 22, 8, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: var(--wm-on-wood);
+}
+
+.wm-lt-dot--star svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  stroke: rgba(40, 22, 8, 0.6);
+  stroke-width: 1;
+}
+
+.wm-lt-check {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wm-on-wood);
+}
+
+.wm-lt-label {
+  font-size: var(--wm-fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: var(--wm-on-wood);
+  text-shadow: 0 1px 2px rgba(40, 22, 8, 0.55);
+  white-space: nowrap;
+}
+
+/* The connecting rail between stages, carrying the progress fill. */
+.wm-lt-rail {
+  position: relative;
+  flex: 1 1 auto;
+  max-width: 150px;
+  height: 7px;
+  margin: 0 10px 19px; /* bottom margin aligns the rail with the dot centres above the labels */
+  border-radius: 999px;
+  background: rgba(40, 22, 8, 0.5);
+  box-shadow: inset 0 1px 2px rgba(40, 22, 8, 0.5);
+  overflow: hidden;
+}
+.wm-lt-rail-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--wm-yellow), var(--wm-gold-deep));
+  box-shadow: 0 0 6px rgba(245, 207, 91, 0.5);
+  transition: width 0.4s var(--wm-ease-morph);
+}
+
+/* ── DONE: filled gold dot + check glyph. ── */
+.wm-lt-step--done .wm-lt-dot {
+  background: var(--wm-gold-deep);
+  border-color: var(--wm-gold);
+}
+
+/* ── ACTIVE: teal "you are here" dot + bright label + a soft ring. ── */
+.wm-lt-step--active .wm-lt-dot {
+  background: var(--wm-mean-magnitude);
+  border-color: var(--wm-on-wood);
+  box-shadow: 0 0 0 3px rgba(224, 187, 99, 0.45);
+}
+.wm-lt-step--active .wm-lt-label {
+  color: #fff;
+}
+
+/* The "Got it!" star, when reached, glows gold. */
+.wm-lt-step--active.wm-lt-step .wm-lt-dot--star,
+.wm-lt-step--done .wm-lt-dot--star {
+  background: var(--wm-gold-deep);
+  color: var(--wm-yellow);
+}
+
+/* ── UPCOMING: dim. The empty shape + low contrast is the non-colour cue. ── */
+.wm-lt-step--upcoming .wm-lt-dot,
+.wm-lt-step--upcoming .wm-lt-label {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-lt-rail-fill {
+    transition: none;
+  }
+}

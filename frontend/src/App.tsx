@@ -6,9 +6,12 @@ import {
   type KnowledgeComponentId,
   type StartSessionResponse,
 } from './api';
+import { BenchmarkTheater } from './pages/BenchmarkTheater';
 import { ColdStart, type RouteKey } from './pages/ColdStart';
 import { CourseMap } from './pages/CourseMap';
 import { EvalComparison } from './pages/EvalComparison';
+import { Homework } from './pages/Homework';
+import { HomeworkUpload } from './pages/HomeworkUpload';
 import { Landing } from './pages/Landing';
 import { SignIn } from './pages/SignIn';
 import { Tutor } from './pages/Tutor';
@@ -17,17 +20,31 @@ import { Tutor } from './pages/Tutor';
 // outside the student flow (no router; a query-param check keeps it zero-cost to wire).
 const SHOW_EVAL = new URLSearchParams(window.location.search).get('eval') === '1';
 
+// Teaching view: ?theater=1 shows the same comparison run step-by-step (the "benchmark
+// theater") — one persona through all three arms, turn by turn. Same zero-router wiring.
+const SHOW_THEATER = new URLSearchParams(window.location.search).get('theater') === '1';
+
+// Mobile homework capture: ?hwupload=<token> is the URL the desktop's QR encodes (PROJECT.md
+// §3.4 two-star model). On a phone it opens the camera/upload screen; the token pairs the photos
+// to the desktop's run. Same zero-router query-param wiring as the views above.
+const HW_UPLOAD_TOKEN = new URLSearchParams(window.location.search).get('hwupload');
+
+// The skill the homework screen anchors to when entered from the home. Homework starts at
+// LESSON 2 (equivalent fractions): Lesson 1 is number-line placement, whose answer is a mark on a
+// line — nothing written for the scanner to read — so it has no scannable homework.
+const HOMEWORK_KC: KnowledgeComponentId = 'KC_equivalence';
+
 // Demo / A/B switch: ?proactive=1 opts into the proactive HelpNeed arm (Slice 4.5).
 // Default OFF = observe-only (RESEARCH.md §7.5); not a learner-facing control.
 const PROACTIVE = new URLSearchParams(window.location.search).get('proactive') === '1';
 
-type View = 'landing' | 'sign_in' | 'course_map' | 'cold_start' | 'starting' | 'session';
+type View = 'landing' | 'sign_in' | 'home' | 'homework' | 'cold_start' | 'starting' | 'session';
 
-// Root view switch. Landing → sign-in → the COURSE MAP (the home, Slice CP.A.2): the learner
-// sees their whole learning path and clicks a skill to start its lesson, which calls POST
-// /session and runs the Tutor turn loop (ARCHITECTURE.md §10). "Not sure where to start?" still
-// routes to the kid-friendly Turn-0 cold start (0.D.2). A plain state toggle (no router until
-// there are real routes; CLAUDE.md §8.6).
+// Root view switch. Landing → sign-in → the COURSE MAP home (Slice CP.A.2): the learner sees their
+// whole learning path and clicks a skill to start its lesson, which calls POST /session and runs
+// the Tutor turn loop (ARCHITECTURE.md §10). "Not sure where to start?" routes to the kid-friendly
+// Turn-0 cold start (0.D.2). A plain state toggle (no router until there are real routes;
+// CLAUDE.md §8.6).
 export function App(): React.JSX.Element {
   const [view, setView] = useState<View>('landing');
   const [session, setSession] = useState<StartSessionResponse | null>(null);
@@ -35,6 +52,14 @@ export function App(): React.JSX.Element {
   // reflects their in-session progress (a signed-in learner's map comes from persisted mastery).
   const [lastSessionId, setLastSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  if (HW_UPLOAD_TOKEN !== null && HW_UPLOAD_TOKEN !== '') {
+    return <HomeworkUpload token={HW_UPLOAD_TOKEN} />;
+  }
+
+  if (SHOW_THEATER) {
+    return <BenchmarkTheater />;
+  }
 
   if (SHOW_EVAL) {
     return <EvalComparison />;
@@ -54,7 +79,7 @@ export function App(): React.JSX.Element {
       enterSession(await startLesson(kc, PROACTIVE));
     } catch {
       setError('We could not start that lesson. Please try again.');
-      setView('course_map');
+      setView('home');
     }
   }
 
@@ -75,7 +100,10 @@ export function App(): React.JSX.Element {
       <Tutor
         session={session}
         onExit={() => {
-          setView('course_map');
+          setView('home');
+        }}
+        onHomework={() => {
+          setView('homework');
         }}
       />
     );
@@ -106,10 +134,10 @@ export function App(): React.JSX.Element {
   }
 
   if (view === 'sign_in') {
-    return <SignIn onContinue={() => setView('course_map')} />;
+    return <SignIn onContinue={() => setView('home')} />;
   }
 
-  if (view === 'course_map') {
+  if (view === 'home') {
     return (
       <>
         <CourseMap
@@ -117,10 +145,15 @@ export function App(): React.JSX.Element {
           onStartLesson={(kc) => {
             void handleStartLesson(kc);
           }}
+          onHomework={() => setView('homework')}
         />
         {error !== null ? <FloatingError message={error} /> : null}
       </>
     );
+  }
+
+  if (view === 'homework') {
+    return <Homework kc={HOMEWORK_KC} sessionId={lastSessionId} onBack={() => setView('home')} />;
   }
 
   if (view === 'cold_start') {

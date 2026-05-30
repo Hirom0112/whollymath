@@ -1,0 +1,32 @@
+/* WoodBanner — a carved-wood PNG rendered as a CSS 9-slice (border-image) frame. The
+   ornamental corners + rope trim are the four corner/edge slices (kept sharp); only the plain
+   wood centre stretches. `fill` keeps the centre wood visible behind the content; `stretch`
+   (never `round`) avoids tiling seams in the organic grain. Plain global CSS, wm- prefixed. */
+
+.wm-woodbanner {
+  position: relative;
+  border-style: solid;
+  border-color: transparent;
+  border-image-repeat: stretch;
+}
+
+/* wide (1792×592) — flexible-width banners (default). render border / image slice per spec. */
+.wm-woodbanner--wide {
+  border-width: 32px 140px;
+  border-image-source: url('/banner_wide_transparent.png');
+  border-image-slice: 70 300 fill;
+}
+
+/* long (2544×416) — the longer, thinner header. Thinner ends → a shorter slice + border. */
+.wm-woodbanner--long {
+  border-width: 26px 120px;
+  border-image-source: url('/banner_long_transparent.png');
+  border-image-slice: 50 280 fill;
+}
+
+/* The recessed centre panel: a little extra padding so text/icons land well inside the plain
+   wood, clear of where the carved corners meet the centre (the border-width already insets the
+   content; this keeps a comfortable margin from the rope trim). */
+.wm-woodbanner-content {
+  padding: 4px 12px;
+}

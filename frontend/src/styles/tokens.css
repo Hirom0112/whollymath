@@ -48,6 +48,166 @@
   --wm-font-hand: 'Caveat', 'Comic Sans MS', cursive;
 }
 
+/* ───────────────────────── Phase RD additions (Session #5) ─────────────────────────
+   ADDITIVE ONLY. Never edit a value above: a meaning hue is referenced across surfaces,
+   so changing one silently recolors state somewhere else (RD.0.5, visual plan §9). The
+   redesign warms the DECORATIVE layer (backgrounds/mascot/onboarding) while keeping this
+   MEANING layer disciplined — color here always pairs with a shape/word/icon. */
+:root {
+  /* ── MEANING LAYER — LOAD-BEARING. Never use any of these for decoration. ──
+     Each encodes learner state; the UI must also carry a non-color cue (Principle 1). */
+  --wm-mean-correct: var(--wm-green); /* fills/marks */
+  --wm-mean-correct-ink: #3f7a3a; /* AA-contrast text weight on cream */
+  --wm-mean-attention: #e0a33a; /* amber "needs a look" (a wrong answer is info, not failure) */
+  --wm-mean-attention-ink: #9a6a12;
+  --wm-mean-wrong: var(--wm-coral); /* reserved for hard/repeated wrong */
+  --wm-mean-magnitude: #2f9c93; /* number-line reasoning (S2) — distinct from operation */
+  --wm-mean-operation: #5b62d6; /* fraction-bars reasoning (S3) — the §3.6 split made visible */
+  --wm-mean-mastery: var(--wm-green); /* shown ONLY when earned (Principle 5) */
+  --wm-mean-spark: var(--wm-yellow); /* reward count, not a state signal */
+
+  /* ── decorative warmth (loud register only): a saturated panel sampled from the Gemini mock ── */
+  --wm-warm-panel: #6a4fb0;
+
+  /* ── wood + brass (the "storybook world" chrome — decorative only, never a meaning hue).
+     Carved-plank framing for the lesson's course-path / sparks plaques and the stepper plank,
+     recreated in CSS (no raster asset) so it stays crisp at any size. (RD.3, user 2026-05-29) ── */
+  --wm-wood-edge: #4a2d12; /* the dark carved border */
+  --wm-wood-mid: #8a5a2b; /* plank body */
+  --wm-wood-grain: rgba(58, 32, 12, 0.16); /* fine grain streaks */
+  --wm-gold: #e0bb63; /* brass trim highlight */
+  --wm-gold-deep: #a8822f; /* brass trim shadow */
+  --wm-on-wood: #fbf3df; /* parchment text that sits on wood */
+
+  /* ── type scale ── */
+  --wm-fs-display: 46px;
+  --wm-fs-h1: 30px;
+  --wm-fs-h2: 24px;
+  --wm-fs-lead: 21px;
+  --wm-fs-body: 16px;
+  --wm-fs-ui: 15px;
+  --wm-fs-meta: 13px;
+
+  /* ── spacing scale ── */
+  --wm-sp-1: 4px;
+  --wm-sp-2: 8px;
+  --wm-sp-3: 12px;
+  --wm-sp-4: 16px;
+  --wm-sp-5: 20px;
+  --wm-sp-6: 24px;
+  --wm-sp-7: 32px;
+  --wm-sp-8: 40px;
+
+  /* ── radius ── */
+  --wm-r-sm: 10px;
+  --wm-r-md: 14px;
+  --wm-r-lg: 18px;
+  --wm-r-xl: 22px;
+  --wm-r-pill: 999px;
+
+  /* ── shadow pair: chunky in the loud register, soft in the calm working register ── */
+  --wm-shadow-chunky: 0 6px 0 var(--wm-navy-deep);
+  --wm-shadow-soft: 0 18px 0 -6px rgba(20, 30, 70, 0.18);
+
+  /* ── motion: the labeled morph is the centerpiece; everything else is quieter ── */
+  --wm-motion-morph: 280ms;
+  --wm-motion-spark: 600ms;
+  --wm-motion-press: 140ms;
+  --wm-ease-morph: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Surface "moods" — the register arc, opt-in via ONE wrapper class per page so the
+   global stylesheet never leaks (visual plan §4). A page sets the mood; descendants read
+   the local vars. loud = invite, calm = work, celebrate = a transient earned flash. */
+.wm-mood-loud {
+  --wm-mood-ground: var(--wm-navy-deep);
+  --wm-mood-accent: var(--wm-yellow);
+  --wm-mood-shadow: var(--wm-shadow-chunky);
+}
+.wm-mood-calm {
+  --wm-mood-ground: var(--wm-page-bg);
+  --wm-mood-accent: var(--wm-mean-magnitude);
+  --wm-mood-shadow: var(--wm-shadow-soft);
+}
+.wm-mood-celebrate {
+  --wm-mood-ground: var(--wm-page-bg);
+  --wm-mood-accent: var(--wm-mean-mastery);
+  --wm-mood-shadow: var(--wm-shadow-soft);
+}
+
+/* ── Wood chrome utilities — opt-in, reusable carved-plank surfaces (RD.3, user 2026-05-29).
+   Pure CSS: horizontal grain streaks + a lengthwise tonal wash + a top-light / bottom-shadow
+   round, a dark carved border, and a chunky base drop. `.wm-wood-plank` is the long framing
+   piece (the stepper); `.wm-wood-plaque` adds a brass inner ring for the small tappable
+   plaques (course-path / sparks). Decorative only — never used to encode learner state. */
+.wm-wood-plank,
+.wm-wood-plaque {
+  background-color: var(--wm-wood-mid);
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 3px,
+      var(--wm-wood-grain) 3px,
+      var(--wm-wood-grain) 4px,
+      rgba(190, 140, 88, 0.1) 4px,
+      rgba(190, 140, 88, 0.1) 6px
+    ),
+    linear-gradient(90deg, #7b4d22 0%, #9a6635 26%, #82531f 54%, #9c6a38 80%, #784b21 100%),
+    linear-gradient(
+      180deg,
+      rgba(255, 224, 178, 0.24) 0%,
+      rgba(0, 0, 0, 0) 32%,
+      rgba(0, 0, 0, 0) 66%,
+      rgba(40, 22, 8, 0.36) 100%
+    );
+  border: 2px solid var(--wm-wood-edge);
+  color: var(--wm-on-wood);
+  box-shadow:
+    inset 0 2px 2px rgba(255, 228, 186, 0.3),
+    inset 0 -6px 10px rgba(40, 22, 8, 0.44),
+    0 4px 0 rgba(40, 22, 8, 0.45);
+}
+
+/* The small plaques (course-path / sparks) get a brass inner ring + a pressable feel. */
+.wm-wood-plaque {
+  box-shadow:
+    inset 0 0 0 1.5px var(--wm-gold-deep),
+    inset 0 1.5px 0 0.5px var(--wm-gold),
+    inset 0 -6px 10px rgba(40, 22, 8, 0.4),
+    0 4px 0 rgba(40, 22, 8, 0.45);
+}
+button.wm-wood-plaque {
+  cursor: pointer;
+  transition:
+    transform var(--wm-motion-press) ease,
+    filter var(--wm-motion-press) ease;
+}
+button.wm-wood-plaque:hover {
+  filter: brightness(1.06);
+}
+button.wm-wood-plaque:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 0 0 1.5px var(--wm-gold-deep),
+    inset 0 -4px 8px rgba(40, 22, 8, 0.4),
+    0 1px 0 rgba(40, 22, 8, 0.45);
+}
+button.wm-wood-plaque:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1.5px var(--wm-gold-deep),
+    inset 0 -6px 10px rgba(40, 22, 8, 0.4),
+    0 0 0 3px var(--wm-gold),
+    0 4px 0 rgba(40, 22, 8, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.wm-wood-plaque {
+    transition: none;
+  }
+}
+
 *,
 *::before,
 *::after {

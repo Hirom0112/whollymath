@@ -1,0 +1,106 @@
+/* The "sparks" reward pill (top-right of the lesson screen). Cream pill, 2px navy
+   outline, pill radius — matches the target mock and the calm working register.
+   The flourish is deliberately restrained (one star lift + a single number pulse),
+   never a points-spam celebration. Tokens live in styles/tokens.css. */
+
+.wm-sparks-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wm-sp-2);
+  padding: var(--wm-sp-2) var(--wm-sp-4);
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: var(--wm-r-pill);
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-ui);
+  color: var(--wm-navy-deep);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.wm-sparks-star {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  color: var(--wm-mean-spark);
+}
+.wm-sparks-star svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.wm-sparks-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25em;
+  font-weight: 600;
+  color: var(--wm-navy-deep);
+}
+
+.wm-sparks-num {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The one-shot tick: a brief scale-up-and-settle on the number when it rises. */
+.wm-sparks-num--pulse {
+  animation: wm-sparks-pulse var(--wm-motion-spark) var(--wm-ease-morph) 1;
+}
+
+/* The single star that lifts ~20px and fades, then is gone (one-shot, no loop). */
+.wm-sparks-lift {
+  position: absolute;
+  top: 50%;
+  left: var(--wm-sp-4);
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  color: var(--wm-mean-spark);
+  pointer-events: none;
+  opacity: 0;
+  animation: wm-sparks-lift var(--wm-motion-spark) var(--wm-ease-morph) 1;
+}
+.wm-sparks-lift svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes wm-sparks-pulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes wm-sparks-lift {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.7);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(1);
+  }
+}
+
+/* Reduced motion: no movement at all — the number just updates in place. */
+@media (prefers-reduced-motion: reduce) {
+  .wm-sparks-num--pulse {
+    animation: none;
+  }
+  .wm-sparks-lift {
+    display: none;
+    animation: none;
+  }
+}

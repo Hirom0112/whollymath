@@ -1,11 +1,17 @@
-/* S2 number-line workspace — a placeable marker on the 0–1 line (Slice 2.5). */
+/* S2 number-line workspace — a placeable marker on the 0–1 line (Slice 2.5).
+   Polished to read as the hero of the lesson screen: a large, centered line with
+   generous breathing room, a forgiving teal knob with a navy ring, and a serif value
+   chip floating above the marker. Visual polish only — props, snap math, and the
+   onChange contract are unchanged. */
 
 .wm-numline {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: var(--wm-sp-3);
   width: 100%;
-  max-width: 420px;
+  max-width: 760px;
+  margin: 0 auto;
 }
 
 .wm-numline-svg {
@@ -16,22 +22,28 @@
   cursor: pointer;
 }
 
+/* The track — a clean navy 0–1 line. */
 .wm-nl-track {
   stroke: var(--wm-navy-deep);
-  stroke-width: 3;
+  stroke-width: 4;
   stroke-linecap: round;
 }
 
+/* Graduations — navy ticks; the 0 and 1 ends are drawn heavier. */
 .wm-nl-tick {
   stroke: var(--wm-navy-deep);
-  stroke-width: 2;
+  stroke-width: 2.5;
   stroke-linecap: round;
 }
+.wm-nl-tick-major {
+  stroke-width: 4;
+}
 
+/* 0 / 1 end labels — bold navy serif, sitting just below the line ends. */
 .wm-nl-end {
-  fill: var(--wm-ink);
-  font-family: var(--wm-font-sans);
-  font-size: 16px;
+  fill: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 26px;
   font-weight: 700;
 }
 
@@ -40,32 +52,97 @@
   cursor: grab;
 }
 
-.wm-nl-marker:focus-visible .wm-nl-knob {
-  stroke-width: 4;
-  filter: drop-shadow(0 0 0 4px var(--wm-blue-soft));
+.wm-nl-marker:active {
+  cursor: grabbing;
 }
 
-.wm-nl-stem {
+.wm-nl-marker:focus-visible .wm-nl-pin-body {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 0 5px var(--wm-blue-soft));
+}
+
+/* The red pin the learner drops — a map-style pin with its tip on the line. Red fill + navy
+   outline; the pin SHAPE (not just colour) reads as "placed here", and the value chip + tick
+   position carry the magnitude for colourblind readers. A gentle lift on hover/grab. */
+.wm-nl-pin-body {
+  fill: #e0483c;
   stroke: var(--wm-navy-deep);
   stroke-width: 3;
+  stroke-linejoin: round;
+  transition: transform var(--wm-motion-press) var(--wm-ease-morph);
+  transform-origin: center bottom;
+}
+.wm-nl-pin-dot {
+  fill: var(--wm-cream);
+}
+.wm-nl-marker:hover .wm-nl-pin-body {
+  transform: scale(1.08);
+}
+
+/* Value chip — fraction k/segments, floating above the pin. Shown only when placed. */
+.wm-nl-chip-box {
+  fill: var(--wm-cream);
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2;
+}
+
+.wm-nl-chip-text {
+  fill: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Correct-answer reveal (Slice AR.1): a teal segment from 0 to the placed tick, emphasizing
+   the magnitude the learner placed. The marker also travels along it (see .wm-nl-pin--travel).
+   Shown only on a correct verdict; a wrong attempt draws nothing (no segment, no snap). */
+.wm-nl-segment {
+  /* The "correct fill" semantic color (tokens.css --wm-mean-correct), so the segment reads as
+     a verdict, not just decoration; consistent with every other correct mark in the app. */
+  stroke: var(--wm-mean-correct, #9ad17c);
+  stroke-width: 7;
   stroke-linecap: round;
 }
 
-.wm-nl-knob {
-  fill: var(--wm-blue-bright);
-  stroke: var(--wm-navy-deep);
-  stroke-width: 2.5;
+/* Draw the segment on, left→right, by animating its dash offset. pathLength isn't reliable for a
+   <line> across browsers, so we use a generous fixed dash that covers the full track length. */
+.wm-nl-segment--draw {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: wm-nl-draw var(--wm-motion-morph, 280ms) var(--wm-ease-morph, ease) forwards;
+}
+
+@keyframes wm-nl-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The pin travels from 0 (--wm-nl-from-x, a negative offset relative to its resting position)
+   back to its resting tick. The pin group already carries the resting translate; we layer an
+   extra X translate that animates from the start offset to 0. */
+.wm-nl-pin--travel {
+  animation: wm-nl-travel var(--wm-motion-morph, 280ms) var(--wm-ease-morph, ease) forwards;
+}
+
+@keyframes wm-nl-travel {
+  from {
+    transform: translateX(var(--wm-nl-from-x, 0));
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 .wm-nl-start {
-  align-self: flex-start;
+  align-self: center;
   font-family: var(--wm-font-sans);
-  font-size: 14px;
+  font-size: var(--wm-fs-ui);
   font-weight: 600;
   color: var(--wm-ink-soft);
   background: transparent;
   border: none;
-  padding: 4px 2px;
+  padding: var(--wm-sp-1) var(--wm-sp-1);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -74,4 +151,17 @@
 .wm-nl-start:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-nl-pin-body {
+    transition: none;
+  }
+  /* The JS gate (prefersReducedMotion) already withholds the travel/draw classes, so the final
+     state renders instantly; this CSS guard is belt-and-suspenders in case a class slips through. */
+  .wm-nl-segment--draw,
+  .wm-nl-pin--travel {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
 }

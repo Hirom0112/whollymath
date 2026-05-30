@@ -86,3 +86,88 @@
 .wm-mascot-leg-r {
   right: 38%;
 }
+
+/* ───────────────── speech (Slice AR.1) ─────────────────
+   When the mascot is given a line to say, it renders a caption bubble above the figure plus a
+   small mute control. Captions-first: the bubble is the speech (no audio yet). Scoped under
+   .wm-mascot-speak so a bare <Mascot/> is completely unaffected. */
+.wm-mascot-speak {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.wm-mascot-bubble {
+  position: relative;
+  margin: 0;
+  max-width: 280px;
+  padding: 12px 14px;
+  text-align: center;
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--wm-ink);
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(15, 22, 46, 0.16);
+}
+
+/* Tail — a small navy-outlined notch on the BOTTOM edge, pointing down toward the mascot. */
+.wm-mascot-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 8px 7px 0 7px;
+  border-color: var(--wm-cream) transparent transparent transparent;
+}
+.wm-mascot-bubble::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 9px 8px 0 8px;
+  border-color: var(--wm-navy-deep) transparent transparent transparent;
+}
+
+/* A correct verdict gets the "correct" tint; a neutral line stays cream/calm. */
+.wm-mascot-bubble--correct {
+  background: var(--wm-card-mint, var(--wm-cream));
+}
+.wm-mascot-bubble--correct::after {
+  border-top-color: var(--wm-card-mint, var(--wm-cream));
+}
+
+.wm-mascot-fig-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.wm-mascot-mute {
+  font-family: var(--wm-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.wm-mascot-mute:hover {
+  color: var(--wm-ink);
+}

@@ -9,6 +9,7 @@ import {
   type KnowledgeComponentId,
 } from '../api';
 import { Mascot } from '../components/Mascot';
+import { PiMenu, type PiMenuItem } from '../components/PiMenu';
 import './CourseMap.css';
 
 /**
@@ -55,6 +56,19 @@ function StatusBadge({ status }: { status: CourseNodeStatus }): React.JSX.Elemen
   );
 }
 
+// The gold mastery star shown beside a mastered skill's name — the same drawn brand spark used
+// across the app (never an emoji). The "star next to the skill you mastered" the owner asked for;
+// it reinforces the existing "Mastered" badge + check dot (color is never the only cue).
+function MasteryStar(): React.JSX.Element {
+  return (
+    <span className="wm-coursemap-star" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z" />
+      </svg>
+    </span>
+  );
+}
+
 function CourseNode({
   node,
   index,
@@ -86,7 +100,10 @@ function CourseNode({
         }}
       >
         <span className="wm-coursemap-card-top">
-          <span className="wm-coursemap-skill">{node.skill_name}</span>
+          <span className="wm-coursemap-skill">
+            {node.skill_name}
+            {node.status === 'mastered' ? <MasteryStar /> : null}
+          </span>
           <StatusBadge status={node.status} />
         </span>
         <span className="wm-coursemap-desc">{node.description}</span>
@@ -106,12 +123,26 @@ function CourseNode({
 export function CourseMap({
   sessionId,
   onStartLesson,
+  onHomework,
+  onExit,
 }: {
   sessionId?: string | null;
   onStartLesson: (kc: KnowledgeComponentId) => void;
+  onHomework?: () => void;
+  /** Optional "leave to home" affordance for Pi's nav menu (Save & exit). */
+  onExit?: () => void;
 }): React.JSX.Element {
   const [course, setCourse] = useState<CourseView | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Pi's nav menu items on the learning path. This page IS the dashboard (no "Dashboard" item —
+  // it would point at itself), and Homework already has its own "Got homework? Tap me" bubble
+  // beside Pi, so the menu does NOT repeat it. That leaves only "Save & exit" when a host wires
+  // onExit; with no items, Pi is just the friendly mascot (no menu to open).
+  const navItems: PiMenuItem[] = [];
+  if (onExit !== undefined) {
+    navItems.push({ id: 'exit', label: 'Save & exit', icon: 'exit', onSelect: onExit });
+  }
 
   useEffect(() => {
     let live = true;
@@ -139,8 +170,31 @@ export function CourseMap({
     <main className="wm-coursemap">
       <div className="wm-coursemap-panel">
         <header className="wm-coursemap-head">
-          <div className="wm-coursemap-mascot" aria-hidden="true">
-            <Mascot />
+          {/* Pi on the learning path: just the friendly mascot. There is no "Dashboard" item (this
+              page IS the dashboard) and no "Homework" item (the "Got homework? Tap me" bubble beside
+              Pi is the homework doorway). Pi only becomes a tappable menu if a host wires extra
+              actions (e.g. Save & exit); otherwise it is decorative. */}
+          <div className="wm-coursemap-mascot-wrap">
+            {navItems.length > 0 ? (
+              <PiMenu items={navItems} label="Open the menu" />
+            ) : (
+              <span className="wm-pimenu-fig wm-coursemap-mascot-solo" aria-hidden="true">
+                <Mascot />
+              </span>
+            )}
+            {onHomework !== undefined ? (
+              <button
+                type="button"
+                className="wm-coursemap-hw"
+                onClick={onHomework}
+                aria-label="Got homework? Scan the paper you worked on and we'll go through it together."
+              >
+                <span className="wm-coursemap-hw-bubble">
+                  Got homework?
+                  <span className="wm-coursemap-hw-tap">Tap me</span>
+                </span>
+              </button>
+            ) : null}
           </div>
           <div>
             <h1 className="wm-coursemap-headline">Your learning path</h1>
