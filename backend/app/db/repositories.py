@@ -32,7 +32,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import InteractionEvent, Learner, MasteryState, Session, Turn
+from app.db.models import (
+    Assignment,
+    InteractionEvent,
+    Learner,
+    Lesson,
+    MasteryState,
+    Roster,
+    Session,
+    Turn,
+    Unit,
+)
 
 
 @dataclass(frozen=True)
@@ -354,13 +364,143 @@ def persist_events(
     return len(events)
 
 
+def list_units(db: OrmSession) -> list[Unit]:
+    """List every curriculum ``Unit`` in display order (Slice DAT.5).
+
+    Ordered by ``Unit.order`` (the 1-based sequence the curriculum is taught in,
+    models.py) so the course map / unit picker renders units in the right order
+    without the caller re-sorting. This is content metadata, the same for every
+    learner; it is a pure read off the turn loop (no learner state, no business
+    logic — CLAUDE.md §7).
+    """
+    return list(db.scalars(select(Unit).order_by(Unit.order)).all())
+
+
+def get_unit(db: OrmSession, slug: str) -> Unit | None:
+    """Return the ``Unit`` for a stable external ``slug``, or ``None`` if unknown (Slice DAT.5).
+
+    Lookup is by ``Unit.slug`` — the human-readable, reseed-stable key the API and
+    assignments reference (models.py), NOT the non-stable autoincrement id. ``None``
+    for an unknown slug so the caller can 404 rather than this raising.
+    """
+    return db.scalars(select(Unit).where(Unit.slug == slug)).first()
+
+
+def list_lessons_for_unit(db: OrmSession, unit_slug: str) -> list[Lesson]:
+    """List a unit's ``Lesson`` rows in authored order, by the unit's ``slug`` (Slice DAT.5).
+
+    Joined on ``Lesson.unit_id == Unit.id`` and filtered by ``Unit.slug`` so the
+    caller can ask by the stable slug it already holds, and ordered by
+    ``Lesson.order`` (the 1-based sequence within the unit, models.py). An UNKNOWN
+    unit slug yields an empty list rather than an error: a unit with no lessons and a
+    unit that does not exist look the same to a read, and neither is exceptional on a
+    list endpoint.
+    """
+    return list(
+        db.scalars(
+            select(Lesson)
+            .join(Unit, Lesson.unit_id == Unit.id)
+            .where(Unit.slug == unit_slug)
+            .order_by(Lesson.order)
+        ).all()
+    )
+
+
+def list_students_for_teacher(db: OrmSession, teacher_id: int) -> list[Learner]:
+    """List the ``Learner`` rows rostered to a teacher, ordered by id (Slice TCH.B1).
+
+    Joins the ``Roster`` membership table to ``Learner`` on ``student_id`` and filters
+    by ``teacher_id`` so a teacher sees ONLY their own students (the isolation the
+    dashboard depends on — TEACHER_NEEDS.md). Ordered by ``Learner.id`` for a stable,
+    deterministic listing (roughly enrollment order). Empty list for a teacher with no
+    roster. This is identity/roster surface only and never reaches the mastery/policy/
+    tutor/LLM path (ARCHITECTURE.md §14 invariant 8).
+    """
+    return list(
+        db.scalars(
+            select(Learner)
+            .join(Roster, Roster.student_id == Learner.id)
+            .where(Roster.teacher_id == teacher_id)
+            .order_by(Learner.id)
+        ).all()
+    )
+
+
+def add_student_to_roster(db: OrmSession, teacher_id: int, student_id: int) -> Roster:
+    """Enroll a student in a teacher's roster, idempotently (Slice TCH.B1).
+
+    Looks the (teacher, student) pair up first and RETURNS THE EXISTING row if the
+    membership is already there, otherwise ``add``-s a new ``Roster`` row — so calling
+    this twice never creates a duplicate membership (the model's ``uq_roster_teacher_
+    student`` constraint backs this; we check in Python so a re-enroll is a clean no-op
+    rather than an IntegrityError the caller must catch). A roster is a SET, not a
+    multiset (TEACHER_NEEDS.md). ``add``-ed, NOT committed — the caller owns the unit of
+    work (same contract as the other writers here).
+    """
+    existing = db.scalars(
+        select(Roster).where(Roster.teacher_id == teacher_id, Roster.student_id == student_id)
+    ).first()
+    if existing is not None:
+        return existing
+    membership = Roster(teacher_id=teacher_id, student_id=student_id)
+    db.add(membership)
+    return membership
+
+
+def get_student_if_on_roster(db: OrmSession, teacher_id: int, student_id: int) -> Learner | None:
+    """Return a student ``Learner`` ONLY if they are on this teacher's roster (Slice TCH.B1).
+
+    The authorization primitive behind every "teacher reads/acts on a student"
+    endpoint: it returns the student row when a ``Roster`` membership for exactly this
+    (teacher, student) pair exists, and ``None`` otherwise — both when the learner is
+    on no roster at all and when they belong to a DIFFERENT teacher. A foreign teacher
+    therefore gets ``None`` and the caller denies the request. Identity/authz surface
+    only; never on the turn loop (ARCHITECTURE.md §14 invariant 8).
+    """
+    return db.scalars(
+        select(Learner)
+        .join(Roster, Roster.student_id == Learner.id)
+        .where(Roster.teacher_id == teacher_id, Roster.student_id == student_id)
+    ).first()
+
+
+def get_assigned_unit(db: OrmSession, student_id: int) -> Assignment | None:
+    """Return a student's CURRENT teacher-assigned ``Assignment``, or ``None`` (Slice DAT.10).
+
+    A student may hold more than one assignment over time (the model allows one per
+    (student, unit) — ``uq_assignment_student_unit``); the "what should I work on now"
+    surface wants the single CURRENT one. We define current as the MOST-RECENTLY-UPDATED
+    assignment: ordered by ``Assignment.updated_at`` descending, with ``Assignment.id``
+    descending as the deterministic tie-break for two rows stamped in the same instant.
+
+    Why updated_at (not created_at): ``updated_at`` is bumped on every status change /
+    note edit / re-assign (the model's ``onupdate``), so the assignment a teacher most
+    recently *touched* — created OR re-prioritized — is the one surfaced. This is a
+    deliberate ordering choice, not pinned by a source doc; recorded here so the
+    decision log can see it (CLAUDE.md §8.4). ``None`` when the student has no
+    assignment, so the surface falls back to the normal next-unit flow.
+    """
+    return db.scalars(
+        select(Assignment)
+        .where(Assignment.student_id == student_id)
+        .order_by(Assignment.updated_at.desc(), Assignment.id.desc())
+    ).first()
+
+
 __all__ = [
     "EventRow",
+    "add_student_to_roster",
     "create_session",
     "end_session",
+    "get_assigned_unit",
     "get_learner",
     "get_or_create_learner",
     "get_or_create_learner_by_google_sub",
+    "get_student_if_on_roster",
+    "get_unit",
+    "list_lessons_for_unit",
+    "list_students_for_teacher",
+    "list_units",
     "load_events_for_learner",
     "load_events_for_session",
     "load_mastery_states",

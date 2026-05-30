@@ -25,7 +25,7 @@ from collections.abc import Iterator
 import pytest
 from app.db import repositories as repo
 from app.db.engine import create_all, create_session_factory
-from app.db.models import Learner, MasteryState, Turn
+from app.db.models import Assignment, Learner, Lesson, MasteryState, Roster, Turn, Unit
 from app.domain.knowledge_components import KnowledgeComponentId
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session as OrmSession
@@ -237,3 +237,206 @@ def test_load_mastery_states_for_learner(session_factory: sessionmaker[OrmSessio
             KnowledgeComponentId.ADDITION_UNLIKE.value,
         }
         assert by_kc[KnowledgeComponentId.EQUIVALENCE.value].bkt_probability == pytest.approx(0.9)
+
+
+# --- Curriculum reads (DAT.5) -------------------------------------------------
+
+
+def _seed_unit(
+    db: OrmSession,
+    *,
+    slug: str,
+    title: str,
+    order: int,
+) -> Unit:
+    """Seed one minimal, well-formed Unit row (all NOT-NULL columns set)."""
+    unit = Unit(
+        slug=slug,
+        title=title,
+        order=order,
+        ccss_cluster="6.RP.A",
+        teks_cluster="6.4",
+        description=f"desc {slug}",
+    )
+    db.add(unit)
+    return unit
+
+
+def test_list_units_orders_by_unit_order(session_factory: sessionmaker[OrmSession]) -> None:
+    """list_units returns every unit sorted by Unit.order, regardless of insert order."""
+    with session_factory() as db:
+        # Insert out of display order on purpose so the ORDER BY is what sorts them.
+        _seed_unit(db, slug="u3", title="Three", order=3)
+        _seed_unit(db, slug="u1", title="One", order=1)
+        _seed_unit(db, slug="u2", title="Two", order=2)
+        db.commit()
+
+    with session_factory() as db:
+        units = repo.list_units(db)
+        assert [u.slug for u in units] == ["u1", "u2", "u3"]
+
+
+def test_get_unit_hit_and_miss(session_factory: sessionmaker[OrmSession]) -> None:
+    """get_unit returns the unit for a known slug and None for an unknown one."""
+    with session_factory() as db:
+        _seed_unit(db, slug="u1-ratios", title="Ratios", order=1)
+        db.commit()
+
+    with session_factory() as db:
+        hit = repo.get_unit(db, "u1-ratios")
+        assert hit is not None
+        assert hit.title == "Ratios"
+        assert repo.get_unit(db, "no-such-unit") is None
+
+
+def test_list_lessons_for_unit_orders_and_unknown_is_empty(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """Lessons come back ordered by Lesson.order; an unknown unit slug yields []."""
+    with session_factory() as db:
+        unit = _seed_unit(db, slug="u1", title="One", order=1)
+        db.flush()
+        # Insert lessons out of order to prove the ORDER BY sorts them.
+        db.add(Lesson(slug="u1-l2", unit_id=unit.id, order=2, title="L2"))
+        db.add(Lesson(slug="u1-l1", unit_id=unit.id, order=1, title="L1"))
+        db.add(Lesson(slug="u1-l3", unit_id=unit.id, order=3, title="L3"))
+        db.commit()
+
+    with session_factory() as db:
+        lessons = repo.list_lessons_for_unit(db, "u1")
+        assert [lesson.slug for lesson in lessons] == ["u1-l1", "u1-l2", "u1-l3"]
+        # An unknown unit slug is not an error — it simply has no lessons.
+        assert repo.list_lessons_for_unit(db, "no-such-unit") == []
+
+
+# --- Roster reads/writes (TCH.B1) --------------------------------------------
+
+
+def _seed_learner(db: OrmSession, session_id: str, *, role: str = "student") -> Learner:
+    """Seed one Learner row with an explicit role."""
+    learner = Learner(session_id=session_id, role=role)
+    db.add(learner)
+    return learner
+
+
+def test_list_students_for_teacher_isolates_by_teacher(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """A teacher sees only their own rostered students, ordered by Learner.id."""
+    with session_factory() as db:
+        teacher_a = _seed_learner(db, "teacher-a", role="teacher")
+        teacher_b = _seed_learner(db, "teacher-b", role="teacher")
+        s1 = _seed_learner(db, "stu-1")
+        s2 = _seed_learner(db, "stu-2")
+        s3 = _seed_learner(db, "stu-3")
+        db.flush()
+        # Teacher A rosters s1 and s2; teacher B rosters s3.
+        db.add(Roster(teacher_id=teacher_a.id, student_id=s2.id))
+        db.add(Roster(teacher_id=teacher_a.id, student_id=s1.id))
+        db.add(Roster(teacher_id=teacher_b.id, student_id=s3.id))
+        db.commit()
+        teacher_a_id, teacher_b_id = teacher_a.id, teacher_b.id
+        s1_id, s2_id, s3_id = s1.id, s2.id, s3.id
+
+    with session_factory() as db:
+        a_students = repo.list_students_for_teacher(db, teacher_a_id)
+        # Only A's students, and ordered by Learner.id (s1 < s2) not insert order.
+        assert [s.id for s in a_students] == [s1_id, s2_id]
+        assert s3_id not in {s.id for s in a_students}
+
+        b_students = repo.list_students_for_teacher(db, teacher_b_id)
+        assert [s.id for s in b_students] == [s3_id]
+
+
+def test_add_student_to_roster_is_idempotent(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """Enrolling the same (teacher, student) twice yields exactly one roster row."""
+    with session_factory() as db:
+        teacher = _seed_learner(db, "teacher", role="teacher")
+        student = _seed_learner(db, "student")
+        db.flush()
+        teacher_id, student_id = teacher.id, student.id
+        first = repo.add_student_to_roster(db, teacher_id, student_id)
+        db.commit()
+        first_id = first.id
+
+    with session_factory() as db:
+        again = repo.add_student_to_roster(db, teacher_id, student_id)
+        db.commit()
+        # Same row returned, not a new one.
+        assert again.id == first_id
+
+    with session_factory() as db:
+        rows = db.query(Roster).filter_by(teacher_id=teacher_id, student_id=student_id).all()
+        assert len(rows) == 1  # idempotent: no duplicate membership
+
+
+def test_get_student_if_on_roster_present_absent_and_foreign(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """The authz primitive returns the student only for the OWNING teacher."""
+    with session_factory() as db:
+        teacher = _seed_learner(db, "teacher", role="teacher")
+        other_teacher = _seed_learner(db, "other-teacher", role="teacher")
+        student = _seed_learner(db, "student")
+        unrostered = _seed_learner(db, "unrostered")
+        db.flush()
+        db.add(Roster(teacher_id=teacher.id, student_id=student.id))
+        db.commit()
+        teacher_id, other_id = teacher.id, other_teacher.id
+        student_id, unrostered_id = student.id, unrostered.id
+
+    with session_factory() as db:
+        # Present: the student is on this teacher's roster.
+        got = repo.get_student_if_on_roster(db, teacher_id, student_id)
+        assert got is not None
+        assert got.id == student_id
+        # Absent: a learner not on any roster.
+        assert repo.get_student_if_on_roster(db, teacher_id, unrostered_id) is None
+        # Foreign teacher: the student exists but not on THIS teacher's roster.
+        assert repo.get_student_if_on_roster(db, other_id, student_id) is None
+
+
+# --- Assigned-unit read (DAT.10) ---------------------------------------------
+
+
+def test_get_assigned_unit_none_present_and_most_recent_wins(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """get_assigned_unit returns None, then the assignment, then the latest-updated one."""
+    with session_factory() as db:
+        teacher = _seed_learner(db, "teacher", role="teacher")
+        student = _seed_learner(db, "student")
+        u1 = _seed_unit(db, slug="u1", title="One", order=1)
+        u2 = _seed_unit(db, slug="u2", title="Two", order=2)
+        db.flush()
+        teacher_id, student_id = teacher.id, student.id
+        u1_id, u2_id = u1.id, u2.id
+
+    # None: the student has no assignment yet.
+    with session_factory() as db:
+        assert repo.get_assigned_unit(db, student_id) is None
+
+    # Present: one assignment is returned.
+    with session_factory() as db:
+        db.add(Assignment(teacher_id=teacher_id, student_id=student_id, unit_id=u1_id))
+        db.commit()
+    with session_factory() as db:
+        got = repo.get_assigned_unit(db, student_id)
+        assert got is not None
+        assert got.unit_id == u1_id
+
+    # Most-recent-wins: assign a second unit, then touch (update) the first so its
+    # updated_at is newest — the most-recently-updated assignment wins.
+    with session_factory() as db:
+        db.add(Assignment(teacher_id=teacher_id, student_id=student_id, unit_id=u2_id))
+        db.commit()
+    with session_factory() as db:
+        first = db.query(Assignment).filter_by(student_id=student_id, unit_id=u1_id).one()
+        first.note = "start here"  # triggers onupdate -> updated_at = now
+        db.commit()
+    with session_factory() as db:
+        got = repo.get_assigned_unit(db, student_id)
+        assert got is not None
+        assert got.unit_id == u1_id  # the just-updated one is most recent
