@@ -94,6 +94,12 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # Its REMEDIATION_ROUTING drop is to KC_exponents (not yet live), so the forward edge uses the
     # live Unit-4 KC the skill conceptually rests on — mirroring the WRITE_EXPRESSIONS pattern.
     _KC.EVALUATE_EXPRESSIONS: frozenset({_KC.WRITE_EXPRESSIONS}),
+    # Grade-6 Unit 5: solving x + b = c / a*x = c rests on the variable STANDING FOR a number (a
+    # point on the line) and on judging the size of that number, so it forward-unlocks on
+    # number-line placement — the live foundation KC the algebra skill conceptually rests on,
+    # matching how KC_write_expressions is wired. (Edge could later tighten to EVALUATE_EXPRESSIONS,
+    # now live and its §11 reactive-drop prereq — left as a follow-up to avoid a mid-merge rewire.)
+    _KC.ONE_STEP_EQUATIONS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -123,6 +129,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.SIGNED_NUMBERS,  # Grade-6 Unit 3: opposites, the reflection across zero on the number line
     _KC.WRITE_EXPRESSIONS,  # Grade-6 Unit 4: write expressions, on number-line placement
     _KC.EVALUATE_EXPRESSIONS,  # Grade-6 Unit 4: evaluate at a value, builds on writing expressions
+    _KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5: solve one-step equations, on number-line placement
 )
 
 

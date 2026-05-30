@@ -807,6 +807,46 @@ def _evaluate_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _one_step_equations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'apply the inverse, isolate x' steps for a one-step equation (Grade-6 Unit 5).
+
+    ``operands = (mode, p, q)``: mode 0 is the additive equation ``x + p = q`` (undo by
+    subtracting p); mode 1 is the multiplicative equation ``p*x = q`` (undo by dividing by p).
+    The final step lands on ``problem.correct_value`` (the value of x). Raises if the operand
+    triple is missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"one-step problem {problem.problem_id} needs (mode, p, q) operands")
+    mode, p, q = int(operands[0]), int(operands[1]), int(operands[2])
+    answer = problem.correct_value
+    if mode == 0:
+        equation = f"x + {p} = {q}"
+        inverse = f"Subtract {p} from BOTH sides to undo the addition: x = {q} - {p}."
+        why_inverse = "Why does subtracting the same amount from both sides keep it balanced?"
+    else:
+        equation = f"{p}x = {q}"
+        inverse = f"Divide BOTH sides by {p} to undo the multiplication: x = {q} / {p}."
+        why_inverse = "Why does dividing both sides by the same number keep it balanced?"
+    return (
+        WorkedStep(
+            shown=f"The equation is {equation}. The goal is to get x by itself.",
+            why_prompt="Why do we want x alone on one side?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=inverse,
+            why_prompt=why_inverse,
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So x = {answer.p}.",
+            why_prompt="Why can we check this by putting the value back into the equation?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _write_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'name the operation, get the order right' steps for a write-expression problem (Unit 4).
 
@@ -914,6 +954,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.SIGNED_NUMBERS: _signed_numbers_steps,
     KnowledgeComponentId.WRITE_EXPRESSIONS: _write_expression_steps,
     KnowledgeComponentId.EVALUATE_EXPRESSIONS: _evaluate_expression_steps,
+    KnowledgeComponentId.ONE_STEP_EQUATIONS: _one_step_equations_steps,
 }
 
 

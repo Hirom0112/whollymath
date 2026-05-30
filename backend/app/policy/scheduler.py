@@ -99,6 +99,12 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # b extra). Both surfaces are LIVE and answered with the SAME numeric value, so this KC is
     # MASTERABLE (two real representations meet §3.4 rule 2) — unlike the practice-only Grade-6 KCs.
     _KC.EVALUATE_EXPRESSIONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
+    # Grade-6 Unit 5: the FIRST Grade-6 KC built MASTERABLE-LIVE. SYMBOLIC = the equation
+    # (x + 5 = 12 / 3x = 12) with x entered in the editor; WORD_PROBLEM = the same equation as a
+    # story, still answered with the value of x (its surface state is SYMBOLIC_FOCUS, like the
+    # equivalence word-problem). TWO live reps ⇒ is_masterable_live is True — a learner can be
+    # correct in two representations of the one skill (mastery rule 2).
+    _KC.ONE_STEP_EQUATIONS: (_REP.SYMBOLIC, _REP.WORD_PROBLEM),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

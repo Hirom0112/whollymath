@@ -445,6 +445,23 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 5: Equations & Inequalities ───
+    # Solve a one-step equation (6.EE.7): ONE KC covering BOTH additive equations (x + b = c) and
+    # multiplicative equations (a*x = c) behind an operand-mode flag in the generator. The answer is
+    # the NUMERIC value of x entered in the editor (reuses the editor, NO new widget). Advertises
+    # SYMBOLIC + WORD_PROBLEM — and unlike the earlier Grade-6 KCs this one is built
+    # MASTERABLE-LIVE: BOTH reps are live (scheduler._LIVE_REPRESENTATIONS), so a learner can be
+    # correct in two representations (the SYMBOLIC equation and the same equation in a story),
+    # satisfying mastery rule 2. WORD_PROBLEM has no surface state, so error routes target SYMBOLIC.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.ONE_STEP_EQUATIONS,
+        skill_name="Solve a one-step equation",
+        description=(
+            "Solve a one-step equation for x by applying the inverse operation — subtract to undo "
+            "addition (x + 5 = 12 gives x = 7), divide to undo multiplying (3x = 12 gives x = 4)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
 )
 
 

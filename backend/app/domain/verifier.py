@@ -56,6 +56,7 @@ from app.domain.misconceptions import (
     decimal_point_misplacement,
     evaluate_left_to_right,
     gcf_lcm_confusion,
+    inverse_operation_error,
     invert_conversion,
     invert_rate,
     keep_original_sign,
@@ -546,6 +547,17 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
         predict=lambda ops: evaluate_left_to_right(int(ops[0]), int(ops[1]), int(ops[2])),
+    ),
+    # inverse-operation-error: solved a one-step equation with the WRONG inverse — added b for
+    # x + b = c, or subtracted a for a*x = c (operands are (mode, p, q)). A wrong OPERATION (reached
+    # for the visible operation instead of the one that undoes it). The generator guarantees the
+    # predicted value differs from the correct solution, so a match is always diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.ONE_STEP_EQUATIONS,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.INVERSE_OPERATION_ERROR,
+        predict=inverse_operation_error,
     ),
 )
 

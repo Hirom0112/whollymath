@@ -101,6 +101,9 @@ class MisconceptionId(StrEnum):
     # Unit 4 (6.EE.2c): an order-of-operations slip on evaluating a*x + b — combining left-to-right
     # (multiply after adding) so a*x + b is computed as a*(x + b) instead of honoring precedence.
     ORDER_OF_OPERATIONS_SLIP = "order-of-operations-slip"
+    # Unit 5 (6.EE.7): solving a one-step equation with the WRONG inverse — adding instead of
+    # subtracting for x + b = c, or subtracting a instead of dividing for a*x = c.
+    INVERSE_OPERATION_ERROR = "inverse-operation-error"
 
 
 @dataclass(frozen=True)
@@ -374,6 +377,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "OPERATION order is wrong (multiplication should happen before the addition)."
         ),
         applicable_kcs=(KnowledgeComponentId.EVALUATE_EXPRESSIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.INVERSE_OPERATION_ERROR,
+        name="Wrong inverse operation",
+        description=(
+            "Solves a one-step equation by applying the WRONG inverse — for 'x + 5 = 12' the "
+            "learner ADDS 5 (getting 17) instead of subtracting it, and for '3x = 12' they "
+            "SUBTRACT 3 (getting 9) instead of dividing. The learner reaches for the operation "
+            "they SEE in the equation rather than the one that undoes it, so the procedure for "
+            "isolating x is run backwards and x is never actually isolated."
+        ),
+        applicable_kcs=(KnowledgeComponentId.ONE_STEP_EQUATIONS,),
     ),
 )
 
@@ -684,6 +699,33 @@ def evaluate_left_to_right(a: int, x: int, b: int) -> Rational:
     ``a*(x + b) - (a*x + b) = (a - 1)*b > 0``.
     """
     return Rational(a * (x + b))
+
+
+def inverse_operation_error(operands: tuple[Rational, ...]) -> Rational | None:
+    """inverse-operation-error: solve a one-step equation with the WRONG inverse.
+
+    The one-step generator encodes a problem as ``(mode, p, q)``: mode 0 is the additive equation
+    ``x + p = q`` (correct ``x = q - p``); mode 1 is the multiplicative equation ``p*x = q``
+    (correct ``x = q / p``). The learner who makes this error reaches for the operation they SEE
+    rather than its inverse:
+
+    - additive (``x + p = q``): ADDS ``p`` instead of subtracting, getting ``q + p``;
+    - multiplicative (``p*x = q``): SUBTRACTS ``p`` instead of dividing, getting ``q - p``.
+
+    Returned as a SymPy ``Rational`` so the verifier compares values directly. The generator
+    guarantees this wrong value differs from the correct solution (``p != 0`` for the additive
+    case, and an explicit resample for the rare multiplicative coincidence), so the misconception
+    is always diagnostic. Returns ``None`` for an unexpected operand shape (defensive; the verifier
+    then reports OTHER rather than over-claiming a match).
+    """
+    if len(operands) != 3:
+        return None
+    mode, p, q = operands
+    if mode == 0:  # x + p = q  ->  added p instead of subtracting it
+        return q + p
+    if mode == 1:  # p*x = q  ->  subtracted p instead of dividing by it
+        return q - p
+    return None
 
 
 def reversed_operands(correct_expression: str | None) -> str | None:

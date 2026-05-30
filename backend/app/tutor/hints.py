@@ -417,6 +417,23 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If you added before multiplying, the order slipped — the times part comes first.",
         ),
     ),
+    # Grade-6 Unit 5: index 0 (operation) orients toward the INVERSE that undoes the equation;
+    # index 1 (magnitude) toward checking x by putting it back in.
+    KnowledgeComponentId.ONE_STEP_EQUATIONS: (
+        _nudge(
+            KnowledgeComponentId.ONE_STEP_EQUATIONS,
+            "To get x alone, do the OPPOSITE of what is done to it — undo adding by subtracting, "
+            "undo multiplying by dividing.",
+        ),
+        _nudge(
+            KnowledgeComponentId.ONE_STEP_EQUATIONS,
+            "Whatever you do to one side, do to the other so the equation stays balanced.",
+        ),
+        _nudge(
+            KnowledgeComponentId.ONE_STEP_EQUATIONS,
+            "Put your value for x back in — if both sides come out equal, you solved it.",
+        ),
+    ),
 }
 
 

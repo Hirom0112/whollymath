@@ -1254,6 +1254,98 @@ def _generate_evaluate_expressions(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 5: Equations & Inequalities ───
+
+# The (b/a) coefficient pool by difficulty tier (the easy→hard ramp; CP.B): higher tiers use
+# larger numbers. Used as the additive constant ``b`` (x + b = c) and the multiplicative
+# coefficient ``a`` (a*x = c).
+_ONE_STEP_COEFF_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3, 4, 5),
+    2: (4, 5, 6, 7, 8),
+    3: (7, 9, 10, 11, 12),
+    4: (12, 15, 18, 20, 25),
+}
+_ONE_STEP_COEFF_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12)
+# The solution (value of x) pool — kept whole-number and 6th-grade-sized so a*x = c divides
+# evenly and x + b = c stays in scope (CURRICULUM_STANDARD.md §6 — one-step over the rationals,
+# whole-number answers at this grade).
+_ONE_STEP_SOLUTION_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+# Story templates for the WORD_PROBLEM surface, one per mode. ``{x}`` is never shown (it is the
+# unknown); the slots are the coefficient and the result. additive: "had x, got b more, now c".
+# multiplicative: "a equal groups hold c in all, how many per group".
+_ONE_STEP_ADD_STORY = (
+    "{name} had some {item}, then got {b} more, and now has {c}. "
+    "How many {item} did {name} start with?"
+)
+_ONE_STEP_MUL_STORY = (
+    "{name} packs {item} into {a} equal boxes and uses {c} {item} in all. "
+    "How many {item} go in each box?"
+)
+_ONE_STEP_NAMES: tuple[str, ...] = ("Maria", "Sam", "Leo", "Ava", "Theo")
+_ONE_STEP_ITEMS: tuple[str, ...] = ("stickers", "marbles", "cards", "apples", "coins")
+
+
+def _generate_one_step_equations(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_one_step_equations: solve a one-step equation for x; the answer is the value of x.
+
+    ONE KC, TWO modes behind an operand flag (decided design, 6.EE.7): mode 0 is the additive
+    equation ``x + b = c`` (solve ``x = c - b``); mode 1 is the multiplicative equation ``a*x = c``
+    (solve ``x = c / a``). The math (operands, correct value) is sampled FIRST and identically for
+    every surface, so the same seed yields the same equation whether shown symbolically or as a
+    story (mastery rule 2 — two surfaces of one skill). ``operands = (mode, p, q)`` lets the
+    verifier replay the inverse-operation misconception uniformly.
+
+    The whole-number solution ``x`` and coefficient are drawn from seeded pools so ``a*x = c``
+    divides evenly. The mode flag is sampled so BOTH equation types appear across seeds. The wrong
+    inverse value is guaranteed DISTINCT from the correct one: for the additive case ``p != 0``
+    forces ``c + b != c - b``; for the rare multiplicative coincidence (``c - a == c / a``) the
+    coefficient is resampled.
+    """
+    pool = (
+        _ONE_STEP_COEFF_BY_DIFFICULTY.get(difficulty, _ONE_STEP_COEFF_POOL)
+        if difficulty
+        else _ONE_STEP_COEFF_POOL
+    )
+    additive = rng.random() < 0.5
+    x_value = rng.choice(_ONE_STEP_SOLUTION_POOL)
+    coeff = rng.choice(pool)
+    if additive:
+        mode, b, c = 0, coeff, coeff + x_value  # x + b = c, x = c - b = x_value
+        correct = Rational(x_value)
+        operands = (Rational(mode), Rational(b), Rational(c))
+        symbolic_statement = f"Solve for x: x + {b} = {c}"
+        story = _ONE_STEP_ADD_STORY.format(
+            name=rng.choice(_ONE_STEP_NAMES), item=rng.choice(_ONE_STEP_ITEMS), b=b, c=c
+        )
+    else:
+        # a*x = c with c = a*x_value, so x = c / a = x_value divides evenly. Resample the
+        # coefficient on the rare coincidence where the wrong inverse (c - a) equals x_value
+        # (otherwise the misconception value would equal the correct answer and not be diagnostic).
+        a = coeff
+        while a * x_value - a == x_value:
+            a = rng.choice(pool)
+        c = a * x_value
+        mode = 1
+        correct = Rational(x_value)
+        operands = (Rational(mode), Rational(a), Rational(c))
+        symbolic_statement = f"Solve for x: {a}x = {c}"
+        story = _ONE_STEP_MUL_STORY.format(
+            name=rng.choice(_ONE_STEP_NAMES), item=rng.choice(_ONE_STEP_ITEMS), a=a, c=c
+        )
+    statement = story if surface_format is Representation.WORD_PROBLEM else symbolic_statement
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.ONE_STEP_EQUATIONS, seed, surface_format),
+        kc=KnowledgeComponentId.ONE_STEP_EQUATIONS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=correct,
+        representations_available=get_kc(KnowledgeComponentId.ONE_STEP_EQUATIONS).representations,
+        operands=operands,
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1277,6 +1369,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.SIGNED_NUMBERS: _generate_signed_numbers,
     KnowledgeComponentId.WRITE_EXPRESSIONS: _generate_write_expressions,
     KnowledgeComponentId.EVALUATE_EXPRESSIONS: _generate_evaluate_expressions,
+    KnowledgeComponentId.ONE_STEP_EQUATIONS: _generate_one_step_equations,
 }
 
 

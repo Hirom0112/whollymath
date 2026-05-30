@@ -592,6 +592,32 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.AREA_MODEL)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 5: Equations & Inequalities ───
+    # Solve one-step equations (6.EE.7) — MASTERABLE-LIVE: BOTH reps (SYMBOLIC + WORD_PROBLEM) are
+    # live, so the probe DOES fire here (unlike the practice-only Grade-6 KCs). Errors route to
+    # SYMBOLIC — the equation surface where the inverse operation is visible; WORD_PROBLEM is a
+    # framing with no surface state, so a story-posed error still remediates on the symbolic
+    # equation. The OPERATION route names the wrong-inverse error directly. The probe draws from
+    # both live reps (transfer across the equation and its story form).
+    _spec(
+        _KC.ONE_STEP_EQUATIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Undo the equation with the INVERSE — subtract to undo adding, divide to undo "
+                "multiplying.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Check the size of x against the equation — put your answer back in and see.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.WORD_PROBLEM)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

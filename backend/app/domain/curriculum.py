@@ -605,7 +605,11 @@ _U5 = CatalogUnit(
             unit_slug="u5",
             order=2,
             title="One-step equations (+/-)",
-            kc_id="KC_one_step_add",
+            # Reconciled 2026-05-30: the stale split ids KC_one_step_add / KC_one_step_mul are now
+            # ONE built KC (KC_one_step_equations) covering BOTH additive (x + b = c) and
+            # multiplicative (a*x = c) equations behind an operand-mode flag (6.EE.7). Both U5
+            # lessons point at it; the generator's mode flag distinguishes the two equation types.
+            kc_id="KC_one_step_equations",
             ccss_code="6.EE.7",
             teks_code="6.9A",
             description="Solve x + p = q over nonnegative rationals.",
@@ -615,7 +619,7 @@ _U5 = CatalogUnit(
             unit_slug="u5",
             order=3,
             title="One-step equations (x/div)",
-            kc_id="KC_one_step_mul",
+            kc_id="KC_one_step_equations",  # reconciled: same KC as u5_l2 (see u5_l2 note)
             ccss_code="6.EE.7",
             teks_code="6.9A",
             description="Solve px = q.",

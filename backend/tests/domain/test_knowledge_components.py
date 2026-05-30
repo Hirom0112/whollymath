@@ -61,6 +61,9 @@ EXPECTED_CATALOG_IDS = {
     "KC_write_expressions",
     # Unit 4 (numeric; masterable — SYMBOLIC + AREA_MODEL both live).
     "KC_evaluate_expressions",
+    # Unit 5 (numeric) — solve one-step equations: ONE KC over BOTH x + b = c and a*x = c behind
+    # an operand-mode flag (6.EE.7); the first Grade-6 KC built MASTERABLE-LIVE (2 live reps).
+    "KC_one_step_equations",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -82,6 +85,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_signed_numbers",
     "KC_write_expressions",
     "KC_evaluate_expressions",
+    "KC_one_step_equations",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -112,9 +116,9 @@ EXPECTED_GRADE6_KCS = {
     "KC_expression_parts",
     "KC_equivalent_expressions",
     "KC_dependent_vars",
-    # U5 — Equations & Inequalities (6.EE.5–9)
+    # U5 — Equations & Inequalities (6.EE.5–9). KC_one_step_equations moved to
+    # EXPECTED_CATALOG_IDS (built 2026-05-30 — the first masterable-live Grade-6 KC).
     "KC_equation_solutions",
-    "KC_one_step_equations",
     "KC_inequalities",
     # U6 — Geometry (6.G)
     "KC_triangle_properties",
@@ -153,7 +157,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 20 content-complete + 26 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 21 content-complete + 25 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:
