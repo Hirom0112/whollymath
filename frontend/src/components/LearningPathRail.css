@@ -1,0 +1,254 @@
+/* LearningPathRail — the shared learning-path rail (extracted from CourseMap so the course home
+   and the per-unit lesson list render the same nodes; STU.4). Rules ported verbatim from the
+   original CourseMap rail styles, renamed wm-pathrail-* (unique app-wide). Page-level styling
+   (backdrop, header, mascot) stays with each host page. */
+
+.wm-pathrail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Each node: a left rail (number/check dot + the connecting line) + a card. */
+.wm-pathrail-node {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 16px;
+}
+
+.wm-pathrail-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* The connecting line between dots (drawn behind, spanning the full node height). */
+.wm-pathrail-rail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--wm-blue-soft);
+}
+
+/* No line above the first dot / below the last — trim the rail ends. */
+.wm-pathrail-node:first-child .wm-pathrail-rail::before {
+  top: 18px;
+}
+.wm-pathrail-node:last-child .wm-pathrail-rail::before {
+  bottom: calc(100% - 36px);
+}
+
+.wm-pathrail-dot {
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  /* Each dot wears its column's tint (matching its card), with a navy numeral + ring for
+     contrast — so the 1–5 march down the path in their own colors. */
+  color: var(--wm-navy-deep);
+  border: 2px solid var(--wm-navy-deep);
+  background: var(--wm-card-sky);
+}
+
+.wm-pathrail-dot--sky {
+  background: var(--wm-card-sky);
+}
+.wm-pathrail-dot--mint {
+  background: var(--wm-card-mint);
+}
+.wm-pathrail-dot--butter {
+  background: var(--wm-card-butter);
+}
+.wm-pathrail-dot--warm {
+  background: var(--wm-card-warm);
+}
+.wm-pathrail-dot--lavender {
+  background: var(--wm-card-lavender);
+}
+
+/* The card is a button (clickable to start), full-width, calm card styling. */
+.wm-pathrail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 16px;
+  box-shadow: 0 6px 0 var(--wm-navy-deep);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    filter 0.14s ease;
+}
+
+.wm-pathrail-card:hover:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 var(--wm-navy-deep);
+  filter: brightness(1.03);
+}
+.wm-pathrail-card:active:not(:disabled) {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 var(--wm-navy-deep);
+}
+.wm-pathrail-card:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 3px;
+}
+
+/* Per-row soft tints (row IDENTITY, not status — the badge carries status). Friendly, varied, in
+   the cold-start palette spirit. */
+.wm-pathrail-card--sky {
+  background: var(--wm-card-sky);
+}
+.wm-pathrail-card--mint {
+  background: var(--wm-card-mint);
+}
+.wm-pathrail-card--butter {
+  background: var(--wm-card-butter);
+}
+.wm-pathrail-card--warm {
+  background: var(--wm-card-warm);
+}
+.wm-pathrail-card--lavender {
+  background: var(--wm-card-lavender);
+}
+
+/* A locked card KEEPS a faded hint of its tint (so the path stays friendly + colorful), but
+   recedes: desaturated, dimmed, flatter, no press. The "Locked" badge + CTA carry the state. */
+.wm-pathrail-card:disabled {
+  cursor: default;
+  border-color: #6b6750;
+  box-shadow: 0 4px 0 #6b6750;
+  filter: saturate(0.5);
+  opacity: 0.8;
+}
+
+.wm-pathrail-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wm-pathrail-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--wm-font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--wm-navy-deep);
+}
+
+/* Gold mastery star beside a mastered row's name — the drawn brand spark (never an emoji),
+   tinted with the reward hue and given a navy outline so the gold reads on the cream card.
+   Additive to the "Mastered" badge + check dot: color is reinforcing, never the only cue. */
+.wm-pathrail-star {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: var(--wm-mean-spark);
+}
+.wm-pathrail-star svg {
+  width: 100%;
+  height: 100%;
+  stroke: var(--wm-navy-deep);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.wm-pathrail-desc {
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--wm-ink-soft);
+}
+
+/* Status pill — colored chip, with the label always present (not color-only). */
+.wm-pathrail-badge {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--wm-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1.5px solid var(--wm-navy-deep);
+}
+.wm-pathrail-badge--available {
+  background: var(--wm-blue-tile);
+  color: var(--wm-navy-deep);
+}
+.wm-pathrail-badge--in_progress {
+  background: var(--wm-blue-soft);
+  color: var(--wm-navy-deep);
+}
+.wm-pathrail-badge--mastered {
+  background: var(--wm-green);
+  color: var(--wm-navy-deep);
+}
+.wm-pathrail-badge--due_review {
+  background: var(--wm-yellow);
+  color: var(--wm-navy-deep);
+}
+.wm-pathrail-badge--locked {
+  background: var(--wm-cream-2);
+  color: #6f6852;
+  border-color: #c9c0a6;
+}
+
+/* Thin mastery-progress bar (probability of the touched row). */
+.wm-pathrail-progress {
+  display: block;
+  height: 7px;
+  width: 100%;
+  background: var(--wm-cream-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.wm-pathrail-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--wm-blue);
+  border-radius: 4px;
+  transition: width 0.35s ease;
+}
+.wm-pathrail-node--mastered .wm-pathrail-progress-fill,
+.wm-pathrail-node--due_review .wm-pathrail-progress-fill {
+  background: var(--wm-green);
+}
+
+.wm-pathrail-cta {
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wm-blue-press);
+}
+.wm-pathrail-card:disabled .wm-pathrail-cta {
+  color: #6f6852;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-pathrail-card {
+    transition: none;
+  }
+}

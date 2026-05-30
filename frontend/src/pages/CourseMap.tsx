@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import {
   ApiError,
   fetchCourse,
-  type CourseNodeStatus,
   type CourseNodeView,
   type CourseView,
   type KnowledgeComponentId,
 } from '../api';
+import { LearningPathRail, type PathNode, type PathNodeTint } from '../components/LearningPathRail';
 import { Mascot } from '../components/Mascot';
 import { PiMenu, type PiMenuItem } from '../components/PiMenu';
 import './CourseMap.css';
@@ -27,20 +27,10 @@ import './CourseMap.css';
  * turn loop.
  */
 
-// Per-status presentation: a short label + the tint class. Color reinforces, never the sole
-// signal — the label and the lock state carry the meaning too (tokens.css note).
-const STATUS_META: Record<CourseNodeStatus, { label: string; cta: string | null }> = {
-  locked: { label: 'Locked', cta: null },
-  available: { label: 'Ready to start', cta: 'Start' },
-  in_progress: { label: 'In progress', cta: 'Keep going' },
-  mastered: { label: 'Mastered', cta: 'Practice again' },
-  due_review: { label: 'Time to review', cta: 'Review' },
-};
-
 // A friendly soft tint per skill, by KC (stable — each skill always wears the same color), in
 // the cold-start palette spirit. The tint is skill IDENTITY, not status (the badge carries
 // status); it just makes the path warm and varied rather than five identical cards.
-const KC_TINT: Record<string, string> = {
+const KC_TINT: Record<string, PathNodeTint> = {
   KC_number_line_placement: 'sky',
   KC_equivalence: 'mint',
   KC_common_denominator: 'butter',
@@ -48,76 +38,17 @@ const KC_TINT: Record<string, string> = {
   KC_subtraction_unlike: 'lavender',
 };
 
-function StatusBadge({ status }: { status: CourseNodeStatus }): React.JSX.Element {
-  return (
-    <span className={`wm-coursemap-badge wm-coursemap-badge--${status}`}>
-      {STATUS_META[status].label}
-    </span>
-  );
-}
-
-// The gold mastery star shown beside a mastered skill's name — the same drawn brand spark used
-// across the app (never an emoji). The "star next to the skill you mastered" the owner asked for;
-// it reinforces the existing "Mastered" badge + check dot (color is never the only cue).
-function MasteryStar(): React.JSX.Element {
-  return (
-    <span className="wm-coursemap-star" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z" />
-      </svg>
-    </span>
-  );
-}
-
-function CourseNode({
-  node,
-  index,
-  onStart,
-}: {
-  node: CourseNodeView;
-  index: number;
-  onStart: (kc: KnowledgeComponentId) => void;
-}): React.JSX.Element {
-  const locked = node.status === 'locked';
-  const meta = STATUS_META[node.status];
-  const pct = node.probability != null ? Math.round(node.probability * 100) : null;
-  const tint = KC_TINT[node.kc_id] ?? 'sky';
-
-  return (
-    <li className={`wm-coursemap-node wm-coursemap-node--${node.status}`}>
-      <span className="wm-coursemap-rail" aria-hidden="true">
-        <span className={`wm-coursemap-dot wm-coursemap-dot--${tint}`}>
-          {node.status === 'mastered' ? '✓' : index + 1}
-        </span>
-      </span>
-      <button
-        type="button"
-        className={`wm-coursemap-card wm-coursemap-card--${tint}`}
-        disabled={locked}
-        aria-disabled={locked}
-        onClick={() => {
-          if (!locked) onStart(node.kc_id);
-        }}
-      >
-        <span className="wm-coursemap-card-top">
-          <span className="wm-coursemap-skill">
-            {node.skill_name}
-            {node.status === 'mastered' ? <MasteryStar /> : null}
-          </span>
-          <StatusBadge status={node.status} />
-        </span>
-        <span className="wm-coursemap-desc">{node.description}</span>
-        {pct != null ? (
-          <span className="wm-coursemap-progress" aria-hidden="true">
-            <span className="wm-coursemap-progress-fill" style={{ width: `${String(pct)}%` }} />
-          </span>
-        ) : null}
-        <span className="wm-coursemap-cta">
-          {locked ? 'Finish the earlier skills to unlock' : meta.cta}
-        </span>
-      </button>
-    </li>
-  );
+// Normalize a course KC node into the shared rail's PathNode. Keeps the KC id branded end to end
+// so the click handler still receives a KnowledgeComponentId.
+function toPathNode(node: CourseNodeView): PathNode<KnowledgeComponentId> {
+  return {
+    id: node.kc_id,
+    title: node.skill_name,
+    description: node.description,
+    status: node.status,
+    tint: KC_TINT[node.kc_id] ?? 'sky',
+    progressPct: node.probability != null ? node.probability * 100 : null,
+  };
 }
 
 export function CourseMap({
@@ -216,11 +147,10 @@ export function CourseMap({
         ) : null}
 
         {course !== null ? (
-          <ol className="wm-coursemap-list">
-            {(course.nodes ?? []).map((node, i) => (
-              <CourseNode key={node.kc_id} node={node} index={i} onStart={onStartLesson} />
-            ))}
-          </ol>
+          <LearningPathRail
+            nodes={(course.nodes ?? []).map(toPathNode)}
+            onSelect={onStartLesson}
+          />
         ) : null}
       </div>
     </main>
