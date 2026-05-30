@@ -538,10 +538,49 @@ def get_assigned_unit(db: OrmSession, student_id: int) -> Assignment | None:
     ).first()
 
 
+def assign_unit(
+    db: OrmSession,
+    *,
+    teacher_id: int,
+    student_id: int,
+    unit_id: int,
+    now: datetime,
+) -> Assignment:
+    """Assign a unit to a student, idempotently upserting on ``(student, unit)`` (Slice TCH.B7).
+
+    The model keys uniqueness on ``(student_id, unit_id)`` (``uq_assignment_student_unit``), so
+    re-assigning the same unit updates the existing row rather than spawning a duplicate. We stamp
+    ``updated_at`` to ``now`` on every call (create OR re-assign) so this row becomes the student's
+    CURRENT assignment — ``get_assigned_unit`` orders by ``updated_at`` desc, so the just-assigned
+    unit is the one the student shell surfaces. ``now`` is passed in (not read from a clock here)
+    to keep the repository deterministic and the unit of work the caller's (CLAUDE.md §7).
+    ``add``/mutate only — the caller commits.
+    """
+    existing = db.scalars(
+        select(Assignment).where(Assignment.student_id == student_id, Assignment.unit_id == unit_id)
+    ).first()
+    if existing is not None:
+        existing.teacher_id = teacher_id
+        existing.status = "assigned"
+        existing.updated_at = now
+        return existing
+    row = Assignment(
+        teacher_id=teacher_id,
+        student_id=student_id,
+        unit_id=unit_id,
+        status="assigned",
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(row)
+    return row
+
+
 __all__ = [
     "DEMO_TEACHER_SESSION_ID",
     "EventRow",
     "add_student_to_roster",
+    "assign_unit",
     "create_session",
     "end_session",
     "get_assigned_unit",

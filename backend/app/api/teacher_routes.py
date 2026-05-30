@@ -16,12 +16,23 @@ response.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import CurrentTeacherDep, demo_bearer_for
 from app.api.routes import StoreDep
-from app.api.schemas import DemoLoginResponse, TeacherHandle
+from app.api.schemas import (
+    AssignUnitRequest,
+    AssignUnitResult,
+    DemoLoginResponse,
+    TeacherHandle,
+    TeacherRosterView,
+    TeacherStudentView,
+)
+from app.api.teacher_service import TeacherService
 from app.db.repositories import DEMO_TEACHER_SESSION_ID
+from app.teacher.assign import StudentNotOnRosterError, UnknownUnitError
 
 # Tagged "teacher" so the endpoints group separately in the OpenAPI docs; ``create_app`` mounts
 # this next to the turn-loop and auth routers.
@@ -60,6 +71,61 @@ def teacher_me(teacher: CurrentTeacherDep) -> TeacherHandle:
     guard ("am I allowed on the dashboard?"). Identity stays contained to this surface — role
     never reaches the turn decision (invariant 8)."""
     return TeacherHandle(learner_id=teacher.learner_id, email=teacher.email, role=teacher.role)
+
+
+@teacher_router.get("/roster", response_model=TeacherRosterView)
+def teacher_roster(teacher: CurrentTeacherDep, store: StoreDep) -> TeacherRosterView:
+    """The signed-in teacher's roster, ranked-summary rows for the dashboard (TCH.B8).
+
+    ``current_teacher`` has already authorized the caller. The coordinator reads only this
+    teacher's own roster (the TCH.B1 owns-guard), so a teacher never sees another's students.
+    """
+    service = TeacherService(store.session_factory)
+    return service.roster(teacher.learner_id, datetime.now(UTC))
+
+
+@teacher_router.get("/student/{student_id}", response_model=TeacherStudentView)
+def teacher_student(
+    student_id: str, teacher: CurrentTeacherDep, store: StoreDep
+) -> TeacherStudentView:
+    """One student's full drill-in (TCH.B8). 404 if the student is not on this teacher's roster.
+
+    ``student_id`` is the student's external key (``Learner.session_id``). A foreign or unknown
+    student is an indistinguishable 404 — the teacher must not learn whether the id exists.
+    """
+    view = TeacherService(store.session_factory).student(
+        teacher.learner_id, student_id, datetime.now(UTC)
+    )
+    if view is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="student not found")
+    return view
+
+
+@teacher_router.post("/student/{student_id}/assign-unit", response_model=AssignUnitResult)
+def teacher_assign_unit(
+    student_id: str,
+    body: AssignUnitRequest,
+    teacher: CurrentTeacherDep,
+    store: StoreDep,
+) -> AssignUnitResult:
+    """Assign the next unit to a student, returning the refreshed drill-in (TCH.B7/B8).
+
+    Idempotent (re-assigning the same unit is a touch, not a duplicate). 404 when the student is
+    unknown or not on this teacher's roster; 400 when the unit slug is not a real unit. A teacher
+    may assign a unit whose prereqs are unmet — availability is advisory (TCH.Q5).
+    """
+    service = TeacherService(store.session_factory)
+    try:
+        view = service.assign(teacher.learner_id, student_id, body.unit_id, datetime.now(UTC))
+    except StudentNotOnRosterError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="student not found"
+        ) from exc
+    except UnknownUnitError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="unknown unit") from exc
+    if view is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="student not found")
+    return AssignUnitResult(student=view)
 
 
 __all__ = ["teacher_router"]

@@ -6,6 +6,32 @@
 */
 
 /**
+ * Ranking bucket for a student (TCH.B6). Any urgent alert forces ``struggling``.
+ */
+export type StudentCategory = "struggling" | "needs_attention" | "on_track";
+/**
+ * The named, tunable alert rules (TCH.B5).
+ */
+export type AlertKind =
+  | "STUCK"
+  | "REPEATED_MISCONCEPTION"
+  | "LOW_ENGAGEMENT"
+  | "FAILING_TREND"
+  | "IDLE"
+  | "REMEDIATION_STUCK";
+/**
+ * Alert severity (TCH.B5). Color is never the sole cue — paired with an icon + word.
+ */
+export type AlertSeverity = "info" | "warn" | "urgent";
+/**
+ * Behavioral HelpNeed direction over the recent window (TCH.B4).
+ */
+export type HelpNeedTrend = "rising" | "steady" | "falling";
+/**
+ * Mastery status for a KC — mirrors the learner course-map vocabulary (CP.A.1).
+ */
+export type KcStatus = "locked" | "available" | "in_progress" | "mastered" | "due_review";
+/**
  * Stable KC identifiers, matching `diagnostic_gems.json` `_meta.kc_catalog`.
  *
  * ``StrEnum`` makes a member compare equal to and serialize as its catalog
@@ -106,6 +132,20 @@ export type UnitStatus = "locked" | "available" | "in_progress" | "mastered";
 export type UnitStatus1 = "locked" | "available" | "in_progress" | "mastered";
 
 /**
+ * One entry in the recent-activity timeline (TCH.F3 §5).
+ */
+export interface ActivityEventView {
+  /**
+   * Human-readable relative time, e.g. '2h ago' (server-rendered).
+   */
+  at: string;
+  /**
+   * Plain text, e.g. 'Answered 3/4 + 1/4 on the number line'.
+   */
+  label: string;
+  outcome: "correct" | "incorrect" | "neutral";
+}
+/**
  * One adaptive-arm turn, display-ready (Slice 5.3 theater). The verified path: the
  * persona's answer, the SymPy verdict, the labelled error class, the one-line feedback, the
  * resulting surface state, and the §3.4 effort/scaffold flags (hinted, below engagement floor).
@@ -172,6 +212,108 @@ export interface ArmVerdictView {
    * One-line explanation (e.g. 'blocked at: transfer_probe').
    */
   detail: string;
+}
+/**
+ * ``POST /teacher/student/{id}/assign-unit`` body (TCH.B8).
+ */
+export interface AssignUnitRequest {
+  /**
+   * The unit slug to assign next.
+   */
+  unit_id: string;
+}
+/**
+ * ``POST /teacher/student/{id}/assign-unit`` response (TCH.B7/B8).
+ */
+export interface AssignUnitResult {
+  student: TeacherStudentView;
+}
+/**
+ * ``GET /teacher/student/{id}`` response — the full drill-in (TCH.B8, aggregating B3–B6).
+ */
+export interface TeacherStudentView {
+  /**
+   * The student's external key (Learner.session_id).
+   */
+  student_id: string;
+  name: string;
+  category: StudentCategory;
+  category_reason: string;
+  alerts?: TeacherAlertView[];
+  struggle: StruggleSummaryView;
+  current_unit_title?: string | null;
+  current_lesson_title?: string | null;
+  percent_complete: number;
+  strengths?: KcMasteryView[];
+  weaknesses?: KcMasteryView[];
+  activity?: ActivityEventView[];
+  assignable_units?: AssignableUnitView[];
+  assigned_unit_id?: string | null;
+}
+/**
+ * One alert on a student (TCH.B5). ``message`` is plain-language, templated, NO LLM.
+ */
+export interface TeacherAlertView {
+  kind: AlertKind;
+  severity: AlertSeverity;
+  /**
+   * Plain-language, templated alert text (no LLM).
+   */
+  message: string;
+}
+/**
+ * The "what + WHY struggling" diagnostic (TCH.B4). Templated, NO LLM.
+ */
+export interface StruggleSummaryView {
+  /**
+   * One-line plain-language summary.
+   */
+  headline: string;
+  /**
+   * Longer templated explanation a teacher can read aloud.
+   */
+  detail: string;
+  /**
+   * Human label, e.g. 'Natural-number bias', or null if none.
+   */
+  matched_misconception?: string | null;
+  helpneed_trend?: HelpNeedTrend | null;
+  /**
+   * 0..1 over the recent window, or null with no recent answers.
+   */
+  recent_error_rate?: number | null;
+}
+/**
+ * A KC mastery row for the strengths/weaknesses lists (TCH.B3).
+ */
+export interface KcMasteryView {
+  /**
+   * KnowledgeComponentId catalog string, e.g. 'KC_equivalence'.
+   */
+  kc_id: string;
+  /**
+   * Display name from the KC registry (get_kc.skill_name).
+   */
+  skill_name: string;
+  /**
+   * BKT p(known), 0..1.
+   */
+  probability: number;
+  status: KcStatus;
+}
+/**
+ * A unit the teacher can assign next (TCH.F3 §6).
+ */
+export interface AssignableUnitView {
+  /**
+   * The unit slug.
+   */
+  unit_id: string;
+  title: string;
+  /**
+   * false = prereqs not met. Advisory only: a teacher may assign either (TCH.Q5).
+   */
+  available: boolean;
 }
 /**
  * One entry in the benchmark-theater persona switcher: who, and the mastery dimension
@@ -861,6 +1003,28 @@ export interface ProblemView {
   given_denominator?: number | null;
 }
 /**
+ * A roster row — one student summarized for the ranked list (TCH.B3 + B6).
+ */
+export interface RosterStudentView {
+  /**
+   * The student's external key (Learner.session_id).
+   */
+  student_id: string;
+  name: string;
+  category: StudentCategory;
+  /**
+   * One-line reason for the bucket (TCH.B6).
+   */
+  category_reason: string;
+  current_unit_title?: string | null;
+  current_lesson_title?: string | null;
+  /**
+   * 0..1 across the assigned course.
+   */
+  percent_complete: number;
+  alerts?: TeacherAlertView[];
+}
+/**
  * One Turn-0 routing option for the cold-start menu (decision 0.D.2).
  *
  * The kid-friendly view of a tutor ``RouteOption``: the surface renders ``prompt``
@@ -1007,6 +1171,14 @@ export interface TeacherHandle {
    * Identity role tag; always 'teacher' on this surface.
    */
   role: string;
+}
+/**
+ * ``GET /teacher/roster`` response (TCH.B8).
+ */
+export interface TeacherRosterView {
+  teacher_name: string;
+  class_name: string;
+  students?: RosterStudentView[];
 }
 /**
  * The full three-arm comparison for display (Slice 5.3, PROJECT.md §3.11).
