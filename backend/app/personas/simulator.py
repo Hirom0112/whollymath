@@ -45,6 +45,7 @@ from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.misconceptions import (
     add_across,
     natural_number_bias_number_line,
+    reversed_operands,
     subtract_across,
 )
 from app.domain.problem_generators import AnswerKind, Problem
@@ -132,7 +133,7 @@ class SimulatedAction:
       evidence the mastery model reads — never an LLM judgment.
     """
 
-    submitted_answer: Rational | bool | None
+    submitted_answer: Rational | bool | str | None
     requested_hint: bool
     think_time_seconds: float
     can_justify: bool
@@ -201,18 +202,24 @@ def _is_hint_dependent(persona: PersonaConfig) -> bool:
 # ─── The core mapping: KnowledgeMode + format + misconception ⇒ action ───────
 
 
-def _correct_answer(problem: Problem) -> Rational:
-    """The problem's SymPy-computed correct value (decided in Layer 1, not here).
+def _correct_answer(problem: Problem) -> Rational | str:
+    """The problem's correct answer (decided in Layer 1, not here).
 
     Layer 3 never recomputes math (that is the domain's job); it only reads the
     answer the generator/verifier already established as correct and decides whether
-    the persona produces it.
+    the persona produces it. For an EXPRESSION item the correct answer is the canonical
+    expression STRING (graded by SymPy equivalence), not a magnitude; every other item
+    is the SymPy ``correct_value``.
     """
+    if problem.answer_kind is AnswerKind.EXPRESSION:
+        if problem.correct_expression is None:  # construction bug, not learner input
+            raise ValueError(f"expression problem {problem.problem_id} has no correct_expression")
+        return problem.correct_expression
     return problem.correct_value
 
 
-def _misconception_wrong_answer(problem: Problem) -> Rational | None:
-    """The wrong VALUE a held misconception yields on this problem, or None.
+def _misconception_wrong_answer(problem: Problem) -> Rational | str | None:
+    """The wrong answer a held misconception yields on this problem, or None.
 
     Replays the Layer-1 misconception generators (``domain/misconceptions.py``) on the
     problem's operands — the simulator chooses WHICH named error fires, the domain
@@ -222,7 +229,14 @@ def _misconception_wrong_answer(problem: Problem) -> Rational | None:
     a single-operand placement item (Natural-number Nate, §4.2 P1); anything else
     returns ``None`` so the caller falls back to a deterministic guess rather than
     fabricating a value the domain doesn't model.
+
+    For an EXPRESSION item the wrong answer is the reversed-operands expression STRING
+    (e.g. "7 - p" for the canonical "p - 7"), or ``None`` on a commutative phrase where
+    reversing changes nothing (so a persona holding the error still answers correctly there).
     """
+    if problem.answer_kind is AnswerKind.EXPRESSION:
+        return reversed_operands(problem.correct_expression)
+
     operands = problem.operands
     if operands is None:
         return None
@@ -387,7 +401,7 @@ def _resolve_answer_and_justification(
     ctx: SimulationContext,
     *,
     requested_hint: bool,
-) -> tuple[Rational | bool | None, bool]:
+) -> tuple[Rational | bool | str | None, bool]:
     """The submitted answer + the can_justify flag for this (mode, request).
 
     Split out of ``simulate_action`` to keep each function under the §6 length
@@ -500,7 +514,7 @@ def _resolve_yes_no(
     return (not truth), False
 
 
-def _resolve_with_misconception(persona: PersonaConfig, problem: Problem) -> Rational:
+def _resolve_with_misconception(persona: PersonaConfig, problem: Problem) -> Rational | str:
     """Surface Sam's format-tied collapse (PROJECT.md §4.2 Persona 4).
 
     The crux of Sam: his grip on the KC is tied to ONE representation
@@ -532,7 +546,7 @@ def _resolve_find_error(
     problem: Problem,
     mode: KnowledgeMode,
     ctx: SimulationContext,
-) -> tuple[Rational | None, bool]:
+) -> tuple[Rational | str | None, bool]:
     """Resolve a FIND_ERROR turn: does the persona catch the claimed wrong answer?
 
     The error-finding probe (§3.9) presents a third party's claimed answer

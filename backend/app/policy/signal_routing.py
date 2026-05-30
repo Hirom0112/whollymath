@@ -29,6 +29,11 @@ _STATE_FOR_REPRESENTATION: dict[Representation, SurfaceState] = {
     Representation.SYMBOLIC: SurfaceState.SYMBOLIC_FOCUS,
     Representation.NUMBER_LINE: SurfaceState.NUMBER_LINE_PRIMARY,
     Representation.AREA_MODEL: SurfaceState.FRACTION_BARS_PRIMARY,
+    # The typed EXPRESSION answer surface (the ExpressionInput) lives in the symbolic-focus state:
+    # like the fraction editor it is a typed symbolic input with no manipulative, so it reuses
+    # SYMBOLIC_FOCUS rather than adding a sixth state — the "exactly five surface states" set stays
+    # closed (PROJECT.md §3.5 / ARCHITECTURE.md §2 "adapt with restraint").
+    Representation.EXPRESSION: SurfaceState.SYMBOLIC_FOCUS,
 }
 
 

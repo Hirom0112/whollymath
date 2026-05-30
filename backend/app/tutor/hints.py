@@ -385,6 +385,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If you wrote the same number back, you forgot to flip it to the other side of zero.",
         ),
     ),
+    # Grade-6 Unit 4: index 0 (operation) orients toward the operation AND its order; index 1
+    # reinforces that order matters for subtraction and division.
+    KnowledgeComponentId.WRITE_EXPRESSIONS: (
+        _nudge(
+            KnowledgeComponentId.WRITE_EXPRESSIONS,
+            "Which operation do the words name, and which quantity comes first?",
+        ),
+        _nudge(
+            KnowledgeComponentId.WRITE_EXPRESSIONS,
+            "For 'less than' or 'divided by', the order flips — start from what you take from.",
+        ),
+        _nudge(
+            KnowledgeComponentId.WRITE_EXPRESSIONS,
+            "Let a letter stand for the unknown, then build the phrase piece by piece.",
+        ),
+    ),
 }
 
 

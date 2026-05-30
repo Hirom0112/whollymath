@@ -89,6 +89,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # ONLY for now; the NUMBER_LINE rep (its widget already exists) is the natural masterable second
     # surface — adding NUMBER_LINE here promotes it, deferred to avoid over-scoping this build.
     _KC.SIGNED_NUMBERS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 4: EXPRESSION = the typed algebra string (the ExpressionInput widget). Live on
+    # EXPRESSION (not SYMBOLIC) — this KC's default + only answer surface; the WORD_PROBLEM rep is
+    # the phrase framing with no surface state. PRACTICE-ONLY (one live rep); a second masterable
+    # surface (e.g. a tile/builder) would be added here when its widget lands.
+    _KC.WRITE_EXPRESSIONS: (_REP.EXPRESSION,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

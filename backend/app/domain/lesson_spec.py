@@ -43,6 +43,7 @@ class WidgetId(StrEnum):
     NUMBER_LINE = "number_line"
     FRACTION_BARS = "fraction_bars"  # area model
     WORD_PROBLEM = "word_problem"
+    EXPRESSION = "expression"  # the free-text ExpressionInput (a typed algebra string)
 
 
 _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
@@ -50,6 +51,7 @@ _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
     Representation.NUMBER_LINE: WidgetId.NUMBER_LINE,
     Representation.AREA_MODEL: WidgetId.FRACTION_BARS,
     Representation.WORD_PROBLEM: WidgetId.WORD_PROBLEM,
+    Representation.EXPRESSION: WidgetId.EXPRESSION,
 }
 
 
@@ -544,6 +546,26 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
         ),
         transfer_probe=TransferProbeSpec(
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+    # Write expressions (6.EE.2a / 6.EE.B.6) — the FIRST expression-answer lesson. Practice-only
+    # (scheduler lives only on EXPRESSION), so the probe never fires. Errors route back to
+    # EXPRESSION — the live answer surface (WORD_PROBLEM is just the phrase framing, no surface
+    # state), so "re-try on the same surface with a labeled hint" is the honest adaptation. The
+    # OPERATION route names the reversed-operands / order confusion directly. Probe over EXPRESSION
+    # (the only live rep), not SYMBOLIC, which this KC does not offer.
+    _spec(
+        _KC.WRITE_EXPRESSIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.EXPRESSION,
+                "Match the words to the operation AND order — 'less than' flips which is first.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.EXPRESSION,)
         ),
     ),
 )

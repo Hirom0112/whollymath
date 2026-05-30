@@ -21,6 +21,7 @@ export type WidgetKind =
   | 'number_line' // NumberLine — drag a marker (placement / a 0–1 arithmetic result)
   | 'yes_no' // YesNo — a relational judgment ("same amount?", "is a > b?")
   | 'number_entry' // NumberEntry — a single whole number (a shared piece-size; §3.4.1)
+  | 'expression' // ExpressionInput — a typed algebra string (write/equivalent expressions)
   | 'fraction_editor'; // SymbolicEditor — the two-box fraction input (the default)
 
 /** The controlled-input contract every answer widget satisfies (HR.A5). */
@@ -51,6 +52,12 @@ export function selectWidget(problem: ProblemView): WidgetKind {
   // A relational yes/no judgment is answered with the buttons, never a fraction input — the server
   // signals it via `answer_kind` so a yes/no question can't land on a typing surface.
   if (problem.answer_kind === 'yes_no') return 'yes_no';
+
+  // A typed algebra expression (write/equivalent expressions): the backend derives widget_id
+  // "expression" from the EXPRESSION representation (HR.A5), so we route on the widget_id string
+  // directly — no kc branch. This is the first widget chosen by widget_id, the contract the rest
+  // collapse onto once every KC carries an authoritative widget_id.
+  if (problem.widget_id === 'expression') return 'expression';
 
   // A number-line surface with snap intervals → the draggable marker (placement, or an arithmetic
   // result that lands on the line).

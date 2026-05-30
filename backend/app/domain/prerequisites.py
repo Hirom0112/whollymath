@@ -85,6 +85,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # Grade-6 Unit 3: a signed number is a point on the number line and its opposite is the
     # reflection across zero, so opposites build on placing a number on the line.
     _KC.SIGNED_NUMBERS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit 4: writing an expression rests on the idea that a variable STANDS FOR a number,
+    # so it forward-unlocks on number-line placement (a number is a point) — the live foundation
+    # KC the algebra skill conceptually rests on (its own §11 prereqs are not yet live).
+    _KC.WRITE_EXPRESSIONS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -112,6 +116,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.ABSOLUTE_VALUE,  # Grade-6 Unit 3: distance from 0, on number-line placement
     _KC.INTEGER_ADD_SUBTRACT,  # Grade-6 Unit-INT: signed add/subtract, on number-line placement
     _KC.SIGNED_NUMBERS,  # Grade-6 Unit 3: opposites, the reflection across zero on the number line
+    _KC.WRITE_EXPRESSIONS,  # Grade-6 Unit 4: write expressions, on number-line placement
 )
 
 

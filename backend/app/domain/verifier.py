@@ -43,7 +43,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TypeAlias
 
-from sympy import Rational
+from sympy import Rational, simplify, sympify
+from sympy.core.sympify import SympifyError
 
 from app.domain.knowledge_components import KnowledgeComponentId
 from app.domain.misconceptions import (
@@ -61,6 +62,7 @@ from app.domain.misconceptions import (
     natural_number_bias_number_line,
     part_part_ratio,
     place_value_slip,
+    reversed_operands,
     signed_not_magnitude,
     subtract_across,
 )
@@ -233,6 +235,78 @@ def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult
         )
     return VerificationResult(
         is_correct=False, error_category=ErrorCategory.MAGNITUDE, matched_misconception=None
+    )
+
+
+def _safe_sympify(text: str) -> object | None:
+    """Parse a submitted expression string to a SymPy object, or ``None`` if it can't.
+
+    The verifier must NEVER crash on what a learner types (CLAUDE.md §8.2). ``sympify`` raises
+    ``SympifyError`` (or ``SyntaxError``/``TypeError`` on malformed input) for garbled strings; we
+    catch and return ``None`` so the caller scores it wrong rather than raising. We do NOT evaluate
+    with ``eval`` — ``sympify`` parses an algebraic expression, not arbitrary Python.
+    """
+    try:
+        parsed: object = sympify(text)
+        return parsed
+    except (SympifyError, SyntaxError, TypeError, ValueError, AttributeError):
+        return None
+
+
+def _expressions_equivalent(a: object, b: object) -> bool:
+    """True iff two SymPy expressions are symbolically equal — ``simplify(a - b) == 0``.
+
+    This is the equivalence rule the EXPRESSION answer kind grades by (so "7+p" == "p+7"): not a
+    string or structural match, but algebraic equality. Wrapped so a non-numeric ``simplify``
+    result (it never should be here) is treated as not-equal rather than raising.
+    """
+    try:
+        return bool(simplify(a - b) == 0)  # type: ignore[operator]
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
+def _verify_expression(problem: Problem, submitted: Submitted) -> VerificationResult:
+    """Verify an EXPRESSION answer by SymPy EQUIVALENCE against ``correct_expression``.
+
+    Grading rule (the frozen expression contract): ``sympify`` the submission and the canonical
+    answer, correct iff ``simplify(submitted - correct) == 0`` — so any algebraically equal form
+    ("7+p" for "p+7", "p+7+0") is correct, never a string match. Unparseable input is wrong
+    (OTHER), never a crash (CLAUDE.md §8.2). A wrong-but-parseable answer that equals the
+    reversed-operands form (e.g. "7-p" for the canonical "p-7") is the reversed-operands
+    misconception → OPERATION; any other wrong answer is OTHER (we do not over-claim a match).
+    """
+    canonical_text = problem.correct_expression
+    if canonical_text is None:
+        # Construction bug, not learner input: an EXPRESSION problem must carry its answer.
+        raise ValueError(f"expression problem {problem.problem_id!r} needs a correct_expression")
+
+    submitted_expr = _safe_sympify(str(submitted))
+    if submitted_expr is None:
+        return VerificationResult(
+            is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+        )
+
+    canonical_expr = sympify(canonical_text)  # generator-built, always parseable
+    if _expressions_equivalent(submitted_expr, canonical_expr):
+        return VerificationResult(
+            is_correct=True, error_category=ErrorCategory.NONE, matched_misconception=None
+        )
+
+    # Reversed-operands misconception: the submission equals the order-swapped form of a
+    # non-commutative answer (only defined for subtraction/division; None otherwise).
+    reversed_text = reversed_operands(canonical_text)
+    if reversed_text is not None and _expressions_equivalent(
+        submitted_expr, sympify(reversed_text)
+    ):
+        return VerificationResult(
+            is_correct=False,
+            error_category=ErrorCategory.OPERATION,
+            matched_misconception=MisconceptionId.REVERSED_OPERANDS,
+        )
+
+    return VerificationResult(
+        is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
     )
 
 
@@ -525,6 +599,9 @@ def verify(problem: Problem, submitted: Submitted) -> VerificationResult:
     """
     if problem.answer_kind is AnswerKind.YES_NO:
         return _verify_yes_no(problem, submitted)
+
+    if problem.answer_kind is AnswerKind.EXPRESSION:
+        return _verify_expression(problem, submitted)
 
     if problem.kc is KnowledgeComponentId.COMMON_DENOMINATOR:
         return _verify_common_denominator(problem, submitted)

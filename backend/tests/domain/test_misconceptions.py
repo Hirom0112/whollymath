@@ -73,6 +73,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "signed-not-magnitude",  # KC_absolute_value (Unit 3)
     "sign-handling-error",  # KC_integer_add_subtract (Unit-INT)
     "sign-error",  # KC_signed_numbers (Unit 3)
+    "reversed-operands",  # KC_write_expressions (Unit 4)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

@@ -26,6 +26,21 @@ describe('selectWidget', () => {
     expect(selectWidget(problem({ answer_kind: 'yes_no' }))).toBe('yes_no');
   });
 
+  it('picks the expression input when the backend emits widget_id "expression"', () => {
+    // The first widget chosen by the authoritative widget_id (not the kc): KC_write_expressions
+    // renders on the EXPRESSION surface, whose widget_id is "expression" + answer_kind "expression".
+    expect(
+      selectWidget(
+        problem({
+          kc: 'KC_write_expressions',
+          surface_format: 'expression',
+          answer_kind: 'expression',
+          widget_id: 'expression',
+        }),
+      ),
+    ).toBe('expression');
+  });
+
   it('picks the number line for a number-line surface with snap intervals', () => {
     expect(
       selectWidget(

@@ -173,11 +173,16 @@ export type CourseNodeStatus1 = "locked" | "available" | "in_progress" | "master
 /**
  * Representation to render (§3.5).
  */
-export type Representation = "symbolic" | "area_model" | "number_line" | "word_problem";
+export type Representation =
+  | "symbolic"
+  | "area_model"
+  | "number_line"
+  | "word_problem"
+  | "expression";
 /**
- * How to answer: a numeric fraction (default) or yes/no buttons.
+ * How to answer: a numeric fraction (default), yes/no buttons, or a typed expression.
  */
-export type AnswerKind = "numeric" | "yes_no";
+export type AnswerKind = "numeric" | "yes_no" | "expression";
 /**
  * The starting surface state (S1, §7).
  */

@@ -50,6 +50,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             KnowledgeComponentId.ABSOLUTE_VALUE,  # whole-number operand; ramps by magnitude
             KnowledgeComponentId.INTEGER_ADD_SUBTRACT,  # signed-integer operands; magnitude ramp
             KnowledgeComponentId.SIGNED_NUMBERS,  # signed-integer operand; ramps by magnitude pool
+            # write-expressions has NO operands (an expression answer; the constant ramps the
+            # phrase, not a denominator) — nothing to read on the denominator path.
+            KnowledgeComponentId.WRITE_EXPRESSIONS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

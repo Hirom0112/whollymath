@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal
 
-from sympy import Rational, gcd, lcm
+from sympy import Add, Mul, Pow, Rational, gcd, lcm, sstr, sympify
 
 from app.domain.knowledge_components import KnowledgeComponentId
 
@@ -95,6 +95,9 @@ class MisconceptionId(StrEnum):
     # Unit 3 (6.NS.5): a sign error on opposites — leaving the number's sign unchanged instead
     # of flipping it ("the opposite of -7 is -7").
     SIGN_ERROR = "sign-error"
+    # Unit 4 (6.EE.2a): writing an expression with the operands reversed on a non-commutative op —
+    # "7 less than p" written as 7 - p instead of p - 7 (or n / 3 as 3 / n).
+    REVERSED_OPERANDS = "reversed-operands"
 
 
 @dataclass(frozen=True)
@@ -345,6 +348,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "original number instead of its opposite."
         ),
         applicable_kcs=(KnowledgeComponentId.SIGNED_NUMBERS,),
+    ),
+    Misconception(
+        id=MisconceptionId.REVERSED_OPERANDS,
+        name="Reversed operands",
+        description=(
+            "Writes the expression with the two operands in the wrong order on a non-commutative "
+            "operation — 'p less than 7' phrasing trips the learner into 7 - p when the phrase '7 "
+            "less than p' means p - 7, or 'n divided by 3' into 3 / n. The learner translates the "
+            "words left-to-right instead of by the operation's meaning, so the OPERATION is set up "
+            "backwards. Harmless on commutative ops (p + 7 == 7 + p), with no wrong order."
+        ),
+        applicable_kcs=(KnowledgeComponentId.WRITE_EXPRESSIONS,),
     ),
 )
 
@@ -642,6 +657,48 @@ def keep_original_sign(n: Rational) -> Rational:
     from the correct ``-n`` whenever ``n != 0`` (the generator never produces zero).
     """
     return n
+
+
+def reversed_operands(correct_expression: str | None) -> str | None:
+    """reversed-operands: write a non-commutative expression with its two operands swapped.
+
+    Given the CANONICAL answer string (e.g. ``"p - 7"`` or ``"n/3"``), return the order-reversed
+    expression a learner who translates the words left-to-right would write (``"7 - p"``,
+    ``"3/n"``). Returns ``None`` when reversing changes nothing — a commutative top-level operation
+    (``p + 7`` == ``7 + p``, ``3*n`` == ``n*3``) or anything not a clean two-operand subtraction or
+    division — so the verifier never matches an "error" that is actually still correct.
+
+    This is the one place we reason over an expression's STRUCTURE rather than a magnitude; it uses
+    SymPy (domain/ owns math, CLAUDE.md §7) and is pure/deterministic. Subtraction ``a - b`` is a
+    SymPy ``Add(a, -b)``; division ``a / b`` is a ``Mul(a, b**-1)``. We detect exactly the
+    two-term forms the write-expressions generator emits and swap them.
+    """
+    if correct_expression is None:
+        return None
+    expr = sympify(correct_expression)
+
+    # Subtraction a - b: an Add of exactly two terms where one carries a negative coefficient.
+    if isinstance(expr, Add) and len(expr.args) == 2:
+        first, second = expr.args
+        # Identify which term is the subtracted one (negative coefficient).
+        if second.could_extract_minus_sign() and not first.could_extract_minus_sign():
+            a, b = first, -second  # canonical a - b
+            return str(sstr(b - a))  # reversed: b - a
+        if first.could_extract_minus_sign() and not second.could_extract_minus_sign():
+            a, b = second, -first
+            return str(sstr(b - a))
+        return None  # a + b (both positive) is commutative — no wrong order
+
+    # Division a / b: a Mul containing exactly one inverse power (b ** -1).
+    if isinstance(expr, Mul):
+        inverse = [arg for arg in expr.args if isinstance(arg, Pow) and arg.exp == -1]
+        if len(inverse) == 1:
+            denominator = inverse[0].base
+            numerator = expr / inverse[0]  # the rest of the product
+            return str(sstr(denominator / numerator))  # reversed: b / a
+        return None  # plain product a*b is commutative
+
+    return None
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

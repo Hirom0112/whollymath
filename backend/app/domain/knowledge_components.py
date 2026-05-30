@@ -125,6 +125,10 @@ class Representation(StrEnum):
     AREA_MODEL = "area_model"
     NUMBER_LINE = "number_line"
     WORD_PROBLEM = "word_problem"
+    # An algebraic expression the learner types (Unit 4–5: write/equivalent expressions). The
+    # answer is a SymPy-parseable string graded by equivalence, rendered by the ExpressionInput
+    # widget (widget_id "expression").
+    EXPRESSION = "expression"
 
 
 @dataclass(frozen=True)
@@ -407,6 +411,22 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
             "the other side (the opposite of -7 is 7; the opposite of 5 is -5)."
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+    # Write an algebraic expression from a word phrase (6.EE.2a / 6.EE.B.6): the answer is a typed
+    # expression STRING ("p + 7", "3*n"), graded by SymPy equivalence — the FIRST expression-answer
+    # KC, establishing the wire contract the ExpressionInput widget consumes (answer_kind
+    # "expression", widget_id "expression"). Advertises EXPRESSION + WORD_PROBLEM (the phrase IS a
+    # word problem; the ≥2-rep contract), LIVE only on EXPRESSION (scheduler._LIVE_REPRESENTATIONS)
+    # — PRACTICE-ONLY; EXPRESSION is the default surface, so widget_id resolves to "expression".
+    KnowledgeComponent(
+        id=KnowledgeComponentId.WRITE_EXPRESSIONS,
+        skill_name="Write an expression",
+        description=(
+            "Write an algebraic expression with a variable from a word phrase, choosing the right "
+            "operation and order (e.g. '7 more than p' is p + 7; '7 less than p' is p - 7)."
+        ),
+        representations=(Representation.EXPRESSION, Representation.WORD_PROBLEM),
     ),
 )
 

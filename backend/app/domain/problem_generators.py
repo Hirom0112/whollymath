@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Literal
 
-from sympy import Rational, igcd, ilcm
+from sympy import Rational, Symbol, igcd, ilcm, sstr
 
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 
@@ -67,6 +67,11 @@ class AnswerKind(StrEnum):
 
     NUMERIC = "numeric"
     YES_NO = "yes_no"
+    # An algebraic EXPRESSION string ("p + 7", "3*n") — not a single magnitude. Its truth is
+    # SymPy EQUIVALENCE against ``correct_expression`` (so "7+p" == "p+7"), not a Rational match;
+    # the surface picks the free-text ExpressionInput widget. Wire contract (frozen, frontend
+    # ExpressionInput): answer_kind="expression" + widget_id="expression".
+    EXPRESSION = "expression"
 
 
 @dataclass(frozen=True)
@@ -120,6 +125,12 @@ class Problem:
     # default) or a magnitude comparison ("greater than?"). The verifier reads this to pick
     # the comparison; the surface answers both the same way (yes/no buttons).
     yes_no_relation: YesNoRelation = "equal"
+    # For an EXPRESSION item (answer_kind=EXPRESSION): the canonical correct answer as a
+    # SymPy-parseable string ("p + 7", "3*n"). The verifier grades a submitted expression by
+    # EQUIVALENCE against this (sympify both, equal iff simplify(a - b) == 0), so a reordered form
+    # is still correct. ``None`` for every numeric/yes-no item; ``correct_value`` carries a
+    # ``Rational(0)`` placeholder for an expression item (never read on the EXPRESSION path).
+    correct_expression: str | None = None
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), the chosen surface
@@ -1099,6 +1110,67 @@ def _generate_signed_numbers(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+
+# Write-expression phrase templates: (phrase with {v}/{c} slots, builder of the canonical SymPy
+# expression). Each builder takes the variable Symbol and the integer constant and returns the
+# correct expression; ``sstr`` renders it to the canonical answer string. Mixes commutative
+# (addition, multiplication — reversing is still equivalent, no wrong order) and non-commutative
+# (subtraction, division — where the reversed-operands misconception produces a genuinely wrong
+# form). 6th-grade single-variable phrases (6.EE.2a).
+_EXPRESSION_TEMPLATES: tuple[tuple[str, Callable[[Symbol, int], object]], ...] = (
+    ("{c} more than {v}", lambda v, c: v + c),  # commutative
+    ("{c} added to {v}", lambda v, c: v + c),  # commutative
+    ("{v} increased by {c}", lambda v, c: v + c),  # commutative
+    ("{c} times {v}", lambda v, c: c * v),  # commutative
+    ("{c} less than {v}", lambda v, c: v - c),  # non-commutative: v - c, NOT c - v
+    ("{v} decreased by {c}", lambda v, c: v - c),  # non-commutative
+    ("{v} divided by {c}", lambda v, c: v / c),  # non-commutative: v / c, NOT c / v
+)
+_EXPRESSION_VARIABLES: tuple[str, ...] = ("p", "n", "x", "y", "t")
+# Constants by difficulty tier (the easy→hard ramp; CP.B): higher tiers use larger numbers.
+_EXPRESSION_CONST_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4, 5),
+    2: (6, 7, 8, 9),
+    3: (11, 12, 15, 20),
+    4: (25, 30, 40, 50),
+}
+_EXPRESSION_CONST_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 8, 10, 12)
+
+
+def _generate_write_expressions(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_write_expressions: write an algebraic expression from a word phrase.
+
+    Picks a phrase template, a variable, and a constant (seeded), builds the CANONICAL SymPy
+    expression, and renders it to the answer string in ``correct_expression`` (e.g. "p - 7"). The
+    answer is an EXPRESSION graded by SymPy equivalence; ``correct_value`` is a ``Rational(0)``
+    placeholder (never read on the EXPRESSION path). ``operands`` is empty; the misconception
+    (reversed-operands) is replayed from ``correct_expression`` by the verifier, not from operands.
+    """
+    const_pool = (
+        _EXPRESSION_CONST_BY_DIFFICULTY.get(difficulty, _EXPRESSION_CONST_POOL)
+        if difficulty
+        else _EXPRESSION_CONST_POOL
+    )
+    phrase_template, build = rng.choice(_EXPRESSION_TEMPLATES)
+    variable = Symbol(rng.choice(_EXPRESSION_VARIABLES))
+    constant = rng.choice(const_pool)
+    canonical = build(variable, constant)
+    phrase = phrase_template.format(v=variable.name, c=constant)
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.WRITE_EXPRESSIONS, seed, surface_format),
+        kc=KnowledgeComponentId.WRITE_EXPRESSIONS,
+        surface_format=surface_format,
+        statement=f'Write an expression for "{phrase}".',
+        correct_value=Rational(0),  # placeholder; the EXPRESSION path grades correct_expression
+        representations_available=get_kc(KnowledgeComponentId.WRITE_EXPRESSIONS).representations,
+        answer_kind=AnswerKind.EXPRESSION,
+        correct_expression=sstr(canonical),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1120,6 +1192,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.ABSOLUTE_VALUE: _generate_absolute_value,
     KnowledgeComponentId.INTEGER_ADD_SUBTRACT: _generate_integer_add_subtract,
     KnowledgeComponentId.SIGNED_NUMBERS: _generate_signed_numbers,
+    KnowledgeComponentId.WRITE_EXPRESSIONS: _generate_write_expressions,
 }
 
 

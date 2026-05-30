@@ -773,6 +773,35 @@ def _signed_numbers_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _write_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'name the operation, get the order right' steps for a write-expression problem (Unit 4).
+
+    The answer is an EXPRESSION, not a magnitude, so the steps land on the canonical
+    ``problem.correct_expression`` string rather than a Rational — the last step's
+    ``revealed_value`` stays ``None`` (a narrative/expression step, the documented non-magnitude
+    case) and its ``shown`` carries the expression. Raises if missing (CLAUDE.md §8.5)."""
+    canonical = problem.correct_expression
+    if canonical is None:
+        raise ValueError(f"write-expression problem {problem.problem_id} needs an expression")
+    return (
+        WorkedStep(
+            shown="Pick a letter for the unknown, then read the phrase for the operation.",
+            why_prompt="Why does a variable let you write the relationship without a fixed number?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Mind the ORDER: 'less than' and 'divided by' put the named amount second.",
+            why_prompt="Why does order matter for subtraction and division but not addition?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"The expression is {canonical}.",
+            why_prompt="Why does this expression say the same thing as the phrase?",
+            revealed_value=None,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -849,6 +878,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.ABSOLUTE_VALUE: _absolute_value_steps,
     KnowledgeComponentId.INTEGER_ADD_SUBTRACT: _integer_add_subtract_steps,
     KnowledgeComponentId.SIGNED_NUMBERS: _signed_numbers_steps,
+    KnowledgeComponentId.WRITE_EXPRESSIONS: _write_expression_steps,
 }
 
 
