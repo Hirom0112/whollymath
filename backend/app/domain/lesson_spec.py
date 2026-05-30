@@ -188,6 +188,7 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             ErrorRoute(
                 _E.OPERATION, _R.AREA_MODEL, "Model the two fractions with bars to compare."
             ),
+            ErrorRoute(_E.FORMAT, _R.AREA_MODEL, "Model the two fractions with bars to compare."),
             ErrorRoute(
                 _E.MAGNITUDE, _R.AREA_MODEL, "Shade the bars to see they cover the same area."
             ),
@@ -202,6 +203,7 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             ErrorRoute(
                 _E.OPERATION, _R.AREA_MODEL, "Line the bars up to find a shared piece size."
             ),
+            ErrorRoute(_E.FORMAT, _R.AREA_MODEL, "Line the bars up to find a shared piece size."),
             ErrorRoute(
                 _E.MAGNITUDE, _R.NUMBER_LINE, "Place both fractions to see the common spacing."
             ),
@@ -216,6 +218,7 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             ErrorRoute(
                 _E.OPERATION, _R.AREA_MODEL, "Add the shaded bars — same-size pieces first."
             ),
+            ErrorRoute(_E.FORMAT, _R.AREA_MODEL, "Add the shaded bars — same-size pieces first."),
             ErrorRoute(_E.MAGNITUDE, _R.NUMBER_LINE, "Hop along the number line to size the sum."),
         ),
         transfer_probe=TransferProbeSpec(
@@ -228,6 +231,7 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             ErrorRoute(
                 _E.OPERATION, _R.AREA_MODEL, "Take away shaded bars — same-size pieces first."
             ),
+            ErrorRoute(_E.FORMAT, _R.AREA_MODEL, "Take away shaded bars — same-size pieces first."),
             ErrorRoute(
                 _E.MAGNITUDE, _R.NUMBER_LINE, "Step back on the number line to size the difference."
             ),
@@ -241,6 +245,12 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
         error_routes=(
             ErrorRoute(
                 _E.MAGNITUDE, _R.NUMBER_LINE, "Use the tick marks to place it by size, not digits."
+            ),
+            # This lesson has no fraction-bars surface, so a FORMAT slip routes to its number line
+            # (the global §3.6 table sent FORMAT to S3, a surface this lesson never renders — a
+            # latent mismatch this per-lesson route fixes; CLAUDE.md §8.4).
+            ErrorRoute(
+                _E.FORMAT, _R.NUMBER_LINE, "Check the form, then place it on the number line."
             ),
         ),
         transfer_probe=TransferProbeSpec(

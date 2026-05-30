@@ -644,6 +644,7 @@ class TutorSession:
         # §3.6: update the two counters from this answer, then apply the policy
         # between problems (gated by the refuse-rules). This mutates surface_state.
         transition = self._apply_policy(
+            kc=problem.kc,
             is_correct=verdict.is_correct,
             error_category=verdict.error_category,
             hint_used=hint_used,
@@ -788,6 +789,7 @@ class TutorSession:
     def _apply_policy(
         self,
         *,
+        kc: KnowledgeComponentId,
         is_correct: bool,
         error_category: ErrorCategory,
         hint_used: bool,
@@ -821,6 +823,7 @@ class TutorSession:
             self._consecutive_correct_no_hint_in_state = 0
 
         outcome = AnswerOutcome(
+            kc=kc,
             is_correct=is_correct,
             error_category=error_category,
             hint_used=hint_used,

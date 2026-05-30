@@ -41,6 +41,7 @@ from app.domain.lesson_spec import get_lesson_spec
 from app.domain.verifier import ErrorCategory
 from app.policy.signal_routing import (
     primary_remediation_representation,
+    representation_for_error,
     surface_state_for_representation,
 )
 from app.policy.surface_states import SurfaceState
@@ -91,6 +92,11 @@ class AnswerOutcome:
     hint_used: bool
     consecutive_correct_no_hint_in_state: int = 0
     consecutive_errors: int = 0
+    # The KC this answer was on (HR.A3). When present, error routing reads the lesson's spec
+    # (per-lesson error_routes); when ``None`` (KC-less legacy/unit-test events) it falls back to
+    # the global §3.6 error→state table. The live turn loop always supplies it, so production is
+    # spec-driven; the fallback keeps the policy usable without a spec.
+    kc: KnowledgeComponentId | None = None
 
 
 @dataclass(frozen=True)
@@ -229,6 +235,20 @@ def _state_for_error_kind(error_category: ErrorCategory) -> SurfaceState | None:
     return None
 
 
+def _error_route_state(event: AnswerOutcome) -> SurfaceState | None:
+    """The surface a single error routes to: spec-driven when the KC is known (HR.A3), else global.
+
+    With a KC, the lesson's own ``error_routes`` choose the representation and we map it to its
+    surface — so a NEW lesson routes correctly with no engine change. Without a KC (legacy/unit-test
+    events), the global §3.6 error→state table applies, preserving the old behavior."""
+    if event.kc is not None:
+        representation = representation_for_error(get_lesson_spec(event.kc), event.error_category)
+        if representation is None:
+            return None
+        return surface_state_for_representation(representation)
+    return _state_for_error_kind(event.error_category)
+
+
 # ─── The policy ───
 
 
@@ -284,9 +304,12 @@ def _from_answer(current: SurfaceState, event: AnswerOutcome) -> Transition:
             "Nice work — let's move to the quicker symbolic view.",
         )
 
-    # Rows 1 & 2: a single error routes to the representation that exposes its kind.
+    # Rows 1 & 2: a single error routes to the representation that exposes its kind. Spec-driven
+    # when the answer carries its KC (HR.A3) — the lesson's own error_routes pick the surface —
+    # else the global §3.6 table. The label stays keyed on the error kind, so the text a learner
+    # sees is unchanged across the refactor.
     if not event.is_correct:
-        target = _state_for_error_kind(event.error_category)
+        target = _error_route_state(event)
         if target is not None and target is not current:
             return StateChange(target, _label_for_error_kind(event.error_category))
 

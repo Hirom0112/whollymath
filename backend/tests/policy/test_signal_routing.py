@@ -18,6 +18,7 @@ from app.policy.signal_routing import (
     surface_state_for_representation,
 )
 from app.policy.surface_states import SurfaceState
+from app.policy.transitions import AnswerOutcome, StateChange, next_transition
 
 _ALL_SPECS = LESSON_SPEC_REGISTRY.all()
 
@@ -78,3 +79,25 @@ def test_primary_remediation_reproduces_the_legacy_kc_routing() -> None:
 
 def test_fade_target_is_symbolic() -> None:
     assert next_representation_on_correct() is Representation.SYMBOLIC
+
+
+def test_answer_routing_is_spec_driven_when_kc_present() -> None:
+    """An AnswerOutcome that carries its KC routes a single error via the lesson's spec (HR.A3)."""
+    # A magnitude slip on number-line placement → its number-line surface (S2), from the spec.
+    event = AnswerOutcome(
+        kc=KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
+        is_correct=False,
+        error_category=ErrorCategory.MAGNITUDE,
+        hint_used=False,
+    )
+    transition = next_transition(SurfaceState.SYMBOLIC_FOCUS, event)
+    assert isinstance(transition, StateChange)
+    assert transition.to_state is SurfaceState.NUMBER_LINE_PRIMARY
+
+
+def test_answer_routing_falls_back_to_global_table_without_kc() -> None:
+    """A KC-less AnswerOutcome (legacy/unit-test) still routes via the global §3.6 table."""
+    event = AnswerOutcome(is_correct=False, error_category=ErrorCategory.OPERATION, hint_used=False)
+    transition = next_transition(SurfaceState.SYMBOLIC_FOCUS, event)
+    assert isinstance(transition, StateChange)
+    assert transition.to_state is SurfaceState.FRACTION_BARS_PRIMARY
