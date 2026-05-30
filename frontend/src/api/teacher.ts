@@ -50,9 +50,13 @@ export type {
   TeacherStudentView,
 };
 
-// The /teacher endpoints + regenerated types have landed (TCH.B8), so the client hits the real
-// API. Flip to false to fall back to the seeded demo class (teacherDemo.ts) for offline/storybook.
-export const TEACHER_API_READY = true;
+// The real /teacher/* endpoints + types are live and working (TCH.B8). But the student BOTS that
+// seed a real class (T1 data-gen) are DEFERRED to the end — saved to test the lesson plans — so the
+// live roster is empty for now. Until the bots seed a class, serve the seeded demo class
+// (teacherDemo.ts / DEMO_ROSTER) so the dashboard renders a populated, demoable roster instead of an
+// empty one (owner decision, 2026-05-30). Flip back to true once the bots land. The live code paths
+// stay intact so the flip is a one-line change.
+export const TEACHER_API_READY = false;
 
 /* ──────────────────────────────────────────────────────────────────────────
    Client. Both paths exist; `TEACHER_API_READY` selects which is live.
@@ -93,13 +97,23 @@ function teacherAuthHeaders(): Record<string, string> {
 }
 
 /**
- * One-click demo-teacher login (TCH.B2). POSTs `/teacher/demo-login`, which seeds-or-returns the
- * durable demo teacher + its seeded class and mints the NON-secret bearer token ('demo:<id>').
- * The caller sets the returned token via `setTeacherToken` so subsequent /teacher/* calls
- * authenticate. No auth on this call itself; throws ApiError(503) if the server has no
- * persistence channel (the demo teacher must be a real row to authenticate later).
+ * One-click demo-teacher login (TCH.B2). In live mode, POSTs `/teacher/demo-login`, which
+ * seeds-or-returns the durable demo teacher + its class and mints the NON-secret bearer token
+ * ('demo:<id>') the caller sets via `setTeacherToken` so subsequent /teacher/* calls authenticate.
+ *
+ * In demo mode (`!TEACHER_API_READY`, the bots-deferred state) it short-circuits to a synthetic
+ * handle and makes NO network call, so the teacher demo signs in and renders the seeded class with
+ * or without a backend.
  */
 export async function demoLogin(): Promise<DemoLoginResponse> {
+  if (!TEACHER_API_READY) {
+    return Promise.resolve({
+      learner_id: 0,
+      email: 'demo.teacher@whollymath.dev',
+      role: 'teacher',
+      token: 'demo:offline',
+    });
+  }
   return postJson<DemoLoginResponse>('/teacher/demo-login', {});
 }
 

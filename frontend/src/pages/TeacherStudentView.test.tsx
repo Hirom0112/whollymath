@@ -1,44 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { assignUnitInDemo, demoStudent } from '../api/teacherDemo';
+import { describe, expect, it, vi } from 'vitest';
 
 import { TeacherStudentView } from './TeacherStudentView';
 
 // The student drill-in (TODO TCH.F3). These pin the spec's load-bearing order and the one
 // write action: the ALERTS banner comes first, the named misconception is surfaced (the
 // diagnostic teachers asked for), assigning a unit reflects immediately, and back navigates out.
-// The live client calls GET/POST /teacher/student/* — fetch is stubbed against the demo data.
-
-function jsonResponse(payload: unknown, ok = true, status = 200): Response {
-  return { ok, status, json: () => Promise.resolve(payload) } as Response;
-}
+// The client runs in demo mode (bots deferred), so it serves the seeded class directly.
 
 describe('TeacherStudentView', () => {
-  beforeEach(() => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string, init?: RequestInit) => {
-        const assign = url.match(/^\/teacher\/student\/([^/]+)\/assign-unit$/);
-        if (assign && init?.method === 'POST') {
-          const unitId = (JSON.parse(String(init.body)) as { unit_id: string }).unit_id;
-          const student = assignUnitInDemo(decodeURIComponent(assign[1]), unitId);
-          return Promise.resolve(
-            student ? jsonResponse({ student }) : jsonResponse({}, false, 404),
-          );
-        }
-        const drill = url.match(/^\/teacher\/student\/([^/]+)$/);
-        if (drill) {
-          const student = demoStudent(decodeURIComponent(drill[1]));
-          return Promise.resolve(student ? jsonResponse(student) : jsonResponse({}, false, 404));
-        }
-        return Promise.resolve(jsonResponse({}, false, 404));
-      }),
-    );
-  });
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
 
   it('renders the alerts banner before the rest of the sections', async () => {
     render(<TeacherStudentView studentId="stu-maya" onBack={vi.fn()} />);
