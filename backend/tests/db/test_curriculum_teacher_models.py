@@ -57,12 +57,13 @@ def session_factory(engine: Engine) -> sessionmaker[OrmSession]:
 
 
 def _make_unit(*, slug: str, title: str, order: int) -> Unit:
-    """A Unit with all NOT-NULL fields filled — for tests that don't assert on them.
+    """A Unit with its NOT-NULL fields filled — for tests that don't assert on them.
 
-    ``ccss_cluster``/``teks_cluster``/``description`` are NOT NULL on Unit (a unit
-    always belongs to a dual-coverage cluster); this helper supplies placeholder
-    values so a test that only cares about, say, uniqueness or cascade can build a
-    valid Unit without restating the cluster columns each time.
+    ``description`` is NOT NULL on Unit; ``ccss_cluster``/``teks_cluster`` are
+    NULLABLE (single-framework units carry one as None — TEKS_CCSS_COMPARISON.md),
+    but this helper supplies concrete cluster placeholders anyway so a test that
+    only cares about, say, uniqueness or cascade can build a fully-populated Unit
+    without restating the cluster columns each time.
     """
     return Unit(
         slug=slug,

@@ -330,8 +330,15 @@ class Unit(Base):
     that survives reseeding, rather than by the autoincrement ``id`` (which is not
     stable across environments). ``ccss_cluster``/``teks_cluster`` carry the
     standard codes the teacher dashboard surfaces (TEACHER_NEEDS.md — teachers map
-    work to standards). They are plain strings, not nullable, because a unit always
-    belongs to a cluster in our dual-coverage curriculum.
+    work to standards). Both are NULLABLE: our coverage is dual but not universally
+    so — single-framework units exist. The whole of U-INT (integer arithmetic,
+    CCSS parks it in Grade 7) and U8 (personal financial literacy, no CCSS strand)
+    are TEKS-only and carry ``ccss_cluster=None``; symmetrically a CCSS-only unit
+    would carry ``teks_cluster=None``. This mirrors the already-nullable per-lesson
+    ``Lesson.ccss_code``/``teks_code`` (same single-framework reality at the leaf).
+    Source: the dual-coverage standard (TEKS_CCSS_COMPARISON.md /
+    CURRICULUM_STANDARD.md) and the catalog's TEKS-only units in
+    ``app.domain.curriculum`` (``uint``/``u8`` have ``ccss_cluster=None``).
     """
 
     __tablename__ = "unit"
@@ -346,8 +353,12 @@ class Unit(Base):
     order: Mapped[int] = mapped_column(Integer, nullable=False)
     # CCSS cluster code (e.g. "6.RP.A") and TEKS cluster code (e.g. "6.4") — the dual
     # standards coverage the teacher dashboard maps work to (TEKS_CCSS_COMPARISON.md).
-    ccss_cluster: Mapped[str] = mapped_column(String(32), nullable=False)
-    teks_cluster: Mapped[str] = mapped_column(String(32), nullable=False)
+    # NULLABLE for single-framework units: a TEKS-only unit (U-INT integer arithmetic,
+    # U8 financial literacy) carries ccss_cluster=None; a CCSS-only unit would carry
+    # teks_cluster=None. Mirrors the already-nullable Lesson.ccss_code/teks_code — see
+    # the class docstring for the source (the dual-coverage standard + the catalog).
+    ccss_cluster: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    teks_cluster: Mapped[str | None] = mapped_column(String(32), nullable=True)
     description: Mapped[str] = mapped_column(String(1024), nullable=False)
 
     # Lessons read back in their authored order (mirrors Session.turns by turn_index).
