@@ -46,6 +46,7 @@ function authHeaders(): Record<string, string> {
 
 export type {
   ActionType,
+  AdaptationView,
   AdaptiveTurnView,
   ArmVerdictView,
   BenchmarkPersonaSummaryView,

@@ -191,4 +191,56 @@ describe('Tutor', () => {
     fireEvent.click(await screen.findByRole('button', { name: /next problem/i }));
     expect(await screen.findByRole('note')).toHaveTextContent(/same size pieces first/i);
   });
+
+  it('shows the live-adaptation reason banner with a dismiss when the loop adapts (HR.B5)', async () => {
+    const adaptTurn: TurnResponse = {
+      ...CORRECT_TURN,
+      adaptation: {
+        state: 'confused',
+        reason: 'Switching to the number line so you can see the size.',
+        is_morph: true,
+      },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(adaptTurn))),
+    );
+    render(<Tutor session={SESSION} />);
+
+    fireEvent.change(screen.getByLabelText(/numerator/i), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText(/denominator/i), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+    // The adaptation rides onto the NEXT problem (the morphed surface), not the answered one.
+    fireEvent.click(await screen.findByRole('button', { name: /next problem/i }));
+
+    const banner = await screen.findByRole('status');
+    expect(banner).toHaveTextContent(/number line so you can see the size/i);
+    // Agency: a non-fluent state offers a plain acknowledge; dismissing removes the banner.
+    fireEvent.click(screen.getByRole('button', { name: /got it/i }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('lets a fluent-ready learner decline the implied skip ("Keep practicing")', async () => {
+    const adaptTurn: TurnResponse = {
+      ...CORRECT_TURN,
+      adaptation: {
+        state: 'fluent_ready',
+        reason: "You're flying — want to keep going at this level?",
+        is_morph: false,
+      },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(adaptTurn))),
+    );
+    render(<Tutor session={SESSION} />);
+
+    fireEvent.change(screen.getByLabelText(/numerator/i), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText(/denominator/i), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /next problem/i }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/want to keep going/i);
+    expect(screen.getByRole('button', { name: /keep practicing/i })).toBeInTheDocument();
+  });
 });

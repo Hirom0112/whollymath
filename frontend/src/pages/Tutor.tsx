@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   submitTurn,
+  type AdaptationView,
   type InterventionView,
   type MasterySnapshot,
   type ProblemView,
@@ -53,6 +54,46 @@ function hashString(s: string): number {
 /** The backdrop for a lesson, as a CSS `url(...)` value — picked from the pool by the KC. */
 export function lessonBackground(kc: string): string {
   return `url('${TUTOR_BACKGROUNDS[hashString(kc) % TUTOR_BACKGROUNDS.length]}')`;
+}
+
+/**
+ * The on-screen banner for a LIVE adaptation the hyperreactive loop made (HR.B5) — the visible
+ * half of "the interface IS part of the tutoring". It does NOT decide the morph (that rides on
+ * next_surface_state, already applied); it says, in one calm line, WHY the screen just adjusted —
+ * so the change never feels arbitrary. A stable key visual (the same "tuned" mark every time) makes
+ * the moment recognizable; the banner is styled by the triggering learner state, announced politely
+ * for screen readers, and dismissible so the learner keeps agency (for a fluent-ready learner the
+ * dismiss reads "Keep practicing" — declining the implied skip by staying). Reduced-motion drops the
+ * entrance (CSS). The reason text itself is server-authored (deterministic; the LLM only voices it).
+ */
+function AdaptationBanner({
+  adaptation,
+  onDismiss,
+}: {
+  adaptation: AdaptationView;
+  onDismiss: () => void;
+}): React.JSX.Element {
+  const fluentReady = adaptation.state === 'fluent_ready';
+  return (
+    <aside
+      className={`wm-tutor-adapt wm-tutor-adapt--${adaptation.state}`}
+      role="status"
+      aria-live="polite"
+    >
+      {/* Stable key visual: the same "tuned the screen for you" sliders mark every adaptation. */}
+      <span className="wm-tutor-adapt-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1">
+          <path d="M4 7h10M18 7h2M4 17h2M10 17h10" strokeLinecap="round" />
+          <circle cx="16" cy="7" r="2.4" fill="currentColor" stroke="none" />
+          <circle cx="8" cy="17" r="2.4" fill="currentColor" stroke="none" />
+        </svg>
+      </span>
+      <span className="wm-tutor-adapt-text">{adaptation.reason}</span>
+      <button type="button" className="wm-tutor-adapt-dismiss" onClick={onDismiss}>
+        {fluentReady ? 'Keep practicing' : 'Got it'}
+      </button>
+    </aside>
+  );
 }
 
 // The starting answer state for a problem. An equivalence "fill the top" item gives the
@@ -167,6 +208,12 @@ export function Tutor({
   // The one-line reason the surface changed, shown as a labeled banner on the new problem
   // (refuse-rule 4). Cleared once the learner submits (it has done its job).
   const [transitionReason, setTransitionReason] = useState<string | null>(null);
+  // A LIVE in-session adaptation the hyperreactive loop proposed (HR.B4 → rendered here, HR.B5):
+  // present only when the live state classifier fired a sustained state and the proactive flag is
+  // on (null in the observe-only default). When set, it replaces the static transition reason with
+  // the loop's own labeled reason + a state-styled, dismissible banner. The morph itself rides on
+  // next_surface_state (already applied); this is the on-screen "why".
+  const [adaptation, setAdaptation] = useState<AdaptationView | null>(null);
   // Sparks — an honest reward count (RD.0.2): earned for correct work, more when unassisted,
   // never for a wrong answer. Frontend-derived for now; the persisted backend field is RD.5.1.
   const [sparks, setSparks] = useState(0);
@@ -347,6 +394,7 @@ export function Tutor({
       setLastAnswer(submittedAnswer);
       setMastery((prev) => mergeMastery(prev, response.mastery ?? []));
       setTransitionReason(null); // the reason for THIS problem has done its job
+      setAdaptation(null); // the live adaptation banner clears once the learner answers
       if (response.correct) {
         const newlyMastered =
           !goalMastered && (response.mastery ?? []).some((m) => m.kc_id === goalKc && m.mastered);
@@ -398,7 +446,17 @@ export function Tutor({
     setProblemNumber((n) => n + 1);
     const changed = result.next_surface_state !== surfaceState;
     setSurfaceState(result.next_surface_state);
-    setTransitionReason(changed ? TRANSITION_REASON[result.next_surface_state] : null);
+    // A live adaptation's own reason takes precedence over the static transition copy (HR.B5);
+    // otherwise fall back to the per-state line when the surface changed.
+    const liveAdaptation = result.adaptation ?? null;
+    setAdaptation(liveAdaptation);
+    setTransitionReason(
+      liveAdaptation
+        ? liveAdaptation.reason
+        : changed
+          ? TRANSITION_REASON[result.next_surface_state]
+          : null,
+    );
     setFraction(initialFraction(next));
     setTick(null);
     setYesNo(null);
@@ -553,7 +611,15 @@ export function Tutor({
           {isProbe && phase !== 'feedback' ? (
             <p className="wm-tutor-probe-badge">Final check — prove you&rsquo;ve really got it</p>
           ) : null}
-          {transitionReason !== null && phase !== 'feedback' ? (
+          {adaptation !== null && phase !== 'feedback' ? (
+            <AdaptationBanner
+              adaptation={adaptation}
+              onDismiss={() => {
+                setAdaptation(null);
+                setTransitionReason(null);
+              }}
+            />
+          ) : transitionReason !== null && phase !== 'feedback' ? (
             <p className="wm-tutor-reason" role="note">
               {transitionReason}
             </p>

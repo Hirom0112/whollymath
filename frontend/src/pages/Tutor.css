@@ -331,6 +331,98 @@
   color: var(--wm-navy-deep);
 }
 
+/* The LIVE-adaptation banner (HR.B5) — the visible "the tutor just adjusted, and here's why".
+   A touch more prominent than the static reason: the stable key visual + a dismiss affordance,
+   and a faint left accent tinted by the triggering learner state (color always paired with the
+   icon + words, never the only cue). Gentle entrance; dropped under reduced-motion. */
+.wm-tutor-adapt {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 20px;
+  padding: 11px 14px 11px 13px;
+  background: var(--wm-card-sky);
+  border: 2px solid var(--wm-navy-deep);
+  border-left-width: 6px;
+  border-radius: 12px;
+  font-family: var(--wm-font-sans);
+  color: var(--wm-navy-deep);
+  animation: wm-tutor-adapt-in 320ms ease-out both;
+}
+
+@keyframes wm-tutor-adapt-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.wm-tutor-adapt-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  color: var(--wm-blue-press);
+}
+.wm-tutor-adapt-mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.wm-tutor-adapt-text {
+  flex: 1 1 auto;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.wm-tutor-adapt-dismiss {
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  border: 1.5px solid var(--wm-navy-deep);
+  border-radius: 999px;
+  background: var(--wm-cream);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.wm-tutor-adapt-dismiss:hover {
+  transform: translateY(1px);
+}
+.wm-tutor-adapt-dismiss:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 2px;
+}
+
+/* Per-state accent (the left border + the mark hue). Each state keeps the same calm card so the
+   banner never alarms; only the accent shifts. Falls back to the neutral sky card for any state. */
+.wm-tutor-adapt--confused {
+  border-left-color: var(--wm-blue-press);
+}
+.wm-tutor-adapt--guessing,
+.wm-tutor-adapt--pattern_matching {
+  border-left-color: var(--wm-yellow);
+}
+.wm-tutor-adapt--idle_avoiding,
+.wm-tutor-adapt--idle {
+  border-left-color: var(--wm-cream-2);
+}
+.wm-tutor-adapt--fluent_ready {
+  border-left-color: var(--wm-green);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-tutor-adapt {
+    animation: none;
+  }
+  .wm-tutor-adapt-dismiss {
+    transition: none;
+  }
+}
+
 /* ───────────────────────── problem statement ───────────────────────── */
 
 .wm-tutor-mode {
