@@ -44,6 +44,7 @@ from sympy import Rational
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.misconceptions import (
     add_across,
+    distributive_error,
     natural_number_bias_number_line,
     reversed_operands,
     subtract_across,
@@ -230,11 +231,15 @@ def _misconception_wrong_answer(problem: Problem) -> Rational | str | None:
     returns ``None`` so the caller falls back to a deterministic guess rather than
     fabricating a value the domain doesn't model.
 
-    For an EXPRESSION item the wrong answer is the reversed-operands expression STRING
-    (e.g. "7 - p" for the canonical "p - 7"), or ``None`` on a commutative phrase where
-    reversing changes nothing (so a persona holding the error still answers correctly there).
+    For an EXPRESSION item the wrong answer is the named misconception's expression STRING: the
+    reversed-operands form (e.g. "7 - p" for "p - 7") for write-expressions, or the distributive-
+    error form (e.g. "3*x + 2" for the given "3*(x + 2)") for equivalent-expressions. ``None`` when
+    the error changes nothing (a commutative phrase, or a source with no distributable structure),
+    so a persona holding the error still answers correctly there.
     """
     if problem.answer_kind is AnswerKind.EXPRESSION:
+        if problem.kc is KnowledgeComponentId.EQUIVALENT_EXPRESSIONS:
+            return distributive_error(problem.source_expression)
         return reversed_operands(problem.correct_expression)
 
     operands = problem.operands

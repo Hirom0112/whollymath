@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Literal
 
-from sympy import Rational, Symbol, igcd, ilcm, sstr
+from sympy import Add, Expr, Mul, Rational, Symbol, igcd, ilcm, sstr
 
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 
@@ -131,6 +131,12 @@ class Problem:
     # is still correct. ``None`` for every numeric/yes-no item; ``correct_value`` carries a
     # ``Rational(0)`` placeholder for an expression item (never read on the EXPRESSION path).
     correct_expression: str | None = None
+    # For an "equivalent expression" item (KC_equivalent_expressions): the GIVEN (un-rewritten)
+    # expression the learner must produce an equivalent of, as a SymPy-parseable string
+    # ("3*(x + 2)"). The verifier replays the distributive-error misconception from THIS source
+    # (it cannot be derived from the answer alone, unlike reversed-operands). ``None`` for every
+    # other item; symmetric to ``correct_expression`` (a domain-only carrier, never on the wire).
+    source_expression: str | None = None
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), the chosen surface
@@ -1346,6 +1352,82 @@ def _generate_one_step_equations(
     )
 
 
+# Equivalent-expression templates (6.EE.3 / 6.EE.4): the learner is shown a GIVEN expression and
+# must type an EQUIVALENT one. Each template builds, from the variable and two integers, a tuple of
+# (the GIVEN expression as a folded SymPy object, its CANONICAL equivalent, a human-readable display
+# string with implicit multiplication). DISTRIBUTE: the given is a product ``c*(v + b)`` (kept
+# folded, so the distributive-error misconception can mis-distribute it onto only the first term),
+# canonical is its expansion ``c*v + c*b``. COMBINE: the given is a like-terms sum (rendered
+# ``a*v + b*v`` but SymPy auto-combines it on construction), canonical is the combined ``(a+b)*v``;
+# it carries no distributive structure (distributive_error returns None for it). 6th-grade single-
+# variable, integer-coefficient expressions.
+def _distribute_given(v: Symbol, c: int, b: int) -> tuple[Expr, Expr, str]:
+    # Build the product UNEVALUATED so SymPy keeps it folded as c*(v + b) (a plain ``c * (v + b)``
+    # auto-distributes to c*v + c*b on construction). ``sstr`` then renders "c*(v + b)", the form
+    # the distributive-error misconception mis-distributes; the canonical is the expansion.
+    folded: Expr = Mul(c, Add(v, b, evaluate=False), evaluate=False)
+    return folded, folded.expand(), f"{c}({v.name} + {b})"
+
+
+def _combine_given(v: Symbol, a: int, b: int) -> tuple[Expr, Expr, str]:
+    combined: Expr = a * v + b * v  # SymPy auto-combines like terms to (a + b)*v
+    return combined, combined, f"{a}{v.name} + {b}{v.name}"
+
+
+_EQUIVALENT_TEMPLATES: tuple[Callable[[Symbol, int, int], tuple[Expr, Expr, str]], ...] = (
+    _distribute_given,
+    _combine_given,
+)
+_EQUIVALENT_VARIABLES: tuple[str, ...] = ("x", "y", "n", "p", "t")
+# Coefficient/constant pools by difficulty tier (the easy→hard ramp; CP.B): higher tiers use
+# larger numbers. Both integer slots draw from the same tier pool (two independent draws).
+_EQUIVALENT_NUM_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4, 5),
+    2: (3, 4, 6, 7),
+    3: (5, 6, 8, 9),
+    4: (7, 9, 11, 12),
+}
+_EQUIVALENT_NUM_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8, 9)
+
+
+def _generate_equivalent_expressions(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_equivalent_expressions: produce an expression equivalent to a GIVEN one (6.EE.3/4).
+
+    Picks a template (distribute a product, or combine like terms), a variable, and two integers
+    (seeded), builds the GIVEN expression and its CANONICAL equivalent. The given (un-rewritten)
+    form goes in ``source_expression`` (e.g. "3*(x + 2)"); the canonical equivalent goes in
+    ``correct_expression`` (e.g. "3*x + 6"). The answer is an EXPRESSION graded by SymPy
+    equivalence; ``correct_value`` is a ``Rational(0)`` placeholder (never read on the EXPRESSION
+    path). The distributive-error misconception is replayed from ``source_expression`` by the
+    verifier, not from operands (``operands`` is empty).
+    """
+    num_pool = (
+        _EQUIVALENT_NUM_BY_DIFFICULTY.get(difficulty, _EQUIVALENT_NUM_POOL)
+        if difficulty
+        else _EQUIVALENT_NUM_POOL
+    )
+    build = rng.choice(_EQUIVALENT_TEMPLATES)
+    variable = Symbol(rng.choice(_EQUIVALENT_VARIABLES))
+    first = rng.choice(num_pool)
+    second = rng.choice(num_pool)
+    given, canonical, given_text = build(variable, first, second)
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.EQUIVALENT_EXPRESSIONS, seed, surface_format),
+        kc=KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,
+        surface_format=surface_format,
+        statement=f'Write an equivalent expression for "{given_text}".',
+        correct_value=Rational(0),  # placeholder; the EXPRESSION path grades correct_expression
+        representations_available=get_kc(
+            KnowledgeComponentId.EQUIVALENT_EXPRESSIONS
+        ).representations,
+        answer_kind=AnswerKind.EXPRESSION,
+        correct_expression=sstr(canonical),
+        source_expression=sstr(given),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1370,6 +1452,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.WRITE_EXPRESSIONS: _generate_write_expressions,
     KnowledgeComponentId.EVALUATE_EXPRESSIONS: _generate_evaluate_expressions,
     KnowledgeComponentId.ONE_STEP_EQUATIONS: _generate_one_step_equations,
+    KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _generate_equivalent_expressions,
 }
 
 

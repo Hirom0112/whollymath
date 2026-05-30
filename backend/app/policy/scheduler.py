@@ -105,6 +105,12 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # equivalence word-problem). TWO live reps ⇒ is_masterable_live is True — a learner can be
     # correct in two representations of the one skill (mastery rule 2).
     _KC.ONE_STEP_EQUATIONS: (_REP.SYMBOLIC, _REP.WORD_PROBLEM),
+    # Grade-6 Unit 4: EXPRESSION = the typed algebra string (the ExpressionInput widget). Live on
+    # EXPRESSION (not SYMBOLIC) — its only answer surface; WORD_PROBLEM is the ontology framing with
+    # no surface state, and SYMBOLIC maps to the fraction editor, which cannot accept a typed
+    # algebra answer. PRACTICE-ONLY (one live rep); a second masterable surface (e.g. an
+    # expression-tile builder) would be added here when its widget lands.
+    _KC.EQUIVALENT_EXPRESSIONS: (_REP.EXPRESSION,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

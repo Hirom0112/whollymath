@@ -50,7 +50,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.SIGNED_NUMBERS,  # Grade-6 Unit 3 (built 2026-05-30)
         KC.WRITE_EXPRESSIONS,  # Grade-6 Unit 4 (built 2026-05-30)
         KC.EVALUATE_EXPRESSIONS,  # Grade-6 Unit 4 (built 2026-05-30)
-        KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5 (built 2026-05-30), last on the spine
+        KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5 (built 2026-05-30)
+        KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4 (built 2026-05-30), last on the spine
     ]
 
 

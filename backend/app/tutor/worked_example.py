@@ -876,6 +876,35 @@ def _write_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _equivalent_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'rewrite without changing the value' steps for an equivalent-expression problem (Unit 4).
+
+    The answer is an EXPRESSION, not a magnitude, so the steps land on the canonical
+    ``problem.correct_expression`` string rather than a Rational — the last step's
+    ``revealed_value`` stays ``None`` (a narrative/expression step, the documented non-magnitude
+    case) and its ``shown`` carries the equivalent expression. Raises if missing (§8.5)."""
+    canonical = problem.correct_expression
+    if canonical is None:
+        raise ValueError(f"equivalent-expression problem {problem.problem_id} needs an expression")
+    return (
+        WorkedStep(
+            shown="Look for a product to expand or like terms to combine.",
+            why_prompt="Why can you rewrite an expression without changing what it equals?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Distribute the multiplier to EVERY term inside, or add the matching terms.",
+            why_prompt="Why must the outside factor reach the second term too, not just the first?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"The equivalent expression is {canonical}.",
+            why_prompt="Why does this have the same value as the one you started with?",
+            revealed_value=None,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -955,6 +984,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.WRITE_EXPRESSIONS: _write_expression_steps,
     KnowledgeComponentId.EVALUATE_EXPRESSIONS: _evaluate_expression_steps,
     KnowledgeComponentId.ONE_STEP_EQUATIONS: _one_step_equations_steps,
+    KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _equivalent_expression_steps,
 }
 
 

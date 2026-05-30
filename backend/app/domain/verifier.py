@@ -54,6 +54,7 @@ from app.domain.misconceptions import (
     add_magnitudes_ignoring_sign,
     additive_ratio,
     decimal_point_misplacement,
+    distributive_error,
     evaluate_left_to_right,
     gcf_lcm_confusion,
     inverse_operation_error,
@@ -305,6 +306,20 @@ def _verify_expression(problem: Problem, submitted: Submitted) -> VerificationRe
             is_correct=False,
             error_category=ErrorCategory.OPERATION,
             matched_misconception=MisconceptionId.REVERSED_OPERANDS,
+        )
+
+    # Distributive-error misconception (KC_equivalent_expressions): the submission equals the
+    # partially-distributed form of the GIVEN expression — the multiplier reached only the first
+    # term ("3x + 2" for "3(x + 2)"). Replayed from ``source_expression`` (it cannot be derived
+    # from the answer alone); ``None`` when the source has no distributable structure.
+    distributive_text = distributive_error(problem.source_expression)
+    if distributive_text is not None and _expressions_equivalent(
+        submitted_expr, sympify(distributive_text)
+    ):
+        return VerificationResult(
+            is_correct=False,
+            error_category=ErrorCategory.OPERATION,
+            matched_misconception=MisconceptionId.DISTRIBUTIVE_ERROR,
         )
 
     return VerificationResult(

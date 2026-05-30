@@ -462,6 +462,22 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
     ),
+    # Produce an expression EQUIVALENT to a given one (6.EE.3 / 6.EE.4): expand a product like
+    # "3(x + 2)" into "3x + 6" (or combine like terms), the answer a typed expression STRING graded
+    # by SymPy equivalence — REUSING the expression-answer contract KC_write_expressions
+    # established (answer_kind "expression", widget_id "expression"). Advertises EXPRESSION (the
+    # typed answer surface) + WORD_PROBLEM (the ≥2-rep ontology), LIVE only on EXPRESSION
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY: the only widget that accepts a typed
+    # algebra answer is the ExpressionInput, so a second masterable surface awaits its own widget.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,
+        skill_name="Write an equivalent expression",
+        description=(
+            "Rewrite an expression as an equivalent one — distribute a product like 3(x + 2) into "
+            "3x + 6, or combine like terms like 2x + 5x into 7x — keeping the same value."
+        ),
+        representations=(Representation.EXPRESSION, Representation.WORD_PROBLEM),
+    ),
 )
 
 

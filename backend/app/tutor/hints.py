@@ -434,6 +434,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Put your value for x back in — if both sides come out equal, you solved it.",
         ),
     ),
+    # Grade-6 Unit 4: index 0 (operation) orients toward distributing to EVERY term; index 1
+    # reinforces that the value must stay the same.
+    KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: (
+        _nudge(
+            KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,
+            "Multiply the outside number by EVERY term inside the parentheses, not just the first.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,
+            "An equivalent expression has the same value — try a number for the letter to check.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,
+            "Like terms (same letter) combine; a letter term and a plain number do not.",
+        ),
+    ),
 }
 
 

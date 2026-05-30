@@ -618,6 +618,25 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.WORD_PROBLEM)
         ),
     ),
+    # Equivalent expressions (6.EE.3 / 6.EE.4) — the SECOND expression-answer lesson, reusing the
+    # contract. Practice-only (scheduler lives only on EXPRESSION; the only widget that accepts a
+    # typed algebra answer is the ExpressionInput — WORD_PROBLEM is the ontology framing, no surface
+    # state), so the probe never fires. Errors route back to EXPRESSION — the live answer surface —
+    # so "re-try on the same surface with a labeled hint" is the honest adaptation. The OPERATION
+    # route names the distributive error directly. Probe over EXPRESSION (the only live rep).
+    _spec(
+        _KC.EQUIVALENT_EXPRESSIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.EXPRESSION,
+                "Distribute to EVERY term inside the parentheses — the factor reaches them all.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.EXPRESSION,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

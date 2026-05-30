@@ -100,6 +100,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # matching how KC_write_expressions is wired. (Edge could later tighten to EVALUATE_EXPRESSIONS,
     # now live and its §11 reactive-drop prereq — left as a follow-up to avoid a mid-merge rewire.)
     _KC.ONE_STEP_EQUATIONS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit 4: rewriting an expression as an equivalent one (distribute, combine like terms)
+    # rests on being able to read/write an algebraic expression in the first place, so it unlocks
+    # on KC_write_expressions — the live prerequisite directly upstream of it.
+    _KC.EQUIVALENT_EXPRESSIONS: frozenset({_KC.WRITE_EXPRESSIONS}),
 }
 
 
@@ -130,6 +134,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.WRITE_EXPRESSIONS,  # Grade-6 Unit 4: write expressions, on number-line placement
     _KC.EVALUATE_EXPRESSIONS,  # Grade-6 Unit 4: evaluate at a value, builds on writing expressions
     _KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5: solve one-step equations, on number-line placement
+    _KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4: rewrite as equivalent, on write expressions
 )
 
 

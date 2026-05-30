@@ -104,6 +104,9 @@ class MisconceptionId(StrEnum):
     # Unit 5 (6.EE.7): solving a one-step equation with the WRONG inverse — adding instead of
     # subtracting for x + b = c, or subtracting a instead of dividing for a*x = c.
     INVERSE_OPERATION_ERROR = "inverse-operation-error"
+    # Unit 4 (6.EE.3): a distributive error — distributing a multiplier onto only the FIRST term of
+    # a sum, "3(x + 2)" written as 3x + 2 instead of 3x + 6 (the +2 is left un-multiplied).
+    DISTRIBUTIVE_ERROR = "distributive-error"
 
 
 @dataclass(frozen=True)
@@ -389,6 +392,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "isolating x is run backwards and x is never actually isolated."
         ),
         applicable_kcs=(KnowledgeComponentId.ONE_STEP_EQUATIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.DISTRIBUTIVE_ERROR,
+        name="Distributive error",
+        description=(
+            "Distributes a multiplier onto only the FIRST term of a sum, leaving the rest "
+            "un-multiplied — '3(x + 2)' written as 3x + 2 instead of 3x + 6. The learner applies "
+            "the factor to the variable term but forgets it must also reach the constant (and any "
+            "further term), so the OPERATION (distribution) is applied incompletely. Harmless on a "
+            "single-term product (3 * x has nothing else to reach), where there is no wrong form."
+        ),
+        applicable_kcs=(KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,),
     ),
 )
 
@@ -768,6 +783,44 @@ def reversed_operands(correct_expression: str | None) -> str | None:
         return None  # plain product a*b is commutative
 
     return None
+
+
+def distributive_error(source_expression: str | None) -> str | None:
+    """distributive-error: distribute a multiplier onto only the FIRST term of a sum.
+
+    Given the GIVEN (un-expanded) expression the learner is asked to rewrite — a product of a
+    numeric coefficient and a sum, e.g. ``"3*(x + 2)"`` — return the partially-distributed form a
+    learner who forgets to reach the other terms would write (``"3*x + 2"``). Returns ``None`` when
+    the source is not a clean ``coeff * (sum of >= 2 terms)`` product (nothing to mis-distribute),
+    or when the partial form is coincidentally still equivalent to the full expansion — so the
+    verifier never matches an "error" that is actually still correct.
+
+    Like ``reversed_operands`` this reasons over the expression's STRUCTURE with SymPy (domain/
+    owns math, CLAUDE.md §7) and is pure/deterministic. A product ``coeff * (a + b + ...)`` is a
+    SymPy ``Mul`` whose args are a ``Number`` and an ``Add``; the error multiplies the coefficient
+    into only the Add's FIRST term and appends the remaining terms un-multiplied.
+    """
+    if source_expression is None:
+        return None
+    # Parse UNEVALUATED so a folded product ``c*(v + b)`` survives as a Mul(coeff, Add) rather than
+    # auto-distributing to c*v + c*b on parse — the folded form is what we mis-distribute.
+    expr = sympify(source_expression, evaluate=False)
+
+    if not isinstance(expr, Mul):
+        return None
+
+    # Split the product into its numeric coefficient and the remaining (non-numeric) factors.
+    coeff, rest = expr.as_coeff_Mul()
+    if coeff == 1 or not isinstance(rest, Add) or len(rest.args) < 2:
+        return None  # not a "number times a (multi-term) sum" — nothing to mis-distribute
+
+    terms = rest.args
+    # The error: multiply the coefficient into the first term only; leave the rest untouched.
+    partial = coeff * terms[0] + Add(*terms[1:])
+    full = expr.expand()  # the CORRECT distribution, for the harmless-case guard
+    if partial == full:
+        return None  # the partial form is coincidentally still the full expansion
+    return str(sstr(partial))
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

@@ -76,6 +76,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "reversed-operands",  # KC_write_expressions (Unit 4)
     "order-of-operations-slip",  # KC_evaluate_expressions (Unit 4)
     "inverse-operation-error",  # KC_one_step_equations (Unit 5)
+    "distributive-error",  # KC_equivalent_expressions (Unit 4)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

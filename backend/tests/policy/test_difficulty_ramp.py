@@ -59,6 +59,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # one-step equations use whole-number operands (mode/coefficient/result, all
             # denominator 1); the ramp widens the coefficient pool, not a fraction denominator.
             KnowledgeComponentId.ONE_STEP_EQUATIONS,
+            # equivalent-expressions likewise: an expression answer, no operand fractions; the
+            # integer coefficients ramp the source expression, not a denominator pool.
+            KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)
