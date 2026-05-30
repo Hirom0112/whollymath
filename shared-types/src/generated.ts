@@ -32,20 +32,68 @@ export type HelpNeedTrend = "rising" | "steady" | "falling";
  */
 export type KcStatus = "locked" | "available" | "in_progress" | "mastered" | "due_review";
 /**
- * Stable KC identifiers, matching `diagnostic_gems.json` `_meta.kc_catalog`.
+ * Stable KC identifiers — the full Grade-6 ontology AND the HelpNeed model's label space.
  *
- * ``StrEnum`` makes a member compare equal to and serialize as its catalog
- * string, so the diagnostic-gem bank, the DB, and the API all speak the same
- * id, while still giving us guaranteed-unique members and a typed handle for
- * code that should not pass raw strings around. The string VALUES are the
- * contract with the catalog and must not change without updating the catalog.
+ * Two tiers (see the member groups below):
+ *   - the five CONTENT-COMPLETE foundation skills, which have a full Layer-1 stack and match
+ *     the `diagnostic_gems.json` `_meta.kc_catalog` verbatim (``LIVE_KCS`` / the registry); and
+ *   - the Grade-6 ontology KCs (one per CURRICULUM_STANDARD.md §3–§7 lesson), added so the
+ *     cross-topic HelpNeed one-hot (`KC_ORDER = tuple(KnowledgeComponentId)`) has a column per
+ *     topic. These are label-space-only until their content is built — not in the registry, the
+ *     gem catalog, or ``LIVE_KCS`` (T1_T2_COORDINATION.md §4).
+ *
+ * ``StrEnum`` makes a member compare equal to and serialize as its id string, so the gem bank,
+ * the DB (plain-string columns), and the API all speak the same id, with guaranteed-unique
+ * members and a typed handle. A content-complete KC's VALUE is the contract with the gem catalog
+ * and must not change without updating the catalog.
  */
 export type KnowledgeComponentId =
   | "KC_equivalence"
   | "KC_common_denominator"
   | "KC_addition_unlike"
   | "KC_subtraction_unlike"
-  | "KC_number_line_placement";
+  | "KC_number_line_placement"
+  | "KC_ratio_language"
+  | "KC_equivalent_ratios"
+  | "KC_unit_rate"
+  | "KC_rate_problems"
+  | "KC_percent"
+  | "KC_unit_conversion"
+  | "KC_gcf_lcm"
+  | "KC_divide_fractions"
+  | "KC_multiply_fractions"
+  | "KC_multi_digit_division"
+  | "KC_decimal_operations"
+  | "KC_signed_numbers"
+  | "KC_rationals_on_line"
+  | "KC_ordering_inequalities"
+  | "KC_absolute_value"
+  | "KC_classify_number_sets"
+  | "KC_coordinate_plane"
+  | "KC_integer_add_subtract"
+  | "KC_integer_multiply_divide"
+  | "KC_exponents"
+  | "KC_write_expressions"
+  | "KC_expression_parts"
+  | "KC_evaluate_expressions"
+  | "KC_equivalent_expressions"
+  | "KC_dependent_vars"
+  | "KC_equation_solutions"
+  | "KC_one_step_equations"
+  | "KC_inequalities"
+  | "KC_triangle_properties"
+  | "KC_area_polygons"
+  | "KC_volume_fractional_edges"
+  | "KC_polygons_coordinate_plane"
+  | "KC_surface_area_nets"
+  | "KC_statistical_questions"
+  | "KC_data_displays"
+  | "KC_center_spread_shape"
+  | "KC_summary_statistics"
+  | "KC_mean_absolute_deviation"
+  | "KC_categorical_data"
+  | "KC_check_register"
+  | "KC_lifetime_income";
 /**
  * The node's status on the learning path.
  */
@@ -55,20 +103,68 @@ export type CourseNodeStatus = "locked" | "available" | "in_progress" | "mastere
  */
 export type InterventionKind = "inline_assertion" | "conceptual_prompt";
 /**
- * Stable KC identifiers, matching `diagnostic_gems.json` `_meta.kc_catalog`.
+ * Stable KC identifiers — the full Grade-6 ontology AND the HelpNeed model's label space.
  *
- * ``StrEnum`` makes a member compare equal to and serialize as its catalog
- * string, so the diagnostic-gem bank, the DB, and the API all speak the same
- * id, while still giving us guaranteed-unique members and a typed handle for
- * code that should not pass raw strings around. The string VALUES are the
- * contract with the catalog and must not change without updating the catalog.
+ * Two tiers (see the member groups below):
+ *   - the five CONTENT-COMPLETE foundation skills, which have a full Layer-1 stack and match
+ *     the `diagnostic_gems.json` `_meta.kc_catalog` verbatim (``LIVE_KCS`` / the registry); and
+ *   - the Grade-6 ontology KCs (one per CURRICULUM_STANDARD.md §3–§7 lesson), added so the
+ *     cross-topic HelpNeed one-hot (`KC_ORDER = tuple(KnowledgeComponentId)`) has a column per
+ *     topic. These are label-space-only until their content is built — not in the registry, the
+ *     gem catalog, or ``LIVE_KCS`` (T1_T2_COORDINATION.md §4).
+ *
+ * ``StrEnum`` makes a member compare equal to and serialize as its id string, so the gem bank,
+ * the DB (plain-string columns), and the API all speak the same id, with guaranteed-unique
+ * members and a typed handle. A content-complete KC's VALUE is the contract with the gem catalog
+ * and must not change without updating the catalog.
  */
 export type KnowledgeComponentId1 =
   | "KC_equivalence"
   | "KC_common_denominator"
   | "KC_addition_unlike"
   | "KC_subtraction_unlike"
-  | "KC_number_line_placement";
+  | "KC_number_line_placement"
+  | "KC_ratio_language"
+  | "KC_equivalent_ratios"
+  | "KC_unit_rate"
+  | "KC_rate_problems"
+  | "KC_percent"
+  | "KC_unit_conversion"
+  | "KC_gcf_lcm"
+  | "KC_divide_fractions"
+  | "KC_multiply_fractions"
+  | "KC_multi_digit_division"
+  | "KC_decimal_operations"
+  | "KC_signed_numbers"
+  | "KC_rationals_on_line"
+  | "KC_ordering_inequalities"
+  | "KC_absolute_value"
+  | "KC_classify_number_sets"
+  | "KC_coordinate_plane"
+  | "KC_integer_add_subtract"
+  | "KC_integer_multiply_divide"
+  | "KC_exponents"
+  | "KC_write_expressions"
+  | "KC_expression_parts"
+  | "KC_evaluate_expressions"
+  | "KC_equivalent_expressions"
+  | "KC_dependent_vars"
+  | "KC_equation_solutions"
+  | "KC_one_step_equations"
+  | "KC_inequalities"
+  | "KC_triangle_properties"
+  | "KC_area_polygons"
+  | "KC_volume_fractional_edges"
+  | "KC_polygons_coordinate_plane"
+  | "KC_surface_area_nets"
+  | "KC_statistical_questions"
+  | "KC_data_displays"
+  | "KC_center_spread_shape"
+  | "KC_summary_statistics"
+  | "KC_mean_absolute_deviation"
+  | "KC_categorical_data"
+  | "KC_check_register"
+  | "KC_lifetime_income";
 /**
  * The learner's status on this lesson's KC (the course-map node's status).
  */
@@ -1056,6 +1152,47 @@ export interface ReadBackView {
    * Whether an answer was extracted; false → ask the learner to rewrite it.
    */
   readable: boolean;
+}
+/**
+ * The reactive-remediation panel: a paused parent lesson + its nested prerequisite (§11.5).
+ *
+ * Present only in the "R" flow state (``LessonFlowState.IN_REMEDIATION``); ``null`` when working
+ * the grade-level lesson normally. The surface renders it as the lesson box EXPANDING IN PLACE
+ * (CURRICULUM_STANDARD.md §11.5): the parent shows ``paused`` and a sub-row reveals the
+ * prerequisite dropped to, with the on-screen ``reason`` and the ``resume_hint``.
+ * ``parent_progress_done`` is the filled dots + the resume point (its TOTAL stays on the parent's
+ * own course view, not duplicated here); the parent resumes there once the prerequisite is
+ * mastered (§11.4 hard gate — it pauses, never resets). Deterministic projection, no LLM.
+ */
+export interface RemediationView {
+  /**
+   * The foundation skill the learner was dropped to.
+   */
+  prerequisite_kc: string;
+  /**
+   * Human-readable name of that prerequisite skill.
+   */
+  prerequisite_label: string;
+  /**
+   * The grade-level lesson that is paused.
+   */
+  parent_kc: string;
+  /**
+   * Human-readable name of the paused parent lesson.
+   */
+  parent_label: string;
+  /**
+   * Problems completed in the parent before pausing — the resume point.
+   */
+  parent_progress_done: number;
+  /**
+   * The one-line on-screen reason for the drop (§11.5 prompt).
+   */
+  reason: string;
+  /**
+   * What finishing the prerequisite unlocks (names the paused parent lesson).
+   */
+  resume_hint: string;
 }
 /**
  * A roster row — one student summarized for the ranked list (TCH.B3 + B6).

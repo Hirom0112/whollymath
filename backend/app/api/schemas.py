@@ -133,6 +133,35 @@ class AdaptationView(BaseModel):
     )
 
 
+class RemediationView(BaseModel):
+    """The reactive-remediation panel: a paused parent lesson + its nested prerequisite (§11.5).
+
+    Present only in the "R" flow state (``LessonFlowState.IN_REMEDIATION``); ``null`` when working
+    the grade-level lesson normally. The surface renders it as the lesson box EXPANDING IN PLACE
+    (CURRICULUM_STANDARD.md §11.5): the parent shows ``paused`` and a sub-row reveals the
+    prerequisite dropped to, with the on-screen ``reason`` and the ``resume_hint``.
+    ``parent_progress_done`` is the filled dots + the resume point (its TOTAL stays on the parent's
+    own course view, not duplicated here); the parent resumes there once the prerequisite is
+    mastered (§11.4 hard gate — it pauses, never resets). Deterministic projection, no LLM."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    prerequisite_kc: str = Field(description="The foundation skill the learner was dropped to.")
+    prerequisite_label: str = Field(description="Human-readable name of that prerequisite skill.")
+    parent_kc: str = Field(description="The grade-level lesson that is paused.")
+    parent_label: str = Field(description="Human-readable name of the paused parent lesson.")
+    parent_progress_done: int = Field(
+        ge=0, description="Problems completed in the parent before pausing — the resume point."
+    )
+    reason: str = Field(
+        min_length=1, description="The one-line on-screen reason for the drop (§11.5 prompt)."
+    )
+    resume_hint: str = Field(
+        min_length=1,
+        description="What finishing the prerequisite unlocks (names the paused parent lesson).",
+    )
+
+
 class ProblemView(BaseModel):
     """The learner-facing view of one presented problem (ARCHITECTURE.md §10 step 12).
 
@@ -1410,6 +1439,7 @@ __all__ = [
     "StruggleSummaryView",
     "StudentCategory",
     "TeacherAlertView",
+    "RemediationView",
     "TeacherRosterView",
     "TeacherStudentView",
     "TranscribeAnswerRequest",
