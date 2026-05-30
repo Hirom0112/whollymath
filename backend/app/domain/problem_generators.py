@@ -1055,6 +1055,50 @@ def _generate_integer_add_subtract(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 3: Rational Numbers ───
+
+# The magnitude pool for "opposite of N" items by difficulty tier (the easy→hard ramp; CP.B):
+# higher tiers use larger magnitudes. The SIGN is chosen separately so both "opposite of a
+# positive" and "opposite of a negative" appear.
+_SIGNED_MAGNITUDE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3, 4, 5),
+    2: (3, 5, 6, 7, 8),
+    3: (7, 9, 10, 12, 15),
+    4: (12, 15, 18, 20, 25),
+}
+_SIGNED_MAGNITUDE_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15)
+
+
+def _generate_signed_numbers(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_signed_numbers: find the opposite of a signed integer; a single signed integer answer.
+
+    Picks a nonzero magnitude and a sign (both via the seeded RNG, so both "opposite of a
+    positive" and "opposite of a negative" occur). The number is ``n``; the answer is its opposite
+    ``-n`` (reflection across zero). ``operands = (n,)`` so the verifier can replay the sign-error
+    misconception (return ``n`` unchanged). Rendered symbolically; ``difficulty`` widens the
+    magnitude pool. ``n`` is never zero, so ``-n != n`` and the misconception is always diagnostic.
+    """
+    pool = (
+        _SIGNED_MAGNITUDE_BY_DIFFICULTY.get(difficulty, _SIGNED_MAGNITUDE_POOL)
+        if difficulty
+        else _SIGNED_MAGNITUDE_POOL
+    )
+    magnitude = rng.choice(pool)
+    n = magnitude if rng.random() < 0.5 else -magnitude
+    statement = f"What is the opposite of {n}?"
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.SIGNED_NUMBERS, seed, surface_format),
+        kc=KnowledgeComponentId.SIGNED_NUMBERS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(-n),
+        representations_available=get_kc(KnowledgeComponentId.SIGNED_NUMBERS).representations,
+        operands=(Rational(n),),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1075,6 +1119,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.DECIMAL_OPERATIONS: _generate_decimal_operations,
     KnowledgeComponentId.ABSOLUTE_VALUE: _generate_absolute_value,
     KnowledgeComponentId.INTEGER_ADD_SUBTRACT: _generate_integer_add_subtract,
+    KnowledgeComponentId.SIGNED_NUMBERS: _generate_signed_numbers,
 }
 
 

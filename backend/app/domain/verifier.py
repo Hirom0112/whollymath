@@ -56,6 +56,7 @@ from app.domain.misconceptions import (
     gcf_lcm_confusion,
     invert_conversion,
     invert_rate,
+    keep_original_sign,
     multiply_without_inverting,
     natural_number_bias_number_line,
     part_part_ratio,
@@ -451,6 +452,15 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.SIGN_HANDLING_ERROR,
         predict=lambda ops: add_magnitudes_ignoring_sign(ops[0], ops[1]),
+    ),
+    # sign-error: answered the number unchanged when its OPPOSITE was asked (operand is (n,)). A
+    # wrong OPERATION — the magnitude is right but the negation (flip across zero) was not applied.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.SIGNED_NUMBERS,
+        operand_count=1,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.SIGN_ERROR,
+        predict=lambda ops: keep_original_sign(ops[0]),
     ),
 )
 

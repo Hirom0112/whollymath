@@ -92,6 +92,9 @@ class MisconceptionId(StrEnum):
     # Unit-INT (TEKS 6.3C/D): a sign-handling error on integer addition — combining two
     # opposite-sign numbers by ADDING their magnitudes instead of accounting for the signs.
     SIGN_HANDLING_ERROR = "sign-handling-error"
+    # Unit 3 (6.NS.5): a sign error on opposites — leaving the number's sign unchanged instead
+    # of flipping it ("the opposite of -7 is -7").
+    SIGN_ERROR = "sign-error"
 
 
 @dataclass(frozen=True)
@@ -331,6 +334,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "so the result is too big (its magnitude is |a| + |b|, never the smaller |a + b|)."
         ),
         applicable_kcs=(KnowledgeComponentId.INTEGER_ADD_SUBTRACT,),
+    ),
+    Misconception(
+        id=MisconceptionId.SIGN_ERROR,
+        name="Sign error on opposites",
+        description=(
+            "Leaves a number's sign unchanged when asked for its opposite — 'the opposite of "
+            "-7 is -7', or returns 7 for the opposite of 7. The magnitude is right but the "
+            "negation (flipping the sign across zero) was never applied, so the answer is the "
+            "original number instead of its opposite."
+        ),
+        applicable_kcs=(KnowledgeComponentId.SIGNED_NUMBERS,),
     ),
 )
 
@@ -617,6 +631,17 @@ def add_magnitudes_ignoring_sign(a: Rational, b: Rational) -> Rational:
     distinct, wrong value.
     """
     return abs(a) + abs(b)
+
+
+def keep_original_sign(n: Rational) -> Rational:
+    """sign-error: return ``n`` unchanged when its OPPOSITE (``-n``) was asked.
+
+    The opposite of ``n`` flips it across zero (``-n``); the learner who makes the sign error
+    leaves the sign as-is and returns ``n`` — 'the opposite of -7 is -7', or 7 for the opposite
+    of 7. Returned as a SymPy ``Rational`` so the verifier compares values directly; it differs
+    from the correct ``-n`` whenever ``n != 0`` (the generator never produces zero).
+    """
+    return n
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

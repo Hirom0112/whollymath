@@ -54,6 +54,7 @@ EXPECTED_CATALOG_IDS = {
     "KC_decimal_operations",
     # Unit 3 (numeric).
     "KC_absolute_value",
+    "KC_signed_numbers",
     # Unit-INT (TEKS 6.3C/D, numeric).
     "KC_integer_add_subtract",
 }
@@ -74,6 +75,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_decimal_operations",
     "KC_absolute_value",
     "KC_integer_add_subtract",
+    "KC_signed_numbers",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -85,13 +87,11 @@ EXPECTED_GRADE6_KCS = {
     # U1 — Ratios & Rates (6.RP). KC_ratio_language + KC_unit_rate + KC_equivalent_ratios +
     # KC_percent + KC_unit_conversion moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_rate_problems",
-    # U2 — Fractions & Decimals (6.NS.1–4). KC_multiply_fractions + KC_gcf_lcm +
-    # KC_divide_fractions + KC_multi_digit_division + KC_decimal_operations all moved to
-    # EXPECTED_CATALOG_IDS (built 2026-05-30, T2 / kc-gcf / kc-conv); KC_unit_conversion
-    # likewise moved (Unit 1, built 2026-05-30).
-    # U3 — Rational Numbers (6.NS.5–8). KC_absolute_value moved to EXPECTED_CATALOG_IDS
-    # (built 2026-05-30).
-    "KC_signed_numbers",
+    # U2 — Fractions & Decimals (6.NS.1–4). KC_multiply_fractions + KC_gcf_lcm + KC_divide_fractions
+    # + KC_multi_digit_division + KC_decimal_operations all moved to EXPECTED_CATALOG_IDS
+    # (built 2026-05-30, T2 / kc-gcf / kc-conv); KC_unit_conversion likewise moved (Unit 1).
+    # U3 — Rational Numbers (6.NS.5–8). KC_absolute_value + KC_signed_numbers moved to
+    # EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_rationals_on_line",
     "KC_ordering_inequalities",
     "KC_classify_number_sets",
@@ -147,7 +147,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 17 content-complete + 29 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 18 content-complete + 28 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:
@@ -155,15 +155,16 @@ def test_live_kcs_is_exactly_the_registry_subset() -> None:
     assert LIVE_KCS == {kc.id for kc in KC_REGISTRY.all()}
     assert {kc.value for kc in LIVE_KCS} == EXPECTED_CATALOG_IDS
     assert all(kc in set(KnowledgeComponentId) for kc in LIVE_KCS)
-    # A Grade-6 ontology KC exists in the enum but is NOT live (no content yet). KC_signed_numbers
-    # is still unbuilt (KC_percent became live 2026-05-30, so it is no longer a valid example).
-    assert KnowledgeComponentId("KC_signed_numbers") not in LIVE_KCS
+    # A Grade-6 ontology KC exists in the enum but is NOT live (no content yet).
+    # KC_rationals_on_line is unbuilt (KC_signed_numbers went live 2026-05-30, so it
+    # is no longer a valid example).
+    assert KnowledgeComponentId("KC_rationals_on_line") not in LIVE_KCS
 
 
 def test_unbuilt_kc_has_no_registry_entry() -> None:
     """Resolving an ontology-only KC through the registry fails loudly (not a silent None)."""
     with pytest.raises(KeyError):
-        get_kc(KnowledgeComponentId("KC_signed_numbers"))
+        get_kc(KnowledgeComponentId("KC_rationals_on_line"))
 
 
 def test_lookup_by_id_returns_the_matching_kc() -> None:

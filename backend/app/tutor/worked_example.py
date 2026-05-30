@@ -742,6 +742,37 @@ def _absolute_value_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _signed_numbers_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'flip the sign across zero' steps for an opposite-of-a-number problem (Grade-6 Unit 3).
+
+    ``operands = (n,)``; the opposite is ``-n == problem.correct_value``. Raises if the operand is
+    missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 1:
+        raise ValueError(f"signed-numbers problem {problem.problem_id} needs (n,) operand")
+    n = int(operands[0])
+    answer = problem.correct_value
+    side = "left of zero (negative)" if n > 0 else "right of zero (positive)"
+    return (
+        WorkedStep(
+            shown=f"The opposite is the SAME distance from zero as {n}, on the other side.",
+            why_prompt="Why does an opposite keep the distance from zero but switch sides?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"{n} sits on one side of zero; its opposite is {side}.",
+            why_prompt="Why does flipping the side flip the sign of the number?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So the opposite is {answer.p}.",
+            why_prompt="Why is the opposite of an opposite the number you started with?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -817,6 +848,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.DECIMAL_OPERATIONS: _decimal_operations_steps,
     KnowledgeComponentId.ABSOLUTE_VALUE: _absolute_value_steps,
     KnowledgeComponentId.INTEGER_ADD_SUBTRACT: _integer_add_subtract_steps,
+    KnowledgeComponentId.SIGNED_NUMBERS: _signed_numbers_steps,
 }
 
 

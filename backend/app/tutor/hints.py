@@ -369,6 +369,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If you just added the sizes, you ignored the signs. The result should be smaller.",
         ),
     ),
+    # Grade-6 Unit 3: index 0 (operation) orients toward flipping the sign across zero; index 1
+    # (magnitude) toward "same distance from zero, other side".
+    KnowledgeComponentId.SIGNED_NUMBERS: (
+        _nudge(
+            KnowledgeComponentId.SIGNED_NUMBERS,
+            "The opposite flips the sign across zero — a negative becomes positive, and back.",
+        ),
+        _nudge(
+            KnowledgeComponentId.SIGNED_NUMBERS,
+            "An opposite sits the same distance from zero, on the other side. Did the sign change?",
+        ),
+        _nudge(
+            KnowledgeComponentId.SIGNED_NUMBERS,
+            "If you wrote the same number back, you forgot to flip it to the other side of zero.",
+        ),
+    ),
 }
 
 

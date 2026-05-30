@@ -85,6 +85,10 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # NUMBER_LINE rep (its widget exists) is the natural masterable second surface — adding
     # NUMBER_LINE here promotes it, deferred to avoid over-scoping this build.
     _KC.INTEGER_ADD_SUBTRACT: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 3: SYMBOLIC = the signed integer (the opposite) entered in the editor. PRACTICE-
+    # ONLY for now; the NUMBER_LINE rep (its widget already exists) is the natural masterable second
+    # surface — adding NUMBER_LINE here promotes it, deferred to avoid over-scoping this build.
+    _KC.SIGNED_NUMBERS: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

@@ -522,6 +522,30 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 3: Rational Numbers ───
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors
+    # route back to SYMBOLIC — the NUMBER_LINE rep is advertised (and its widget exists) but isn't
+    # live yet, so "re-try on the same surface with a labeled hint" is the honest adaptation until
+    # NUMBER_LINE is promoted live (then it becomes the masterable second surface). The OPERATION
+    # route names the sign error directly.
+    _spec(
+        _KC.SIGNED_NUMBERS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "The opposite flips the sign across zero — don't write the same number back.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "The opposite is the same distance from zero, just on the other side — re-check.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

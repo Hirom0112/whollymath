@@ -391,6 +391,23 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 3: Rational Numbers ───
+    # Signed numbers / opposites (6.NS.5): find the opposite of a signed integer. The answer is a
+    # single signed integer entered in the symbolic editor (reuses the editor, NO new widget).
+    # Advertises SYMBOLIC + NUMBER_LINE (the number line is the canonical picture of an opposite —
+    # the reflection of a point across zero), but LIVE only on SYMBOLIC for now
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the other Grade-6 KCs. The NUMBER_LINE
+    # widget already exists, so this is the natural first candidate to promote to a masterable
+    # second rep later; kept SYMBOLIC-only here to match the template and not over-scope.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.SIGNED_NUMBERS,
+        skill_name="Find the opposite of a number",
+        description=(
+            "Find the opposite of a signed number — the number the same distance from zero on "
+            "the other side (the opposite of -7 is 7; the opposite of 5 is -5)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
 )
 
 
