@@ -9,12 +9,14 @@ into an over-claim verdict.
 
 from __future__ import annotations
 
-from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.problem_generators import generate_problem
 from app.eval.three_arm_comparison import (
     MetricComparison,
+    adaptive_defense_coverage,
     chat_mastery_claim,
     format_comparison,
+    format_defense_coverage,
     format_metric_comparison,
     per_metric_comparison,
     run_three_arm_comparison,
@@ -179,3 +181,31 @@ def test_metric_report_renders_all_three_arms() -> None:
     assert "adaptive" in report.lower()
     assert "chat" in report.lower()
     assert "static" in report.lower()
+
+
+# ── LIVE_KCS defense coverage (the adaptive arm's mechanisms exist for EVERY live KC) ──
+# The headline false-positive metric is measured on the five fraction adversaries. This
+# structural check ranges over the WHOLE LIVE_KCS space and asserts the adaptive arm's
+# defense scaffolding (a lesson spec with a transfer probe + at least one routed error) is
+# present for every live KC — the mechanisms the chat/static arms lack by construction. It
+# is honest about scope: it certifies the DEFENSE EXISTS per KC, not that a persona attacked
+# each KC (only the five fraction KCs are persona-tested).
+
+
+def test_defense_coverage_spans_every_live_kc() -> None:
+    rows = adaptive_defense_coverage()
+    assert {row.kc for row in rows} == {kc.value for kc in LIVE_KCS}
+
+
+def test_every_live_kc_has_a_transfer_probe_and_error_route() -> None:
+    """The adaptive arm's confirm-gate (transfer probe) + error routing exist for every live KC."""
+    rows = adaptive_defense_coverage()
+    assert all(row.has_transfer_probe for row in rows)
+    assert all(row.has_error_route for row in rows)
+
+
+def test_defense_coverage_report_renders() -> None:
+    report = format_defense_coverage(adaptive_defense_coverage())
+    assert "defense coverage" in report.lower()
+    # honest scope note: persona attacks cover only the fraction KCs.
+    assert "persona" in report.lower()

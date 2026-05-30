@@ -29,6 +29,7 @@ numbers come from ``main()`` over the committed predictor artifact (RESEARCH.md 
 
 from __future__ import annotations
 
+from app.domain.knowledge_components import LIVE_KCS
 from app.eval.proactive_ab import (
     GRID_K,
     GRID_THRESHOLD,
@@ -37,6 +38,7 @@ from app.eval.proactive_ab import (
     first_fire_turn,
     recommend_gate,
     sweep,
+    tier2_firing_by_kc,
 )
 from app.policy.intervention_gate import DEFAULT_K, DEFAULT_THRESHOLD, SustainedHelpNeedGate
 
@@ -112,6 +114,39 @@ def test_recommend_returns_a_passing_setting() -> None:
 def test_recommend_is_deterministic() -> None:
     """Same grid + traces -> same recommendation, every run (PROJECT.md §4.1)."""
     assert recommend_gate() == recommend_gate()
+
+
+# ── Tier-2 firing across the LIVE_KCS space (ranges over all KCs, not just the 5 fractions) ──
+
+
+def test_tier2_firing_covers_every_live_kc() -> None:
+    """The Tier-2 firing report ranges over the WHOLE LIVE_KCS space, one row per KC."""
+    gate = SustainedHelpNeedGate(k=3, threshold=0.5)
+    rows = tier2_firing_by_kc(gate)
+    assert {row.kc for row in rows} == {kc.value for kc in LIVE_KCS}
+
+
+def test_tier2_no_trustworthy_set_fires_on_every_kc() -> None:
+    """With no trustworthy set (the dormant default), the canonical struggle fires on all KCs.
+
+    This is the baseline the guard narrows: a sustained struggle would proactively fire everywhere
+    until the Tier-2 allow-list is stamped.
+    """
+    gate = SustainedHelpNeedGate(k=3, threshold=0.5)  # trustworthy_kcs=None
+    rows = tier2_firing_by_kc(gate)
+    assert all(row.would_fire for row in rows)
+    assert all(row.trustworthy for row in rows)  # None ⇒ no KC is "guarded"
+
+
+def test_tier2_guarded_kcs_fall_back_to_reactive() -> None:
+    """A configured allow-list fires only on its KCs; every other LIVE_KC is suppressed."""
+    some_kc = sorted(kc.value for kc in LIVE_KCS)[0]
+    gate = SustainedHelpNeedGate(k=3, threshold=0.5, trustworthy_kcs=frozenset({some_kc}))
+    by_kc = {row.kc: row for row in tier2_firing_by_kc(gate)}
+    assert by_kc[some_kc].would_fire and by_kc[some_kc].trustworthy
+    guarded = [row for kc, row in by_kc.items() if kc != some_kc]
+    assert guarded  # there are other LIVE_KCs
+    assert all((not row.would_fire) and (not row.trustworthy) for row in guarded)
 
 
 def test_recommendation_aligns_with_locked_defaults() -> None:

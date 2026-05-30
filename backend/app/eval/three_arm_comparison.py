@@ -36,6 +36,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app.domain.knowledge_components import LIVE_KCS
+from app.domain.lesson_spec import LESSON_SPEC_REGISTRY
 from app.domain.problem_generators import Problem, generate_problem
 from app.eval.chat_baseline import CHAT_SYSTEM_PROMPT, run_chat_session
 from app.eval.false_positive_harness import (
@@ -505,6 +507,66 @@ def format_metric_comparison(metrics: list[MetricComparison]) -> str:
     return "\n".join(lines)
 
 
+# ───────────── LIVE_KCS defense coverage (Slice 5.3.3 — range over the whole KC space) ──────────
+#
+# The headline + per-metric layers above are measured on the five fraction adversaries (the
+# personas attack specific fraction KCs). This layer ranges over the WHOLE LIVE_KCS space and
+# reports, per KC, whether the adaptive arm's defense scaffolding EXISTS — the confirm-gate (the
+# S5 transfer probe) and at least one error route (the reactive morph). These are exactly the
+# mechanisms the chat and static arms lack by construction (Slices 5.1/5.2). It is honest about
+# scope: it certifies the defense exists for every KC, NOT that a persona attacked each KC — only
+# the fraction KCs are persona-tested today. Pure, deterministic, FREE: it reads the lesson-spec
+# registry, no LLM/DB/SymPy.
+
+
+@dataclass(frozen=True)
+class DefenseCoverageRow:
+    """Whether the adaptive arm's defenses are wired for one live KC."""
+
+    kc: str
+    has_transfer_probe: bool
+    has_error_route: bool
+
+
+def adaptive_defense_coverage() -> list[DefenseCoverageRow]:
+    """Per live KC, whether the adaptive arm's transfer-probe gate + error routing are present.
+
+    Reads each KC's ``LessonSpec`` (the single source of truth): ``transfer_probe`` is the §3.9
+    confirm-or-demote gate, and a non-empty ``error_routes`` is the reactive-morph table. Sorted by
+    KC for a stable report. Ranges over every ``LIVE_KCS`` value, not just the five fraction KCs."""
+    rows: list[DefenseCoverageRow] = []
+    for kc in sorted(LIVE_KCS, key=lambda k: k.value):
+        spec = LESSON_SPEC_REGISTRY.get(kc)
+        rows.append(
+            DefenseCoverageRow(
+                kc=kc.value,
+                has_transfer_probe=spec.transfer_probe is not None,
+                has_error_route=len(spec.error_routes) > 0,
+            )
+        )
+    return rows
+
+
+def format_defense_coverage(rows: list[DefenseCoverageRow]) -> str:
+    """A readable per-KC adaptive-defense-coverage table (decision log / writeup)."""
+    lines = ["Adaptive-arm defense coverage across LIVE_KCS (RESEARCH.md §9):", ""]
+    for row in rows:
+        probe = "probe ✓" if row.has_transfer_probe else "probe ✗"
+        route = "route ✓" if row.has_error_route else "route ✗"
+        lines.append(f"  {row.kc:28} {probe}  {route}")
+    full = sum(1 for r in rows if r.has_transfer_probe and r.has_error_route)
+    lines.append("")
+    lines.append(
+        f"{full}/{len(rows)} live KCs have BOTH the S5 transfer-probe gate and reactive error "
+        "routing — the mechanisms the chat/static arms lack by construction."
+    )
+    lines.append(
+        "  SCOPE: this certifies the defense EXISTS per KC; persona false-positive attacks cover "
+        "only the fraction KCs (the five adversaries), reported honestly (CLAUDE.md §9)."
+    )
+    return "\n".join(lines)
+
+
 def main() -> None:
     """Run the live comparison and print the report.
 
@@ -517,6 +579,8 @@ def main() -> None:
     print(
         format_metric_comparison(per_metric_comparison(recorded_chat_run=load_recorded_chat_run()))
     )
+    print()
+    print(format_defense_coverage(adaptive_defense_coverage()))
 
 
 if __name__ == "__main__":
@@ -527,13 +591,16 @@ __all__ = [
     "ArmOutcome",
     "CHAT_ASSESSMENT_QUESTION",
     "ComparisonRow",
+    "DefenseCoverageRow",
     "MetricArmVerdict",
     "MetricComparison",
     "PREDICTED_CHAT_NOTE",
+    "adaptive_defense_coverage",
     "chat_mastery_claim",
     "compare_case",
     "compare_case_offline",
     "format_comparison",
+    "format_defense_coverage",
     "format_metric_comparison",
     "load_recorded_chat_run",
     "per_metric_comparison",

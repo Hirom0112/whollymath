@@ -35,6 +35,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from app.domain.knowledge_components import LIVE_KCS
 from app.eval.false_positive_harness import harness_cases, measure_case
 from app.eval.helpneed_calibration import predict_run
 from app.helpneed.predictor import HelpNeedPredictor
@@ -270,6 +271,62 @@ def outcome_ab(predictor: HelpNeedPredictor, gate: SustainedHelpNeedGate) -> lis
     return comparisons
 
 
+# A canonical clearly-sustained struggle stream (the "sustained_struggle" acceptance trace): five
+# turns all well above the 0.5 threshold. Used to probe, per KC, whether the gate WOULD fire on a
+# genuine sustained struggle — so the only variable left is the Tier-2 trustworthiness guard, not
+# the signal strength. Length 5 ≥ any swept K, so the window is always satisfiable.
+_CANONICAL_STRUGGLE_STREAM: tuple[float, ...] = (0.82, 0.88, 0.91, 0.86, 0.90)
+
+
+@dataclass(frozen=True)
+class KcFiringRow:
+    """Whether the proactive arm would fire on one KC given a canonical sustained struggle.
+
+    ``trustworthy`` is whether the gate's Tier-2 allow-list admits this KC (always True when the
+    gate has no list configured — the dormant default). ``would_fire`` is the gate's full verdict
+    via ``should_intervene_for_kc`` on the canonical stream: True only when the sustained window
+    trips AND the KC is admitted, so a guarded KC reads ``would_fire=False`` (reactive fallback).
+    """
+
+    kc: str
+    trustworthy: bool
+    would_fire: bool
+
+
+def tier2_firing_by_kc(gate: SustainedHelpNeedGate) -> list[KcFiringRow]:
+    """For every LIVE_KC, whether ``gate`` would fire proactively on a canonical sustained struggle.
+
+    Ranges over the WHOLE live KC space (not just the five fraction KCs), exercising the Tier-2
+    guard (T1_T2_COORDINATION §"Tier-2") end-to-end: with no allow-list every KC fires (the
+    baseline the guard narrows); with one, only admitted KCs fire and the rest fall back to the
+    deterministic reactive layer. Deterministic and free — pure gate logic on a fixed stream, no
+    LLM/DB/SymPy, no predictor call (the stream is the canonical high signal, held constant so KC
+    trustworthiness is the only variable). Sorted by KC for a stable report.
+    """
+    trusted = gate.trustworthy_kcs
+    rows: list[KcFiringRow] = []
+    for kc in sorted(kc.value for kc in LIVE_KCS):
+        is_trusted = trusted is None or kc in trusted
+        would_fire = gate.should_intervene_for_kc(_CANONICAL_STRUGGLE_STREAM, kc=kc)
+        rows.append(KcFiringRow(kc=kc, trustworthy=is_trusted, would_fire=would_fire))
+    return rows
+
+
+def format_tier2_firing(rows: list[KcFiringRow]) -> str:
+    """A readable per-KC Tier-2 firing table (decision log / RESEARCH.md §9.3)."""
+    lines = ["Tier-2 proactive firing across LIVE_KCS (canonical sustained struggle):", ""]
+    for row in rows:
+        verdict = "FIRES proactively" if row.would_fire else "reactive only (guarded)"
+        lines.append(f"  {row.kc:28} trustworthy={str(row.trustworthy):5}  {verdict}")
+    fires = sum(1 for r in rows if r.would_fire)
+    lines.append("")
+    lines.append(
+        f"{fires}/{len(rows)} LIVE_KCs are proactive-eligible under this gate; the rest fall back "
+        "to the deterministic reactive layer (SymPy verdict → morph + misconception)."
+    )
+    return "\n".join(lines)
+
+
 def format_report(
     sweep_results: list[SettingResult],
     recommended: tuple[int, float],
@@ -319,9 +376,16 @@ def main() -> None:
     predictor = load_predictor()
     sweep_results = sweep()
     recommended = recommend_gate()
-    gate = SustainedHelpNeedGate(k=recommended[0], threshold=recommended[1])
+    # Build the gate with the recommended (K, threshold) AND the artifact's stamped Tier-2 set, so
+    # the per-KC firing report reflects the live guard. A pre-stamp artifact carries None ⇒ the
+    # report shows the dormant baseline (every KC proactive-eligible) until a re-fit stamps the set.
+    gate = SustainedHelpNeedGate(
+        k=recommended[0], threshold=recommended[1], trustworthy_kcs=predictor.trustworthy_kcs
+    )
     comparisons = outcome_ab(predictor, gate)
     print(format_report(sweep_results, recommended, comparisons))
+    print()
+    print(format_tier2_firing(tier2_firing_by_kc(gate)))
 
 
 if __name__ == "__main__":
@@ -333,13 +397,16 @@ __all__ = [
     "GRID_THRESHOLD",
     "AcceptanceTrace",
     "ArmComparison",
+    "KcFiringRow",
     "SettingResult",
     "acceptance_traces",
     "evaluate_setting",
     "first_fire_turn",
     "format_report",
+    "format_tier2_firing",
     "outcome_ab",
     "persona_streams",
     "recommend_gate",
     "sweep",
+    "tier2_firing_by_kc",
 ]

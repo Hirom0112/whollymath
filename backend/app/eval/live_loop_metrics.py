@@ -12,6 +12,16 @@ needed for these three), so the pitch can report real numbers with their counter
     1.0 — reported as a GUARANTEE, with the scenario count, not a hopeful estimate.
   - sensor_noise_agreement: typed vs OCR-transcribed answer — the fraction graded to the SAME
     verdict. The multimodal robustness check (HR.C2): a second INPUT must not change correctness.
+  - ui_change_frequency: of the labeled classifier states, the fraction that fire a UI change
+    (morph or nudge). Counter-metric to "did the UI change too often" (HYPERREACTIVE §6): the
+    protected productive-struggle state is a deliberate no-op, so the rate sits below 1.0 and at
+    or under a documented bound. A structural per-state rate, NOT a per-turn live frequency — a
+    real session frequency needs a live run (flagged).
+  - intent_routing_accuracy: of the error routes declared across every lesson spec, the fraction
+    that morph to a MANIPULATIVE surface (not back to the symbolic default). Counter-metric to
+    "did the morph fix the error?" (HYPERREACTIVE §6, target ≥0.75). Honest by construction: it is
+    < 1.0 today because the ratio/percent KCs route errors to symbolic (no manipulative built for
+    them yet) — the metric surfaces that gap rather than hiding it.
 
 These are run as an eval (CLAUDE.md §9), not a unit gate; the metric functions are pure and tested.
 The responsiveness→hint-dependence and transfer-after-scaffold-removal deltas need a live A/B run
@@ -26,6 +36,7 @@ from sympy import Rational
 
 from app.api.live_adaptation import propose_adaptation_view
 from app.domain.knowledge_components import KnowledgeComponentId, Representation
+from app.domain.lesson_spec import LESSON_SPEC_REGISTRY
 from app.domain.problem_generators import AnswerKind, Problem
 from app.domain.verifier import verify
 from app.helpneed.live_signal_features import LiveSignalFeatures
@@ -123,6 +134,55 @@ def reason_label_coverage() -> tuple[float, int]:
     return with_reason / len(present), len(present)
 
 
+# The target ceiling for the per-state UI-change rate (HYPERREACTIVE §6 "morph too often? target ≤
+# a bound"). From SYMBOLIC_FOCUS, 4 of the 6 classifier states fire: productive-struggle is the
+# protected no-op (never fires) and fluent-ready's fade targets the surface the learner is already
+# on (a no-op from S1). So the observed rate is ~0.67, set the bound at 5/6 ≈ 0.83 — comfortably
+# above today's rate so it is not a tautology, but low enough that a future state firing a change
+# spuriously (lifting the rate toward 1.0) trips it. NOT a per-turn live frequency — a real session
+# frequency needs a live run (flagged in the report).
+UI_CHANGE_FREQUENCY_BOUND = 5.0 / 6.0
+
+
+def ui_change_frequency(
+    cases: tuple[_ClassifierCase, ...] = _CLASSIFIER_CASES,
+) -> tuple[float, int]:
+    """Fraction of the labeled classifier states that fire a UI change (morph/nudge), + count.
+
+    For each labeled scenario, classify the state and ask the policy whether it would adapt
+    (``propose_adaptation_view`` returns non-None). The protected productive-struggle state must
+    NOT fire, so the rate is structurally below 1.0 — the honest counter-metric to over-morphing.
+    A per-state rate over the labeled set, not a live per-turn frequency (which needs a run).
+    """
+    fired = 0
+    for c in cases:
+        state = classify_state(
+            c.features,
+            helpneed_score=c.helpneed_score,
+            correct_streak_no_hint=c.correct_streak_no_hint,
+            distinct_recent_representations=c.distinct_recent_representations,
+        )
+        if propose_adaptation_view(state, _ADD, SurfaceState.SYMBOLIC_FOCUS) is not None:
+            fired += 1
+    return fired / len(cases), len(cases)
+
+
+def intent_routing_accuracy() -> tuple[float, int]:
+    """Fraction of declared error routes that morph to a manipulative surface, + the route count.
+
+    "Did the morph fix the error?" (HYPERREACTIVE §6): a wrong answer should route to a surface
+    that EXPOSES its error (a number line for magnitude, bars for operation) — a route that lands
+    back on the symbolic default is no morph and does not count. Computed over every lesson spec's
+    ``error_routes`` (the single source of truth signal routing reads). Reported honestly: it is
+    below 1.0 today because the ratio/percent KCs route to symbolic (no manipulative yet).
+    """
+    routes = [route for spec in LESSON_SPEC_REGISTRY.all() for route in spec.error_routes]
+    if not routes:
+        return 1.0, 0
+    morphs = sum(1 for route in routes if route.representation is not Representation.SYMBOLIC)
+    return morphs / len(routes), len(routes)
+
+
 def _problem(correct: Rational) -> Problem:
     return Problem(
         problem_id="EVAL",
@@ -165,13 +225,19 @@ class LiveLoopMetrics:
     reason_label_n: int
     sensor_noise_agreement: float
     sensor_noise_n: int
+    ui_change_frequency: float
+    ui_change_n: int
+    intent_routing_accuracy: float
+    intent_routing_n: int
 
 
 def compute_live_loop_metrics() -> LiveLoopMetrics:
-    """Compute the three honestly-computable live-loop metrics (HR.D1)."""
+    """Compute the honestly-computable live-loop metrics (HR.D1)."""
     acc, acc_n = classifier_accuracy()
     cov, cov_n = reason_label_coverage()
     agree, agree_n = sensor_noise_agreement()
+    ui_rate, ui_n = ui_change_frequency()
+    routing, routing_n = intent_routing_accuracy()
     return LiveLoopMetrics(
         classifier_accuracy=acc,
         classifier_n=acc_n,
@@ -179,6 +245,10 @@ def compute_live_loop_metrics() -> LiveLoopMetrics:
         reason_label_n=cov_n,
         sensor_noise_agreement=agree,
         sensor_noise_n=agree_n,
+        ui_change_frequency=ui_rate,
+        ui_change_n=ui_n,
+        intent_routing_accuracy=routing,
+        intent_routing_n=routing_n,
     )
 
 
@@ -186,11 +256,17 @@ def format_report(metrics: LiveLoopMetrics) -> str:
     """A plain-text report of the live-loop metrics with their sample sizes (honest reporting)."""
     return (
         "Live-loop evidence (HR.D1)\n"
-        f"  classifier accuracy:     {metrics.classifier_accuracy:.0%} "
+        f"  classifier accuracy:        {metrics.classifier_accuracy:.0%} "
         f"(n={metrics.classifier_n} labeled states)\n"
-        f"  reason-label coverage:   {metrics.reason_label_coverage:.0%} "
+        f"  intent->UI routing accuracy: {metrics.intent_routing_accuracy:.0%} "
+        f"(n={metrics.intent_routing_n} error routes; target >=75%, "
+        "below it = ratio/percent KCs route to symbolic, no manipulative yet)\n"
+        f"  UI-change frequency:        {metrics.ui_change_frequency:.0%} "
+        f"(n={metrics.ui_change_n} states; <=83% bound — productive-struggle is a protected no-op; "
+        "per-state, not per-turn)\n"
+        f"  reason-label coverage:      {metrics.reason_label_coverage:.0%} "
         f"(n={metrics.reason_label_n} fired adaptations)\n"
-        f"  typed/OCR verdict agree: {metrics.sensor_noise_agreement:.0%} "
+        f"  typed/OCR verdict agree:    {metrics.sensor_noise_agreement:.0%} "
         f"(n={metrics.sensor_noise_n} answers)\n"
         "  NOTE: responsiveness->hint-dependence + transfer-after-scaffold-removal deltas\n"
         "  need a live A/B run (gated on the proactive arm) — not computed here."
@@ -198,10 +274,13 @@ def format_report(metrics: LiveLoopMetrics) -> str:
 
 
 __all__ = [
+    "UI_CHANGE_FREQUENCY_BOUND",
     "LiveLoopMetrics",
     "classifier_accuracy",
     "compute_live_loop_metrics",
     "format_report",
+    "intent_routing_accuracy",
     "reason_label_coverage",
     "sensor_noise_agreement",
+    "ui_change_frequency",
 ]
