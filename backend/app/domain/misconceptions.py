@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal
 
-from sympy import Rational
+from sympy import Rational, gcd, lcm
 
 from app.domain.knowledge_components import KnowledgeComponentId
 
@@ -75,6 +75,9 @@ class MisconceptionId(StrEnum):
     CONVERSION_INVERSION = "conversion-inversion"
     # Unit 1 (6.RP.1): confusing a part-part ratio with a part-whole ratio (and vice versa).
     PART_PART_WHOLE_CONFUSION = "part-part-whole-confusion"
+    # Unit 2: swapping the two whole-number aggregates — answering the LCM when the GCF was
+    # asked, or the GCF when the LCM was asked.
+    GCF_LCM_CONFUSION = "gcf-lcm-confusion"
 
 
 @dataclass(frozen=True)
@@ -247,6 +250,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "loses track of whether the comparison is against the other part or the whole."
         ),
         applicable_kcs=(KnowledgeComponentId.RATIO_LANGUAGE,),
+    ),
+    Misconception(
+        id=MisconceptionId.GCF_LCM_CONFUSION,
+        name="GCF/LCM confusion",
+        description=(
+            "Swaps the two whole-number aggregates: answers the LEAST COMMON MULTIPLE when "
+            "the GREATEST COMMON FACTOR was asked (e.g. gives 36 for 'GCF of 12 and 18' instead "
+            "of 6), or the GCF when the LCM was asked. The learner can compute both but loses "
+            "track of which one the question wants — factors (what divides into both) versus "
+            "multiples (what both divide into)."
+        ),
+        applicable_kcs=(KnowledgeComponentId.GCF_LCM,),
     ),
 )
 
@@ -436,6 +451,19 @@ def invert_conversion(quantity: int, factor: int) -> Rational:
     instead of 48. Returned as a SymPy ``Rational`` so the verifier can compare values directly.
     """
     return Rational(quantity, factor)
+
+
+def gcf_lcm_confusion(a: int, b: int, *, lcm_asked: bool) -> Rational:
+    """gcf-lcm-confusion: answer the OTHER whole-number aggregate of ``a`` and ``b``.
+
+    The learner swaps factors and multiples: when the GCF was asked (``lcm_asked`` False) they
+    return ``lcm(a, b)``; when the LCM was asked (``lcm_asked`` True) they return ``gcd(a, b)``.
+    SymPy ``gcd``/``lcm`` compute both (domain/ is the one place math correctness lives,
+    CLAUDE.md §7). Returned as a ``Rational`` so the verifier compares values directly; equals the
+    correct answer only when gcd == lcm (a == b), which the generator avoids.
+    """
+    other = gcd(a, b) if lcm_asked else lcm(a, b)
+    return Rational(int(other))
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

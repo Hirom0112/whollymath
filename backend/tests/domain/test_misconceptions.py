@@ -66,6 +66,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "percent-as-amount",  # KC_percent
     "multiply-as-add",  # KC_multiply_fractions (Unit 2, T2)
     "conversion-inversion",  # KC_unit_conversion
+    "gcf-lcm-confusion",  # KC_gcf_lcm (Unit 2)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

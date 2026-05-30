@@ -273,6 +273,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Each big unit is made of several small ones. Do you multiply by that many, or split?",
         ),
     ),
+    # Grade-6 Unit 2: index 0 (operation) orients toward "factors versus multiples — which is
+    # asked"; index 1 (magnitude) toward the relative size of each.
+    KnowledgeComponentId.GCF_LCM: (
+        _nudge(
+            KnowledgeComponentId.GCF_LCM,
+            "Are you asked for a factor (divides into both) or a multiple (both divide into it)?",
+        ),
+        _nudge(
+            KnowledgeComponentId.GCF_LCM,
+            "A common factor is no bigger than either number; a common multiple is no smaller.",
+        ),
+        _nudge(
+            KnowledgeComponentId.GCF_LCM,
+            "For the greatest common factor, find the biggest number that divides both evenly.",
+        ),
+    ),
 }
 
 

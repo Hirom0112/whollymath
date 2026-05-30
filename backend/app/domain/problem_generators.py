@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Literal
 
-from sympy import Rational, ilcm
+from sympy import Rational, igcd, ilcm
 
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 
@@ -778,6 +778,60 @@ def _generate_unit_conversion(
     )
 
 
+# GCF/LCM number pairs by difficulty tier (the easy→hard ramp; CP.B). Every pair has a != b (so
+# gcd != lcm — the GCF↔LCM confusion is always a genuinely wrong answer) and a non-trivial shared
+# factor on the harder tiers (so the GCF isn't a giveaway 1). ``None`` / out-of-range keeps the
+# full pool (the pre-ramp default, unchanged for callers that don't ask for a tier).
+_GCF_LCM_PAIRS_BY_DIFFICULTY: dict[int, tuple[tuple[int, int], ...]] = {
+    1: ((4, 6), (6, 8), (4, 10)),
+    2: ((6, 9), (8, 12), (9, 12)),
+    3: ((12, 18), (10, 15), (8, 20)),
+    4: ((12, 30), (18, 24), (16, 20)),
+}
+_GCF_LCM_PAIR_POOL: tuple[tuple[int, int], ...] = tuple(
+    pair for pairs in _GCF_LCM_PAIRS_BY_DIFFICULTY.values() for pair in pairs
+)
+# operands carry a mode flag the verifier reads (it never sees the statement): 0 = GCF asked,
+# 1 = LCM asked. Defined here as the single source of truth for the encoding.
+_GCF_MODE = 0
+_LCM_MODE = 1
+
+
+def _generate_gcf_lcm(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_gcf_lcm: find the GCF or the LCM of two whole numbers; a single integer is the answer.
+
+    Picks a pair ``(a, b)`` with ``a != b`` and then, by the same seeded RNG, whether to ask for
+    the GREATEST COMMON FACTOR or the LEAST COMMON MULTIPLE. The correct value is the SymPy
+    ``igcd``/``ilcm`` of the pair. ``operands = (a, b, mode)`` — ``mode`` (0 = GCF, 1 = LCM) lets
+    the verifier replay the GCF↔LCM-confusion misconception (return the OTHER aggregate) without
+    seeing the statement. Rendered symbolically; ``difficulty`` widens the pair pool.
+    """
+    pool = (
+        _GCF_LCM_PAIRS_BY_DIFFICULTY.get(difficulty, _GCF_LCM_PAIR_POOL)
+        if difficulty
+        else _GCF_LCM_PAIR_POOL
+    )
+    a, b = rng.choice(pool)
+    ask_lcm = rng.random() < 0.5
+    mode = _LCM_MODE if ask_lcm else _GCF_MODE
+    answer = ilcm(a, b) if ask_lcm else igcd(a, b)
+    if ask_lcm:
+        statement = f"What is the least common multiple (LCM) of {a} and {b}?"
+    else:
+        statement = f"What is the greatest common factor (GCF) of {a} and {b}?"
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.GCF_LCM, seed, surface_format),
+        kc=KnowledgeComponentId.GCF_LCM,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(int(answer)),
+        representations_available=get_kc(KnowledgeComponentId.GCF_LCM).representations,
+        operands=(Rational(a), Rational(b), Rational(mode)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -792,6 +846,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.PERCENT: _generate_percent,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _generate_multiply_fractions,
     KnowledgeComponentId.UNIT_CONVERSION: _generate_unit_conversion,
+    KnowledgeComponentId.GCF_LCM: _generate_gcf_lcm,
 }
 
 

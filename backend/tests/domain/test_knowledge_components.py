@@ -48,6 +48,7 @@ EXPECTED_CATALOG_IDS = {
     "KC_unit_conversion",
     # Unit 2 (numeric, T2).
     "KC_multiply_fractions",
+    "KC_gcf_lcm",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -60,6 +61,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_percent",
     "KC_unit_conversion",
     "KC_multiply_fractions",
+    "KC_gcf_lcm",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -71,9 +73,9 @@ EXPECTED_GRADE6_KCS = {
     # U1 — Ratios & Rates (6.RP). KC_ratio_language + KC_unit_rate + KC_equivalent_ratios +
     # KC_percent + KC_unit_conversion moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_rate_problems",
-    # U2 — Fractions & Decimals (6.NS.1–4). KC_multiply_fractions moved to EXPECTED_CATALOG_IDS
-    # (built 2026-05-30, T2).
-    "KC_gcf_lcm",
+    # U2 — Fractions & Decimals (6.NS.1–4). KC_multiply_fractions + KC_gcf_lcm moved to
+    # EXPECTED_CATALOG_IDS (built 2026-05-30, T2 / kc-gcf); KC_unit_conversion likewise moved
+    # (Unit 1, built 2026-05-30).
     "KC_divide_fractions",
     "KC_multi_digit_division",
     "KC_decimal_operations",

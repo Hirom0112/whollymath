@@ -528,6 +528,55 @@ def _unit_conversion_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _gcf_lcm_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'list factors / list multiples, take the right one' steps for a GCF or LCM problem.
+
+    ``operands = (a, b, mode)``; ``mode`` 1 == LCM asked, 0 == GCF asked. The answer is
+    ``problem.correct_value`` (a whole number). Walks the canonical procedure for whichever
+    aggregate was asked, landing on the answer. Raises if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"gcf-lcm problem {problem.problem_id} needs (a, b, mode) operands")
+    a, b, mode = int(operands[0]), int(operands[1]), int(operands[2])
+    answer = problem.correct_value
+    if mode == 1:  # LCM asked
+        return (
+            WorkedStep(
+                shown=f"The LCM is the SMALLEST number that BOTH {a} and {b} divide into.",
+                why_prompt="Why is it a multiple of both, and not a factor of them?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"Count up by {a} and by {b}; find the first total they land on together.",
+                why_prompt="Why is the first shared landing the LEAST common multiple?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"That shared total is {answer.p}.",
+                why_prompt="Why must this be at least as big as the larger of the two numbers?",
+                revealed_value=answer,
+            ),
+        )
+    return (  # GCF asked
+        WorkedStep(
+            shown=f"The GCF is the LARGEST number that divides BOTH {a} and {b} with no remainder.",
+            why_prompt="Why is it a factor of both, and not a multiple of them?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"List what divides {a}, list what divides {b}, and find the biggest they share.",
+            why_prompt="Why is the biggest shared divisor the GREATEST common factor?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"That biggest shared divisor is {answer.p}.",
+            why_prompt="Why must this be no bigger than the smaller of the two numbers?",
+            revealed_value=answer,
+        ),
+    )
+
+
 # ─── The public builder ───────────────────────────────────────────────────────
 
 
@@ -568,6 +617,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.PERCENT: _percent_steps,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _multiply_fractions_steps,
     KnowledgeComponentId.UNIT_CONVERSION: _unit_conversion_steps,
+    KnowledgeComponentId.GCF_LCM: _gcf_lcm_steps,
 }
 
 

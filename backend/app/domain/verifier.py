@@ -50,6 +50,7 @@ from app.domain.misconceptions import (
     WrongFraction,
     add_across,
     additive_ratio,
+    gcf_lcm_confusion,
     invert_conversion,
     invert_rate,
     natural_number_bias_number_line,
@@ -368,6 +369,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.CONVERSION_INVERSION,
         predict=lambda ops: invert_conversion(int(ops[0]), int(ops[1])),
+    ),
+    # gcf-lcm-confusion: answered the OTHER aggregate (LCM when GCF asked, or vice versa). Operands
+    # are (a, b, mode); mode 1 == LCM asked. A wrong OPERATION (took multiples not factors, or the
+    # reverse) — applied the wrong aggregating operation to the right operands.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.GCF_LCM,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.GCF_LCM_CONFUSION,
+        predict=lambda ops: gcf_lcm_confusion(int(ops[0]), int(ops[1]), lcm_asked=int(ops[2]) == 1),
     ),
 )
 

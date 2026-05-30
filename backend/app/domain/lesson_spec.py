@@ -389,6 +389,28 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # GCF & LCM (6.NS.4 / TEKS 6.7A). Practice-only today (scheduler lives only on SYMBOLIC), so
+    # the probe never fires. Errors route back to SYMBOLIC (the NUMBER_LINE factor/multiple widget
+    # isn't live yet), so "re-try on the same surface with a labeled hint" is the honest adaptation
+    # until that widget lands (T3). The OPERATION route names the GCF↔LCM confusion directly.
+    _spec(
+        _KC.GCF_LCM,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Factors divide INTO both; multiples are what both divide into — which is asked?",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "A common factor is no bigger than either number; a common multiple is no smaller.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

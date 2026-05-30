@@ -42,6 +42,7 @@ def test_generator_difficulty_narrows_denominators() -> None:
             KnowledgeComponentId.EQUIVALENT_RATIOS,
             KnowledgeComponentId.PERCENT,
             KnowledgeComponentId.UNIT_CONVERSION,
+            KnowledgeComponentId.GCF_LCM,  # whole-number operands; ramps by pair pool, not denom
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

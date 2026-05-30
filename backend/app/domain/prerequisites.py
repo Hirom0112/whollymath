@@ -58,6 +58,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # Grade-6 Unit 1: a unit conversion via proportions IS unit-rate reasoning applied to a
     # known factor, so it forward-unlocks on the unit rate.
     _KC.UNIT_CONVERSION: frozenset({_KC.UNIT_RATE}),
+    # Grade-6 Unit 2: GCF/LCM generalizes finding a shared denominator (the LCM IS the least
+    # common denominator), so it forward-unlocks on common-denominator — matching its
+    # REMEDIATION_ROUTING drop target.
+    _KC.GCF_LCM: frozenset({_KC.COMMON_DENOMINATOR}),
 }
 
 
@@ -78,6 +82,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.PERCENT,  # Grade-6 Unit 1: a per-100 ratio
     _KC.MULTIPLY_FRACTIONS,  # Grade-6 Unit 2: multiply fractions, built on equivalence
     _KC.UNIT_CONVERSION,  # Grade-6 Unit 1: convert via proportions, built on the unit rate
+    _KC.GCF_LCM,  # Grade-6 Unit 2: GCF/LCM, generalizes the common denominator (LCM = LCD)
 )
 
 

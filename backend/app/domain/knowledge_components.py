@@ -301,6 +301,22 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
     ),
+    # GCF & LCM of two whole numbers (6.NS.4 / TEKS 6.7A): the answer is a single integer entered
+    # in the symbolic editor. Advertises SYMBOLIC + NUMBER_LINE (the number line is the canonical
+    # whole-number picture — factors as marks that divide the span evenly, multiples as the
+    # skip-count jumps where two counts first coincide for the LCM), but LIVE only on SYMBOLIC for
+    # now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like MULTIPLY_FRACTIONS; masterability
+    # waits on a whole-number NUMBER_LINE factor/multiple widget (T3).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.GCF_LCM,
+        skill_name="Find the GCF or LCM",
+        description=(
+            "Find the greatest common factor (the largest number that divides both) or the "
+            "least common multiple (the smallest number both divide into) of two whole numbers "
+            "(e.g. GCF of 12 and 18 is 6; LCM of 4 and 6 is 12)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
 )
 
 
