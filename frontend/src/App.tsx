@@ -16,6 +16,8 @@ import { Landing } from './pages/Landing';
 import { SignIn } from './pages/SignIn';
 import { TeacherApp } from './pages/TeacherApp';
 import { Tutor } from './pages/Tutor';
+import { Unit } from './pages/Unit';
+import { Units } from './pages/Units';
 
 // Researcher/demo view: ?eval=1 shows the Slice 5.3 three-arm comparison dashboard,
 // outside the student flow (no router; a query-param check keeps it zero-cost to wire).
@@ -45,7 +47,16 @@ const HOMEWORK_KC: KnowledgeComponentId = 'KC_equivalence';
 // Default OFF = observe-only (RESEARCH.md §7.5); not a learner-facing control.
 const PROACTIVE = new URLSearchParams(window.location.search).get('proactive') === '1';
 
-type View = 'landing' | 'sign_in' | 'home' | 'homework' | 'cold_start' | 'starting' | 'session';
+type View =
+  | 'landing'
+  | 'sign_in'
+  | 'home'
+  | 'units'
+  | 'unit'
+  | 'homework'
+  | 'cold_start'
+  | 'starting'
+  | 'session';
 
 // Root view switch. Landing → sign-in → the COURSE MAP home (Slice CP.A.2): the learner sees their
 // whole learning path and clicks a skill to start its lesson, which calls POST /session and runs
@@ -58,6 +69,11 @@ export function App(): React.JSX.Element {
   // The most recent session id, passed to the course map so an anonymous demo learner's map
   // reflects their in-session progress (a signed-in learner's map comes from persisted mastery).
   const [lastSessionId, setLastSessionId] = useState<string | null>(null);
+  // The unit the learner is currently inside (the units → unit → lesson flow, STU.1/STU.4).
+  const [unitSlug, setUnitSlug] = useState<string | null>(null);
+  // Where a finished/exited lesson returns to: the CourseMap home, or the unit page it launched
+  // from (STU.5). Remounting the unit page on return refetches its progress (STU.7).
+  const [sessionReturnView, setSessionReturnView] = useState<View>('home');
   const [error, setError] = useState<string | null>(null);
 
   if (HW_UPLOAD_TOKEN !== null && HW_UPLOAD_TOKEN !== '') {
@@ -82,15 +98,20 @@ export function App(): React.JSX.Element {
     setView('session');
   }
 
-  // Launch a lesson directly for a course-map skill node (Slice CP.A.2).
-  async function handleStartLesson(kc: KnowledgeComponentId): Promise<void> {
+  // Launch a lesson directly for a skill node — from the course map (returns 'home') or from a
+  // unit's lesson list (returns 'unit'), Slice CP.A.2 / STU.5.
+  async function handleStartLesson(
+    kc: KnowledgeComponentId,
+    returnView: View = 'home',
+  ): Promise<void> {
+    setSessionReturnView(returnView);
     setView('starting');
     setError(null);
     try {
       enterSession(await startLesson(kc, PROACTIVE));
     } catch {
       setError('We could not start that lesson. Please try again.');
-      setView('home');
+      setView(returnView);
     }
   }
 
@@ -111,7 +132,7 @@ export function App(): React.JSX.Element {
       <Tutor
         session={session}
         onExit={() => {
-          setView('home');
+          setView(sessionReturnView);
         }}
         onHomework={() => {
           setView('homework');
@@ -154,9 +175,43 @@ export function App(): React.JSX.Element {
         <CourseMap
           sessionId={lastSessionId}
           onStartLesson={(kc) => {
-            void handleStartLesson(kc);
+            void handleStartLesson(kc, 'home');
           }}
+          onBrowseUnits={() => setView('units')}
           onHomework={() => setView('homework')}
+        />
+        {error !== null ? <FloatingError message={error} /> : null}
+      </>
+    );
+  }
+
+  // The unit overview — the added student "course shelf" (STU.3). Reachable from the home via Pi's
+  // menu; the CourseMap home itself is unchanged (units-vs-coursemap-as-home is the owner's call,
+  // DEC.2).
+  if (view === 'units') {
+    return (
+      <Units
+        sessionId={lastSessionId}
+        onOpenUnit={(slug) => {
+          setUnitSlug(slug);
+          setView('unit');
+        }}
+        onBack={() => setView('home')}
+      />
+    );
+  }
+
+  // One unit's lesson list (STU.4). A lesson launches the Tutor with return-to-this-unit (STU.5).
+  if (view === 'unit' && unitSlug !== null) {
+    return (
+      <>
+        <Unit
+          slug={unitSlug}
+          sessionId={lastSessionId}
+          onStartLesson={(kc) => {
+            void handleStartLesson(kc, 'unit');
+          }}
+          onBack={() => setView('units')}
         />
         {error !== null ? <FloatingError message={error} /> : null}
       </>

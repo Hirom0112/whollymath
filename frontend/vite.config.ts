@@ -22,6 +22,9 @@ export default defineConfig({
       '/turn': API_TARGET,
       '/eval': API_TARGET,
       '/course': API_TARGET,
+      // '/units' listed before '/unit' so the list endpoint isn't shadowed by the detail prefix.
+      '/units': API_TARGET,
+      '/unit': API_TARGET,
       '/me': API_TARGET,
       '/events': API_TARGET,
       '/hw': API_TARGET,

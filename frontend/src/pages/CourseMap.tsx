@@ -54,11 +54,14 @@ function toPathNode(node: CourseNodeView): PathNode<KnowledgeComponentId> {
 export function CourseMap({
   sessionId,
   onStartLesson,
+  onBrowseUnits,
   onHomework,
   onExit,
 }: {
   sessionId?: string | null;
   onStartLesson: (kc: KnowledgeComponentId) => void;
+  /** Optional "go to the unit shelf" affordance for Pi's nav menu (Explore units, STU.3). */
+  onBrowseUnits?: () => void;
   onHomework?: () => void;
   /** Optional "leave to home" affordance for Pi's nav menu (Save & exit). */
   onExit?: () => void;
@@ -71,6 +74,9 @@ export function CourseMap({
   // beside Pi, so the menu does NOT repeat it. That leaves only "Save & exit" when a host wires
   // onExit; with no items, Pi is just the friendly mascot (no menu to open).
   const navItems: PiMenuItem[] = [];
+  if (onBrowseUnits !== undefined) {
+    navItems.push({ id: 'units', label: 'Explore units', icon: 'dashboard', onSelect: onBrowseUnits });
+  }
   if (onExit !== undefined) {
     navItems.push({ id: 'exit', label: 'Save & exit', icon: 'exit', onSelect: onExit });
   }

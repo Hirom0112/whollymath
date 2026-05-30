@@ -25,6 +25,8 @@ import type {
   ThreeArmComparisonView,
   TurnRequest,
   TurnResponse,
+  UnitDetailView,
+  UnitListView,
 } from '@whollymath/shared-types';
 
 // The Google ID token for the signed-in learner (Slice PL.3), attached as a Bearer header
@@ -66,6 +68,7 @@ export type {
   InterventionKind,
   InterventionView,
   KnowledgeComponentId,
+  LessonView,
   MasterySnapshot,
   MeResponse,
   MetricArmVerdictView,
@@ -82,6 +85,10 @@ export type {
   TransferProbeStepView,
   TurnRequest,
   TurnResponse,
+  UnitDetailView,
+  UnitListView,
+  UnitStatus,
+  UnitView,
 } from '@whollymath/shared-types';
 
 /** A non-2xx response from the API, carrying the status for the caller to surface. */
@@ -196,6 +203,35 @@ export async function fetchCourse(sessionId?: string | null): Promise<CourseView
   const query =
     sessionId != null && sessionId !== '' ? `?session_id=${encodeURIComponent(sessionId)}` : '';
   return getJson<CourseView>(`/course${query}`);
+}
+
+// Shared between /units and /unit/{slug}: an anonymous demo learner passes their session id so
+// the list/detail reflects their in-session progress; a signed-in learner (auth token) gets it
+// from persisted mastery and the server ignores the session id (units_routes.py).
+function sessionQuery(sessionId?: string | null): string {
+  return sessionId != null && sessionId !== '' ? `?session_id=${encodeURIComponent(sessionId)}` : '';
+}
+
+/**
+ * Fetch the learner's units — every catalog unit as a card with status + percent-complete, plus
+ * the teacher-assigned unit slug if any (DAT.8/DAT.10). Resolves progress like {@link fetchCourse}:
+ * persisted mastery when signed in, the passed `sessionId` for an anonymous demo learner, else the
+ * fresh default. The student unit-overview page (STU.3).
+ */
+export async function fetchUnits(sessionId?: string | null): Promise<UnitListView> {
+  return getJson<UnitListView>(`/units${sessionQuery(sessionId)}`);
+}
+
+/**
+ * Fetch one unit's detail — its lessons in catalog order, each with per-lesson progress (DAT.9).
+ * Resolves progress like {@link fetchUnits}. Throws ApiError(404) for a slug not in the catalog,
+ * which the unit page surfaces as a gentle "unit not found". The student unit-detail page (STU.4).
+ */
+export async function fetchUnit(
+  slug: string,
+  sessionId?: string | null,
+): Promise<UnitDetailView> {
+  return getJson<UnitDetailView>(`/unit/${encodeURIComponent(slug)}${sessionQuery(sessionId)}`);
 }
 
 /**
