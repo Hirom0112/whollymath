@@ -56,6 +56,7 @@ from app.domain.misconceptions import (
     multiply_without_inverting,
     natural_number_bias_number_line,
     part_part_ratio,
+    place_value_slip,
     subtract_across,
 )
 from app.domain.problem_generators import AnswerKind, Problem
@@ -389,6 +390,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.GCF_LCM_CONFUSION,
         predict=lambda ops: gcf_lcm_confusion(int(ops[0]), int(ops[1]), lcm_asked=int(ops[2]) == 1),
+    ),
+    # place-value-slip: the right quotient digits off by a factor of 10 (a dropped/extra zero in
+    # long division). Operands are (dividend, divisor). A misjudged MAGNITUDE (the procedure was
+    # right; the place value slipped), so the answer is 10x the quotient.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.MULTI_DIGIT_DIVISION,
+        operand_count=2,
+        error_category=ErrorCategory.MAGNITUDE,
+        misconception=MisconceptionId.PLACE_VALUE_SLIP,
+        predict=lambda ops: place_value_slip(int(ops[0]), int(ops[1])),
     ),
 )
 

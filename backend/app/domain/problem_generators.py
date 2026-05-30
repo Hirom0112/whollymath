@@ -857,6 +857,50 @@ def _generate_gcf_lcm(
     )
 
 
+# Multi-digit-division divisor and quotient pools by difficulty tier (the easy→hard ramp; CP.B).
+# The dividend is divisor * quotient, so division is always EXACT (a clean integer quotient) and
+# the dividend is multi-digit; higher tiers use larger quotients (so larger dividends). ``None`` /
+# out-of-range keeps the full pool (the pre-ramp default, unchanged for callers without a tier).
+_DIVISION_DIVISORS: tuple[int, ...] = (3, 4, 6, 7, 8, 9, 12)
+_DIVISION_QUOTIENT_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (12, 15, 18, 24),
+    2: (23, 34, 41, 52),
+    3: (68, 75, 84, 96),
+    4: (123, 156, 204, 312),
+}
+_DIVISION_QUOTIENT_POOL: tuple[int, ...] = (12, 15, 23, 34, 52, 68, 84, 96, 123, 204)
+
+
+def _generate_multi_digit_division(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_multi_digit_division: divide a multi-digit whole number exactly; quotient is the answer.
+
+    Builds the dividend as ``divisor * quotient`` so the division is always exact (a clean integer
+    quotient, no remainder) and the dividend is multi-digit. The correct value is the SymPy
+    quotient ``dividend / divisor`` (which equals ``quotient``). ``operands = (dividend, divisor)``
+    so the verifier can replay the place-value-slip misconception (``quotient * 10`` — the right
+    digits off by a factor of 10). Rendered symbolically; ``difficulty`` widens the quotient pool.
+    """
+    quotient_pool = (
+        _DIVISION_QUOTIENT_BY_DIFFICULTY.get(difficulty, _DIVISION_QUOTIENT_POOL)
+        if difficulty
+        else _DIVISION_QUOTIENT_POOL
+    )
+    divisor = rng.choice(_DIVISION_DIVISORS)
+    quotient = rng.choice(quotient_pool)
+    dividend = divisor * quotient
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.MULTI_DIGIT_DIVISION, seed, surface_format),
+        kc=KnowledgeComponentId.MULTI_DIGIT_DIVISION,
+        surface_format=surface_format,
+        statement=f"{dividend} divided by {divisor} = ?",
+        correct_value=Rational(dividend, divisor),
+        representations_available=get_kc(KnowledgeComponentId.MULTI_DIGIT_DIVISION).representations,
+        operands=(Rational(dividend), Rational(divisor)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -873,6 +917,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.DIVIDE_FRACTIONS: _generate_divide_fractions,
     KnowledgeComponentId.UNIT_CONVERSION: _generate_unit_conversion,
     KnowledgeComponentId.GCF_LCM: _generate_gcf_lcm,
+    KnowledgeComponentId.MULTI_DIGIT_DIVISION: _generate_multi_digit_division,
 }
 
 

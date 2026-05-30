@@ -332,6 +332,21 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
     ),
+    # Multi-digit whole-number division by the standard algorithm (6.NS.2): the answer is a single
+    # integer quotient entered in the symbolic editor. Generated as CLEAN exact division (the
+    # divisor divides the dividend evenly). Advertises SYMBOLIC + AREA_MODEL (the equal-groups
+    # array is the canonical picture of division — the dividend split into ``divisor`` equal rows),
+    # but LIVE only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like
+    # MULTIPLY_FRACTIONS; masterability waits on an AREA_MODEL equal-groups widget (T3).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.MULTI_DIGIT_DIVISION,
+        skill_name="Divide multi-digit whole numbers",
+        description=(
+            "Fluently divide multi-digit whole numbers with the standard algorithm, finding the "
+            "whole-number quotient of an exact division (e.g. 416 divided by 8 is 52)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

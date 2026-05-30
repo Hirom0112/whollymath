@@ -305,6 +305,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "For the greatest common factor, find the biggest number that divides both evenly.",
         ),
     ),
+    # Grade-6 Unit 2: index 0 (operation) orients toward "how many times does the divisor fit";
+    # index 1 (magnitude) toward checking the place value of the quotient.
+    KnowledgeComponentId.MULTI_DIGIT_DIVISION: (
+        _nudge(
+            KnowledgeComponentId.MULTI_DIGIT_DIVISION,
+            "How many whole times does the divisor fit into the number? Work it place by place.",
+        ),
+        _nudge(
+            KnowledgeComponentId.MULTI_DIGIT_DIVISION,
+            "Check each quotient digit's place — a stray or missing zero throws the size way off.",
+        ),
+        _nudge(
+            KnowledgeComponentId.MULTI_DIGIT_DIVISION,
+            "Multiply your answer back by the divisor — does it land on the number you began with?",
+        ),
+    ),
 }
 
 

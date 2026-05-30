@@ -65,6 +65,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # common denominator), so it forward-unlocks on common-denominator — matching its
     # REMEDIATION_ROUTING drop target.
     _KC.GCF_LCM: frozenset({_KC.COMMON_DENOMINATOR}),
+    # Grade-6 Unit 2: multi-digit division is whole-number arithmetic; the modeled error is a
+    # place-value (magnitude) slip, so it forward-unlocks on number-line placement — judging a
+    # number's magnitude on the line is the readiness that catches an off-by-ten quotient.
+    _KC.MULTI_DIGIT_DIVISION: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -87,6 +91,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.DIVIDE_FRACTIONS,  # Grade-6 Unit 2: divide fractions (invert & multiply), on multiplication
     _KC.UNIT_CONVERSION,  # Grade-6 Unit 1: convert via proportions, built on the unit rate
     _KC.GCF_LCM,  # Grade-6 Unit 2: GCF/LCM, generalizes the common denominator (LCM = LCD)
+    _KC.MULTI_DIGIT_DIVISION,  # Grade-6 Unit 2: whole-number division, on number-line placement
 )
 
 

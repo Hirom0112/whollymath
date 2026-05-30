@@ -297,7 +297,10 @@ _U2 = CatalogUnit(
             unit_slug="u2",
             order=6,
             title="Divide multi-digit numbers",
-            kc_id="KC_long_division",
+            # Aligned to the enum/model id ``KC_multi_digit_division`` (was the stray
+            # ``KC_long_division``, which matched no KnowledgeComponentId member and so could
+            # never resolve or be built — Grade-6 build, 2026-05-30).
+            kc_id="KC_multi_digit_division",
             ccss_code="6.NS.2",
             teks_code=None,  # spec tags TEKS side "(computation)" — no own code
             description="Fluent standard-algorithm long division (CCSS 6.NS.2).",

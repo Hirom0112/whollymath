@@ -43,6 +43,7 @@ def test_generator_difficulty_narrows_denominators() -> None:
             KnowledgeComponentId.PERCENT,
             KnowledgeComponentId.UNIT_CONVERSION,
             KnowledgeComponentId.GCF_LCM,  # whole-number operands; ramps by pair pool, not denom
+            KnowledgeComponentId.MULTI_DIGIT_DIVISION,  # whole-number operands; ramps by dividend
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

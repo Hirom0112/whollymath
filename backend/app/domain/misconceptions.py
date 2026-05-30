@@ -80,6 +80,9 @@ class MisconceptionId(StrEnum):
     GCF_LCM_CONFUSION = "gcf-lcm-confusion"
     # Unit 2 (6.NS.1): dividing fractions by multiplying straight across without inverting.
     MULTIPLY_WITHOUT_INVERTING = "multiply-without-inverting"
+    # Unit 2: a long-division place-value slip — the quotient digits are right but misplaced
+    # (a dropped/extra zero), so the answer is off by a factor of 10.
+    PLACE_VALUE_SLIP = "place-value-slip"
 
 
 @dataclass(frozen=True)
@@ -275,6 +278,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "the multiplication procedure on the division problem unchanged."
         ),
         applicable_kcs=(KnowledgeComponentId.DIVIDE_FRACTIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.PLACE_VALUE_SLIP,
+        name="Place-value slip",
+        description=(
+            "Computes the right quotient digits but misplaces them by one place — drops or adds "
+            "a zero in the quotient, so the answer is off by a factor of 10 (e.g. gives 4 or 400 "
+            "for 240 / 6 instead of 40). The division procedure is sound; the learner loses track "
+            "of place value, so the magnitude is wrong while the digits are right."
+        ),
+        applicable_kcs=(KnowledgeComponentId.MULTI_DIGIT_DIVISION,),
     ),
 )
 
@@ -490,6 +504,18 @@ def multiply_without_inverting(dividend: Rational, divisor: Rational) -> Rationa
     divisor c/d with c < d.
     """
     return dividend * divisor
+
+
+def place_value_slip(dividend: int, divisor: int) -> Rational:
+    """place-value-slip: the right quotient digits, off by one place (a factor of 10).
+
+    The correct quotient of an exact division is ``dividend // divisor`` ("how many times the
+    divisor fits"). The learner who slips place value writes the same digits with an extra zero —
+    ``quotient * 10`` — e.g. 240 / 6 = 40 becomes 400. Returned as a SymPy ``Rational`` so the
+    verifier compares values directly; never equals the correct quotient (which is >= 1), so it is
+    always a genuinely wrong, magnitude-only error.
+    """
+    return Rational((dividend // divisor) * 10)
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

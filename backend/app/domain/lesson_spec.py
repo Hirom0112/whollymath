@@ -432,6 +432,28 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # Multi-digit division (6.NS.2). Practice-only today (scheduler lives only on SYMBOLIC), so the
+    # probe never fires. Errors route back to SYMBOLIC (the AREA_MODEL equal-groups widget isn't
+    # live yet), so "re-try on the same surface with a labeled hint" is the honest adaptation until
+    # that widget lands (T3). The MAGNITUDE route names the place-value slip directly.
+    _spec(
+        _KC.MULTI_DIGIT_DIVISION,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Divide the whole number by the divisor — how many times does it fit, exactly?",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Check the place value of each quotient digit — a stray zero is off by ten times.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

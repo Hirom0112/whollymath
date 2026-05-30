@@ -614,6 +614,36 @@ def _gcf_lcm_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _multi_digit_division_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'how many times the divisor fits, mind the place value' steps for an exact division.
+
+    ``operands = (dividend, divisor)``; the quotient is ``dividend // divisor ==
+    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"division problem {problem.problem_id} needs (dividend, divisor)")
+    dividend, divisor = int(operands[0]), int(operands[1])
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=f"Divide {dividend} by {divisor}: how many whole times does {divisor} fit?",
+            why_prompt="Why does exact division mean it fits a whole number of times, no leftover?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Work left to right, placing each quotient digit over its place in the dividend.",
+            why_prompt="Why does the place of each quotient digit set the size of the answer?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"The quotient is {answer.p}.",
+            why_prompt=f"Why does {answer.p} times {divisor} land back on {dividend}?",
+            revealed_value=answer,
+        ),
+    )
+
+
 # ─── The public builder ───────────────────────────────────────────────────────
 
 
@@ -656,6 +686,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.DIVIDE_FRACTIONS: _divide_fractions_steps,
     KnowledgeComponentId.UNIT_CONVERSION: _unit_conversion_steps,
     KnowledgeComponentId.GCF_LCM: _gcf_lcm_steps,
+    KnowledgeComponentId.MULTI_DIGIT_DIVISION: _multi_digit_division_steps,
 }
 
 

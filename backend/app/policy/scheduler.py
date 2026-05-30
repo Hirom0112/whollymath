@@ -70,6 +70,9 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # ONLY until a whole-number NUMBER_LINE factor/multiple widget lands (T3), then adding
     # NUMBER_LINE here makes it masterable with no other change.
     _KC.GCF_LCM: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 2: SYMBOLIC = the integer quotient entered in the editor. PRACTICE-ONLY until
+    # the AREA_MODEL equal-groups widget lands (T3), then adding AREA_MODEL makes it masterable.
+    _KC.MULTI_DIGIT_DIVISION: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a
