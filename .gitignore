@@ -11,8 +11,13 @@ RESEARCH.md
 # The slice-by-slice build tracker. Working state, not a deliverable.
 TODO.md
 
-# ─── Session handoff note (local-only; for picking up the build in a new terminal) ───
+# ─── Session handoff + inter-terminal coordination notes (local-only) ───
+# Picking up the build in a new terminal (HANDOFF*.md) and the T1⇄T2/T3 coordination
+# channels (*COORDINATION*.md) stay on disk only — internal planning, never pushed to
+# the remotes (same posture as mdfile/). T2/T3 share these via the working tree, not git.
 HANDOFF.md
+HANDOFF*.md
+*COORDINATION*.md
 
 # ─── Internal submission-prep / design docs (untracked per user decision 2026-05-28) ───
 # We submit these to Nerdy directly, NOT through this repo, so they don't belong in the
