@@ -34,6 +34,27 @@ import './Tutor.css';
 
 const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
 
+// The pool of storybook-world backdrops a lesson can wear (frontend/public/tutor-bg-*.jpg).
+// Each is pre-toned: edge-cropped (no generator watermark), softened, and faintly blue so it
+// stays a calm backdrop behind the problem card (a further blur + blue wash is added in CSS).
+const TUTOR_BACKGROUNDS: readonly string[] = Array.from(
+  { length: 11 },
+  (_, i) => `/tutor-bg-${String(i + 1)}.jpg`,
+);
+
+// A tiny deterministic string hash (djb2) so a lesson's backdrop is STABLE for the whole lesson
+// (no reshuffle between problems) yet VARIES across lessons. Seeded by the lesson's KC.
+function hashString(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (h * 33) ^ s.charCodeAt(i);
+  return h >>> 0;
+}
+
+/** The backdrop for a lesson, as a CSS `url(...)` value — picked from the pool by the KC. */
+function lessonBackground(kc: string): string {
+  return `url('${TUTOR_BACKGROUNDS[hashString(kc) % TUTOR_BACKGROUNDS.length]}')`;
+}
+
 // The starting answer state for a problem. An equivalence "fill the top" item gives the
 // denominator ("?/8"), so we seed it (locked in the editor) and the learner enters only
 // the numerator; every other item starts blank.
@@ -475,7 +496,10 @@ export function Tutor({
           world, then the floating cream problem card (the calm working surface — every answer
           widget, the actions, feedback / mastered / worked-example blocks). Pi, the companion +
           global nav, stands at the bottom-right. */}
-      <section className="wm-tutor-stage">
+      <section
+        className="wm-tutor-stage"
+        style={{ '--wm-tutor-bg': lessonBackground(problem.kc) } as React.CSSProperties}
+      >
         <WoodBanner variant="long" className="wm-tutor-stepper-row">
           <p className="wm-tutor-steps-caption">
             {problemNumber <= lessonLength
