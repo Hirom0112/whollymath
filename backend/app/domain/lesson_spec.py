@@ -477,6 +477,28 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # Absolute value (6.NS.7c/d). Practice-only today (scheduler lives only on SYMBOLIC), so the
+    # probe never fires. Errors route back to SYMBOLIC (the NUMBER_LINE distance widget isn't live
+    # yet), so "re-try on the same surface with a labeled hint" is the honest adaptation until that
+    # widget lands (T3). The MAGNITUDE route names the "distance is never negative" idea directly.
+    _spec(
+        _KC.ABSOLUTE_VALUE,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Absolute value asks HOW FAR from zero — count the distance, ignore the side.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "A distance is never negative — drop the sign and report how far from zero it is.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

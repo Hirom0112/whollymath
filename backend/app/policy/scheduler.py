@@ -77,6 +77,10 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # answer the verifier now parses exactly). PRACTICE-ONLY until the AREA_MODEL decimal-grid
     # widget lands (T3), then adding AREA_MODEL here makes it masterable with no other change.
     _KC.DECIMAL_OPERATIONS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 3: SYMBOLIC = the non-negative integer (the distance) entered in the editor.
+    # PRACTICE-ONLY until a signed NUMBER_LINE distance widget lands (T3), then adding NUMBER_LINE
+    # makes it masterable with no other change.
+    _KC.ABSOLUTE_VALUE: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

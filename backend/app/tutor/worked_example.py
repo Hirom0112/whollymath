@@ -681,6 +681,36 @@ def _decimal_operations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _absolute_value_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'distance from zero, drop the sign' steps for an absolute-value problem (Unit 3).
+
+    ``operands = (value,)``; the answer is ``abs(value) == problem.correct_value``. Raises if the
+    operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 1:
+        raise ValueError(f"absolute-value problem {problem.problem_id} needs a (value,) operand")
+    value = int(operands[0])
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=f"Absolute value is the DISTANCE of {value} from zero on the number line.",
+            why_prompt="Why is absolute value a distance, and never which side of zero?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Count the steps from {value} back to zero, ignoring the sign.",
+            why_prompt="Why can a distance never be negative?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"That distance is {answer.p}.",
+            why_prompt="Why do a number and its opposite share the same absolute value?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -754,6 +784,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.GCF_LCM: _gcf_lcm_steps,
     KnowledgeComponentId.MULTI_DIGIT_DIVISION: _multi_digit_division_steps,
     KnowledgeComponentId.DECIMAL_OPERATIONS: _decimal_operations_steps,
+    KnowledgeComponentId.ABSOLUTE_VALUE: _absolute_value_steps,
 }
 
 

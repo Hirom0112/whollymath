@@ -47,6 +47,7 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # decimal operands are powers of ten (tenths/hundredths); ramps by place value + digit
             # size, not by a fraction-denominator pool.
             KnowledgeComponentId.DECIMAL_OPERATIONS,
+            KnowledgeComponentId.ABSOLUTE_VALUE,  # whole-number operand; ramps by magnitude
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

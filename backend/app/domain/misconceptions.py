@@ -86,6 +86,9 @@ class MisconceptionId(StrEnum):
     # Unit 2 (6.NS.3): misplacing the decimal point in a product — the digits are right but the
     # value is off by a power of ten.
     DECIMAL_POINT_MISPLACEMENT = "decimal-point-misplacement"
+    # Unit 3 (6.NS.7c): "absolute value of a negative stays negative" — reports the signed value
+    # itself instead of its distance from 0 (conflates magnitude with signed order).
+    SIGNED_NOT_MAGNITUDE = "signed-not-magnitude"
 
 
 @dataclass(frozen=True)
@@ -303,6 +306,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "0.20. The DIGITS are right; the value is off by a power of ten (a magnitude error)."
         ),
         applicable_kcs=(KnowledgeComponentId.DECIMAL_OPERATIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.SIGNED_NOT_MAGNITUDE,
+        name="Signed value, not magnitude",
+        description=(
+            "Treats absolute value as 'leave the number as it is' rather than its DISTANCE from "
+            "0, so the absolute value of a negative stays negative — gives -7 for |-7| instead of "
+            "7. The learner conflates the magnitude (how far from 0) with the signed number and "
+            "its order on the line; a magnitude can never be negative."
+        ),
+        applicable_kcs=(KnowledgeComponentId.ABSOLUTE_VALUE,),
     ),
 )
 
@@ -566,6 +580,17 @@ def decimal_point_misplacement(first: Rational, second: Rational) -> Rational:
     """
     p1, p2 = _decimal_places(first), _decimal_places(second)
     return Rational(first * second) * (10 ** min(p1, p2))
+
+
+def signed_not_magnitude(value: int) -> Rational:
+    """signed-not-magnitude: report the signed value itself instead of its distance from 0.
+
+    The correct absolute value is ``abs(value)`` ("how far from 0"). The learner who thinks the
+    absolute value of a negative stays negative just returns ``value`` unchanged — e.g. -7 for
+    |-7| instead of 7. Returned as a SymPy ``Rational`` so the verifier compares values directly;
+    it differs from ``abs(value)`` for any negative input (which the generator guarantees).
+    """
+    return Rational(value)
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

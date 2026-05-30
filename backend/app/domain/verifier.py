@@ -59,6 +59,7 @@ from app.domain.misconceptions import (
     natural_number_bias_number_line,
     part_part_ratio,
     place_value_slip,
+    signed_not_magnitude,
     subtract_across,
 )
 from app.domain.problem_generators import AnswerKind, Problem
@@ -429,6 +430,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.MAGNITUDE,
         misconception=MisconceptionId.DECIMAL_POINT_MISPLACEMENT,
         predict=lambda ops: decimal_point_misplacement(ops[0], ops[1]),
+    ),
+    # signed-not-magnitude: reported the signed value itself instead of its distance from 0
+    # (|-7| -> -7). Operands are (value,), the signed input. A misjudged MAGNITUDE (a magnitude
+    # can never be negative; the learner kept the sign), so the wrong answer is the input unchanged.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.ABSOLUTE_VALUE,
+        operand_count=1,
+        error_category=ErrorCategory.MAGNITUDE,
+        misconception=MisconceptionId.SIGNED_NOT_MAGNITUDE,
+        predict=lambda ops: signed_not_magnitude(int(ops[0])),
     ),
 )
 

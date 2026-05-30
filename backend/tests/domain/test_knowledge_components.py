@@ -52,6 +52,8 @@ EXPECTED_CATALOG_IDS = {
     "KC_divide_fractions",
     "KC_multi_digit_division",
     "KC_decimal_operations",
+    # Unit 3 (numeric).
+    "KC_absolute_value",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -68,6 +70,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_divide_fractions",
     "KC_multi_digit_division",
     "KC_decimal_operations",
+    "KC_absolute_value",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -83,11 +86,11 @@ EXPECTED_GRADE6_KCS = {
     # KC_divide_fractions + KC_multi_digit_division + KC_decimal_operations all moved to
     # EXPECTED_CATALOG_IDS (built 2026-05-30, T2 / kc-gcf / kc-conv); KC_unit_conversion
     # likewise moved (Unit 1, built 2026-05-30).
-    # U3 — Rational Numbers (6.NS.5–8)
+    # U3 — Rational Numbers (6.NS.5–8). KC_absolute_value moved to EXPECTED_CATALOG_IDS
+    # (built 2026-05-30).
     "KC_signed_numbers",
     "KC_rationals_on_line",
     "KC_ordering_inequalities",
-    "KC_absolute_value",
     "KC_classify_number_sets",
     "KC_coordinate_plane",
     # U-INT — Integer Arithmetic (TEKS 6.3C/D)
@@ -141,7 +144,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 15 content-complete + 31 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 16 content-complete + 30 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

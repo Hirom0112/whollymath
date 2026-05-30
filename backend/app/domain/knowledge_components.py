@@ -361,6 +361,20 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # Absolute value as distance from 0 (6.NS.7c/d): the answer is a single non-negative integer
+    # entered in the symbolic editor. Advertises SYMBOLIC + NUMBER_LINE (the number line is the
+    # canonical picture — |x| is how many units x sits from 0, regardless of side), but LIVE only
+    # on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like
+    # MULTI_DIGIT_DIVISION; masterability waits on a signed NUMBER_LINE distance widget (T3).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.ABSOLUTE_VALUE,
+        skill_name="Find an absolute value",
+        description=(
+            "Find the absolute value of an integer as its distance from 0 on the number line, "
+            "so the result is never negative (e.g. the absolute value of -7 is 7)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
 )
 
 

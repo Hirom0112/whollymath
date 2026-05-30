@@ -337,6 +337,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Multiply as whole numbers first, then place the point by the digits sitting after it.",
         ),
     ),
+    # Grade-6 Unit 3: index 0 (operation) orients toward "distance from zero"; index 1 (magnitude)
+    # toward "a distance is never negative".
+    KnowledgeComponentId.ABSOLUTE_VALUE: (
+        _nudge(
+            KnowledgeComponentId.ABSOLUTE_VALUE,
+            "Absolute value asks how FAR from zero a number sits — count the steps either way.",
+        ),
+        _nudge(
+            KnowledgeComponentId.ABSOLUTE_VALUE,
+            "A distance is never negative. Should your answer carry a minus sign?",
+        ),
+        _nudge(
+            KnowledgeComponentId.ABSOLUTE_VALUE,
+            "Picture the number on the line — how many steps back to zero, ignoring the side?",
+        ),
+    ),
 }
 
 

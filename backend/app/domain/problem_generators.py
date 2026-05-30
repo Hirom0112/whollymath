@@ -963,6 +963,47 @@ def _generate_decimal_operations(
     )
 
 
+# Absolute-value input magnitudes by difficulty tier (the easy→hard ramp; CP.B): higher tiers use
+# larger distances from 0. The generated input is the NEGATIVE of the chosen magnitude (so |x|
+# always differs from x and the signed-not-magnitude error is genuinely wrong). ``None`` /
+# out-of-range keeps the full pool (the pre-ramp default, unchanged for callers without a tier).
+_ABS_MAGNITUDE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4, 5),
+    2: (6, 7, 8, 9),
+    3: (11, 13, 15, 18),
+    4: (21, 27, 34, 42),
+}
+_ABS_MAGNITUDE_POOL: tuple[int, ...] = (2, 3, 5, 7, 9, 11, 15, 21, 34)
+
+
+def _generate_absolute_value(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_absolute_value: find |x| as the distance of an integer from 0; the answer is non-negative.
+
+    Samples a positive magnitude and negates it, so the input is a NEGATIVE integer and the answer
+    ``abs(value)`` always differs from the signed value (the signed-not-magnitude misconception is
+    then always wrong). The correct value is the SymPy ``Rational(abs(value))``. ``operands =
+    (value,)`` (the signed input) so the verifier can replay signed-not-magnitude (return ``value``
+    unchanged). Rendered symbolically; ``difficulty`` widens the magnitude pool.
+    """
+    pool = (
+        _ABS_MAGNITUDE_BY_DIFFICULTY.get(difficulty, _ABS_MAGNITUDE_POOL)
+        if difficulty
+        else _ABS_MAGNITUDE_POOL
+    )
+    value = -rng.choice(pool)
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.ABSOLUTE_VALUE, seed, surface_format),
+        kc=KnowledgeComponentId.ABSOLUTE_VALUE,
+        surface_format=surface_format,
+        statement=f"What is the absolute value of {value}?",
+        correct_value=Rational(abs(value)),
+        representations_available=get_kc(KnowledgeComponentId.ABSOLUTE_VALUE).representations,
+        operands=(Rational(value),),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -981,6 +1022,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.GCF_LCM: _generate_gcf_lcm,
     KnowledgeComponentId.MULTI_DIGIT_DIVISION: _generate_multi_digit_division,
     KnowledgeComponentId.DECIMAL_OPERATIONS: _generate_decimal_operations,
+    KnowledgeComponentId.ABSOLUTE_VALUE: _generate_absolute_value,
 }
 
 

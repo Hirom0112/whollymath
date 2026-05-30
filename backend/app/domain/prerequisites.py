@@ -74,6 +74,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # equivalence (its REMEDIATION_ROUTING drop is to multi-digit division, not yet live, so the
     # forward edge uses the live foundation KC the skill conceptually rests on).
     _KC.DECIMAL_OPERATIONS: frozenset({_KC.EQUIVALENCE}),
+    # Grade-6 Unit 3: absolute value is distance from 0 on the line, so it forward-unlocks on
+    # number-line placement — reading where a number sits relative to 0 is the readiness for "how
+    # far from 0", and underpins the signed-vs-magnitude distinction the lesson targets.
+    _KC.ABSOLUTE_VALUE: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -98,6 +102,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.GCF_LCM,  # Grade-6 Unit 2: GCF/LCM, generalizes the common denominator (LCM = LCD)
     _KC.MULTI_DIGIT_DIVISION,  # Grade-6 Unit 2: whole-number division, on number-line placement
     _KC.DECIMAL_OPERATIONS,  # Grade-6 Unit 2: multiply decimals, built on equivalence
+    _KC.ABSOLUTE_VALUE,  # Grade-6 Unit 3: distance from 0, on number-line placement
 )
 
 
