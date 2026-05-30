@@ -764,6 +764,24 @@ export function Tutor({
                   ) : null}
                 </div>
               ) : null}
+              {/* Explain-after-correct (live loop Beat 2): on a CORRECT answer, affirm WHY it
+                  worked before moving on — a celebrate-and-consolidate beat, not the stuck-path
+                  rescue above. All steps shown at once (it's a quick "here's why", not a walkthrough). */}
+              {(result?.correct ?? false) &&
+              result?.explanation &&
+              result.explanation.length > 0 ? (
+                <div className="wm-tutor-explain" aria-label="Why that works">
+                  <p className="wm-tutor-explain-title">Nice — here&rsquo;s why that works:</p>
+                  <ol className="wm-tutor-explain-steps">
+                    {result.explanation.map((step, i) => (
+                      <li key={i} className="wm-tutor-explain-step">
+                        <span className="wm-tutor-explain-shown">{step.shown}</span>
+                        <span className="wm-tutor-explain-why">{step.why_prompt}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
               {goalMastered && onExit !== undefined ? (
                 // Mastered: the owner's flow wants the learner sent BACK HOME, told clearly they
                 // mastered the skill. "Back to home" (onExit → the course map) is the visible

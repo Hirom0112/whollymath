@@ -243,4 +243,30 @@ describe('Tutor', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(/want to keep going/i);
     expect(screen.getByRole('button', { name: /keep practicing/i })).toBeInTheDocument();
   });
+
+  it('affirms WHY a correct answer worked (explain-after-correct, Beat 2)', async () => {
+    const explainTurn: TurnResponse = {
+      ...CORRECT_TURN,
+      explanation: [
+        {
+          shown: '1/3 = 4/12 and 1/4 = 3/12, so 1/3 + 1/4 = 7/12.',
+          why_prompt: 'Same-size twelfths let us add the tops.',
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(explainTurn))),
+    );
+    render(<Tutor session={SESSION} />);
+
+    fireEvent.change(screen.getByLabelText(/numerator/i), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText(/denominator/i), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+
+    // On the correct verdict, the "here's why" affirmation + its step show before advancing.
+    expect(await screen.findByLabelText(/why that works/i)).toBeInTheDocument();
+    expect(screen.getByText(/here.s why that works/i)).toBeInTheDocument();
+    expect(screen.getByText(/same-size twelfths let us add the tops/i)).toBeInTheDocument();
+  });
 });

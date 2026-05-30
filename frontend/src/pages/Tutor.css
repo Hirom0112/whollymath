@@ -835,6 +835,47 @@
   background: var(--wm-card-sky);
   border: 2px solid var(--wm-navy-deep);
 }
+
+/* Explain-after-correct (Beat 2) — a celebrate-and-consolidate panel, not the rescue above. Same
+   structure as the worked example but a warm GREEN affirming tint so it reads as praise, not help
+   (color paired with the "Nice — here's why" wording, never the only cue). Reuses worked-step type. */
+.wm-tutor-explain {
+  margin: 4px 0 18px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: var(--wm-green);
+  border: 2px solid var(--wm-navy-deep);
+}
+.wm-tutor-explain-title {
+  margin: 0 0 10px;
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+}
+.wm-tutor-explain-steps {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wm-tutor-explain-step {
+  font-family: var(--wm-font-sans);
+}
+.wm-tutor-explain-shown {
+  display: block;
+  font-size: 16px;
+  color: var(--wm-navy-deep);
+  line-height: 1.4;
+}
+.wm-tutor-explain-why {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--wm-ink-soft);
+}
 .wm-tutor-worked-title {
   margin: 0 0 12px;
   font-family: var(--wm-font-sans);
