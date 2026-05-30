@@ -568,6 +568,30 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.EXPRESSION,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+    # Evaluate expressions (6.EE.2c) — a MASTERABLE lesson: SYMBOLIC + AREA_MODEL are BOTH live, so
+    # errors route to the OTHER live surface (AREA_MODEL — the array/area picture makes order of
+    # operations concrete: count the a×x rows, THEN add the b extras), and the probe draws from both
+    # reps. The OPERATION route names the precedence (multiply-before-add) slip directly. AREA_MODEL
+    # has a real surface state (FRACTION_BARS_PRIMARY), so the route is honest.
+    _spec(
+        _KC.EVALUATE_EXPRESSIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.AREA_MODEL,
+                "Count the rows of squares first (that's the multiply), then add the extras.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.AREA_MODEL,
+                "Lay out the squares to see how big the total should be before you total it.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.AREA_MODEL)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

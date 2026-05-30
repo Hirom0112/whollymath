@@ -401,6 +401,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Let a letter stand for the unknown, then build the phrase piece by piece.",
         ),
     ),
+    # Grade-6 Unit 4: index 0 (operation) orients toward precedence — multiply before you add;
+    # index 1 reinforces substituting first, then evaluating in the right order.
+    KnowledgeComponentId.EVALUATE_EXPRESSIONS: (
+        _nudge(
+            KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+            "Multiply before you add — handle the times part first, then add what's left.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+            "Put the value in for the letter first, then work the operations in the right order.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+            "If you added before multiplying, the order slipped — the times part comes first.",
+        ),
+    ),
 }
 
 

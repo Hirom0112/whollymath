@@ -59,6 +59,8 @@ EXPECTED_CATALOG_IDS = {
     "KC_integer_add_subtract",
     # Unit 4 (expression-answer; the first non-numeric answer kind).
     "KC_write_expressions",
+    # Unit 4 (numeric; masterable — SYMBOLIC + AREA_MODEL both live).
+    "KC_evaluate_expressions",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -79,6 +81,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_integer_add_subtract",
     "KC_signed_numbers",
     "KC_write_expressions",
+    "KC_evaluate_expressions",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -102,11 +105,11 @@ EXPECTED_GRADE6_KCS = {
     # U-INT — Integer Arithmetic (TEKS 6.3C/D). KC_integer_add_subtract moved to
     # EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_integer_multiply_divide",
-    # U4 — Expressions (6.EE.1–4, 6). KC_write_expressions moved to EXPECTED_CATALOG_IDS
-    # (built 2026-05-30 — the first expression-answer KC).
+    # U4 — Expressions (6.EE.1–4, 6). KC_write_expressions (first expression-answer KC) and
+    # KC_evaluate_expressions (6.EE.2c, masterable numeric) moved to EXPECTED_CATALOG_IDS
+    # (built 2026-05-30).
     "KC_exponents",
     "KC_expression_parts",
-    "KC_evaluate_expressions",
     "KC_equivalent_expressions",
     "KC_dependent_vars",
     # U5 — Equations & Inequalities (6.EE.5–9)
@@ -150,7 +153,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 19 content-complete + 27 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 20 content-complete + 26 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

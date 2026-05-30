@@ -428,6 +428,23 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.EXPRESSION, Representation.WORD_PROBLEM),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+    # Evaluate an expression at a given value (6.EE.2c): substitute a value for the variable and
+    # evaluate a*x + b honoring order of operations ("evaluate 3x + 2 when x = 4" -> 14). The answer
+    # is a single NUMERIC value entered in the editor (reuses the editor, NO new widget). Offers TWO
+    # REAL surfaces — SYMBOLIC (the symbolic "evaluate … when x = …") and AREA_MODEL (an array/area
+    # picture: a rows of x squares, plus b extra) — answered with the SAME numeric value, and BOTH
+    # are live (scheduler._LIVE_REPRESENTATIONS), so this KC is MASTERABLE: the §3.4 rule-2
+    # representation-diversity gate is reachable live, unlike the practice-only Grade-6 KCs.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+        skill_name="Evaluate an expression",
+        description=(
+            "Substitute a given value for the variable and evaluate the expression, honoring order "
+            "of operations — multiply before you add (evaluate 3x + 2 when x = 4 gives 14, not 18)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

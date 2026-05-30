@@ -773,6 +773,40 @@ def _signed_numbers_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _evaluate_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'substitute, then multiply before add' steps for an evaluate-expression problem (Unit 4).
+
+    ``operands = (a, x, b)``; the answer is ``a*x + b == problem.correct_value``. Raises if the
+    operands are missing (CLAUDE.md §8.5). The middle step lands the product ``a*x`` so the learner
+    sees precedence applied before the final addition.
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(
+            f"evaluate-expression problem {problem.problem_id} needs (a, x, b) operands"
+        )
+    a, x, b = (int(operand) for operand in operands)
+    product = Rational(a * x)
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=f"Put the value in for x: {a}x + {b} becomes {a}·{x} + {b}.",
+            why_prompt="Why does substituting the value let us evaluate the expression?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Multiply BEFORE you add: {a}·{x} = {product.p}.",
+            why_prompt="Why do we do the multiplication before the addition?",
+            revealed_value=product,
+        ),
+        WorkedStep(
+            shown=f"Now add the {b}: {product.p} + {b} = {answer.p}.",
+            why_prompt="Why would adding first (before multiplying) give a different answer?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _write_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'name the operation, get the order right' steps for a write-expression problem (Unit 4).
 
@@ -879,6 +913,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.INTEGER_ADD_SUBTRACT: _integer_add_subtract_steps,
     KnowledgeComponentId.SIGNED_NUMBERS: _signed_numbers_steps,
     KnowledgeComponentId.WRITE_EXPRESSIONS: _write_expression_steps,
+    KnowledgeComponentId.EVALUATE_EXPRESSIONS: _evaluate_expression_steps,
 }
 
 

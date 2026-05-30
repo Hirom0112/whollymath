@@ -98,6 +98,9 @@ class MisconceptionId(StrEnum):
     # Unit 4 (6.EE.2a): writing an expression with the operands reversed on a non-commutative op —
     # "7 less than p" written as 7 - p instead of p - 7 (or n / 3 as 3 / n).
     REVERSED_OPERANDS = "reversed-operands"
+    # Unit 4 (6.EE.2c): an order-of-operations slip on evaluating a*x + b — combining left-to-right
+    # (multiply after adding) so a*x + b is computed as a*(x + b) instead of honoring precedence.
+    ORDER_OF_OPERATIONS_SLIP = "order-of-operations-slip"
 
 
 @dataclass(frozen=True)
@@ -360,6 +363,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "backwards. Harmless on commutative ops (p + 7 == 7 + p), with no wrong order."
         ),
         applicable_kcs=(KnowledgeComponentId.WRITE_EXPRESSIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
+        name="Order-of-operations slip on evaluation",
+        description=(
+            "Evaluates a*x + b by combining left-to-right instead of by precedence — adds before "
+            "multiplying, computing a*(x + b) rather than a*x + b. 'Evaluate 3x + 2 when x = 4' "
+            "becomes 3*(4 + 2) = 18 instead of 3*4 + 2 = 14. The substitution is right; the "
+            "OPERATION order is wrong (multiplication should happen before the addition)."
+        ),
+        applicable_kcs=(KnowledgeComponentId.EVALUATE_EXPRESSIONS,),
     ),
 )
 
@@ -657,6 +671,19 @@ def keep_original_sign(n: Rational) -> Rational:
     from the correct ``-n`` whenever ``n != 0`` (the generator never produces zero).
     """
     return n
+
+
+def evaluate_left_to_right(a: int, x: int, b: int) -> Rational:
+    """order-of-operations-slip: evaluate ``a*x + b`` left-to-right as ``a*(x + b)``.
+
+    The learner substitutes correctly but combines the operations in reading order — adding ``x``
+    and ``b`` first, then multiplying by ``a`` — instead of honoring precedence (multiply before
+    add). 'Evaluate 3x + 2 when x = 4' becomes ``3*(4 + 2) = 18`` rather than ``3*4 + 2 = 14``.
+    Returned as a SymPy ``Rational`` so the verifier compares values directly; it differs from the
+    correct ``a*x + b`` whenever ``a >= 2`` and ``b >= 1`` (the generator's scope), since then
+    ``a*(x + b) - (a*x + b) = (a - 1)*b > 0``.
+    """
+    return Rational(a * (x + b))
 
 
 def reversed_operands(correct_expression: str | None) -> str | None:

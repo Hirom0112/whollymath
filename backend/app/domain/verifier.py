@@ -54,6 +54,7 @@ from app.domain.misconceptions import (
     add_magnitudes_ignoring_sign,
     additive_ratio,
     decimal_point_misplacement,
+    evaluate_left_to_right,
     gcf_lcm_confusion,
     invert_conversion,
     invert_rate,
@@ -535,6 +536,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.SIGN_ERROR,
         predict=lambda ops: keep_original_sign(ops[0]),
+    ),
+    # order-of-operations-slip: evaluated a*x + b left-to-right as a*(x + b) — added before
+    # multiplying (operands are (a, x, b)). A wrong OPERATION: the substitution is right, but the
+    # operation ORDER ignored precedence, so the value is a*(x + b) instead of a*x + b.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
+        predict=lambda ops: evaluate_left_to_right(int(ops[0]), int(ops[1]), int(ops[2])),
     ),
 )
 

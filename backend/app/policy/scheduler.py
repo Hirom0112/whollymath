@@ -94,6 +94,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # the phrase framing with no surface state. PRACTICE-ONLY (one live rep); a second masterable
     # surface (e.g. a tile/builder) would be added here when its widget lands.
     _KC.WRITE_EXPRESSIONS: (_REP.EXPRESSION,),
+    # Grade-6 Unit 4: SYMBOLIC = the numeric value entered in the editor ("evaluate 3x + 2 when
+    # x = 4"); AREA_MODEL = the same total read off an array/area picture (a rows of x squares plus
+    # b extra). Both surfaces are LIVE and answered with the SAME numeric value, so this KC is
+    # MASTERABLE (two real representations meet §3.4 rule 2) — unlike the practice-only Grade-6 KCs.
+    _KC.EVALUATE_EXPRESSIONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

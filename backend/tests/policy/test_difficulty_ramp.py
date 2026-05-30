@@ -53,6 +53,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # write-expressions has NO operands (an expression answer; the constant ramps the
             # phrase, not a denominator) — nothing to read on the denominator path.
             KnowledgeComponentId.WRITE_EXPRESSIONS,
+            # evaluate-expressions has whole-number operands (a, x, b; denominator 1); it ramps by
+            # coefficient/value/constant pool, not by a fraction denominator.
+            KnowledgeComponentId.EVALUATE_EXPRESSIONS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

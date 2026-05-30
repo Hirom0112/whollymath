@@ -1171,6 +1171,89 @@ def _generate_write_expressions(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+
+# Operand pools for "evaluate a*x + b at x" by difficulty tier (the easy→hard ramp; CP.B). Higher
+# tiers use larger coefficients/values. a >= 2 and b >= 1 in every tier, so the multiply-first
+# answer a*x + b is always DISTINCT from the left-to-right slip a*(x + b) — the misconception
+# stays diagnostic. (a, x, b) are drawn independently from these pools.
+_EVAL_COEFF_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4),
+    2: (3, 4, 5),
+    3: (4, 6, 7),
+    4: (6, 8, 9),
+}
+_EVAL_VALUE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4),
+    2: (4, 5, 6),
+    3: (6, 7, 8),
+    4: (8, 9, 10),
+}
+_EVAL_CONST_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3),
+    2: (2, 4, 5),
+    3: (5, 6, 7),
+    4: (7, 9, 11),
+}
+_EVAL_COEFF_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7)
+_EVAL_VALUE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8)
+_EVAL_CONST_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7)
+
+
+def _generate_evaluate_expressions(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_evaluate_expressions: substitute a value and evaluate a*x + b; a single numeric answer.
+
+    Picks a coefficient ``a`` (>= 2), a value ``x``, and a constant ``b`` (>= 1) via the seeded
+    RNG; the answer is ``a*x + b`` (multiply before add). ``operands = (a, x, b)`` so the verifier
+    can replay the order-of-operations slip (``a*(x + b)``). Two REAL surfaces share this answer
+    (so the KC is masterable across representations, PROJECT.md §3.4 rule 2):
+
+      - **SYMBOLIC** (default) — "Evaluate {a}x + {b} when x = {x}." (the symbolic form);
+      - **AREA_MODEL** — an array/area picture: ``a`` rows of ``x`` squares, plus ``b`` extra; the
+        total count IS ``a*x + b`` (the visual, magnitude-grounded form).
+
+    The math is sampled before the format is applied, so the same seed yields identical operands
+    in either surface. ``a >= 2`` and ``b >= 1`` keep the slip ``a*(x + b)`` distinct from the
+    correct ``a*x + b`` (they differ by ``(a - 1)*b > 0``), so the misconception is diagnostic.
+    """
+    coeff_pool = (
+        _EVAL_COEFF_BY_DIFFICULTY.get(difficulty, _EVAL_COEFF_POOL)
+        if difficulty
+        else _EVAL_COEFF_POOL
+    )
+    value_pool = (
+        _EVAL_VALUE_BY_DIFFICULTY.get(difficulty, _EVAL_VALUE_POOL)
+        if difficulty
+        else _EVAL_VALUE_POOL
+    )
+    const_pool = (
+        _EVAL_CONST_BY_DIFFICULTY.get(difficulty, _EVAL_CONST_POOL)
+        if difficulty
+        else _EVAL_CONST_POOL
+    )
+    a = rng.choice(coeff_pool)
+    x = rng.choice(value_pool)
+    b = rng.choice(const_pool)
+    if surface_format is Representation.AREA_MODEL:
+        statement = (
+            f"A picture shows {a} rows of {x} squares, plus {b} more squares. "
+            f"How many squares is that in all?"
+        )
+    else:
+        statement = f"Evaluate {a}x + {b} when x = {x}."
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.EVALUATE_EXPRESSIONS, seed, surface_format),
+        kc=KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(a * x + b),
+        representations_available=get_kc(KnowledgeComponentId.EVALUATE_EXPRESSIONS).representations,
+        operands=(Rational(a), Rational(x), Rational(b)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1193,6 +1276,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.INTEGER_ADD_SUBTRACT: _generate_integer_add_subtract,
     KnowledgeComponentId.SIGNED_NUMBERS: _generate_signed_numbers,
     KnowledgeComponentId.WRITE_EXPRESSIONS: _generate_write_expressions,
+    KnowledgeComponentId.EVALUATE_EXPRESSIONS: _generate_evaluate_expressions,
 }
 
 
