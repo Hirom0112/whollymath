@@ -70,6 +70,9 @@ class MisconceptionId(StrEnum):
     PERCENT_AS_AMOUNT = "percent-as-amount"
     # Unit 2 (T2): treating fraction multiplication like addition (x as +).
     MULTIPLY_AS_ADD = "multiply-as-add"
+    # Unit 1: applying the conversion factor upside-down — dividing (or flipping the factor)
+    # when converting to the SMALLER unit, where you should multiply.
+    CONVERSION_INVERSION = "conversion-inversion"
 
 
 @dataclass(frozen=True)
@@ -219,6 +222,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "two proper fractions is smaller than either factor, never larger."
         ),
         applicable_kcs=(KnowledgeComponentId.MULTIPLY_FRACTIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.CONVERSION_INVERSION,
+        name="Conversion-factor inversion",
+        description=(
+            "Applies the conversion factor the wrong way round when converting to the smaller "
+            "unit: DIVIDES by the factor (or flips it) instead of multiplying, so '4 feet' at "
+            "12 inches per foot becomes 4/12 instead of 4 x 12 = 48. The learner has the right "
+            "factor but loses track of which way the conversion goes."
+        ),
+        applicable_kcs=(KnowledgeComponentId.UNIT_CONVERSION,),
     ),
 )
 
@@ -385,6 +399,17 @@ def invert_rate(total: int, count: int) -> Rational:
     single magnitude, not a fraction pair), so the verifier can compare values directly.
     """
     return Rational(count, total)
+
+
+def invert_conversion(quantity: int, factor: int) -> Rational:
+    """conversion-inversion: convert to the smaller unit by DIVIDING by the factor, not multiplying.
+
+    The correct conversion of ``quantity`` larger units to the smaller unit (``factor`` small units
+    per large unit) is ``quantity * factor`` ("how many small units"). The learner who inverts
+    divides the other way, getting ``quantity/factor`` — e.g. 4 feet at 12 in/ft becomes 4/12 = 1/3
+    instead of 48. Returned as a SymPy ``Rational`` so the verifier can compare values directly.
+    """
+    return Rational(quantity, factor)
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

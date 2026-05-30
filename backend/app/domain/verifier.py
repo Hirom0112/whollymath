@@ -50,6 +50,7 @@ from app.domain.misconceptions import (
     WrongFraction,
     add_across,
     additive_ratio,
+    invert_conversion,
     invert_rate,
     natural_number_bias_number_line,
     subtract_across,
@@ -346,6 +347,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.MULTIPLY_AS_ADD,
         predict=lambda ops: ops[0] + ops[1],
+    ),
+    # conversion-inversion: converted to the smaller unit by DIVIDING by the factor instead of
+    # multiplying (operands are (quantity, factor)). A wrong OPERATION (applied the factor upside-
+    # down), so the result is smaller than the quantity instead of larger.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.UNIT_CONVERSION,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.CONVERSION_INVERSION,
+        predict=lambda ops: invert_conversion(int(ops[0]), int(ops[1])),
     ),
 )
 

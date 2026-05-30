@@ -40,6 +40,7 @@ def test_generator_difficulty_narrows_denominators() -> None:
             KnowledgeComponentId.UNIT_RATE,
             KnowledgeComponentId.EQUIVALENT_RATIOS,
             KnowledgeComponentId.PERCENT,
+            KnowledgeComponentId.UNIT_CONVERSION,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

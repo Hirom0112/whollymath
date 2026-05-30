@@ -273,6 +273,21 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # Convert units via ratio reasoning / proportions (TEKS 6.4H; partial CCSS 6.RP.3d). Given a
+    # conversion factor ("12 inches = 1 foot") and a quantity in the larger unit, find the
+    # quantity in the smaller unit — a single numeric answer entered in the symbolic editor.
+    # Advertises SYMBOLIC + WORD_PROBLEM (the ≥2-rep contract; the statement is a conversion
+    # story), but LIVE only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY
+    # like UNIT_RATE; masterability waits on a numeric word-problem widget (T3).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.UNIT_CONVERSION,
+        skill_name="Convert units via proportions",
+        description=(
+            "Convert a quantity from a larger unit to a smaller one using a conversion factor "
+            "(e.g. 12 inches per foot, so 4 feet is 48 inches), by MULTIPLYING by the factor."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
 )
 
 

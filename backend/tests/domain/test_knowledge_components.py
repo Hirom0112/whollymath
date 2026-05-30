@@ -44,6 +44,7 @@ EXPECTED_CATALOG_IDS = {
     "KC_unit_rate",
     "KC_equivalent_ratios",
     "KC_percent",
+    "KC_unit_conversion",
     # Unit 2 (numeric, T2).
     "KC_multiply_fractions",
 }
@@ -55,6 +56,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_unit_rate",
     "KC_equivalent_ratios",
     "KC_percent",
+    "KC_unit_conversion",
     "KC_multiply_fractions",
 }
 
@@ -66,9 +68,9 @@ GRADE6_BUILT_NOT_IN_BANK = {
 EXPECTED_GRADE6_KCS = {
     # U1 — Ratios & Rates (6.RP). KC_unit_rate + KC_equivalent_ratios + KC_percent moved to
     # EXPECTED_CATALOG_IDS (built 2026-05-30).
+    # KC_unit_conversion moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_ratio_language",
     "KC_rate_problems",
-    "KC_unit_conversion",
     # U2 — Fractions & Decimals (6.NS.1–4). KC_multiply_fractions moved to EXPECTED_CATALOG_IDS
     # (built 2026-05-30, T2).
     "KC_gcf_lcm",
@@ -133,7 +135,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 6 content-complete + 40 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 10 content-complete + 36 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

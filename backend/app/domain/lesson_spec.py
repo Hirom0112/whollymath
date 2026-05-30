@@ -349,6 +349,29 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # Unit 1: practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires.
+    # Errors route back to SYMBOLIC — there is no richer surface for a conversion yet (WORD_PROBLEM
+    # has no surface state, and NUMBER_LINE/AREA_MODEL don't model a unit conversion), so "re-try on
+    # the same surface with a labeled hint" is the honest adaptation until a widget lands (T3). The
+    # WORD_PROBLEM representation is the conversion-story framing (satisfies the ≥2-rep contract).
+    _spec(
+        _KC.UNIT_CONVERSION,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Convert to the smaller unit by MULTIPLYING by the factor — dividing flips it.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Smaller units means more of them — your answer should be bigger, not smaller.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

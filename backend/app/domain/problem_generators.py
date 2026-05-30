@@ -662,6 +662,64 @@ def _generate_multiply_fractions(
     )
 
 
+# Conversion contexts: (larger-unit, smaller-unit, factor) — small units per ONE large unit.
+# Chosen through the seeded RNG so the same seed yields the same scenario (PROJECT.md §4.1).
+# Every factor is > 1 (a genuine convert-down), so the inversion error (quantity/factor) is
+# always a distinct, smaller value.
+_CONVERSION_CONTEXTS: tuple[tuple[str, str, int], ...] = (
+    ("foot", "inches", 12),
+    ("yard", "feet", 3),
+    ("hour", "minutes", 60),
+    ("minute", "seconds", 60),
+    ("meter", "centimeters", 100),
+    ("dozen", "items", 12),
+    ("week", "days", 7),
+)
+
+# The quantity pool by difficulty tier (the easy→hard ramp; CP.B): higher tiers use larger
+# quantities. ``None`` / out-of-range keeps the full pool (the pre-ramp default).
+_CONVERSION_QTY_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4),
+    2: (3, 4, 5, 6),
+    3: (5, 6, 7, 8),
+    4: (7, 8, 9, 10),
+}
+_CONVERSION_QTY_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+
+def _generate_unit_conversion(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_unit_conversion: convert a quantity to the smaller unit via its conversion factor.
+
+    Builds a clean whole-number conversion: ``quantity`` larger units at ``factor`` smaller units
+    each, asking how many smaller units. The correct value is the SymPy product ``quantity *
+    factor``; ``operands = (quantity, factor)`` so the verifier can replay the conversion-inversion
+    misconception (``quantity / factor``). Rendered symbolically — a numeric-answer conversion
+    word problem; ``difficulty`` widens the quantity pool.
+    """
+    qty_pool = (
+        _CONVERSION_QTY_BY_DIFFICULTY.get(difficulty, _CONVERSION_QTY_POOL)
+        if difficulty
+        else _CONVERSION_QTY_POOL
+    )
+    quantity = rng.choice(qty_pool)
+    larger, smaller, factor = rng.choice(_CONVERSION_CONTEXTS)
+    statement = (
+        f"{factor} {smaller} = 1 {larger}. How many {smaller} are in {quantity} {larger}s? "
+        f"(Convert by multiplying by the factor.)"
+    )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.UNIT_CONVERSION, seed, surface_format),
+        kc=KnowledgeComponentId.UNIT_CONVERSION,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(quantity * factor),
+        representations_available=get_kc(KnowledgeComponentId.UNIT_CONVERSION).representations,
+        operands=(Rational(quantity), Rational(factor)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -674,6 +732,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.EQUIVALENT_RATIOS: _generate_equivalent_ratios,
     KnowledgeComponentId.PERCENT: _generate_percent,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _generate_multiply_fractions,
+    KnowledgeComponentId.UNIT_CONVERSION: _generate_unit_conversion,
 }
 
 

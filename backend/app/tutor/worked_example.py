@@ -465,6 +465,36 @@ def _multiply_fractions_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _unit_conversion_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'each big unit holds this many small ones, so multiply' steps for a unit conversion.
+
+    ``operands = (quantity, factor)``; the answer is ``quantity * factor ==
+    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"unit-conversion problem {problem.problem_id} needs (quantity, factor)")
+    quantity, factor = int(operands[0]), int(operands[1])
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=f"Each big unit is made of {factor} small units.",
+            why_prompt="Why does one bigger unit contain several of the smaller unit?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"For {quantity} of them, multiply: {quantity} times {factor}.",
+            why_prompt="Why multiply by the factor (not divide) to convert to the smaller unit?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"That is {answer.p} small units.",
+            why_prompt="Why should the count grow when the unit gets smaller?",
+            revealed_value=answer,
+        ),
+    )
+
+
 # ─── The public builder ───────────────────────────────────────────────────────
 
 
@@ -503,6 +533,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _equivalent_ratios_steps,
     KnowledgeComponentId.PERCENT: _percent_steps,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _multiply_fractions_steps,
+    KnowledgeComponentId.UNIT_CONVERSION: _unit_conversion_steps,
 }
 
 

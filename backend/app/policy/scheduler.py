@@ -54,6 +54,10 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # Grade-6 Unit 2 (T2): SYMBOLIC = the product entered in the fraction editor. PRACTICE-ONLY
     # until the AREA_MODEL multiply widget lands (T3), then adding AREA_MODEL makes it masterable.
     _KC.MULTIPLY_FRACTIONS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 1: SYMBOLIC = the numeric "how many small units" entry. PRACTICE-ONLY (one live
+    # representation, like UNIT_RATE) until a numeric word-problem widget lands (T3), at which point
+    # adding WORD_PROBLEM here makes it masterable with no other change.
+    _KC.UNIT_CONVERSION: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

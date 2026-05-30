@@ -241,6 +241,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Two thirds of three quarters: multiply across, then simplify the result.",
         ),
     ),
+    # Grade-6 Unit 1: index 0 (operation) orients toward multiplying by the factor, not dividing;
+    # index 1 (magnitude) toward "smaller units means MORE of them".
+    KnowledgeComponentId.UNIT_CONVERSION: (
+        _nudge(
+            KnowledgeComponentId.UNIT_CONVERSION,
+            "How many small units fit in ONE big unit? Build up from there for all of them.",
+        ),
+        _nudge(
+            KnowledgeComponentId.UNIT_CONVERSION,
+            "Smaller units means you need MORE of them. Did your answer get bigger or smaller?",
+        ),
+        _nudge(
+            KnowledgeComponentId.UNIT_CONVERSION,
+            "Each big unit is made of several small ones. Do you multiply by that many, or split?",
+        ),
+    ),
 }
 
 
