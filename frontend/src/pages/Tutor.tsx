@@ -250,6 +250,11 @@ export function Tutor({
   // sustained HelpNeed signal tripped the §3.7 gate, so help is shown unasked, inline in
   // the workspace (§3.8 refuse-rule 6). null unless the proactive arm fired (default OFF).
   const [intervention, setIntervention] = useState<InterventionView | null>(null);
+  // A MID-PROBLEM nudge the live loop offered on a telemetry flush (Beat 1) while the learner is
+  // still working — sustained struggle, never one twitch; the backend gates it to at most once per
+  // problem. Voiced by Pi inline, additive (never touches the workspace), cleared once they answer
+  // or advance. null unless the proactive arm fired (default OFF), like `intervention`.
+  const [midNudge, setMidNudge] = useState<InterventionView | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The per-KC mastery snapshot the backend returns each turn (BKT probability + declared
   // mastery). Merged across turns so the progress strip shows every skill touched.
@@ -297,7 +302,11 @@ export function Tutor({
   // Behavioral telemetry (Slice PL.2): record HOW the learner works each problem, off the
   // turn loop (fire-and-forget, never blocks the surface). `firstInteractionLogged` makes
   // time-to-first-interaction a single edge per problem.
-  const telemetry = useTelemetry(sessionId);
+  // Surface a mid-problem nudge from a telemetry flush (Beat 1). Only meaningful while answering;
+  // once a verdict shows or we advance, it is cleared, so a late flush can't pop a stale tip.
+  const telemetry = useTelemetry(sessionId, (n) => {
+    setMidNudge(n);
+  });
   const firstInteractionLogged = useRef(false);
 
   // Emit problem_presented whenever a new problem mounts, and reset the first-interaction
@@ -375,6 +384,7 @@ export function Tutor({
     setPhase('submitting');
     setError(null);
     setIntervention(null); // the offer pertained to this attempt; it is now spent
+    setMidNudge(null); // a mid-problem nudge is spent once the learner answers
     telemetry.track('submit', {
       problem_id: problem.problem_id,
       latency_ms: Date.now() - startedAt.current,
@@ -467,6 +477,7 @@ export function Tutor({
     setLastAnswer(null);
     // Carry any proactive offer the just-finished turn produced onto this next problem.
     setIntervention(result.intervention ?? null);
+    setMidNudge(null); // a fresh problem starts with no mid-problem nudge (it's per-problem)
     setResult(null);
     setPhase('answering');
     startedAt.current = Date.now();
@@ -517,11 +528,13 @@ export function Tutor({
   const helpSpeech =
     hint !== null
       ? { text: hint, kind: 'hint' as const }
-      : intervention !== null
-        ? { text: intervention.text, kind: 'offer' as const }
-        : verdictSpeech !== null && mascotIsPiMenu
-          ? { text: verdictSpeech.text, kind: verdictSpeech.kind }
-          : null;
+      : midNudge !== null && phase === 'answering'
+        ? { text: midNudge.text, kind: 'offer' as const }
+        : intervention !== null
+          ? { text: intervention.text, kind: 'offer' as const }
+          : verdictSpeech !== null && mascotIsPiMenu
+            ? { text: verdictSpeech.text, kind: verdictSpeech.kind }
+            : null;
 
   return (
     <main className="wm-tutor">

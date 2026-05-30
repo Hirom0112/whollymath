@@ -7,6 +7,8 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 
+import { type InterventionView } from '../api';
+
 import { TelemetryBuffer, type TelemetryEventType } from './telemetry';
 
 // How often to drain the buffer while the page is open.
@@ -19,9 +21,23 @@ export interface Telemetry {
   track: (type: TelemetryEventType, payload?: Record<string, unknown>) => void;
 }
 
-/** Wire a TelemetryBuffer to the page lifecycle for `sessionId`. Returns a stable `track`. */
-export function useTelemetry(sessionId: string): Telemetry {
-  const buffer = useMemo(() => new TelemetryBuffer(sessionId), [sessionId]);
+/**
+ * Wire a TelemetryBuffer to the page lifecycle for `sessionId`. Returns a stable `track`.
+ *
+ * `onNudge` (optional) fires when a flush response carries a mid-problem nudge (live loop Beat 1) —
+ * kept in a ref so the latest handler is used without re-creating the buffer (which would lose the
+ * pending tail). Additive-only: a nudge never blocks or alters the flush.
+ */
+export function useTelemetry(
+  sessionId: string,
+  onNudge?: (nudge: InterventionView) => void,
+): Telemetry {
+  const onNudgeRef = useRef(onNudge);
+  onNudgeRef.current = onNudge;
+  const buffer = useMemo(
+    () => new TelemetryBuffer(sessionId, undefined, (n) => onNudgeRef.current?.(n)),
+    [sessionId],
+  );
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {

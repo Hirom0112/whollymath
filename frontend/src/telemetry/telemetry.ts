@@ -8,7 +8,7 @@
 // learner's experience (invariant 7 — the server endpoint is likewise lenient + off the
 // turn loop).
 
-import { postEvents, type InteractionEventIn } from '../api';
+import { postEvents, type InteractionEventIn, type InterventionView } from '../api';
 
 /** The behavioral event tags we record. An open string on the wire; this union documents
  *  the vocabulary the app actually emits so callers stay consistent. */
@@ -36,11 +36,19 @@ export class TelemetryBuffer {
   private readonly sessionId: string;
   private buffer: InteractionEventIn[] = [];
   private readonly now: () => number;
+  // Called when a flush response carries a mid-problem nudge (live loop Beat 1). Additive-only:
+  // surfacing a nudge never blocks or alters the flush; it just lets the surface voice the tip.
+  private readonly onNudge?: (nudge: InterventionView) => void;
 
   // `now` is injectable so tests are deterministic (the harness forbids a real clock here).
-  constructor(sessionId: string, now: () => number = () => Date.now()) {
+  constructor(
+    sessionId: string,
+    now: () => number = () => Date.now(),
+    onNudge?: (nudge: InterventionView) => void,
+  ) {
     this.sessionId = sessionId;
     this.now = now;
+    this.onNudge = onNudge;
   }
 
   /** Buffer one event; auto-flush (fire-and-forget) once the buffer is large enough. */
@@ -64,7 +72,12 @@ export class TelemetryBuffer {
     if (this.buffer.length === 0) return;
     const batch = this.buffer;
     this.buffer = [];
-    const ok = await postEvents(this.sessionId, batch);
-    if (!ok) this.buffer = [...batch, ...this.buffer];
+    const res = await postEvents(this.sessionId, batch);
+    if (res === null) {
+      this.buffer = [...batch, ...this.buffer];
+      return;
+    }
+    // A mid-problem nudge the live loop offered on this flush (Beat 1) — hand it to the surface.
+    if (res.nudge != null && this.onNudge !== undefined) this.onNudge(res.nudge);
   }
 }

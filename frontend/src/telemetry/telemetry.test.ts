@@ -6,8 +6,10 @@ import { TelemetryBuffer } from './telemetry';
 // best-effort, never throwing. These pin that contract; the fire-and-forget POST itself is
 // mocked (CLAUDE.md §9 — don't reach the real server).
 
-function mockFetchOk(ok: boolean): ReturnType<typeof vi.fn> {
-  const fn = vi.fn(() => Promise.resolve({ ok } as Response));
+function mockFetchOk(ok: boolean, body: unknown = { accepted: 1 }): ReturnType<typeof vi.fn> {
+  const fn = vi.fn(() =>
+    Promise.resolve({ ok, json: () => Promise.resolve(body) } as unknown as Response),
+  );
   vi.stubGlobal('fetch', fn);
   return fn;
 }
@@ -58,6 +60,24 @@ describe('TelemetryBuffer', () => {
     buffer.track('blur');
     await expect(buffer.flush()).resolves.toBeUndefined();
     expect(buffer.pending).toBe(1); // kept for retry
+  });
+
+  it('surfaces a mid-problem nudge from the flush response to onNudge (Beat 1)', async () => {
+    mockFetchOk(true, { accepted: 1, nudge: { text: 'Try same-size pieces first.', kind: 'offer' } });
+    const nudges: string[] = [];
+    const buffer = new TelemetryBuffer('sess-1', () => 1000, (n) => nudges.push(n.text));
+    buffer.track('idle', { after_ms: 30000 });
+    await buffer.flush();
+    expect(nudges).toEqual(['Try same-size pieces first.']);
+  });
+
+  it('does not call onNudge when the flush carries no nudge', async () => {
+    mockFetchOk(true, { accepted: 1 });
+    const onNudge = vi.fn();
+    const buffer = new TelemetryBuffer('sess-1', () => 1000, onNudge);
+    buffer.track('focus');
+    await buffer.flush();
+    expect(onNudge).not.toHaveBeenCalled();
   });
 
   it('auto-flushes once the buffer reaches the batch threshold', async () => {

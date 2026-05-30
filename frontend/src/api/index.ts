@@ -14,6 +14,7 @@ import type {
   BenchmarkTranscriptView,
   CourseView,
   EventBatchRequest,
+  EventIngestResponse,
   HwAssignResponse,
   HwConfirmAnswer,
   HwStatusResponse,
@@ -65,6 +66,7 @@ export type {
   HwStatusResponse,
   HwSubmitResponse,
   EventBatchRequest,
+  EventIngestResponse,
   InteractionEventIn,
   InterventionKind,
   InterventionView,
@@ -154,14 +156,15 @@ export async function submitTurn(request: TurnRequest): Promise<TurnResponse> {
 /**
  * Send a batch of raw behavioral events (Slice PL.2). Fire-and-forget: telemetry must
  * never break the learner's experience, so this NEVER throws — a failed/blocked flush is
- * swallowed (the server endpoint is itself lenient and off the turn loop). Returns true if
- * the batch was accepted, false on any failure, so a caller can decide whether to re-buffer.
+ * swallowed (the server endpoint is itself lenient and off the turn loop). Returns the
+ * accepted-count + any mid-problem `nudge` the live loop offered (Beat 1), or null on any
+ * failure so a caller can decide whether to re-buffer.
  */
 export async function postEvents(
   sessionId: string,
   events: InteractionEventIn[],
-): Promise<boolean> {
-  if (events.length === 0) return true;
+): Promise<EventIngestResponse | null> {
+  if (events.length === 0) return { accepted: 0 };
   const body: EventBatchRequest = { session_id: sessionId, events };
   try {
     const response = await fetch('/events', {
@@ -170,9 +173,10 @@ export async function postEvents(
       body: JSON.stringify(body),
       keepalive: true, // let an in-flight flush survive a page unload
     });
-    return response.ok;
+    if (!response.ok) return null;
+    return (await response.json()) as EventIngestResponse;
   } catch {
-    return false;
+    return null;
   }
 }
 
