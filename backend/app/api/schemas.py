@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -1118,8 +1118,199 @@ class DemoLoginResponse(TeacherHandle):
     )
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Teacher surface (Slice TCH.B3–B8). These shapes are the contract the teacher
+# dashboard (lane T2, already built against LOCAL wire-types in api/teacher.ts) swaps
+# its local interfaces for once these regenerate into @whollymath/shared-types — so the
+# field names/types below MUST stay byte-for-byte aligned with that client. The teacher
+# surface reads one teacher's roster + one student's mastery evidence; role gates the
+# surface only, never the turn loop (ARCHITECTURE.md §14 invariant 8).
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class StudentCategory(StrEnum):
+    """Ranking bucket for a student (TCH.B6). Any urgent alert forces ``struggling``."""
+
+    STRUGGLING = "struggling"
+    NEEDS_ATTENTION = "needs_attention"
+    ON_TRACK = "on_track"
+
+
+class AlertSeverity(StrEnum):
+    """Alert severity (TCH.B5). Color is never the sole cue — paired with an icon + word."""
+
+    INFO = "info"
+    WARN = "warn"
+    URGENT = "urgent"
+
+
+class AlertKind(StrEnum):
+    """The named, tunable alert rules (TCH.B5)."""
+
+    STUCK = "STUCK"
+    REPEATED_MISCONCEPTION = "REPEATED_MISCONCEPTION"
+    LOW_ENGAGEMENT = "LOW_ENGAGEMENT"
+    FAILING_TREND = "FAILING_TREND"
+    IDLE = "IDLE"
+    REMEDIATION_STUCK = "REMEDIATION_STUCK"
+
+
+class HelpNeedTrend(StrEnum):
+    """Behavioral HelpNeed direction over the recent window (TCH.B4)."""
+
+    RISING = "rising"
+    STEADY = "steady"
+    FALLING = "falling"
+
+
+class KcStatus(StrEnum):
+    """Mastery status for a KC — mirrors the learner course-map vocabulary (CP.A.1)."""
+
+    LOCKED = "locked"
+    AVAILABLE = "available"
+    IN_PROGRESS = "in_progress"
+    MASTERED = "mastered"
+    DUE_REVIEW = "due_review"
+
+
+class TeacherAlertView(BaseModel):
+    """One alert on a student (TCH.B5). ``message`` is plain-language, templated, NO LLM."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: AlertKind
+    severity: AlertSeverity
+    message: str = Field(description="Plain-language, templated alert text (no LLM).")
+
+
+class KcMasteryView(BaseModel):
+    """A KC mastery row for the strengths/weaknesses lists (TCH.B3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kc_id: str = Field(description="KnowledgeComponentId catalog string, e.g. 'KC_equivalence'.")
+    skill_name: str = Field(description="Display name from the KC registry (get_kc.skill_name).")
+    probability: float = Field(description="BKT p(known), 0..1.")
+    status: KcStatus
+
+
+class StruggleSummaryView(BaseModel):
+    """The "what + WHY struggling" diagnostic (TCH.B4). Templated, NO LLM."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    headline: str = Field(description="One-line plain-language summary.")
+    detail: str = Field(description="Longer templated explanation a teacher can read aloud.")
+    matched_misconception: str | None = Field(
+        default=None, description="Human label, e.g. 'Natural-number bias', or null if none."
+    )
+    helpneed_trend: HelpNeedTrend | None = Field(default=None)
+    recent_error_rate: float | None = Field(
+        default=None, description="0..1 over the recent window, or null with no recent answers."
+    )
+
+
+class ActivityEventView(BaseModel):
+    """One entry in the recent-activity timeline (TCH.F3 §5)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    at: str = Field(description="Human-readable relative time, e.g. '2h ago' (server-rendered).")
+    label: str = Field(description="Plain text, e.g. 'Answered 3/4 + 1/4 on the number line'.")
+    outcome: Literal["correct", "incorrect", "neutral"]
+
+
+class AssignableUnitView(BaseModel):
+    """A unit the teacher can assign next (TCH.F3 §6)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    unit_id: str = Field(description="The unit slug.")
+    title: str
+    available: bool = Field(
+        description="false = prereqs not met. Advisory only: a teacher may assign either (TCH.Q5)."
+    )
+
+
+class RosterStudentView(BaseModel):
+    """A roster row — one student summarized for the ranked list (TCH.B3 + B6)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    student_id: str = Field(description="The student's external key (Learner.session_id).")
+    name: str
+    category: StudentCategory
+    category_reason: str = Field(description="One-line reason for the bucket (TCH.B6).")
+    current_unit_title: str | None = Field(default=None)
+    current_lesson_title: str | None = Field(default=None)
+    percent_complete: float = Field(description="0..1 across the assigned course.")
+    alerts: list[TeacherAlertView] = Field(default_factory=list)
+
+
+class TeacherRosterView(BaseModel):
+    """``GET /teacher/roster`` response (TCH.B8)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    teacher_name: str
+    class_name: str
+    students: list[RosterStudentView] = Field(default_factory=list)
+
+
+class TeacherStudentView(BaseModel):
+    """``GET /teacher/student/{id}`` response — the full drill-in (TCH.B8, aggregating B3–B6)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    student_id: str = Field(description="The student's external key (Learner.session_id).")
+    name: str
+    category: StudentCategory
+    category_reason: str
+    alerts: list[TeacherAlertView] = Field(default_factory=list)
+    struggle: StruggleSummaryView
+    current_unit_title: str | None = Field(default=None)
+    current_lesson_title: str | None = Field(default=None)
+    percent_complete: float
+    strengths: list[KcMasteryView] = Field(default_factory=list)
+    weaknesses: list[KcMasteryView] = Field(default_factory=list)
+    activity: list[ActivityEventView] = Field(default_factory=list)
+    assignable_units: list[AssignableUnitView] = Field(default_factory=list)
+    assigned_unit_id: str | None = Field(default=None)
+
+
+class AssignUnitRequest(BaseModel):
+    """``POST /teacher/student/{id}/assign-unit`` body (TCH.B8)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    unit_id: str = Field(description="The unit slug to assign next.")
+
+
+class AssignUnitResult(BaseModel):
+    """``POST /teacher/student/{id}/assign-unit`` response (TCH.B7/B8)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    student: TeacherStudentView
+
+
 __all__ = [
     "ActionType",
+    "ActivityEventView",
+    "AlertKind",
+    "AlertSeverity",
+    "AssignUnitRequest",
+    "AssignUnitResult",
+    "AssignableUnitView",
+    "HelpNeedTrend",
+    "KcMasteryView",
+    "KcStatus",
+    "RosterStudentView",
+    "StruggleSummaryView",
+    "StudentCategory",
+    "TeacherAlertView",
+    "TeacherRosterView",
+    "TeacherStudentView",
     "AdaptiveTurnView",
     "AnswerKind",
     "ArmVerdictView",

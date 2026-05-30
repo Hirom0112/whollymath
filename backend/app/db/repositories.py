@@ -338,6 +338,28 @@ def load_events_for_learner(db: OrmSession, learner_id: int) -> list[Interaction
     )
 
 
+def load_turns_for_learner(db: OrmSession, learner_id: int) -> list[Turn]:
+    """Load all of a learner's ``Turn`` rows across their sessions, chronologically (Slice TCH.B3).
+
+    ``Turn`` rows hang off ``Session`` (``Turn.session_id`` → ``Session.id``), which carries the
+    ``learner_id``; we join through it so the teacher overview/struggle/alerts services can read a
+    student's whole answer history (correctness, ``error_type``, ``hint_used``, ``latency_ms``,
+    ``created_at``) without the API layer ever touching a query (CLAUDE.md §7). Ordered by
+    (``created_at``, ``id``) — the same authoritative-clock-then-id ordering the event reads use,
+    so a busy batch sharing a timestamp is still deterministically ordered. A pure, commit-free
+    read off the turn loop (ARCHITECTURE.md §14 invariants 5 and 7); ``[]`` for a learner with no
+    recorded turns.
+    """
+    return list(
+        db.scalars(
+            select(Turn)
+            .join(Session, Turn.session_id == Session.id)
+            .where(Session.learner_id == learner_id)
+            .order_by(Turn.created_at, Turn.id)
+        ).all()
+    )
+
+
 def persist_event(
     db: OrmSession,
     *,
@@ -535,6 +557,7 @@ __all__ = [
     "load_events_for_learner",
     "load_events_for_session",
     "load_mastery_states",
+    "load_turns_for_learner",
     "load_open_session",
     "load_open_session_for_learner",
     "persist_event",
