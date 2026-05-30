@@ -43,6 +43,8 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     _KC.COMMON_DENOMINATOR: frozenset({_KC.EQUIVALENCE}),
     _KC.ADDITION_UNLIKE: frozenset({_KC.COMMON_DENOMINATOR}),
     _KC.SUBTRACTION_UNLIKE: frozenset({_KC.COMMON_DENOMINATOR}),
+    # Grade-6 Unit 1: a unit rate is a ratio relationship, so it builds on equivalent fractions.
+    _KC.UNIT_RATE: frozenset({_KC.EQUIVALENCE}),
 }
 
 
@@ -57,6 +59,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.COMMON_DENOMINATOR,  # use equivalence to match sizes
     _KC.ADDITION_UNLIKE,  # operate on unlike forms …
     _KC.SUBTRACTION_UNLIKE,  # … (add/sub both gated on common denominator)
+    _KC.UNIT_RATE,  # Grade-6 Unit 1: a ratio relationship, built on equivalence
 )
 
 
@@ -75,7 +78,8 @@ REMEDIATION_ROUTING: dict[KnowledgeComponentId, tuple[KnowledgeComponentId, ...]
     # U1 — Ratios & Rates → equivalent fractions (ratio = a fraction relationship)
     _KC_.RATIO_LANGUAGE: (_KC_.EQUIVALENCE,),
     _KC_.EQUIVALENT_RATIOS: (_KC_.EQUIVALENCE,),
-    _KC_.UNIT_RATE: (_KC_.EQUIVALENCE,),
+    # KC_unit_rate is now a LIVE foundation (built, Grade-6 Unit 1), so it is NOT a remediation
+    # key — a live KC is terminal here (it's a drop TARGET, e.g. for unit_conversion, not a source).
     _KC_.RATE_PROBLEMS: (_KC_.EQUIVALENCE,),
     _KC_.PERCENT: (_KC_.EQUIVALENCE, _KC_.DECIMAL_OPERATIONS),
     _KC_.UNIT_CONVERSION: (_KC_.UNIT_RATE,),

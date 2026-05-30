@@ -178,6 +178,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "How many equal jumps fit between the ends, and how far along is this one?",
         ),
     ),
+    # Grade-6 Unit 1: index 0 (operation) orients toward which quantity is "per one"; index 1
+    # (magnitude) toward the size of one share.
+    KnowledgeComponentId.UNIT_RATE: (
+        _nudge(
+            KnowledgeComponentId.UNIT_RATE,
+            "A unit rate is 'how much for ONE'. Which amount are you sharing, and across how many?",
+        ),
+        _nudge(
+            KnowledgeComponentId.UNIT_RATE,
+            "If that many together cost that much, is just one bigger or smaller than the total?",
+        ),
+        _nudge(
+            KnowledgeComponentId.UNIT_RATE,
+            "Split the total evenly into that many equal shares. How big is a single share?",
+        ),
+    ),
 }
 
 

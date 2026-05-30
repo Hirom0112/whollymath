@@ -47,6 +47,7 @@ from sympy import Rational
 # The five misconception ids are the Layer-1 contract. The catalog string VALUES
 # must match `diagnostic_gems.json` `_meta.misconception_catalog` verbatim — they
 # are the join key between this module, the bank, and the persona configs.
+# The five misconceptions that match the fraction-only gem bank verbatim (RESEARCH.md §1.2).
 EXPECTED_MISCONCEPTION_IDS = {
     "natural-number-bias",
     "add-across-error",
@@ -54,6 +55,14 @@ EXPECTED_MISCONCEPTION_IDS = {
     "equal-sign-as-procedural",
     "procedure-without-concept",
 }
+
+# Grade-6 content-build misconceptions: NOT in the fraction-only bank — each enters with its
+# lesson (Grade-6 build, 2026-05-30). The enum/registry == bank ∪ these; the bank-verbatim
+# check stays scoped to the five bank ids above.
+EXPECTED_GRADE6_MISCONCEPTION_IDS = {
+    "rate-inversion",  # KC_unit_rate
+}
+EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 
 _GEMS_PATH = Path(__file__).resolve().parents[2] / "app" / "domain" / "diagnostic_gems.json"
 
@@ -76,16 +85,16 @@ def _load_items() -> list[dict[str, Any]]:
 
 
 def test_registry_contains_exactly_the_five_misconceptions() -> None:
-    """The registry has exactly the 5 misconceptions from RESEARCH.md §1.2."""
+    """The registry has the 5 fraction misconceptions (RESEARCH.md §1.2) + Grade-6 additions."""
     registry_ids = {m.id.value for m in MISCONCEPTION_REGISTRY.all()}
-    assert registry_ids == EXPECTED_MISCONCEPTION_IDS
-    assert len(MISCONCEPTION_REGISTRY.all()) == 5
+    assert registry_ids == EXPECTED_ALL_MISCONCEPTION_IDS
+    assert len(MISCONCEPTION_REGISTRY.all()) == len(EXPECTED_ALL_MISCONCEPTION_IDS)
 
 
 def test_enum_values_match_the_bank_catalog_verbatim() -> None:
-    """The MisconceptionId enum mirrors the gem-bank `_meta.misconception_catalog`."""
+    """The MisconceptionId enum = the gem-bank catalog (5) PLUS the Grade-6 build additions."""
     enum_values = {member.value for member in MisconceptionId}
-    assert enum_values == EXPECTED_MISCONCEPTION_IDS
+    assert enum_values == EXPECTED_ALL_MISCONCEPTION_IDS
 
 
 def test_enum_values_match_gem_bank_when_present() -> None:

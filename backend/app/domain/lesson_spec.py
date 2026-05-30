@@ -266,6 +266,31 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.NUMBER_LINE, _R.SYMBOLIC)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 1: Ratios & Rates ───
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors
+    # route back to SYMBOLIC — there is no richer surface for a rate yet (WORD_PROBLEM has no
+    # surface state, NUMBER_LINE/AREA_MODEL don't model a rate), so "re-try on the same surface
+    # with a labeled hint" is the honest adaptation until a rate widget lands (T3). The
+    # WORD_PROBLEM representation is the story framing (satisfies the ≥2-rep contract); it
+    # becomes the masterable second surface once it has a live widget.
+    _spec(
+        _KC.UNIT_RATE,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Reread it: which amount is the total, and how many share it?",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "One share should be smaller than the whole — check the size.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

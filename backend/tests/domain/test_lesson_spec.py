@@ -18,17 +18,14 @@ from app.domain.lesson_spec import (
 from app.domain.misconceptions import get_misconception
 
 _ALL_SPECS = LESSON_SPEC_REGISTRY.all()
-_FRACTION_KCS = {
-    KnowledgeComponentId.EQUIVALENCE,
-    KnowledgeComponentId.COMMON_DENOMINATOR,
-    KnowledgeComponentId.ADDITION_UNLIKE,
-    KnowledgeComponentId.SUBTRACTION_UNLIKE,
-    KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
-}
 
 
-def test_registry_covers_the_five_fraction_kcs() -> None:
-    assert {s.kc for s in _ALL_SPECS} == _FRACTION_KCS
+def test_registry_covers_every_live_kc() -> None:
+    """Every content-complete KC has a lesson spec, and only those — the engine reads a spec
+    per live KC (HR.A1). Compares against LIVE_KCS so it holds as the Grade-6 build adds KCs."""
+    from app.domain.knowledge_components import LIVE_KCS
+
+    assert {s.kc for s in _ALL_SPECS} == LIVE_KCS
 
 
 def test_get_lesson_spec_accepts_enum_and_string() -> None:

@@ -49,6 +49,7 @@ from app.domain.misconceptions import (
     MisconceptionId,
     WrongFraction,
     add_across,
+    invert_rate,
     natural_number_bias_number_line,
     subtract_across,
 )
@@ -308,6 +309,15 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.MAGNITUDE,
         misconception=MisconceptionId.NATURAL_NUMBER_BIAS,
         predict=lambda ops: natural_number_bias_number_line(ops[0].p, ops[0].q).biased_position,
+    ),
+    # unit-rate inversion: total/count formed upside-down as count/total — a wrong OPERATION
+    # setup (operands are (total, count), both whole-number Rationals).
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.UNIT_RATE,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.RATE_INVERSION,
+        predict=lambda ops: invert_rate(int(ops[0]), int(ops[1])),
     ),
 )
 

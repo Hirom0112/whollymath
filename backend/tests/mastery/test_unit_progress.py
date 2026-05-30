@@ -86,9 +86,15 @@ def test_fresh_learner_unbuilt_lessons_default_available_zero_percent() -> None:
     """Forward-declared / None KC lessons default to AVAILABLE; unit 0% (DAT.6)."""
     progress = build_unit_progress(all_units(), _course([]), frozenset())
 
-    # u1 lessons are all forward-declared KCs -> AVAILABLE placeholder.
+    # u1 now MIXES built lessons with placeholders: KC_unit_rate (u1_l3/l4) is content-complete
+    # (Grade-6 build) and gates on its prerequisite, so it is not an AVAILABLE placeholder. Every
+    # still-unbuilt (forward-declared) u1 lesson defaults to the AVAILABLE placeholder.
+    from app.domain.knowledge_components import LIVE_KCS
+
     u1 = _by_slug(progress)["u1"]
     for lp in u1.lessons:
+        if lp.kc_id and KnowledgeComponentId(lp.kc_id) in LIVE_KCS:
+            continue  # a built lesson — gated by its prereq, not a placeholder
         assert lp.status is CourseNodeStatus.AVAILABLE
         assert lp.probability is None
     assert u1.percent_complete == 0.0

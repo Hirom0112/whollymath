@@ -509,14 +509,70 @@ def _generate_number_line(
     )
 
 
-# The flat KC -> generator registry. Exactly the five KCs (PROJECT.md §3.1); a KC
-# without a generator would fail the "a generator exists for every KC" contract.
+# ─── Grade-6 content build (2026-05-30) — Unit 1: Ratios & Rates ───
+
+# Word-problem contexts for unit-rate items: (quantity-noun, single-unit) pairs. Chosen through
+# the seeded RNG so the same seed yields the same scenario (PROJECT.md §4.1 reproducibility).
+_RATE_CONTEXTS: tuple[tuple[str, str], ...] = (
+    ("dollars", "pound"),
+    ("dollars", "ticket"),
+    ("miles", "hour"),
+    ("pages", "minute"),
+    ("liters", "tank"),
+)
+
+# The per-ONE rate pool by difficulty tier (the easy→hard ramp; CP.B). Higher tiers use larger
+# rates. ``None`` / out-of-range keeps the full pool (the pre-ramp default, unchanged for callers
+# that don't ask for a tier).
+_RATE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4),
+    2: (3, 4, 5, 6),
+    3: (4, 6, 7, 8),
+    4: (6, 7, 8, 9),
+}
+_RATE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8, 9)
+
+
+def _generate_unit_rate(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_unit_rate: find the per-ONE rate from a total given for several units.
+
+    Builds a clean whole-number unit rate ``r`` (so the answer is friendly): a total of
+    ``r * count`` over ``count`` units, asking how much for ONE unit. The correct value is the
+    SymPy quotient ``total / count`` (which equals ``r``); ``operands = (total, count)`` so the
+    verifier can replay the rate-inversion misconception (``count / total``). Rendered
+    symbolically — a numeric-answer word problem; ``difficulty`` widens the rate pool.
+    """
+    rate_pool = _RATE_BY_DIFFICULTY.get(difficulty, _RATE_POOL) if difficulty else _RATE_POOL
+    rate = rng.choice(rate_pool)
+    count = rng.choice((2, 3, 4, 5, 6))
+    total = rate * count
+    noun, unit = rng.choice(_RATE_CONTEXTS)
+    statement = (
+        f"{total} {noun} for {count} {unit}s. How many {noun} per {unit}? "
+        f"(Find the unit rate — the amount for ONE {unit}.)"
+    )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.UNIT_RATE, seed, surface_format),
+        kc=KnowledgeComponentId.UNIT_RATE,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(total, count),
+        representations_available=get_kc(KnowledgeComponentId.UNIT_RATE).representations,
+        operands=(Rational(total), Rational(count)),
+    )
+
+
+# The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
+# for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.EQUIVALENCE: _generate_equivalence,
     KnowledgeComponentId.COMMON_DENOMINATOR: _generate_common_denominator,
     KnowledgeComponentId.ADDITION_UNLIKE: _generate_addition,
     KnowledgeComponentId.SUBTRACTION_UNLIKE: _generate_subtraction,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _generate_number_line,
+    KnowledgeComponentId.UNIT_RATE: _generate_unit_rate,
 }
 
 

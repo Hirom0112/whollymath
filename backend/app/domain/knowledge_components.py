@@ -221,6 +221,22 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
             Representation.SYMBOLIC,
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 1: Ratios & Rates ───
+    # The first Grade-6 lesson built on the existing numeric infrastructure: a unit-rate
+    # word problem with a numeric answer. It advertises SYMBOLIC + WORD_PROBLEM (the lesson-spec
+    # contract requires ≥2 representations), but is LIVE only on SYMBOLIC for now (see
+    # scheduler._LIVE_REPRESENTATIONS) — i.e. PRACTICE-ONLY, exactly like COMMON_DENOMINATOR;
+    # masterability waits on a numeric-answer word-problem widget (T3). The answer is a single
+    # magnitude entered in the symbolic editor; the statement carries the rate context.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.UNIT_RATE,
+        skill_name="Find a unit rate",
+        description=(
+            "Find how much for ONE — the rate per single unit — from a quantity given for "
+            "several units (e.g. $6 for 3 lbs is $2 per lb)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
 )
 
 

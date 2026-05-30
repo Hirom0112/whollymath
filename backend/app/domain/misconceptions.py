@@ -62,6 +62,10 @@ class MisconceptionId(StrEnum):
     REDUCE_MEANS_SMALLER = "reduce-means-smaller"
     EQUAL_SIGN_AS_PROCEDURAL = "equal-sign-as-procedural"
     PROCEDURE_WITHOUT_CONCEPT = "procedure-without-concept"
+    # Grade-6 content build (2026-05-30): misconceptions for the new KCs are NOT in the
+    # fraction-only diagnostic_gems bank — they enter with their lesson (the bank's verbatim
+    # match holds only for the five fraction misconceptions above).
+    RATE_INVERSION = "rate-inversion"
 
 
 @dataclass(frozen=True)
@@ -168,6 +172,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             KnowledgeComponentId.SUBTRACTION_UNLIKE,
             KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
         ),
+    ),
+    Misconception(
+        id=MisconceptionId.RATE_INVERSION,
+        name="Rate inversion",
+        description=(
+            "Forms the rate with the quantities upside-down — divides the per-unit "
+            "count by the total instead of the total by the count, so '$6 for 3 lbs' "
+            "becomes 3/6 = $0.50 per lb instead of 6/3 = $2 per lb. The learner sets up "
+            "the ratio but loses track of which quantity is 'per 1'."
+        ),
+        applicable_kcs=(KnowledgeComponentId.UNIT_RATE,),
     ),
 )
 
@@ -312,6 +327,17 @@ def add_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:
     sum, and exactly the diagnostic tell).
     """
     return WrongFraction(numerator=num1 + num2, denominator=den1 + den2)
+
+
+def invert_rate(total: int, count: int) -> Rational:
+    """rate-inversion: form the unit rate upside-down — ``count/total`` not ``total/count``.
+
+    The correct unit rate for ``total`` per ``count`` units is ``total/count`` ("how much for
+    ONE"). The learner who inverts divides the other way, getting ``count/total`` — e.g. $6 for
+    3 lbs becomes 3/6 = 1/2 instead of 6/3 = 2. Returned as a SymPy ``Rational`` (a rate is a
+    single magnitude, not a fraction pair), so the verifier can compare values directly.
+    """
+    return Rational(count, total)
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

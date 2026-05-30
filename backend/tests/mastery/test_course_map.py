@@ -35,6 +35,7 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.COMMON_DENOMINATOR,
         KC.ADDITION_UNLIKE,
         KC.SUBTRACTION_UNLIKE,
+        KC.UNIT_RATE,  # Grade-6 Unit 1 (built 2026-05-30), last on the spine
     ]
 
 

@@ -124,9 +124,12 @@ _U1 = CatalogUnit(
         CatalogLesson(
             slug="u1_l1",
             unit_slug="u1",
+            # Aligned to the enum/model label-space id ``KC_ratio_language`` (was the stray
+            # ``KC_ratio_meaning``, which matched no KnowledgeComponentId member and so could
+            # never resolve or be built — Grade-6 build, 2026-05-30).
             order=1,
             title="Ratio language",
-            kc_id="KC_ratio_meaning",
+            kc_id="KC_ratio_language",
             ccss_code="6.RP.1",
             teks_code="6.4A",
             description=(

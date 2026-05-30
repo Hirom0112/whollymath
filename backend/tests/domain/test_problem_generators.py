@@ -115,9 +115,15 @@ def test_problem_operands_are_present_for_arithmetic_kcs() -> None:
 
 
 def test_a_generator_exists_for_every_kc() -> None:
-    """Exactly the five KCs have a registered procedural generator (PROJECT.md §3.1)."""
-    assert set(GENERATORS.keys()) == set(ALL_KCS)
-    assert len(GENERATORS) == 5
+    """Every LIVE (content-complete) KC has a registered procedural generator, and no extras.
+
+    Compares against LIVE_KCS (not the fraction-only ALL_KCS) so the contract holds as the
+    Grade-6 build adds KCs: a KC is live exactly when its full stack — generator included —
+    exists. ALL_KCS stays the fraction set for the fraction-specific parametrized tests below.
+    """
+    from app.domain.knowledge_components import LIVE_KCS
+
+    assert set(GENERATORS.keys()) == LIVE_KCS
 
 
 @pytest.mark.parametrize("kc", ALL_KCS)

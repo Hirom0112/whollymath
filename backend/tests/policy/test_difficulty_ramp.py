@@ -33,7 +33,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
     hard tier is a denominator-size ramp. Number-line is excluded: its hard tiers ramp by
     sign/magnitude (improper, then negative), not denominator size — covered separately below."""
     for kc in LIVE_KCS:
-        if kc is KnowledgeComponentId.NUMBER_LINE_PLACEMENT:
+        # Number-line ramps by sign/magnitude; unit-rate ramps by the RATE pool (its operands are
+        # whole-number total/count, denominator 1) — neither is a fraction-denominator ramp.
+        if kc in (KnowledgeComponentId.NUMBER_LINE_PLACEMENT, KnowledgeComponentId.UNIT_RATE):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)
         hard_ops = _operand_denoms(kc, difficulty=4)

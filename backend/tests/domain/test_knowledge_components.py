@@ -40,6 +40,16 @@ EXPECTED_CATALOG_IDS = {
     "KC_addition_unlike",
     "KC_subtraction_unlike",
     "KC_number_line_placement",
+    # Grade-6 content build (2026-05-30) — Unit 1: the first non-fraction KC made
+    # content-complete (registry + generator + spec + hints + worked example).
+    "KC_unit_rate",
+}
+
+# Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
+# are in the registry/LIVE_KCS but NOT in diagnostic_gems.json, so the bank-vs-registry check
+# subtracts them. Grows with each Grade-6 KC built on the procedural generators (no gem items).
+GRADE6_BUILT_NOT_IN_BANK = {
+    "KC_unit_rate",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -48,10 +58,9 @@ EXPECTED_CATALOG_IDS = {
 # — no generator/spec/hints — so they are absent from the registry, the gem catalog, and
 # LIVE_KCS until their content is built. The full enum is exactly CATALOG ∪ GRADE6.
 EXPECTED_GRADE6_KCS = {
-    # U1 — Ratios & Rates (6.RP)
+    # U1 — Ratios & Rates (6.RP). KC_unit_rate moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_ratio_language",
     "KC_equivalent_ratios",
-    "KC_unit_rate",
     "KC_rate_problems",
     "KC_percent",
     "KC_unit_conversion",
@@ -109,7 +118,7 @@ def test_registry_contains_exactly_the_content_complete_kcs() -> None:
     """
     registry_ids = {kc.id.value for kc in KC_REGISTRY.all()}
     assert registry_ids == EXPECTED_CATALOG_IDS
-    assert len(KC_REGISTRY.all()) == 5
+    assert len(KC_REGISTRY.all()) == 6
 
 
 def test_enum_is_the_full_grade6_ontology() -> None:
@@ -119,7 +128,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 5 content + 41 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 6 content-complete + 40 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:
@@ -212,4 +221,6 @@ def test_gem_bank_catalog_matches_registry_when_present() -> None:
     if not gems_path.exists():
         pytest.skip("diagnostic_gems.json not present — bank-vs-registry check skipped")
     catalog = set(json.loads(gems_path.read_text())["_meta"]["kc_catalog"])
-    assert catalog == EXPECTED_CATALOG_IDS
+    # The gem bank is the fraction-only corpus; Grade-6 build KCs are content-complete (in the
+    # registry) but not in the bank, so the bank catalog == the registry MINUS those additions.
+    assert catalog == EXPECTED_CATALOG_IDS - GRADE6_BUILT_NOT_IN_BANK

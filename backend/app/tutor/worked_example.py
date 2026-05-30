@@ -337,6 +337,38 @@ def _number_line_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'share the total into equal parts' steps for a unit rate (Grade-6 Unit 1).
+
+    ``operands = (total, count)``; the unit rate is ``total / count``, which equals
+    ``problem.correct_value`` by construction (the last step lands on it). Raises if the
+    operands are missing (CLAUDE.md §8.5 — a hollow example would mislead).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"unit-rate problem {problem.problem_id} needs (total, count) operands")
+    total, count = int(operands[0]), int(operands[1])
+    rate = problem.correct_value
+    each = f"{rate.p}/{rate.q}" if rate.q != 1 else f"{rate.p}"
+    return (
+        WorkedStep(
+            shown=f"A unit rate is the amount for ONE. Here {total} is shared over {count} units.",
+            why_prompt="Why does 'for one' mean splitting the total into equal shares?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Split the total into {count} equal shares: {total} divided by {count}.",
+            why_prompt="Why divide the total by the count, and not the count by the total?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Each single unit is {each}.",
+            why_prompt="Why is this the amount for exactly one unit?",
+            revealed_value=rate,
+        ),
+    )
+
+
 # ─── The public builder ───────────────────────────────────────────────────────
 
 
@@ -371,6 +403,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.COMMON_DENOMINATOR: _common_denominator_steps,
     KnowledgeComponentId.EQUIVALENCE: _equivalence_steps,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _number_line_steps,
+    KnowledgeComponentId.UNIT_RATE: _unit_rate_steps,
 }
 
 
