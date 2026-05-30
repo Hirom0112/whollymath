@@ -1035,6 +1035,25 @@ export interface ProblemView {
   given_denominator?: number | null;
 }
 /**
+ * The read-back of a snapped handwritten answer, for the learner to confirm (Slice HR.C2).
+ *
+ * The multimodal beat: instead of typing, a child photographs their work; the camera→OCR path
+ * transcribes it and this is what the surface shows back — "I read this as 3/4 — right?" — BEFORE
+ * grading. On confirm, ``transcribed_answer`` is submitted through the normal turn (the SAME SymPy
+ * verifier as a typed answer). ``readable`` is false when no answer could be read, so the surface
+ * asks the learner to rewrite it rather than grade a misread. No LLM, no second grader (§8.2).
+ */
+export interface ReadBackView {
+  /**
+   * The answer read from the image (e.g. '3/4'), or null if unreadable.
+   */
+  transcribed_answer?: string | null;
+  /**
+   * Whether an answer was extracted; false → ask the learner to rewrite it.
+   */
+  readable: boolean;
+}
+/**
  * A roster row — one student summarized for the ranked list (TCH.B3 + B6).
  */
 export interface RosterStudentView {

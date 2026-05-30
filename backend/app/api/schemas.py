@@ -1145,6 +1145,26 @@ class MeResponse(BaseModel):
     )
 
 
+class ReadBackView(BaseModel):
+    """The read-back of a snapped handwritten answer, for the learner to confirm (Slice HR.C2).
+
+    The multimodal beat: instead of typing, a child photographs their work; the camera→OCR path
+    transcribes it and this is what the surface shows back — "I read this as 3/4 — right?" — BEFORE
+    grading. On confirm, ``transcribed_answer`` is submitted through the normal turn (the SAME SymPy
+    verifier as a typed answer). ``readable`` is false when no answer could be read, so the surface
+    asks the learner to rewrite it rather than grade a misread. No LLM, no second grader (§8.2)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    transcribed_answer: str | None = Field(
+        default=None,
+        description="The answer read from the image (e.g. '3/4'), or null if unreadable.",
+    )
+    readable: bool = Field(
+        description="Whether an answer was extracted; false → ask the learner to rewrite it."
+    )
+
+
 class TeacherHandle(BaseModel):
     """The authenticated teacher's identity handle (Slice TCH.B2).
 
@@ -1363,6 +1383,7 @@ __all__ = [
     "HelpNeedTrend",
     "KcMasteryView",
     "KcStatus",
+    "ReadBackView",
     "RosterStudentView",
     "StruggleSummaryView",
     "StudentCategory",
