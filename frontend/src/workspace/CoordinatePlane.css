@@ -1,0 +1,120 @@
+/* Coordinate-plane plotter — a four-quadrant grid the learner places point(s) on (6.NS.8 plot a
+   point, 6.EE.9 read a dependent-variable point, 6.G.3 polygon vertices). Reads as the hero of the
+   lesson screen, in the same register as the number line: a clean navy frame, light minor
+   gridlines, a red placed point with a serif coordinate chip. Class names unique app-wide (global
+   CSS). */
+
+.wm-coord {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--wm-sp-3);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.wm-coord-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none; /* let a tap place a point instead of scrolling the page */
+  cursor: pointer;
+  background: var(--wm-cream);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+}
+
+.wm-coord-svg:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+/* Minor gridlines — light navy, so the axes read as the frame and the points pop. */
+.wm-coord-grid {
+  stroke: var(--wm-navy-deep);
+  stroke-width: 1;
+  opacity: 0.16;
+}
+
+/* The two axes (x = 0, y = 0) — heavy navy. */
+.wm-coord-axis {
+  stroke: var(--wm-navy-deep);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* Axis-end labels — bold navy serif. */
+.wm-coord-label {
+  fill: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* The connecting polygon outline (maxPoints > 1) — a translucent teal fill so the placed shape
+   reads as a shape; decorative, the answer is the point set. */
+.wm-coord-poly {
+  fill: var(--wm-mean-correct, #9ad17c);
+  fill-opacity: 0.18;
+  stroke: var(--wm-mean-correct, #9ad17c);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+/* The keyboard cursor — a hollow navy ring shown only while the grid has keyboard focus. */
+.wm-coord-cursor {
+  fill: none;
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+/* A placed point — a red dot with a navy ring (shape + colour, so it reads for colourblind
+   viewers; the coordinate chip carries the value redundantly). */
+.wm-coord-point {
+  fill: #e0483c;
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2.5;
+  transform-origin: center;
+}
+
+/* A small "pop" as a point lands; withheld under reduced motion (see the JS gate + the guard
+   below). */
+.wm-coord-point--pop {
+  animation: wm-coord-pop var(--wm-motion-press, 140ms) var(--wm-ease-morph, ease);
+}
+
+@keyframes wm-coord-pop {
+  from {
+    transform: scale(0.4);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* The coordinate chip next to a placed point — bold navy serif "(2,-1)". */
+.wm-coord-coord {
+  fill: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.wm-coord-readout {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The JS gate (prefersReducedMotion) already withholds the pop class; this guard is
+     belt-and-suspenders in case a class slips through. */
+  .wm-coord-point--pop {
+    animation: none;
+  }
+}

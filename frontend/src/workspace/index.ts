@@ -6,6 +6,12 @@ export { YesNo, yesNoToAnswer } from './YesNo';
 export { NumberEntry } from './NumberEntry';
 export { ExpressionInput } from './ExpressionInput';
 export {
+  CoordinatePlane,
+  pointsToAnswer,
+  answerToPoints,
+  type GridPoint,
+} from './CoordinatePlane';
+export {
   selectWidget,
   type WidgetKind,
   type WorkspaceWidgetProps,
