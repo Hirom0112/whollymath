@@ -37,7 +37,7 @@ const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
 // The pool of storybook-world backdrops a lesson can wear (frontend/public/tutor-bg-*.jpg).
 // Each is pre-toned: edge-cropped (no generator watermark), softened, and faintly blue so it
 // stays a calm backdrop behind the problem card (a further blur + blue wash is added in CSS).
-const TUTOR_BACKGROUNDS: readonly string[] = Array.from(
+export const TUTOR_BACKGROUNDS: readonly string[] = Array.from(
   { length: 11 },
   (_, i) => `/tutor-bg-${String(i + 1)}.jpg`,
 );
@@ -51,7 +51,7 @@ function hashString(s: string): number {
 }
 
 /** The backdrop for a lesson, as a CSS `url(...)` value — picked from the pool by the KC. */
-function lessonBackground(kc: string): string {
+export function lessonBackground(kc: string): string {
   return `url('${TUTOR_BACKGROUNDS[hashString(kc) % TUTOR_BACKGROUNDS.length]}')`;
 }
 
