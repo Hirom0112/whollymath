@@ -34,6 +34,19 @@ Design constraints honored here:
   - **Deferred** (NOT modeled here — they land with the harness in Weeks 2/5,
     TECH_STACK §4): persona-run-results and baseline-comparison tables.
 
+Wave 1 (DAT.1) adds the curriculum and teacher-layer tables on top of the same
+thin, portable-types foundation:
+
+  - ``Unit`` / ``Lesson`` — the curriculum skeleton (one Unit per CCSS/TEKS
+    cluster, ordered Lessons inside it). A Lesson may carry a ``kc_id`` string to
+    reuse an existing KnowledgeComponentId, but it is NULLABLE because some lessons
+    do not map to a KC yet (DAT.1).
+  - ``role`` on ``Learner`` + ``Roster`` + ``Assignment`` — the teacher layer
+    (TEACHER_NEEDS.md): a learner can be a teacher, a teacher↔student roster is a
+    many-to-many membership, and an Assignment hands a Unit to a student. Identity/
+    role never reaches the mastery/policy/tutor/llm path (ARCHITECTURE.md §14
+    invariant 8) — it only governs which surface a request may use.
+
 Defer reasons recorded so the decision log is intact (CLAUDE.md §8.4).
 """
 
@@ -97,6 +110,18 @@ class Learner(Base):
     # token may omit it and we never require it. It is a convenience handle for the learner, NOT
     # an auth secret and NOT consumed by any turn-loop decision (invariant 8).
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    # Which kind of user this row is: "student" (the default, every v1 learner) or
+    # "teacher" (a learner who also owns a roster + assigns units, Wave 1 TCH layer).
+    # A PLAIN STRING TAG, not a DB ENUM — same rationale as ``kc_id`` on MasteryState:
+    # adding/renaming a role is a code change, not a Postgres migration, and SQLite and
+    # Postgres agree on the column type (the §4 portability rule). NOT NULL with a
+    # Python-side default so every existing and new row has a concrete role.
+    #
+    # IMPORTANT (ARCHITECTURE.md §14 invariant 8): role is IDENTITY, and identity NEVER
+    # reaches the mastery model / policy / tutor / LLM. It only gates which API surface a
+    # request may use (a teacher's dashboard vs. a student's tutor) and who may read whose
+    # state. No turn-loop decision branches on it.
+    role: Mapped[str] = mapped_column(String(16), default="student", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
@@ -288,4 +313,184 @@ class InteractionEvent(Base):
     # Python-side UTC default the other tables use, so it is identical on SQLite and Postgres.
     server_ts: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+
+class Unit(Base):
+    """One curriculum unit — a CCSS/TEKS cluster of lessons (Wave 1, DAT.1).
+
+    The top of the curriculum skeleton: U1..U8 (TEKS_CCSS_COMPARISON.md /
+    CURRICULUM_STANDARD.md). One row per unit, ordered by ``order`` for display.
+    Lessons hang off it (``Unit.lessons``). This is content metadata, not learner
+    state — it is the same for every learner and changes only when the curriculum
+    does.
+
+    ``slug`` is the STABLE external key (e.g. ``"u1-ratios"``): unique + indexed so
+    code, the API, and assignments can reference a unit by a human-readable handle
+    that survives reseeding, rather than by the autoincrement ``id`` (which is not
+    stable across environments). ``ccss_cluster``/``teks_cluster`` carry the
+    standard codes the teacher dashboard surfaces (TEACHER_NEEDS.md — teachers map
+    work to standards). They are plain strings, not nullable, because a unit always
+    belongs to a cluster in our dual-coverage curriculum.
+    """
+
+    __tablename__ = "unit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Stable, human-readable external key for the unit (see class doc). Unique +
+    # indexed so a unit is referenced by slug, not by the non-stable autoincrement id.
+    slug: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Display/sequence order within the curriculum (1-based). Not unique — ordering is
+    # a presentation concern, and reordering should not require a uniqueness dance.
+    order: Mapped[int] = mapped_column(Integer, nullable=False)
+    # CCSS cluster code (e.g. "6.RP.A") and TEKS cluster code (e.g. "6.4") — the dual
+    # standards coverage the teacher dashboard maps work to (TEKS_CCSS_COMPARISON.md).
+    ccss_cluster: Mapped[str] = mapped_column(String(32), nullable=False)
+    teks_cluster: Mapped[str] = mapped_column(String(32), nullable=False)
+    description: Mapped[str] = mapped_column(String(1024), nullable=False)
+
+    # Lessons read back in their authored order (mirrors Session.turns by turn_index).
+    lessons: Mapped[list[Lesson]] = relationship(
+        back_populates="unit",
+        cascade="all, delete-orphan",
+        order_by="Lesson.order",
+    )
+
+
+class Lesson(Base):
+    """One lesson inside a Unit (Wave 1, DAT.1).
+
+    The leaf of the curriculum skeleton. Like ``Unit`` it is content metadata, not
+    learner state. Ordered within its unit by ``order`` (``Unit.lessons`` sorts on it).
+
+    ``kc_id`` is NULLABLE on purpose (DAT.1): some lessons reuse an existing
+    ``KnowledgeComponentId`` catalog string (so the lesson's practice updates that
+    KC's MasteryState), but others do not map to a KC yet — we model the curriculum
+    structure now and wire the KC mapping in as it is authored, rather than blocking
+    a lesson row on a KC that may not exist. When set, it is the SAME catalog string
+    ``MasteryState.kc_id`` stores (knowledge_components.py is the single source of
+    truth), kept as a string (not a DB ENUM) for the same portability reason.
+
+    ``ccss_code``/``teks_code`` are the per-lesson standard codes (finer than the
+    unit's cluster) the teacher dashboard surfaces.
+    """
+
+    __tablename__ = "lesson"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Stable external key for the lesson (e.g. "u1-l1"), same rationale as Unit.slug.
+    slug: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    # Owning unit. NOT NULL (a lesson always belongs to a unit) and indexed so
+    # "lessons of this unit" is a cheap lookup. CASCADE so deleting a unit removes
+    # its lessons at the DB level too (the ORM relationship cascade handles the
+    # session-level delete; the FK rule covers raw deletes).
+    unit_id: Mapped[int] = mapped_column(
+        ForeignKey("unit.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # Display/sequence order within the unit (1-based). Not unique — see Unit.order.
+    order: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Optional KnowledgeComponentId catalog string this lesson trains (see class doc).
+    # NULLABLE: not every lesson maps to a KC yet (DAT.1).
+    kc_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Per-lesson standard codes (finer than the unit cluster). Nullable so a lesson can
+    # exist before its exact standard code is pinned (curriculum is authored incrementally).
+    ccss_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    teks_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Nullable: a lesson row can be created before its blurb is written.
+    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+
+    unit: Mapped[Unit] = relationship(back_populates="lessons")
+
+
+class Roster(Base):
+    """A teacher↔student membership row (Wave 1, DAT.1; TEACHER_NEEDS.md).
+
+    The many-to-many association between a teacher Learner and a student Learner:
+    "this student is in this teacher's roster". A join table rather than a column on
+    Learner because the relationship is many-to-many (a student may appear in more
+    than one teacher's roster; a teacher has many students) and because we want to
+    record WHEN the membership was created.
+
+    Both FKs point at ``learner.id`` (teacher and student are both Learner rows; the
+    ``role`` tag distinguishes them — see ``Learner.role``). CASCADE on both so
+    deleting either learner removes the membership rather than leaving a dangling row.
+    Indexed on both sides so "students of a teacher" and "teachers of a student" are
+    both cheap. The (teacher, student) pair is UNIQUE so the same student cannot be
+    enrolled twice in the same teacher's roster (a clean idempotent enroll target).
+    """
+
+    __tablename__ = "roster"
+    # One membership per (teacher, student): makes enroll idempotent and prevents
+    # duplicate roster rows (TEACHER_NEEDS.md — a roster is a set, not a multiset).
+    __table_args__ = (
+        UniqueConstraint("teacher_id", "student_id", name="uq_roster_teacher_student"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    teacher_id: Mapped[int] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+
+class Assignment(Base):
+    """A unit assigned by a teacher to a student (Wave 1, DAT.1; TEACHER_NEEDS.md).
+
+    The teacher hands a ``Unit`` to a student and tracks its ``status`` as the
+    student works it. ``teacher_id`` records who assigned it (TEACHER_NEEDS.md
+    surfaces "assigned by" and lets a teacher manage their own assignments);
+    ``student_id``/``unit_id`` are the assignment itself.
+
+    ``status`` is a PLAIN STRING tag (default ``"assigned"``), not a DB ENUM — same
+    portability rationale as ``Learner.role`` and ``MasteryState.kc_id``: the state
+    machine's labels can evolve without a Postgres migration, and SQLite/Postgres
+    agree on the type. The status STATE MACHINE itself is owned by the teacher
+    service/policy layer (not modeled here — models are thin, CLAUDE.md §7); this
+    column only persists the current label.
+
+    The (student, unit) pair is UNIQUE (``uq_assignment_student_unit``) so a student
+    has AT MOST ONE assignment per unit. That makes TCH's "assign the next unit"
+    flow an idempotent UPSERT (re-assigning the same unit updates the existing row's
+    status/note rather than spawning duplicates). ``teacher_id`` is deliberately NOT
+    part of the uniqueness: a unit is assigned to a student once regardless of which
+    teacher pressed the button (two teachers cannot create two competing assignments
+    of the same unit to the same student).
+    """
+
+    __tablename__ = "assignment"
+    # One assignment per (student, unit): the idempotent upsert target for "assign
+    # next unit" (TCH). teacher_id is intentionally excluded from the key — see class doc.
+    __table_args__ = (UniqueConstraint("student_id", "unit_id", name="uq_assignment_student_unit"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    teacher_id: Mapped[int] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    unit_id: Mapped[int] = mapped_column(
+        ForeignKey("unit.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # Current state-machine label (e.g. "assigned"). Default "assigned" — a freshly
+    # created assignment is in the initial state. The transitions live in the service
+    # layer; this column only holds the current label (see class doc).
+    status: Mapped[str] = mapped_column(String(32), default="assigned", nullable=False)
+    # Optional free-text note from the teacher to the student ("start here"). Nullable
+    # because most assignments carry none.
+    note: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    # Stamped on every update (status change, note edit) so the dashboard can show
+    # "last touched" and so an upsert reflects when it last ran.
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
