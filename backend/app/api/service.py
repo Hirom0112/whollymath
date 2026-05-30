@@ -43,6 +43,7 @@ from app.api.schemas import (
     InteractionEventIn,
     InterventionKind,
     InterventionView,
+    LessonView,
     MasterySnapshot,
     ProblemView,
     RouteOptionView,
@@ -51,10 +52,15 @@ from app.api.schemas import (
     SurfaceState,
     TurnRequest,
     TurnResponse,
+    UnitDetailView,
+    UnitListView,
+    UnitView,
     WorkedStepView,
 )
 from app.db import repositories as repo
+from app.db.models import Unit
 from app.db.repositories import EventRow
+from app.domain.curriculum import CatalogUnit, all_units, get_unit
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 from app.domain.problem_generators import Problem
 from app.domain.verifier import verify
@@ -66,6 +72,7 @@ from app.mastery.course_map import build_course_map
 from app.mastery.mastery_model import Observation
 from app.mastery.progression import plan_study
 from app.mastery.retention import ReviewableSkill
+from app.mastery.unit_progress import UnitProgress, build_unit_progress
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.policy.scheduler import (
@@ -1215,6 +1222,227 @@ class SessionStore:
             for row in _mastery_rollup(live)
         ]
         return self._course_view(skills, now)
+
+    def _reviewable_skills_for_session(
+        self, session_id: str | None, now: datetime
+    ) -> list[ReviewableSkill]:
+        """Roll an ANONYMOUS demo session's in-memory history up into retention inputs.
+
+        Mirrors the skill construction in :meth:`course_map_for_session`: the demo learner's
+        progress lives only in the live ``_LiveSession`` (the v1 session-id flow, TECH_STACK §9),
+        so we roll its history up (``_mastery_rollup`` — the same per-KC BKT + confirmed readout
+        the persistence layer uses) and project it into the retention model's inputs. An unknown /
+        ``None`` ``session_id`` (a brand-new demo learner) yields ``[]`` — the empty/default path.
+
+        ``last_practiced`` is ``now``: a single live session has no real time gap to decay over
+        (consistent with the retention model's "spacing needs a real cross-session gap" note).
+        """
+        live = self._sessions.get(session_id) if session_id is not None else None
+        if live is None:
+            return []
+        return [
+            ReviewableSkill(
+                kc=row.kc,
+                confirmed=row.confirmed,
+                bkt_probability=row.bkt_probability,
+                last_practiced=now,
+            )
+            for row in _mastery_rollup(live)
+        ]
+
+    # -- units (the unit/lesson shell — Slices DAT.8 / DAT.9 / DAT.10) ----------
+
+    def units_for_learner(self, learner_id: int, now: datetime) -> UnitListView:
+        """A SIGNED-IN learner's unit list with rolled-up progress + assignment (DAT.8/DAT.10).
+
+        Derives the unit list from the CATALOG + the course map + ``build_unit_progress`` (NOT
+        the DB ``unit`` rows), so it returns the full curriculum even with no DB — exactly like
+        :meth:`course_map_for_learner`. The teacher-assigned unit (if any) is resolved via the
+        assignment repository and surfaced as ``assigned_unit_slug`` plus ``assigned=True`` on the
+        matching unit. A pure composition of existing engine state, no new mastery logic
+        (PROJECT.md §3.13); off the turn loop, advisory only (invariant 8/9).
+        """
+        skills = self._reviewable_skills_for_learner(learner_id)
+        assigned_slug = self._assigned_unit_slug(learner_id)
+        return self._unit_list_view(skills, now, assigned_slug=assigned_slug)
+
+    def units_for_session(self, session_id: str | None, now: datetime) -> UnitListView:
+        """An ANONYMOUS demo learner's unit list, from their in-memory session (DAT.8).
+
+        Mirrors :meth:`course_map_for_session`: the unit list is derived from the catalog + the
+        session's rolled-up in-memory mastery. Anonymous callers have no teacher assignment, so
+        ``assigned`` is ``False`` on every unit and ``assigned_unit_slug`` is ``None``. An unknown
+        / ``None`` ``session_id`` yields the fresh default unit list (so the shell always renders).
+        """
+        skills = self._reviewable_skills_for_session(session_id, now)
+        return self._unit_list_view(skills, now, assigned_slug=None)
+
+    def unit_detail_for_learner(
+        self, unit_slug: str, learner_id: int, now: datetime
+    ) -> UnitDetailView | None:
+        """A SIGNED-IN learner's single-unit detail — lessons + per-lesson progress (DAT.9).
+
+        Same derivation as :meth:`units_for_learner` but for one unit. Returns ``None`` when
+        ``unit_slug`` is not in the catalog, so the route can respond with a 404.
+        """
+        skills = self._reviewable_skills_for_learner(learner_id)
+        assigned_slug = self._assigned_unit_slug(learner_id)
+        return self._unit_detail_view(unit_slug, skills, now, assigned_slug=assigned_slug)
+
+    def unit_detail_for_session(
+        self, unit_slug: str, session_id: str | None, now: datetime
+    ) -> UnitDetailView | None:
+        """An ANONYMOUS demo learner's single-unit detail, or None (DAT.9).
+
+        Same derivation as :meth:`units_for_session` but for one unit (no assignment). Returns
+        ``None`` when ``unit_slug`` is not in the catalog, so the route can respond with a 404.
+        """
+        skills = self._reviewable_skills_for_session(session_id, now)
+        return self._unit_detail_view(unit_slug, skills, now, assigned_slug=None)
+
+    def _assigned_unit_slug(self, learner_id: int) -> str | None:
+        """The learner's teacher-assigned unit slug, or ``None`` (DAT.10).
+
+        Reads the assignment via the assignment repository (the ONLY place a DB query lives,
+        CLAUDE.md §7) and resolves the assigned ``unit_id`` to the DB ``Unit`` row's slug — that
+        slug is the same stable key the catalog uses, so it matches a ``UnitView.unit_slug``.
+        Returns ``None`` when there is no session factory (the pure in-memory demo, so no DB to
+        read an assignment from), no current assignment, or the assigned unit row is missing.
+        """
+        if self.session_factory is None:
+            return None
+        with self.session_factory() as db:
+            assignment = repo.get_assigned_unit(db, learner_id)
+            if assignment is None:
+                return None
+            unit = db.get(Unit, assignment.unit_id)
+            return unit.slug if unit is not None else None
+
+    @staticmethod
+    def _unit_progress(skills: list[ReviewableSkill], now: datetime) -> tuple[UnitProgress, ...]:
+        """Derive per-unit progress from the catalog + the course map (DAT.6 bridge).
+
+        Built from the catalog (``all_units``) and the course map (``build_course_map`` over the
+        learner's per-skill state), then overlaid by ``build_unit_progress`` — so the unit list
+        works for the anonymous demo learner with no DB, exactly like :meth:`_course_view`. The
+        confirmed-KC set used for unit gating is the same the course map derives.
+        """
+        nodes = build_course_map(skills, now)
+        confirmed = frozenset(s.kc for s in skills if s.confirmed)
+        return build_unit_progress(all_units(), nodes, confirmed)
+
+    def _unit_list_view(
+        self,
+        skills: list[ReviewableSkill],
+        now: datetime,
+        *,
+        assigned_slug: str | None,
+    ) -> UnitListView:
+        """Map a learner's per-skill state to the wire ``UnitListView`` (DAT.8).
+
+        Shared by the persisted (signed-in) and the live-session (anonymous) lists, so the two
+        sources produce the identical shape. Always returns every catalog unit in teaching order.
+        """
+        catalog_by_slug = {unit.slug: unit for unit in all_units()}
+        units = [
+            self._unit_view(up, catalog_by_slug[up.unit_slug], assigned_slug=assigned_slug)
+            for up in self._unit_progress(skills, now)
+        ]
+        return UnitListView(units=units, assigned_unit_slug=assigned_slug)
+
+    def _unit_detail_view(
+        self,
+        unit_slug: str,
+        skills: list[ReviewableSkill],
+        now: datetime,
+        *,
+        assigned_slug: str | None,
+    ) -> UnitDetailView | None:
+        """Map a learner's per-skill state to one unit's ``UnitDetailView``, or ``None`` (DAT.9).
+
+        Returns ``None`` when ``unit_slug`` is not in the catalog (``get_unit`` raises
+        ``KeyError`` for an unknown slug) so the route 404s, and defensively when the slug has no
+        matching ``UnitProgress`` entry.
+        """
+        try:
+            catalog_unit = get_unit(unit_slug)
+        except KeyError:
+            return None
+        unit_progress = next(
+            (up for up in self._unit_progress(skills, now) if up.unit_slug == unit_slug),
+            None,
+        )
+        if unit_progress is None:
+            return None
+        return self._unit_detail(unit_progress, catalog_unit, assigned_slug=assigned_slug)
+
+    @staticmethod
+    def _unit_view(
+        unit_progress: UnitProgress,
+        catalog_unit: CatalogUnit,
+        *,
+        assigned_slug: str | None,
+    ) -> UnitView:
+        """Project a ``UnitProgress`` + its ``CatalogUnit`` to the wire ``UnitView``.
+
+        Titles / description / cluster codes come from the catalog; ``status`` /
+        ``percent_complete`` / ``lesson_count`` from the rolled-up progress. ``percent_complete``
+        is scaled from the overlay's ``[0, 1]`` fraction to the wire's ``[0, 100]`` percent.
+        """
+        return UnitView(
+            unit_slug=unit_progress.unit_slug,
+            title=catalog_unit.title,
+            description=catalog_unit.description,
+            order=catalog_unit.order,
+            ccss_cluster=catalog_unit.ccss_cluster,
+            teks_cluster=catalog_unit.teks_cluster,
+            status=unit_progress.status,
+            percent_complete=unit_progress.percent_complete * 100.0,
+            lesson_count=len(unit_progress.lessons),
+            assigned=unit_progress.unit_slug == assigned_slug,
+        )
+
+    @staticmethod
+    def _unit_detail(
+        unit_progress: UnitProgress,
+        catalog_unit: CatalogUnit,
+        *,
+        assigned_slug: str | None,
+    ) -> UnitDetailView:
+        """Project a ``UnitProgress`` + its ``CatalogUnit`` to the wire ``UnitDetailView``.
+
+        The unit-card fields (as in :meth:`_unit_view`) plus per-lesson ``LessonView``s: lesson
+        titles + dual-coverage codes come from the catalog (matched by slug), and per-lesson
+        status + probability from the rolled-up ``LessonProgress``. The two are zipped in catalog
+        order — ``build_unit_progress`` preserves the catalog's lesson order — so a positional join
+        is exact; we still index the catalog by slug to be robust to ordering.
+        """
+        catalog_lessons = {lesson.slug: lesson for lesson in catalog_unit.lessons}
+        lessons = [
+            LessonView(
+                lesson_slug=lp.lesson_slug,
+                title=catalog_lessons[lp.lesson_slug].title,
+                kc_id=lp.kc_id,
+                ccss_code=catalog_lessons[lp.lesson_slug].ccss_code,
+                teks_code=catalog_lessons[lp.lesson_slug].teks_code,
+                status=lp.status,
+                probability=lp.probability,
+            )
+            for lp in unit_progress.lessons
+        ]
+        return UnitDetailView(
+            unit_slug=unit_progress.unit_slug,
+            title=catalog_unit.title,
+            description=catalog_unit.description,
+            order=catalog_unit.order,
+            ccss_cluster=catalog_unit.ccss_cluster,
+            teks_cluster=catalog_unit.teks_cluster,
+            status=unit_progress.status,
+            percent_complete=unit_progress.percent_complete * 100.0,
+            lesson_count=len(unit_progress.lessons),
+            assigned=unit_progress.unit_slug == assigned_slug,
+            lessons=lessons,
+        )
 
     def prior_for(self, session_id: str, kc: KnowledgeComponentId) -> float | None:
         """The seeded BKT prior for ``kc`` in a live session, or ``None`` if unknown.

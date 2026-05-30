@@ -28,6 +28,7 @@ from app.api.auth_routes import auth_router
 from app.api.course_routes import course_router
 from app.api.routes import router
 from app.api.service import SessionStore
+from app.api.units_routes import units_router
 from app.db.engine import (
     create_all,
     create_db_engine,
@@ -93,9 +94,7 @@ def _build_session_factory() -> sessionmaker[OrmSession] | None:
             _log.info("no DATABASE_URL; persisting to default SQLite at %s", _DEFAULT_SQLITE_PATH)
             return create_session_factory(engine)
         except Exception:  # noqa: BLE001 — even the default store is best-effort (invariant 7).
-            _log.warning(
-                "could not open default SQLite store; running in-memory (no persistence)"
-            )
+            _log.warning("could not open default SQLite store; running in-memory (no persistence)")
             return None
     try:
         engine = create_db_engine(url)
@@ -103,9 +102,7 @@ def _build_session_factory() -> sessionmaker[OrmSession] | None:
             pass
         return create_session_factory(engine)
     except Exception:  # noqa: BLE001 — configured DB unreachable ⇒ in-memory; the demo still boots.
-        _log.warning(
-            "configured DATABASE_URL is unreachable; running in-memory (no persistence)"
-        )
+        _log.warning("configured DATABASE_URL is unreachable; running in-memory (no persistence)")
         return None
 
 
@@ -154,6 +151,11 @@ def create_app() -> FastAPI:
     # The course-product endpoints (Slice CP.A.1) — also additive and on the authenticated path:
     # /course derives the learning-path home from existing engine state, off the turn loop.
     app.include_router(course_router)
+    # The unit-product endpoints (Slices DAT.8/DAT.9/DAT.10) — additive and on the same optional-
+    # auth path as /course: /units and /unit/{slug} derive the unit/lesson shell from the catalog
+    # + the course map, off the turn loop, surfacing the teacher-assigned unit for a signed-in
+    # learner (DAT.10).
+    app.include_router(units_router)
     return app
 
 

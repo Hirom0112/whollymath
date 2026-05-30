@@ -45,6 +45,12 @@ from app.domain.verifier import ErrorCategory as ErrorType
 # derives, and the two can't drift.
 from app.mastery.course_map import CourseNodeStatus
 
+# UnitStatus is owned by mastery/ (the unit-progress overlay's status vocabulary — see
+# ``unit_progress.build_unit_progress``). The unit-product wire reuses it as the field type,
+# the same single-source-of-truth principle as ``CourseNodeStatus`` above, so the API and the
+# generated TS types speak the exact unit statuses the overlay derives and the two can't drift.
+from app.mastery.unit_progress import UnitStatus
+
 # SurfaceState is owned by policy/ (the adaptation policy's vocabulary — it routes
 # between the five states, ARCHITECTURE.md §7); the API imports it forward so the
 # wire speaks the same enum the policy and tutor do (single source of truth, §4).
@@ -906,6 +912,148 @@ class CourseView(BaseModel):
     )
 
 
+class LessonView(BaseModel):
+    """One lesson within a unit, with the learner's status on its KC (Slice DAT.9).
+
+    The renderable subset of a catalog ``CatalogLesson`` joined to its rolled-up
+    ``LessonProgress`` (``mastery/unit_progress``): the catalog ``title`` + dual-coverage
+    standard codes for display, plus the learner's per-lesson ``status``/``probability`` derived
+    from the lesson's KC course-map node. ``kc_id`` is the raw catalog string (a real KC id, a
+    forward-declared Wave-3 string, or ``null`` for an interleave-gate lesson); ``ccss_code`` /
+    ``teks_code`` are ``null`` where a lesson is single-framework (the honest exceptions in the
+    catalog). ``probability`` is ``null`` until the KC is touched (or for an unmapped lesson).
+    Derived from existing engine state only (PROJECT.md §3.13); off the turn loop, advisory.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    lesson_slug: str = Field(description="Stable lesson slug (unique within the unit).")
+    title: str = Field(description="Human-readable lesson title (catalog).")
+    kc_id: str | None = Field(
+        default=None,
+        description="The lesson's catalog KC string, or null if it maps to no KC yet.",
+    )
+    ccss_code: str | None = Field(
+        default=None,
+        description="Common Core (CCSS) standard code, or null if single-framework.",
+    )
+    teks_code: str | None = Field(
+        default=None,
+        description="Texas (TEKS) standard code, or null if single-framework.",
+    )
+    status: CourseNodeStatus = Field(
+        description="The learner's status on this lesson's KC (the course-map node's status).",
+    )
+    probability: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Stored BKT mastery level for the lesson's KC; null if not yet started.",
+    )
+
+
+class UnitView(BaseModel):
+    """One unit with the learner's rolled-up progress, no lessons (Slice DAT.8).
+
+    The unit-card view for the unit list: the catalog ``title``/``description``/``order`` +
+    dual-coverage cluster codes, plus the learner's aggregated ``status``/``percent_complete``
+    (from ``mastery/unit_progress``) and ``lesson_count``. ``assigned`` is ``true`` only for the
+    signed-in learner's teacher-assigned unit (Slice DAT.10), ``false`` for every other unit and
+    for an anonymous caller. ``ccss_cluster``/``teks_cluster`` are ``null`` for a single-framework
+    unit (e.g. TEKS-only integer arithmetic). Derived from the catalog + course map only
+    (PROJECT.md §3.13: reuse, never rebuild); off the turn loop, advisory.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    unit_slug: str = Field(description="Stable unit slug (unique across the catalog).")
+    title: str = Field(description="Human-readable unit title (catalog).")
+    description: str = Field(description="Short description of the unit (catalog).")
+    order: int = Field(description="Display/teaching order within the catalog (1-based).")
+    ccss_cluster: str | None = Field(
+        default=None,
+        description="Common Core (CCSS) cluster code, or null if single-framework.",
+    )
+    teks_cluster: str | None = Field(
+        default=None,
+        description="Texas (TEKS) cluster code, or null if single-framework.",
+    )
+    status: UnitStatus = Field(description="The learner's aggregated status on this unit.")
+    percent_complete: float = Field(
+        ge=0.0,
+        le=100.0,
+        description="Percent of the unit's lessons completed, in [0, 100].",
+    )
+    lesson_count: int = Field(ge=0, description="Number of lessons in the unit.")
+    assigned: bool = Field(
+        description="True only for the signed-in learner's teacher-assigned unit (DAT.10).",
+    )
+
+
+class UnitListView(BaseModel):
+    """The full unit catalog for one learner, with progress + assignment (Slice DAT.8).
+
+    ``units`` is every catalog unit in teaching order, each a ``UnitView`` with the learner's
+    rolled-up progress — so the frontend can render the unit map and use it as a learning home.
+    Always contains every unit (a path needs all its stops), even for a brand-new learner.
+    ``assigned_unit_slug`` is the teacher-assigned unit for a signed-in learner (Slice DAT.10),
+    or ``null`` when none is assigned OR the caller is anonymous (anonymous demo learners have no
+    teacher assignment).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    units: list[UnitView] = Field(
+        default_factory=list,
+        description="Every unit as a card, in teaching order, with the learner's progress.",
+    )
+    assigned_unit_slug: str | None = Field(
+        default=None,
+        description=(
+            "Slug of the teacher-assigned unit for a signed-in learner (DAT.10), or null when "
+            "none is assigned or the caller is anonymous."
+        ),
+    )
+
+
+class UnitDetailView(BaseModel):
+    """A single unit with its lessons and the learner's per-lesson progress (Slice DAT.9).
+
+    The ``UnitView`` fields (so a detail page needs no second card lookup) plus ``lessons`` — the
+    unit's lessons in catalog order, each a ``LessonView`` carrying the learner's per-lesson
+    status. The frontend renders this as a unit's lesson list / learning-path rail.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    unit_slug: str = Field(description="Stable unit slug (unique across the catalog).")
+    title: str = Field(description="Human-readable unit title (catalog).")
+    description: str = Field(description="Short description of the unit (catalog).")
+    order: int = Field(description="Display/teaching order within the catalog (1-based).")
+    ccss_cluster: str | None = Field(
+        default=None,
+        description="Common Core (CCSS) cluster code, or null if single-framework.",
+    )
+    teks_cluster: str | None = Field(
+        default=None,
+        description="Texas (TEKS) cluster code, or null if single-framework.",
+    )
+    status: UnitStatus = Field(description="The learner's aggregated status on this unit.")
+    percent_complete: float = Field(
+        ge=0.0,
+        le=100.0,
+        description="Percent of the unit's lessons completed, in [0, 100].",
+    )
+    lesson_count: int = Field(ge=0, description="Number of lessons in the unit.")
+    assigned: bool = Field(
+        description="True only for the signed-in learner's teacher-assigned unit (DAT.10).",
+    )
+    lessons: list[LessonView] = Field(
+        default_factory=list,
+        description="The unit's lessons, in catalog order, each with per-lesson progress.",
+    )
+
+
 class MeResponse(BaseModel):
     """The authenticated learner's persistent identity handle + carried-forward mastery (PL.3).
 
@@ -968,6 +1116,7 @@ __all__ = [
     "InteractionEventIn",
     "InterventionKind",
     "InterventionView",
+    "LessonView",
     "MasterySnapshot",
     "MeResponse",
     "StudyPlanView",
@@ -984,5 +1133,9 @@ __all__ = [
     "TransferProbeStepView",
     "TurnRequest",
     "TurnResponse",
+    "UnitDetailView",
+    "UnitListView",
+    "UnitStatus",
+    "UnitView",
     "WorkedStepView",
 ]

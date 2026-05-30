@@ -44,6 +44,10 @@ export type KnowledgeComponentId1 =
  */
 export type InterventionKind = "inline_assertion" | "conceptual_prompt";
 /**
+ * The learner's status on this lesson's KC (the course-map node's status).
+ */
+export type CourseNodeStatus1 = "locked" | "available" | "in_progress" | "mastered" | "due_review";
+/**
  * Representation to render (§3.5).
  */
 export type Representation = "symbolic" | "area_model" | "number_line" | "word_problem";
@@ -92,6 +96,14 @@ export type SurfaceState2 =
   | "S3_fraction_bars_primary"
   | "S4_worked_example"
   | "S5_transfer_probe";
+/**
+ * The learner's aggregated status on this unit.
+ */
+export type UnitStatus = "locked" | "available" | "in_progress" | "mastered";
+/**
+ * The learner's aggregated status on this unit.
+ */
+export type UnitStatus1 = "locked" | "available" | "in_progress" | "mastered";
 
 /**
  * One adaptive-arm turn, display-ready (Slice 5.3 theater). The verified path: the
@@ -602,6 +614,45 @@ export interface InterventionView {
   text: string;
 }
 /**
+ * One lesson within a unit, with the learner's status on its KC (Slice DAT.9).
+ *
+ * The renderable subset of a catalog ``CatalogLesson`` joined to its rolled-up
+ * ``LessonProgress`` (``mastery/unit_progress``): the catalog ``title`` + dual-coverage
+ * standard codes for display, plus the learner's per-lesson ``status``/``probability`` derived
+ * from the lesson's KC course-map node. ``kc_id`` is the raw catalog string (a real KC id, a
+ * forward-declared Wave-3 string, or ``null`` for an interleave-gate lesson); ``ccss_code`` /
+ * ``teks_code`` are ``null`` where a lesson is single-framework (the honest exceptions in the
+ * catalog). ``probability`` is ``null`` until the KC is touched (or for an unmapped lesson).
+ * Derived from existing engine state only (PROJECT.md §3.13); off the turn loop, advisory.
+ */
+export interface LessonView {
+  /**
+   * Stable lesson slug (unique within the unit).
+   */
+  lesson_slug: string;
+  /**
+   * Human-readable lesson title (catalog).
+   */
+  title: string;
+  /**
+   * The lesson's catalog KC string, or null if it maps to no KC yet.
+   */
+  kc_id?: string | null;
+  /**
+   * Common Core (CCSS) standard code, or null if single-framework.
+   */
+  ccss_code?: string | null;
+  /**
+   * Texas (TEKS) standard code, or null if single-framework.
+   */
+  teks_code?: string | null;
+  status: CourseNodeStatus1;
+  /**
+   * Stored BKT mastery level for the lesson's KC; null if not yet started.
+   */
+  probability?: number | null;
+}
+/**
  * A per-KC mastery readout returned to the surface (ARCHITECTURE.md §6).
  *
  * The response carries a snapshot so the UI can show mastery progress without a
@@ -1058,4 +1109,124 @@ export interface WorkedStepView {
    * The one-line 'why did this work?' prompt for this step (§3.5 S4).
    */
   why_prompt: string;
+}
+/**
+ * A single unit with its lessons and the learner's per-lesson progress (Slice DAT.9).
+ *
+ * The ``UnitView`` fields (so a detail page needs no second card lookup) plus ``lessons`` — the
+ * unit's lessons in catalog order, each a ``LessonView`` carrying the learner's per-lesson
+ * status. The frontend renders this as a unit's lesson list / learning-path rail.
+ */
+export interface UnitDetailView {
+  /**
+   * Stable unit slug (unique across the catalog).
+   */
+  unit_slug: string;
+  /**
+   * Human-readable unit title (catalog).
+   */
+  title: string;
+  /**
+   * Short description of the unit (catalog).
+   */
+  description: string;
+  /**
+   * Display/teaching order within the catalog (1-based).
+   */
+  order: number;
+  /**
+   * Common Core (CCSS) cluster code, or null if single-framework.
+   */
+  ccss_cluster?: string | null;
+  /**
+   * Texas (TEKS) cluster code, or null if single-framework.
+   */
+  teks_cluster?: string | null;
+  status: UnitStatus;
+  /**
+   * Percent of the unit's lessons completed, in [0, 100].
+   */
+  percent_complete: number;
+  /**
+   * Number of lessons in the unit.
+   */
+  lesson_count: number;
+  /**
+   * True only for the signed-in learner's teacher-assigned unit (DAT.10).
+   */
+  assigned: boolean;
+  /**
+   * The unit's lessons, in catalog order, each with per-lesson progress.
+   */
+  lessons?: LessonView[];
+}
+/**
+ * The full unit catalog for one learner, with progress + assignment (Slice DAT.8).
+ *
+ * ``units`` is every catalog unit in teaching order, each a ``UnitView`` with the learner's
+ * rolled-up progress — so the frontend can render the unit map and use it as a learning home.
+ * Always contains every unit (a path needs all its stops), even for a brand-new learner.
+ * ``assigned_unit_slug`` is the teacher-assigned unit for a signed-in learner (Slice DAT.10),
+ * or ``null`` when none is assigned OR the caller is anonymous (anonymous demo learners have no
+ * teacher assignment).
+ */
+export interface UnitListView {
+  /**
+   * Every unit as a card, in teaching order, with the learner's progress.
+   */
+  units?: UnitView[];
+  /**
+   * Slug of the teacher-assigned unit for a signed-in learner (DAT.10), or null when none is assigned or the caller is anonymous.
+   */
+  assigned_unit_slug?: string | null;
+}
+/**
+ * One unit with the learner's rolled-up progress, no lessons (Slice DAT.8).
+ *
+ * The unit-card view for the unit list: the catalog ``title``/``description``/``order`` +
+ * dual-coverage cluster codes, plus the learner's aggregated ``status``/``percent_complete``
+ * (from ``mastery/unit_progress``) and ``lesson_count``. ``assigned`` is ``true`` only for the
+ * signed-in learner's teacher-assigned unit (Slice DAT.10), ``false`` for every other unit and
+ * for an anonymous caller. ``ccss_cluster``/``teks_cluster`` are ``null`` for a single-framework
+ * unit (e.g. TEKS-only integer arithmetic). Derived from the catalog + course map only
+ * (PROJECT.md §3.13: reuse, never rebuild); off the turn loop, advisory.
+ */
+export interface UnitView {
+  /**
+   * Stable unit slug (unique across the catalog).
+   */
+  unit_slug: string;
+  /**
+   * Human-readable unit title (catalog).
+   */
+  title: string;
+  /**
+   * Short description of the unit (catalog).
+   */
+  description: string;
+  /**
+   * Display/teaching order within the catalog (1-based).
+   */
+  order: number;
+  /**
+   * Common Core (CCSS) cluster code, or null if single-framework.
+   */
+  ccss_cluster?: string | null;
+  /**
+   * Texas (TEKS) cluster code, or null if single-framework.
+   */
+  teks_cluster?: string | null;
+  status: UnitStatus1;
+  /**
+   * Percent of the unit's lessons completed, in [0, 100].
+   */
+  percent_complete: number;
+  /**
+   * Number of lessons in the unit.
+   */
+  lesson_count: number;
+  /**
+   * True only for the signed-in learner's teacher-assigned unit (DAT.10).
+   */
+  assigned: boolean;
 }
