@@ -5,6 +5,7 @@ export { FractionBar, barToAnswer, type BarValue } from './FractionBar';
 export { YesNo, yesNoToAnswer } from './YesNo';
 export { NumberEntry } from './NumberEntry';
 export { ExpressionInput } from './ExpressionInput';
+export { InequalityInput, inequalityToAnswer } from './InequalityInput';
 export {
   CoordinatePlane,
   pointsToAnswer,

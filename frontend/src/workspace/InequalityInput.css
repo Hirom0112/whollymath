@@ -1,0 +1,98 @@
+/* One-variable inequality input (Unit 4-5 inequalities: write x > 3, x ≤ −2). Structured, not
+   free-text: a read-only variable chip, a relation button group (like the yes/no control), and a
+   boundary-number field (like the whole-number entry). Calm/editorial to match the in-tutor
+   register. Class names unique app-wide (global CSS). */
+
+.wm-ineq {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wm-ineq-prompt {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}
+
+.wm-ineq-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  flex-wrap: wrap;
+}
+
+/* The variable chip — read-only; the item names the variable, the learner picks relation + number. */
+.wm-ineq-var {
+  font-family: var(--wm-font-serif);
+  font-size: 30px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--wm-navy-deep);
+  padding: 0 4px;
+}
+
+.wm-ineq-ops {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* Relation buttons — mirror the yes/no choice style: navy-outlined cream chips that fill navy when
+   selected, so the chosen relation reads clearly. */
+.wm-ineq-op {
+  min-width: 52px;
+  font-family: var(--wm-font-sans);
+  font-size: 24px;
+  font-weight: 700;
+  padding: 8px 10px;
+  color: var(--wm-ink);
+  background: var(--wm-cream-2);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.wm-ineq-op:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-ineq-op--selected {
+  background: var(--wm-navy-deep);
+  color: var(--wm-cream);
+}
+
+.wm-ineq-op:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Boundary-number field — same shape/weight as the whole-number entry. */
+.wm-ineq-num {
+  width: 92px;
+  text-align: center;
+  font-family: var(--wm-font-sans);
+  font-size: 30px;
+  font-weight: 700;
+  padding: 8px 6px;
+  color: var(--wm-ink);
+  background: var(--wm-cream-2);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.wm-ineq-num:focus-visible {
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-ineq-num:disabled {
+  opacity: 0.6;
+}
