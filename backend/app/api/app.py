@@ -16,6 +16,7 @@ uvicorn entrypoint (``uvicorn app.api.app:app``) used in local dev (CLAUDE.md
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -27,8 +28,15 @@ from app.api.auth_routes import auth_router
 from app.api.course_routes import course_router
 from app.api.routes import router
 from app.api.service import SessionStore
-from app.db.engine import create_db_engine, create_session_factory, database_url_from_env
+from app.db.engine import (
+    create_all,
+    create_db_engine,
+    create_session_factory,
+    database_url_from_env,
+)
 from app.helpneed.artifact import load_predictor
+from app.homework.scanner import MathpixScanner, MockScanner
+from app.homework.session import HomeworkStore
 from app.llm.tracing import traced
 from app.persona_surface.hint_renderer import default_hint_provider
 from app.persona_surface.tutor_voice import default_voice_provider
@@ -42,25 +50,62 @@ _log = logging.getLogger(__name__)
 load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 
-def _build_session_factory() -> sessionmaker[OrmSession] | None:
-    """Build the persistence factory from ``DATABASE_URL`` — or ``None`` if no DB is reachable.
+# The default durable store when no ``DATABASE_URL`` is configured (Slice AR.2). An on-disk
+# SQLite file under the gitignored ``backend/data/`` dir, so the DEFAULT running app persists —
+# a passed transfer probe writes ``confirmed=true`` to ``mastery_state`` and the 1★ survives a
+# restart (AUDIT.md §6 blocker 2) — WITHOUT requiring a Postgres to be stood up first. SQLite is
+# already a first-class backend here (the test suite and ``create_db_engine`` both use it); prod
+# still points ``DATABASE_URL`` at RDS Postgres and that path is unchanged. The file lives next
+# to this package's repo root (``backend/data/whollymath.db``); ``backend/data/`` is gitignored.
+_DEFAULT_SQLITE_PATH = Path(__file__).resolve().parents[2] / "data" / "whollymath.db"
 
-    Persistence is OFF the decision path and strictly optional (Slice PL.1, ARCHITECTURE.md
-    §14 invariant 7): the live demo must boot even with no Postgres. So engine creation is
-    wrapped in try/except — a missing ``DATABASE_URL`` (``database_url_from_env`` raises) or an
-    engine that cannot be built is logged and skipped, and the app runs in-memory only. We do a
-    cheap ``connect()`` to surface an unreachable DB at boot rather than on the first turn;
-    note SQLAlchemy ``create_engine`` is lazy, so without this probe a dead DB would only fail
-    later (and harmlessly, since turn-time persistence failures are already swallowed).
+
+def _build_session_factory() -> sessionmaker[OrmSession] | None:
+    """Build the persistence factory — durable by DEFAULT, ``None`` only on an explicit-DB failure.
+
+    Persistence is OFF the decision path and strictly optional (Slice PL.1, ARCHITECTURE.md §14
+    invariant 7): a turn's response is identical with or without a factory, and a write failure
+    is swallowed. But the DEFAULT running app MUST persist so the first mastery star is durable
+    (AUDIT.md §6 blocker 2; PROJECT.md §3.4 "mastered means CONFIRMED"). Resolution order:
+
+      1. ``DATABASE_URL`` set ⇒ use it (prod RDS Postgres, or a local docker-compose Postgres).
+         We probe with a cheap ``connect()`` so an UNREACHABLE explicitly-configured DB surfaces
+         at boot, not on the first turn (``create_engine`` is lazy). If that explicit DB cannot
+         be reached we fall back to ``None`` (in-memory only) rather than silently writing to a
+         different store than the operator configured — the demo still boots (invariant 7).
+      2. No ``DATABASE_URL`` ⇒ default to a durable on-disk SQLite file (``backend/data/``),
+         materializing the schema on first boot via ``create_all`` (SQLite has no migration
+         runner wired; prod Postgres uses Alembic). This is what makes the out-of-the-box app
+         persist the 1★ across a restart with no Postgres required.
+
+    Only a genuinely-unusable filesystem for the default SQLite path degrades to ``None``.
     """
     try:
         url = database_url_from_env()
+    except RuntimeError:
+        # No DATABASE_URL: default to a durable on-disk SQLite store so the app persists by
+        # default (Slice AR.2). create_all is idempotent, so re-boot over an existing file is a
+        # no-op; it materializes the schema on the very first boot (no Alembic for SQLite here).
+        try:
+            _DEFAULT_SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            engine = create_db_engine(f"sqlite:///{_DEFAULT_SQLITE_PATH}")
+            create_all(engine)
+            _log.info("no DATABASE_URL; persisting to default SQLite at %s", _DEFAULT_SQLITE_PATH)
+            return create_session_factory(engine)
+        except Exception:  # noqa: BLE001 — even the default store is best-effort (invariant 7).
+            _log.warning(
+                "could not open default SQLite store; running in-memory (no persistence)"
+            )
+            return None
+    try:
         engine = create_db_engine(url)
         with engine.connect():
             pass
         return create_session_factory(engine)
-    except Exception:  # noqa: BLE001 — no DB ⇒ in-memory only; the demo still boots (invariant 7).
-        _log.warning("no database reachable; running in-memory (no session/mastery persistence)")
+    except Exception:  # noqa: BLE001 — configured DB unreachable ⇒ in-memory; the demo still boots.
+        _log.warning(
+            "configured DATABASE_URL is unreachable; running in-memory (no persistence)"
+        )
         return None
 
 
@@ -97,6 +142,11 @@ def create_app() -> FastAPI:
         # so the app boots with no Postgres. Writes are off the decision path (invariant 7).
         session_factory=_build_session_factory(),
     )
+    # The homework scan flow's store (PROJECT.md §3.4 two-star model): one per app instance, like
+    # the turn-loop store, so runs are isolated between apps. Real Mathpix OCR when MATHPIX_APP_KEY
+    # is configured, else the deterministic MockScanner (no key needed) — same flow either way.
+    homework_scanner = MathpixScanner() if os.environ.get("MATHPIX_APP_KEY") else MockScanner()
+    app.state.homework_store = HomeworkStore(scanner=homework_scanner)
     app.include_router(router)
     # The Google-OIDC account endpoints (Slice PL.3), additive and independent of the turn loop:
     # mounting this router adds /me without touching the turn endpoints' (identity-free) contract.

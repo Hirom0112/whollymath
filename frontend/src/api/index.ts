@@ -10,8 +10,14 @@
 // (vite.config.ts), so the browser sees one origin and there is no CORS to manage.
 
 import type {
+  BenchmarkPersonaSummaryView,
+  BenchmarkTranscriptView,
   CourseView,
   EventBatchRequest,
+  HwAssignResponse,
+  HwConfirmAnswer,
+  HwStatusResponse,
+  HwSubmitResponse,
   InteractionEventIn,
   KnowledgeComponentId,
   MeResponse,
@@ -38,11 +44,23 @@ function authHeaders(): Record<string, string> {
 
 export type {
   ActionType,
+  AdaptiveTurnView,
   ArmVerdictView,
+  BenchmarkPersonaSummaryView,
+  BenchmarkTranscriptView,
+  ChatTurnView,
   CourseNodeStatus,
   CourseNodeView,
   CourseView,
   ErrorCategory,
+  HwAssignResponse,
+  HwConfirmAnswer,
+  HwDraftItemView,
+  HwGradeResultView,
+  HwQuestionResultView,
+  HwQuestionView,
+  HwStatusResponse,
+  HwSubmitResponse,
   EventBatchRequest,
   InteractionEventIn,
   InterventionKind,
@@ -58,8 +76,10 @@ export type {
   RouteOptionView,
   StartSessionRequest,
   StartSessionResponse,
+  StaticTurnView,
   SurfaceState,
   ThreeArmComparisonView,
+  TransferProbeStepView,
   TurnRequest,
   TurnResponse,
 } from '@whollymath/shared-types';
@@ -185,4 +205,53 @@ export async function fetchCourse(sessionId?: string | null): Promise<CourseView
  */
 export async function fetchThreeArmComparison(): Promise<ThreeArmComparisonView> {
   return getJson<ThreeArmComparisonView>('/eval/three-arm-comparison');
+}
+
+/**
+ * The five adversarial personas for the benchmark-theater switcher (PROJECT.md §4.2).
+ * Pure data on the server — who each learner is and the one mastery dimension they attack.
+ */
+export async function fetchBenchmarkPersonas(): Promise<BenchmarkPersonaSummaryView[]> {
+  return getJson<BenchmarkPersonaSummaryView[]>('/eval/benchmark-personas');
+}
+
+/**
+ * One persona's run through all three arms, turn by turn (a teaching view of Slice 5.3).
+ * Deterministic and free on the server — the chat arm uses an offline illustrative provider,
+ * so the per-turn tutor wording is a placeholder while the verdict comes from a recorded run.
+ */
+export async function fetchBenchmarkTranscript(
+  personaId: string,
+): Promise<BenchmarkTranscriptView> {
+  return getJson<BenchmarkTranscriptView>(
+    `/eval/benchmark-transcript/${encodeURIComponent(personaId)}`,
+  );
+}
+
+/* ── Homework scan flow (PROJECT.md §3.4 two-star model) ── */
+
+/** Start a homework run for a skill at lesson end → the upload token (QR payload) + questions. */
+export async function hwAssign(
+  kc: KnowledgeComponentId,
+  sessionId?: string | null,
+): Promise<HwAssignResponse> {
+  return postJson<HwAssignResponse>('/hw/assign', { kc, session_id: sessionId ?? null });
+}
+
+/** Upload the phone's page photos (base64) for a run → transcribe a draft (ready_for_review). */
+export async function hwSubmit(token: string, pages: string[]): Promise<HwSubmitResponse> {
+  return postJson<HwSubmitResponse>('/hw/submit', { token, pages });
+}
+
+/** Poll a run (the desktop, while it waits): state + the read-back draft + the graded verdict. */
+export async function hwStatus(token: string): Promise<HwStatusResponse> {
+  return getJson<HwStatusResponse>(`/hw/status?token=${encodeURIComponent(token)}`);
+}
+
+/** Grade the learner-confirmed answers (after the read-back) → the ★★ verdict. */
+export async function hwConfirm(
+  token: string,
+  answers: HwConfirmAnswer[],
+): Promise<HwStatusResponse> {
+  return postJson<HwStatusResponse>('/hw/confirm', { token, answers });
 }

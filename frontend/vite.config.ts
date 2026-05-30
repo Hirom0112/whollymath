@@ -11,6 +11,10 @@ const API_TARGET = 'http://localhost:8000';
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Bind to the LAN (0.0.0.0) so a phone on the same wifi can open the homework scan page by
+    // QR (PROJECT.md §3.4 two-star model). Harmless for desktop dev. In production the phone hits
+    // the public HTTPS URL directly, so none of this matters there.
+    host: true,
     proxy: {
       '/health': API_TARGET,
       '/routing-choices': API_TARGET,
@@ -20,6 +24,7 @@ export default defineConfig({
       '/course': API_TARGET,
       '/me': API_TARGET,
       '/events': API_TARGET,
+      '/hw': API_TARGET,
     },
   },
   test: {

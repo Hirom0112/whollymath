@@ -25,6 +25,21 @@ export type KnowledgeComponentId =
  */
 export type CourseNodeStatus = "locked" | "available" | "in_progress" | "mastered" | "due_review";
 /**
+ * Stable KC identifiers, matching `diagnostic_gems.json` `_meta.kc_catalog`.
+ *
+ * ``StrEnum`` makes a member compare equal to and serialize as its catalog
+ * string, so the diagnostic-gem bank, the DB, and the API all speak the same
+ * id, while still giving us guaranteed-unique members and a typed handle for
+ * code that should not pass raw strings around. The string VALUES are the
+ * contract with the catalog and must not change without updating the catalog.
+ */
+export type KnowledgeComponentId1 =
+  | "KC_equivalence"
+  | "KC_common_denominator"
+  | "KC_addition_unlike"
+  | "KC_subtraction_unlike"
+  | "KC_number_line_placement";
+/**
  * Which intervention form was offered (§3.7).
  */
 export type InterventionKind = "inline_assertion" | "conceptual_prompt";
@@ -79,6 +94,50 @@ export type SurfaceState2 =
   | "S5_transfer_probe";
 
 /**
+ * One adaptive-arm turn, display-ready (Slice 5.3 theater). The verified path: the
+ * persona's answer, the SymPy verdict, the labelled error class, the one-line feedback, the
+ * resulting surface state, and the §3.4 effort/scaffold flags (hinted, below engagement floor).
+ */
+export interface AdaptiveTurnView {
+  problem_statement: string;
+  /**
+   * The representation shown, e.g. 'Number line'.
+   */
+  format_label: string;
+  /**
+   * The persona's submitted answer, or '—' for none.
+   */
+  student_answer: string;
+  /**
+   * The SymPy verdict for this turn (domain decides).
+   */
+  correct: boolean;
+  /**
+   * 'Correct' or the labelled error, e.g. 'Magnitude'.
+   */
+  result_label: string;
+  /**
+   * The tutor's one-line labelled feedback for the turn.
+   */
+  feedback: string;
+  /**
+   * Surface state after the turn, e.g. 'S1 · symbolic'.
+   */
+  state_label: string;
+  /**
+   * Whether the attempt was scaffolded (down-weighted).
+   */
+  hint_used: boolean;
+  /**
+   * Whether the answer landed under the 2s engagement floor (non-evidence).
+   */
+  below_engagement_floor: boolean;
+  /**
+   * How long the persona 'thought', e.g. '12.0s'.
+   */
+  latency_label: string;
+}
+/**
  * One arm's mastery verdict for one persona, pre-formatted for display.
  *
  * The view layer (``api/eval_view``) maps the raw eval outcome to a label + a tone the
@@ -101,6 +160,171 @@ export interface ArmVerdictView {
    * One-line explanation (e.g. 'blocked at: transfer_probe').
    */
   detail: string;
+}
+/**
+ * One entry in the benchmark-theater persona switcher: who, and the mastery dimension
+ * they attack (PROJECT.md §4.2). Display-ready; the surface renders these verbatim.
+ */
+export interface BenchmarkPersonaSummaryView {
+  /**
+   * Opaque persona id; sent back to load that transcript.
+   */
+  persona_id: string;
+  /**
+   * Display name, e.g. 'Procedure Priya'.
+   */
+  persona_name: string;
+  /**
+   * The one mastery rule/dimension this learner attacks.
+   */
+  attacks: string;
+  /**
+   * The knowledge component the run targets.
+   */
+  kc: string;
+}
+/**
+ * One persona run through all three arms, turn by turn, with each arm's verdict — the
+ * on-screen "benchmark theater" (a teaching view of Slice 5.3 / PROJECT.md §3.11).
+ *
+ * The adaptive verdict is the real two-stage gate (provisional ``declare_mastery`` then the
+ * S5 transfer probe); the chat verdict is the recorded LIVE self-certification (or the §9
+ * prediction when no live run is committed); static has no mastery construct by design.
+ */
+export interface BenchmarkTranscriptView {
+  persona_id: string;
+  persona_name: string;
+  attacks: string;
+  kc: string;
+  /**
+   * The problem statements, the same set fed every arm.
+   */
+  problems: string[];
+  adaptive_turns: AdaptiveTurnView[];
+  /**
+   * Display label, e.g. 'Denied ✓ — refused mastery'.
+   */
+  adaptive_verdict: string;
+  /**
+   * good | bad — drives the surface styling.
+   */
+  adaptive_tone: string;
+  /**
+   * Plain-language, demo-ready explanation of the verdict.
+   */
+  adaptive_why: string;
+  /**
+   * Stage that caught the learner (provisional | transfer_probe | NOT BLOCKED).
+   */
+  adaptive_blocked_at: string;
+  /**
+   * The exact rule(s) that denied mastery.
+   */
+  adaptive_reasons?: string[];
+  /**
+   * True when the learner reached provisional and the transfer probe ran.
+   */
+  adaptive_probe_ran: boolean;
+  /**
+   * The transfer-probe items, shown when the probe ran.
+   */
+  adaptive_probe_steps?: TransferProbeStepView[];
+  chat_turns: ChatTurnView[];
+  /**
+   * Display label, e.g. 'Mastered ✗ (false positive)'.
+   */
+  chat_verdict: string;
+  /**
+   * good | bad | pending — drives the surface styling.
+   */
+  chat_tone: string;
+  /**
+   * Plain-language, demo-ready explanation of the chat verdict.
+   */
+  chat_why: string;
+  /**
+   * The chat tutor's own MASTERED/NOT_YET word (or a prediction note).
+   */
+  chat_self_assessment: string;
+  /**
+   * True when the verdict reflects a real recorded LLM run.
+   */
+  chat_live: boolean;
+  /**
+   * The standing caveat that the chat replies above are offline placeholders.
+   */
+  chat_illustrative_note: string;
+  static_turns: StaticTurnView[];
+  /**
+   * Always 'N/A — certifies nothing' (no mastery model).
+   */
+  static_verdict: string;
+  /**
+   * neutral — the static arm has no verdict to style.
+   */
+  static_tone: string;
+  /**
+   * One-line note that the arm never checks or tracks.
+   */
+  static_note: string;
+}
+/**
+ * One item of the S5 transfer probe, made visible (PROJECT.md §3.9): the step that tests
+ * understanding rather than computation — a same-skill-new-format item, or an error-finding
+ * 'Tim says ¼+¼=2/8, why is he wrong?' item — with its pass/fail and a plain-language line.
+ */
+export interface TransferProbeStepView {
+  /**
+   * 'representation' (new format) or 'error_finding'.
+   */
+  item_type: string;
+  /**
+   * What the learner was shown for this probe item.
+   */
+  prompt: string;
+  /**
+   * The representation of the item, e.g. 'number_line'.
+   */
+  surface_format: string;
+  /**
+   * Whether the learner passed this transfer item.
+   */
+  passed: boolean;
+  /**
+   * Plain-language line on what the persona did here.
+   */
+  detail: string;
+}
+/**
+ * One chat-arm exchange, display-ready. ``tutor_reply`` is an ILLUSTRATIVE placeholder in
+ * the offline theater (no live model is called) — the arm's real signal is its self-
+ * certification verdict on the transcript, not this wording (CLAUDE.md §5, §8.2).
+ */
+export interface ChatTurnView {
+  problem_statement: string;
+  /**
+   * The persona's typed answer (same as every arm).
+   */
+  student_answer: string;
+  /**
+   * Illustrative chat reply (offline placeholder, labelled).
+   */
+  tutor_reply: string;
+}
+/**
+ * One static-arm screen, display-ready: the fixed worked-example walkthrough shown, and the
+ * answer the learner submitted — recorded UNVERIFIED (the arm has no verifier, by design).
+ */
+export interface StaticTurnView {
+  problem_statement: string;
+  /**
+   * The pre-rendered linear walkthrough shown for the item.
+   */
+  walkthrough: string;
+  /**
+   * The submitted answer, recorded but never checked.
+   */
+  student_answer: string;
 }
 /**
  * One KC's place on the course map (Slice CP.A.1 — the course-product home screen).
@@ -215,6 +439,151 @@ export interface EventIngestResponse {
    * Number of events accepted for best-effort persist.
    */
   accepted: number;
+}
+/**
+ * Start a homework run for a skill (the desktop, at lesson end). Returns a token for the QR.
+ */
+export interface HwAssignRequest {
+  kc: KnowledgeComponentId1;
+  /**
+   * Optional session this homework belongs to (carried for context).
+   */
+  session_id?: string | null;
+}
+/**
+ * The freshly-created homework run: the upload token (QR payload) + the question list.
+ */
+export interface HwAssignResponse {
+  /**
+   * One-time upload token; the QR encodes it.
+   */
+  token: string;
+  /**
+   * The anchored target skill.
+   */
+  target_kc: string;
+  /**
+   * The set, in order (target first).
+   */
+  questions: HwQuestionView[];
+}
+/**
+ * One homework question, for the desktop checklist + the mobile capture screen.
+ */
+export interface HwQuestionView {
+  /**
+   * 0-based position in the set (the grading/scan index).
+   */
+  index: number;
+  /**
+   * The kid-facing problem text.
+   */
+  statement: string;
+  /**
+   * True for the anchored target skill; False for spaced review.
+   */
+  is_target: boolean;
+}
+/**
+ * One learner-confirmed answer from the read-back (may differ from the draft if corrected).
+ */
+export interface HwConfirmAnswer {
+  index: number;
+  /**
+   * The confirmed answer text, or null if left blank.
+   */
+  answer?: string | null;
+}
+/**
+ * The confirmed answers to grade (after the desktop read-back).
+ */
+export interface HwConfirmRequest {
+  token: string;
+  /**
+   * Confirmed answer per question index.
+   */
+  answers: HwConfirmAnswer[];
+}
+/**
+ * One question's DRAFT transcription, shown for the read-back ('I read this as 1/4 — yes?').
+ */
+export interface HwDraftItemView {
+  index: number;
+  statement: string;
+  is_target: boolean;
+  /**
+   * What the scanner read for this question; null if unreadable.
+   */
+  read_as?: string | null;
+}
+/**
+ * The graded set + the ★★ verdict (target-skill score ≥ 0.8 = passed).
+ */
+export interface HwGradeResultView {
+  results: HwQuestionResultView[];
+  target_correct: number;
+  target_total: number;
+  target_score: number;
+  /**
+   * True = ★★ earned; False = redo the lesson + a fresh set.
+   */
+  passed: boolean;
+}
+/**
+ * One graded question — for the 1-on-1 walk-through (right or wrong).
+ */
+export interface HwQuestionResultView {
+  index: number;
+  statement: string;
+  is_target: boolean;
+  submitted: string | null;
+  correct: boolean;
+  unreadable: boolean;
+}
+/**
+ * What the desktop polls: the run state, the draft (for the read-back), and the verdict.
+ */
+export interface HwStatusResponse {
+  /**
+   * waiting | ready_for_review | graded.
+   */
+  state: string;
+  /**
+   * The transcribed draft (present once photos are in).
+   */
+  draft?: HwDraftItemView[];
+  /**
+   * The graded verdict (present once confirmed).
+   */
+  result?: HwGradeResultView | null;
+}
+/**
+ * The phone's page photos for a run — base64-encoded images (no multipart dependency).
+ */
+export interface HwSubmitRequest {
+  /**
+   * The run's upload token (from the QR).
+   */
+  token: string;
+  /**
+   * One or more page images, base64-encoded (data may be raw or data-URL).
+   *
+   * @minItems 1
+   */
+  pages: [string, ...string[]];
+}
+/**
+ * Acknowledges the upload and reports the new run state (``ready_for_review``).
+ */
+export interface HwSubmitResponse {
+  /**
+   * Run state after the upload (waiting | ready_for_review | graded).
+   */
+  state: string;
+  /**
+   * How many questions the draft now covers.
+   */
+  question_count: number;
 }
 /**
  * A proactively-offered help nudge (Slice 4.5), or absent when none is offered.
@@ -398,9 +767,17 @@ export interface ProblemView {
    */
   yes_no_relation?: string;
   /**
-   * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
+   * Number-line only: equal intervals PER UNIT to snap a drag to (the target's denominator); null otherwise. The total ticks shown is ``(axis_max - axis_min) * tick_segments``.
    */
   tick_segments?: number | null;
+  /**
+   * Number-line only: the left end of the axis. 0 for a proper-fraction or improper placement; negative for a negative target (e.g. −2 to place −5/4) — CCSS 6.NS.6. Ignored by non-number-line surfaces.
+   */
+  axis_min?: number;
+  /**
+   * Number-line only: the right end of the axis. 1 for a proper fraction, 2 for an improper target (e.g. 5/4), so the marker can sit PAST the '1' whole. Ignored by non-number-line surfaces.
+   */
+  axis_max?: number;
   /**
    * Equivalence fill-the-top only: the denominator named in the question ('?/8'), pre-filled and locked so the learner enters only the numerator. Null otherwise.
    */
@@ -492,9 +869,17 @@ export interface ProblemView1 {
    */
   yes_no_relation?: string;
   /**
-   * Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.
+   * Number-line only: equal intervals PER UNIT to snap a drag to (the target's denominator); null otherwise. The total ticks shown is ``(axis_max - axis_min) * tick_segments``.
    */
   tick_segments?: number | null;
+  /**
+   * Number-line only: the left end of the axis. 0 for a proper-fraction or improper placement; negative for a negative target (e.g. −2 to place −5/4) — CCSS 6.NS.6. Ignored by non-number-line surfaces.
+   */
+  axis_min?: number;
+  /**
+   * Number-line only: the right end of the axis. 1 for a proper fraction, 2 for an improper target (e.g. 5/4), so the marker can sit PAST the '1' whole. Ignored by non-number-line surfaces.
+   */
+  axis_max?: number;
   /**
    * Equivalence fill-the-top only: the denominator named in the question ('?/8'), pre-filled and locked so the learner enters only the numerator. Null otherwise.
    */
@@ -648,6 +1033,10 @@ export interface TurnResponse {
    * The ordered worked steps to reveal when ``next_surface_state`` is S4_worked_example; empty otherwise. This is the worked solution of the problem the learner JUST got stuck on — NOT ``next_problem`` (which is the fresh practice item and whose answer must not be revealed). The surface reveals these one step at a time, each with its 'why?' prompt (§3.5 S4). May be empty even on an S4 turn when the stuck problem's KC procedure has no buildable worked example (e.g. a yes/no item with no operand pair) — the surface then shows S4 without a walkthrough rather than the loop failing.
    */
   worked_example?: WorkedStepView[];
+  /**
+   * True on the turn that FINISHES the lesson — i.e. the goal KC just became CONFIRMED (the S5 transfer probe passed). The bounded-lesson terminal signal (CP.B; PROJECT.md §3.13): the surface shows the 'you finished it' screen and routes the learner home instead of presenting yet another practice problem. ``next_problem`` may still be populated as an optional 'keep practicing' item, but a complete lesson must not silently loop on. False on every other turn.
+   */
+  lesson_complete?: boolean;
 }
 /**
  * One revealed step of an S4 worked example, on the wire (Slice 3.6 → API).
