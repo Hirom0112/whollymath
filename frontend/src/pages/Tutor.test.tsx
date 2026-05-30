@@ -23,6 +23,23 @@ const SESSION: StartSessionResponse = {
   },
 };
 
+// An expression-answer session (KC_write_expressions, 6.EE.2a): the backend derives
+// widget_id "expression" from the EXPRESSION representation, so selectWidget routes it to the
+// typed ExpressionInput rather than the fraction editor. Pins that the expression widget is
+// wired live end-to-end (the answer string reaches /turn unchanged for SymPy grading).
+const EXPR_SESSION: StartSessionResponse = {
+  session_id: 'sess-expr',
+  surface_state: 'S1_symbolic_focus',
+  problem: {
+    problem_id: 'gen-expr-1',
+    kc: 'KC_write_expressions',
+    surface_format: 'expression',
+    statement: 'Write an expression for "7 more than p".',
+    answer_kind: 'expression',
+    widget_id: 'expression',
+  },
+};
+
 const CORRECT_TURN: TurnResponse = {
   correct: true,
   error_type: 'none',
@@ -143,6 +160,27 @@ describe('Tutor', () => {
     fireEvent.click(next);
     // Advancing mounts the next problem statement returned by the loop.
     expect(screen.getByRole('heading', { name: /1\/2 \+ 1\/5/i })).toBeInTheDocument();
+  });
+
+  it('renders the typed expression widget and submits the string through /turn', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(CORRECT_TURN)));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<Tutor session={EXPR_SESSION} />);
+
+    // An expression problem routes to ExpressionInput (the free-text algebra field), NOT the
+    // numerator/denominator fraction editor.
+    expect(screen.queryByLabelText(/numerator/i)).not.toBeInTheDocument();
+    const field = screen.getByLabelText(/your expression/i);
+    fireEvent.change(field, { target: { value: 'p + 7' } });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+
+    expect(await screen.findByText(/correct/i)).toBeInTheDocument();
+    // The typed string reaches /turn unchanged — SymPy grades equivalence server-side (§8.2).
+    const calls = fetchMock.mock.calls as unknown as [string, RequestInit?][];
+    const turnCall = calls.find((c) => c[0] === '/turn');
+    expect(turnCall).toBeDefined();
+    const turnBody = JSON.parse(String(turnCall?.[1]?.body)) as Record<string, unknown>;
+    expect(turnBody).toMatchObject({ submitted_answer: 'p + 7', action: 'submit_answer' });
   });
 
   it('requesting a hint surfaces the nudge (mascot speech) without advancing', async () => {

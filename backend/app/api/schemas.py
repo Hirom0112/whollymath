@@ -194,7 +194,9 @@ class ProblemView(BaseModel):
     statement: str = Field(min_length=1, description="Kid-friendly problem text.")
     answer_kind: AnswerKind = Field(
         default=AnswerKind.NUMERIC,
-        description="How to answer: a numeric fraction (default) or yes/no buttons.",
+        description=(
+            "How to answer: a numeric fraction (default), yes/no buttons, or a typed expression."
+        ),
     )
     yes_no_relation: str = Field(
         default="equal",

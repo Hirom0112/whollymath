@@ -12,15 +12,10 @@ import {
   type SurfaceState,
   type TurnResponse,
 } from '../api';
-import {
-  Mascot,
-  PiMenu,
-  SparkCount,
-  WoodBanner,
-  type PiMenuItem,
-} from '../components';
+import { Mascot, PiMenu, SparkCount, WoodBanner, type PiMenuItem } from '../components';
 import { useTelemetry } from '../telemetry';
 import {
+  ExpressionInput,
   fractionToAnswer,
   NumberEntry,
   NumberLine,
@@ -146,7 +141,7 @@ type Phase = 'answering' | 'submitting' | 'feedback';
 
 // Which input the learner edited — distinguishes a number-line drag from a typed answer in
 // the behavioral stream (Slice PL.2).
-type TelemetryEditKind = 'fraction' | 'numberline' | 'yesno' | 'number';
+type TelemetryEditKind = 'fraction' | 'numberline' | 'yesno' | 'number' | 'expression';
 
 // The one-line reason shown when the surface changes between problems (refuse-rule 4: never
 // present a new state without saying why). The labeled morph is the centerpiece of the
@@ -166,6 +161,7 @@ const KC_LABEL: Record<string, string> = {
   KC_addition_unlike: 'Adding fractions',
   KC_subtraction_unlike: 'Subtracting fractions',
   KC_number_line_placement: 'Number line',
+  KC_write_expressions: 'Writing expressions',
 };
 
 // Fuller, sentence-style lesson titles for the header headline (the mock shows the human
@@ -177,6 +173,7 @@ const KC_TITLE: Record<string, string> = {
   KC_addition_unlike: 'Add fractions with unlike denominators',
   KC_subtraction_unlike: 'Subtract fractions with unlike denominators',
   KC_number_line_placement: 'Place a fraction on a number line',
+  KC_write_expressions: 'Write an expression from words',
 };
 
 // τ — the mastery probability threshold (PROJECT.md §3.4 / mastery_model), τ=0.90. The progress
@@ -242,6 +239,9 @@ export function Tutor({
   const [yesNo, setYesNo] = useState<boolean | null>(null);
   // The whole-number answer for a common-denominator item (a shared piece-size, not a fraction).
   const [numberAnswer, setNumberAnswer] = useState('');
+  // The typed algebra string for an expression-answer item (write/equivalent expressions). Graded
+  // by SymPy equivalence on the backend (§8.2); the surface only keeps it SymPy-parseable.
+  const [expression, setExpression] = useState('');
   const [phase, setPhase] = useState<Phase>('answering');
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -365,6 +365,7 @@ export function Tutor({
   const isNumberLine = widgetKind === 'number_line';
   const isYesNo = widgetKind === 'yes_no';
   const isNumberEntry = widgetKind === 'number_entry';
+  const isExpression = widgetKind === 'expression';
 
   // Number-line axis (CP.B / 6.NS.6): proper targets sit on 0–1, improper stretch the right
   // end (5/4 → 0–2), negatives the left (−3/4 → −1…1). `unitSegments` is ticks-per-whole (the
@@ -390,6 +391,10 @@ export function Tutor({
   } else if (isNumberEntry) {
     submittedAnswer = numberAnswer;
     canSubmit = numberAnswer !== '';
+  } else if (isExpression) {
+    // The typed algebra string; SymPy grades it by equivalence, so we only require non-empty here.
+    submittedAnswer = expression;
+    canSubmit = expression.trim() !== '';
   } else {
     submittedAnswer = fractionToAnswer(fraction);
     canSubmit = submittedAnswer !== '';
@@ -533,6 +538,7 @@ export function Tutor({
     setTick(null);
     setYesNo(null);
     setNumberAnswer('');
+    setExpression('');
     setHint(null);
     setHintUsed(false);
     setRevealCount(1);
@@ -732,6 +738,16 @@ export function Tutor({
                   disabled={phase === 'submitting'}
                   prompt="Your answer"
                   unit="equal pieces"
+                />
+              ) : isExpression ? (
+                <ExpressionInput
+                  value={expression}
+                  onChange={(v) => {
+                    setExpression(v);
+                    noteInteraction('expression', { value: v });
+                  }}
+                  disabled={phase === 'submitting'}
+                  prompt="Write the expression"
                 />
               ) : (
                 <SymbolicEditor

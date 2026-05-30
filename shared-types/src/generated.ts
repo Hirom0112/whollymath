@@ -173,12 +173,7 @@ export type CourseNodeStatus1 = "locked" | "available" | "in_progress" | "master
 /**
  * Representation to render (§3.5).
  */
-export type Representation =
-  | "symbolic"
-  | "area_model"
-  | "number_line"
-  | "word_problem"
-  | "expression";
+export type Representation = "symbolic" | "area_model" | "number_line" | "word_problem" | "expression";
 /**
  * How to answer: a numeric fraction (default), yes/no buttons, or a typed expression.
  */
