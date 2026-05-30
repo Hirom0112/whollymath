@@ -7,6 +7,9 @@ export { NumberEntry } from './NumberEntry';
 export { ExpressionInput } from './ExpressionInput';
 export { InequalityInput, inequalityToAnswer } from './InequalityInput';
 export { ClassifySets, selectionToAnswer, answerToSelection } from './ClassifySets';
+// Display-only stimulus (not a WorkspaceWidget answer input): a labeled geometry figure for the
+// Unit-6 area/volume problem statements; geometry answers stay numeric via NumberEntry.
+export { FigureStimulus, describeFigure, type FigureSpec } from './FigureStimulus';
 export {
   CoordinatePlane,
   pointsToAnswer,

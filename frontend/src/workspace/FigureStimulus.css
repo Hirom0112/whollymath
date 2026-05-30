@@ -1,0 +1,49 @@
+/* Display-only geometry figure for the Unit-6 area/volume problem statements (rectangle, triangle,
+   parallelogram, right rectangular prism). A labeled SVG drawing — navy outline on cream, serif
+   dimension labels, dashed altitude where a height is shown. Static (no animation), so inherently
+   reduced-motion safe. Class names unique app-wide (global CSS). */
+
+.wm-fig {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.wm-fig-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The figure outline — navy on a faint cream fill so the shape reads clearly. */
+.wm-fig-shape {
+  fill: var(--wm-cream-2);
+  fill-opacity: 0.7;
+  stroke: var(--wm-navy-deep);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+/* The receding faces of the prism — lighter, to read as "behind" the front face. */
+.wm-fig-shape--back {
+  fill: var(--wm-cream);
+  fill-opacity: 0.5;
+}
+
+/* Auxiliary construction line (a triangle/parallelogram altitude) — dashed navy. */
+.wm-fig-aux {
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+
+/* Dimension labels — bold navy serif. */
+.wm-fig-dim {
+  fill: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 18px;
+  font-weight: 700;
+}
