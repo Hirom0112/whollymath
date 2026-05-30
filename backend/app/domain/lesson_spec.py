@@ -268,11 +268,28 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
     ),
     # ─── Grade-6 content build (2026-05-30) — Unit 1: Ratios & Rates ───
     # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors
-    # route back to SYMBOLIC — there is no richer surface for a rate yet (WORD_PROBLEM has no
-    # surface state, NUMBER_LINE/AREA_MODEL don't model a rate), so "re-try on the same surface
-    # with a labeled hint" is the honest adaptation until a rate widget lands (T3). The
-    # WORD_PROBLEM representation is the story framing (satisfies the ≥2-rep contract); it
-    # becomes the masterable second surface once it has a live widget.
+    # route back to SYMBOLIC — WORD_PROBLEM has no surface state and NUMBER_LINE/AREA_MODEL don't
+    # model a part-whole comparison, so "re-try on the same surface with a labeled hint" is the
+    # honest adaptation until a ratio widget lands (T3). The WORD_PROBLEM representation is the
+    # story framing (satisfies the ≥2-rep contract); it becomes the masterable surface then.
+    _spec(
+        _KC.RATIO_LANGUAGE,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Compare the asked colour to ALL the counters — the whole, not the other colour.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "A part of the whole is smaller than the whole — re-check what's on the bottom.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
     _spec(
         _KC.UNIT_RATE,
         error_routes=(

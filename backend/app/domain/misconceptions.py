@@ -73,6 +73,8 @@ class MisconceptionId(StrEnum):
     # Unit 1: applying the conversion factor upside-down — dividing (or flipping the factor)
     # when converting to the SMALLER unit, where you should multiply.
     CONVERSION_INVERSION = "conversion-inversion"
+    # Unit 1 (6.RP.1): confusing a part-part ratio with a part-whole ratio (and vice versa).
+    PART_PART_WHOLE_CONFUSION = "part-part-whole-confusion"
 
 
 @dataclass(frozen=True)
@@ -234,6 +236,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.UNIT_CONVERSION,),
     ),
+    Misconception(
+        id=MisconceptionId.PART_PART_WHOLE_CONFUSION,
+        name="Part-part vs part-whole confusion",
+        description=(
+            "Confuses a part-to-part ratio with a part-to-whole ratio. Asked for the "
+            "part-OF-the-whole (3 red of 8 total = 3/8), the learner reports the "
+            "part-TO-part comparison instead (3 red to 5 blue = 3/5). The two quantities "
+            "are both legitimate ratios, but they answer different questions — the learner "
+            "loses track of whether the comparison is against the other part or the whole."
+        ),
+        applicable_kcs=(KnowledgeComponentId.RATIO_LANGUAGE,),
+    ),
 )
 
 
@@ -388,6 +402,18 @@ def additive_ratio(known_num: int, known_den: int, target_den: int) -> Rational:
     degenerate target_den == 2*b case, which the generator avoids).
     """
     return Rational(known_num + (target_den - known_den))
+
+
+def part_part_ratio(part: int, other: int) -> Rational:
+    """part-part-whole confusion: report the part-TO-part ratio ``part/other`` when the
+
+    part-TO-whole ratio ``part/(part+other)`` was asked. Given "3 red, 5 blue", asked for the
+    fraction of counters that are red (3/8), the learner answers the red-to-blue comparison
+    instead (3/5). Returned as a SymPy ``Rational`` so the verifier compares values directly; it
+    is always distinct from the correct part-whole value because ``other != part + other`` for
+    any ``part >= 1``.
+    """
+    return Rational(part, other)
 
 
 def invert_rate(total: int, count: int) -> Rational:

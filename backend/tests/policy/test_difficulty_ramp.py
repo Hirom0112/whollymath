@@ -37,6 +37,7 @@ def test_generator_difficulty_narrows_denominators() -> None:
         # whole-number operands (denominator 1) — none is a fraction-denominator ramp.
         if kc in (
             KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
+            KnowledgeComponentId.RATIO_LANGUAGE,
             KnowledgeComponentId.UNIT_RATE,
             KnowledgeComponentId.EQUIVALENT_RATIOS,
             KnowledgeComponentId.PERCENT,

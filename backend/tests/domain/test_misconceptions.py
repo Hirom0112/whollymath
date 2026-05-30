@@ -60,6 +60,7 @@ EXPECTED_MISCONCEPTION_IDS = {
 # lesson (Grade-6 build, 2026-05-30). The enum/registry == bank ∪ these; the bank-verbatim
 # check stays scoped to the five bank ids above.
 EXPECTED_GRADE6_MISCONCEPTION_IDS = {
+    "part-part-whole-confusion",  # KC_ratio_language
     "rate-inversion",  # KC_unit_rate
     "additive-ratio",  # KC_equivalent_ratios
     "percent-as-amount",  # KC_percent

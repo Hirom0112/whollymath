@@ -222,6 +222,19 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
     ),
     # ─── Grade-6 content build (2026-05-30) — Unit 1: Ratios & Rates ───
+    # Ratio language (6.RP.1): tell a part-TO-part ratio from a part-TO-whole ratio. Numeric
+    # answer (a single fraction entered in the symbolic editor — reuses the editor, no new
+    # widget), practice-only like UNIT_RATE; the WORD_PROBLEM rep is the story framing that
+    # satisfies the ≥2-rep contract and becomes the masterable surface once a widget lands (T3).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.RATIO_LANGUAGE,
+        skill_name="Read ratio language",
+        description=(
+            "Describe a relationship as a ratio and tell a part-to-part ratio from a "
+            "part-to-whole ratio (3 red to 5 blue is 3:5; red of all counters is 3/8)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
     # The first Grade-6 lesson built on the existing numeric infrastructure: a unit-rate
     # word problem with a numeric answer. It advertises SYMBOLIC + WORD_PROBLEM (the lesson-spec
     # contract requires ≥2 representations), but is LIVE only on SYMBOLIC for now (see

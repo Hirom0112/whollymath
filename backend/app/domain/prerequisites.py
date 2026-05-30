@@ -43,6 +43,9 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     _KC.COMMON_DENOMINATOR: frozenset({_KC.EQUIVALENCE}),
     _KC.ADDITION_UNLIKE: frozenset({_KC.COMMON_DENOMINATOR}),
     _KC.SUBTRACTION_UNLIKE: frozenset({_KC.COMMON_DENOMINATOR}),
+    # Grade-6 Unit 1: ratio language reads a ratio as a fraction relationship (part-of-the-whole),
+    # so it builds on equivalent fractions — the conceptual entry to the ratio strand.
+    _KC.RATIO_LANGUAGE: frozenset({_KC.EQUIVALENCE}),
     # Grade-6 Unit 1: a unit rate is a ratio relationship, so it builds on equivalent fractions.
     _KC.UNIT_RATE: frozenset({_KC.EQUIVALENCE}),
     _KC.EQUIVALENT_RATIOS: frozenset({_KC.EQUIVALENCE}),
@@ -69,6 +72,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.COMMON_DENOMINATOR,  # use equivalence to match sizes
     _KC.ADDITION_UNLIKE,  # operate on unlike forms …
     _KC.SUBTRACTION_UNLIKE,  # … (add/sub both gated on common denominator)
+    _KC.RATIO_LANGUAGE,  # Grade-6 Unit 1: read a ratio (part-part vs part-whole), on equivalence
     _KC.UNIT_RATE,  # Grade-6 Unit 1: a ratio relationship, built on equivalence
     _KC.EQUIVALENT_RATIOS,  # Grade-6 Unit 1: scale a ratio multiplicatively
     _KC.PERCENT,  # Grade-6 Unit 1: a per-100 ratio

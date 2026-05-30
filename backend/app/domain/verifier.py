@@ -53,6 +53,7 @@ from app.domain.misconceptions import (
     invert_conversion,
     invert_rate,
     natural_number_bias_number_line,
+    part_part_ratio,
     subtract_across,
 )
 from app.domain.problem_generators import AnswerKind, Problem
@@ -311,6 +312,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.MAGNITUDE,
         misconception=MisconceptionId.NATURAL_NUMBER_BIAS,
         predict=lambda ops: natural_number_bias_number_line(ops[0].p, ops[0].q).biased_position,
+    ),
+    # ratio-language part-part-whole confusion: answered the part-TO-part ratio (part/other)
+    # when the part-TO-whole ratio (part/(part+other)) was asked. A wrong OPERATION (compared
+    # against the wrong reference — the other part, not the whole). Operands are (part, other).
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.RATIO_LANGUAGE,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.PART_PART_WHOLE_CONFUSION,
+        predict=lambda ops: part_part_ratio(int(ops[0]), int(ops[1])),
     ),
     # unit-rate inversion: total/count formed upside-down as count/total — a wrong OPERATION
     # setup (operands are (total, count), both whole-number Rationals).

@@ -45,6 +45,10 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # one live representation, so is_masterable_live is False — the AREA_MODEL alignment form (the
     # second representation that makes it masterable) is added once its surface widget exists.
     _KC.COMMON_DENOMINATOR: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 1: SYMBOLIC = the part-whole fraction entered in the editor. PRACTICE-ONLY
+    # (one live representation, like COMMON_DENOMINATOR) until a ratio word-problem widget lands
+    # (T3), at which point adding WORD_PROBLEM here makes it masterable with no other change.
+    _KC.RATIO_LANGUAGE: (_REP.SYMBOLIC,),
     # Grade-6 Unit 1: SYMBOLIC = the numeric "amount for ONE" entry. PRACTICE-ONLY (one live
     # representation, like COMMON_DENOMINATOR) until a numeric word-problem widget lands (T3),
     # at which point adding WORD_PROBLEM here makes it masterable with no other change.

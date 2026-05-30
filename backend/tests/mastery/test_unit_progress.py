@@ -228,10 +228,27 @@ def test_gating_root_first_lesson_unit_available() -> None:
 
 
 def test_gating_forward_declared_first_lesson_defaults_available() -> None:
-    """U1/U3 (forward-declared first-lesson KCs) default to available (DEC.3)."""
+    """A unit whose first lesson is a forward-declared (unbuilt) KC defaults to available (DEC.3).
+
+    U3's first lesson (KC_signed_numbers) is not yet content-complete, so it is not in the
+    prerequisite DAG and cannot gate — the unit falls back to the neutral AVAILABLE placeholder.
+    U1 is NO LONGER such a case: its first lesson (KC_ratio_language) is now BUILT (Grade-6 build,
+    2026-05-30), so it is a real DAG node that gates on its prerequisite — covered below.
+    """
     progress = build_unit_progress(all_units(), _course([]), frozenset())
-    assert _by_slug(progress)["u1"].status is UnitStatus.AVAILABLE
     assert _by_slug(progress)["u3"].status is UnitStatus.AVAILABLE
+
+
+def test_gating_built_first_lesson_locks_until_prereq_confirmed() -> None:
+    """U1's first lesson is now a BUILT KC (KC_ratio_language), so U1 gates on its prerequisite.
+
+    With nothing confirmed, KC_ratio_language is locked (its prereq EQUIVALENCE — and that KC's
+    own prereq — are unconfirmed), so the unit is LOCKED, not the old forward-declared AVAILABLE
+    default. This is the intended consequence of making u1_l1 content-complete (Grade-6 build,
+    2026-05-30): real gating replaces the neutral placeholder once the first lesson exists.
+    """
+    progress = build_unit_progress(all_units(), _course([]), frozenset())
+    assert _by_slug(progress)["u1"].status is UnitStatus.LOCKED
 
 
 def test_gating_none_first_lesson_defaults_available() -> None:

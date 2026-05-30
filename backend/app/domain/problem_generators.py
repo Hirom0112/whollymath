@@ -511,6 +511,64 @@ def _generate_number_line(
 
 # ─── Grade-6 content build (2026-05-30) — Unit 1: Ratios & Rates ───
 
+# Two-colour counter contexts for ratio-language items: (this-colour, other-colour). The asked
+# colour is the FIRST entry; the question wants its part-OF-the-whole fraction. Seeded RNG so the
+# same seed yields the same scenario (PROJECT.md §4.1 reproducibility).
+_RATIO_COLOURS: tuple[tuple[str, str], ...] = (
+    ("red", "blue"),
+    ("green", "yellow"),
+    ("black", "white"),
+    ("orange", "purple"),
+)
+
+# The two part-counts by difficulty tier (the easy→hard ramp; CP.B): higher tiers use larger
+# counts so the part-whole fraction is less obvious. Whole-number counts (the answer is the
+# part-WHOLE fraction); the ramp is by count size, not denominator size.
+_RATIO_COUNTS_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3),
+    2: (2, 3, 4),
+    3: (3, 4, 5, 6),
+    4: (4, 5, 6, 7),
+}
+_RATIO_COUNT_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7)
+
+
+def _generate_ratio_language(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_ratio_language: tell a part-to-whole ratio from a part-to-part ratio (6.RP.1).
+
+    Builds a two-colour collection (``part`` of one colour, ``other`` of a second) and asks for
+    the asked colour's fraction OF the whole — ``part / (part + other)``, strictly between 0 and 1.
+    ``operands = (part, other)`` so the verifier can replay the part-part-whole confusion (the
+    part-TO-part ratio ``part / other``, which is always a DIFFERENT value since ``part >= 1`` ⇒
+    ``other != part + other``). Rendered symbolically; ``difficulty`` widens the count pool.
+    """
+    pool = (
+        _RATIO_COUNTS_BY_DIFFICULTY.get(difficulty, _RATIO_COUNT_POOL)
+        if difficulty
+        else _RATIO_COUNT_POOL
+    )
+    part = rng.choice(pool)
+    other = rng.choice(pool)
+    this_colour, other_colour = rng.choice(_RATIO_COLOURS)
+    total = part + other
+    statement = (
+        f"A jar has {part} {this_colour} and {other} {other_colour} counters. "
+        f"What fraction of the counters are {this_colour}? "
+        f"(Compare the {this_colour} counters to ALL the counters, not to the {other_colour}.)"
+    )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.RATIO_LANGUAGE, seed, surface_format),
+        kc=KnowledgeComponentId.RATIO_LANGUAGE,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(part, total),
+        representations_available=get_kc(KnowledgeComponentId.RATIO_LANGUAGE).representations,
+        operands=(Rational(part), Rational(other)),
+    )
+
+
 # Word-problem contexts for unit-rate items: (quantity-noun, single-unit) pairs. Chosen through
 # the seeded RNG so the same seed yields the same scenario (PROJECT.md §4.1 reproducibility).
 _RATE_CONTEXTS: tuple[tuple[str, str], ...] = (
@@ -728,6 +786,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.ADDITION_UNLIKE: _generate_addition,
     KnowledgeComponentId.SUBTRACTION_UNLIKE: _generate_subtraction,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _generate_number_line,
+    KnowledgeComponentId.RATIO_LANGUAGE: _generate_ratio_language,
     KnowledgeComponentId.UNIT_RATE: _generate_unit_rate,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _generate_equivalent_ratios,
     KnowledgeComponentId.PERCENT: _generate_percent,

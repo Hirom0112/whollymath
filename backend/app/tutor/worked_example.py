@@ -369,6 +369,39 @@ def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _ratio_language_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'count the whole, then the part' steps for a part-to-whole ratio (Grade-6 Unit 1).
+
+    ``operands = (part, other)``; the part-whole fraction is ``part / (part + other)``, which
+    equals ``problem.correct_value`` by construction (the last step lands on it). Raises if the
+    operands are missing (CLAUDE.md §8.5 — a hollow example would mislead).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"ratio-language problem {problem.problem_id} needs (part, other)")
+    part, other = int(operands[0]), int(operands[1])
+    total = part + other
+    answer = problem.correct_value
+    each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
+    return (
+        WorkedStep(
+            shown=f"Count ALL the counters first: {part} and {other} make {total} in all.",
+            why_prompt="Why is the whole the total of both colours, not just the other colour?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"The asked colour is {part} of those {total}.",
+            why_prompt="Why does 'fraction of the whole' put the total on the bottom?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So the fraction of the whole is {each}.",
+            why_prompt="Why is this less than one whole when only some counters are that colour?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _equivalent_ratios_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'multiply both terms by the same factor' steps for an equivalent ratio.
 
@@ -529,6 +562,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.COMMON_DENOMINATOR: _common_denominator_steps,
     KnowledgeComponentId.EQUIVALENCE: _equivalence_steps,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _number_line_steps,
+    KnowledgeComponentId.RATIO_LANGUAGE: _ratio_language_steps,
     KnowledgeComponentId.UNIT_RATE: _unit_rate_steps,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _equivalent_ratios_steps,
     KnowledgeComponentId.PERCENT: _percent_steps,

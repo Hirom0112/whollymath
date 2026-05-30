@@ -178,6 +178,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "How many equal jumps fit between the ends, and how far along is this one?",
         ),
     ),
+    # Grade-6 Unit 1: index 0 (operation) orients toward comparing against the WHOLE, not the
+    # other part; index 1 (magnitude) toward a part-of-the-whole being less than the whole.
+    KnowledgeComponentId.RATIO_LANGUAGE: (
+        _nudge(
+            KnowledgeComponentId.RATIO_LANGUAGE,
+            "A part OF the whole compares one colour to ALL the counters, not to the other colour.",
+        ),
+        _nudge(
+            KnowledgeComponentId.RATIO_LANGUAGE,
+            "Part of the whole is less than the whole — is your bottom number all of them?",
+        ),
+        _nudge(
+            KnowledgeComponentId.RATIO_LANGUAGE,
+            "Count every counter for the bottom; put just the asked colour on the top.",
+        ),
+    ),
     # Grade-6 Unit 1: index 0 (operation) orients toward which quantity is "per one"; index 1
     # (magnitude) toward the size of one share.
     KnowledgeComponentId.UNIT_RATE: (

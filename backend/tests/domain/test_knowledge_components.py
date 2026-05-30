@@ -41,6 +41,7 @@ EXPECTED_CATALOG_IDS = {
     "KC_subtraction_unlike",
     "KC_number_line_placement",
     # Grade-6 content build (2026-05-30) — Unit 1 (numeric, on the existing infra).
+    "KC_ratio_language",
     "KC_unit_rate",
     "KC_equivalent_ratios",
     "KC_percent",
@@ -53,6 +54,7 @@ EXPECTED_CATALOG_IDS = {
 # are in the registry/LIVE_KCS but NOT in diagnostic_gems.json, so the bank-vs-registry check
 # subtracts them. Grows with each Grade-6 KC built on the procedural generators (no gem items).
 GRADE6_BUILT_NOT_IN_BANK = {
+    "KC_ratio_language",
     "KC_unit_rate",
     "KC_equivalent_ratios",
     "KC_percent",
@@ -66,10 +68,8 @@ GRADE6_BUILT_NOT_IN_BANK = {
 # — no generator/spec/hints — so they are absent from the registry, the gem catalog, and
 # LIVE_KCS until their content is built. The full enum is exactly CATALOG ∪ GRADE6.
 EXPECTED_GRADE6_KCS = {
-    # U1 — Ratios & Rates (6.RP). KC_unit_rate + KC_equivalent_ratios + KC_percent moved to
-    # EXPECTED_CATALOG_IDS (built 2026-05-30).
-    # KC_unit_conversion moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
-    "KC_ratio_language",
+    # U1 — Ratios & Rates (6.RP). KC_ratio_language + KC_unit_rate + KC_equivalent_ratios +
+    # KC_percent + KC_unit_conversion moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_rate_problems",
     # U2 — Fractions & Decimals (6.NS.1–4). KC_multiply_fractions moved to EXPECTED_CATALOG_IDS
     # (built 2026-05-30, T2).
