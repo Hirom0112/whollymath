@@ -146,6 +146,30 @@ export interface ActivityEventView {
   outcome: "correct" | "incorrect" | "neutral";
 }
 /**
+ * A live, in-session adaptation the hyperreactive loop proposed (Slice HR.B4).
+ *
+ * Present only when the live state classifier (HR.B2) fired a SUSTAINED state and the policy
+ * (HR.B3) routed it to a move; ``null`` in the observe-only default (and whenever the live
+ * adaptation flag is off). ``state`` is the LearnerState that triggered it (for surface styling),
+ * ``reason`` is the one-line on-screen label, and ``is_morph`` distinguishes a surface change
+ * (the new surface is on ``next_surface_state``) from a nudge-only (no state change — refuse-rule
+ * 3). Deterministic; the LLM only voices an already-decided adaptation (§2.3).
+ */
+export interface AdaptationView {
+  /**
+   * The triggering LearnerState, e.g. 'confused' (HR.B2).
+   */
+  state: string;
+  /**
+   * The one-line on-screen reason for the change.
+   */
+  reason: string;
+  /**
+   * True if the surface changed (see next_surface_state); False for a nudge-only.
+   */
+  is_morph: boolean;
+}
+/**
  * One adaptive-arm turn, display-ready (Slice 5.3 theater). The verified path: the
  * persona's answer, the SymPy verdict, the labelled error class, the one-line feedback, the
  * resulting surface state, and the §3.4 effort/scaffold flags (hinted, below engagement floor).
@@ -1296,6 +1320,10 @@ export interface TurnResponse {
    * A proactively-offered help nudge (Slice 4.5), present only when the session's proactive arm is enabled AND the §3.7 sustained-signal gate fired on the HelpNeed stream. null in the observe-only default. Rendered inline in the workspace (§3.8 refuse-rule 6).
    */
   intervention?: InterventionView | null;
+  /**
+   * A live, in-session adaptation the hyperreactive loop proposed (Slice HR.B4), present only when the live state classifier fired a SUSTAINED state and the adaptation flag is on. null in the observe-only default. The morph target (if any) is on next_surface_state; the on-screen reason is on adaptation.reason.
+   */
+  adaptation?: AdaptationView | null;
   /**
    * The next problem to present after this turn, or null when the loop has nothing further to serve (e.g. an unrecognized session). The surface renders it directly; the deterministic loop chose it (§10 step 12).
    */

@@ -232,6 +232,7 @@ def test_turn_response_has_exactly_the_contract_keys() -> None:
         "mastery",
         "help_need",
         "intervention",
+        "adaptation",
         "next_problem",
         "worked_example",
         "lesson_complete",

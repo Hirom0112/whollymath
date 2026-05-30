@@ -106,6 +106,25 @@ class InterventionView(BaseModel):
     text: str = Field(min_length=1, description="The pre-written nudge text (no LLM, §8.1).")
 
 
+class AdaptationView(BaseModel):
+    """A live, in-session adaptation the hyperreactive loop proposed (Slice HR.B4).
+
+    Present only when the live state classifier (HR.B2) fired a SUSTAINED state and the policy
+    (HR.B3) routed it to a move; ``null`` in the observe-only default (and whenever the live
+    adaptation flag is off). ``state`` is the LearnerState that triggered it (for surface styling),
+    ``reason`` is the one-line on-screen label, and ``is_morph`` distinguishes a surface change
+    (the new surface is on ``next_surface_state``) from a nudge-only (no state change — refuse-rule
+    3). Deterministic; the LLM only voices an already-decided adaptation (§2.3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    state: str = Field(description="The triggering LearnerState, e.g. 'confused' (HR.B2).")
+    reason: str = Field(min_length=1, description="The one-line on-screen reason for the change.")
+    is_morph: bool = Field(
+        description="True if the surface changed (see next_surface_state); False for a nudge-only."
+    )
+
+
 class ProblemView(BaseModel):
     """The learner-facing view of one presented problem (ARCHITECTURE.md §10 step 12).
 
@@ -397,6 +416,15 @@ class TurnResponse(BaseModel):
             "session's proactive arm is enabled AND the §3.7 sustained-signal gate fired "
             "on the HelpNeed stream. null in the observe-only default. Rendered inline "
             "in the workspace (§3.8 refuse-rule 6)."
+        ),
+    )
+    adaptation: AdaptationView | None = Field(
+        default=None,
+        description=(
+            "A live, in-session adaptation the hyperreactive loop proposed (Slice HR.B4), "
+            "present only when the live state classifier fired a SUSTAINED state and the "
+            "adaptation flag is on. null in the observe-only default. The morph target (if "
+            "any) is on next_surface_state; the on-screen reason is on adaptation.reason."
         ),
     )
     next_problem: ProblemView | None = Field(
@@ -1297,6 +1325,7 @@ class AssignUnitResult(BaseModel):
 __all__ = [
     "ActionType",
     "ActivityEventView",
+    "AdaptationView",
     "AlertKind",
     "AlertSeverity",
     "AssignUnitRequest",
