@@ -56,6 +56,6 @@ def test_lesson_complete_coincides_with_confirmed_mastery() -> None:
     bodies = _drive_all_correct(app)
     complete = next((b for b in bodies if b.get("lesson_complete")), None)
     assert complete is not None, "lesson never completed"
-    assert any(
-        m["kc_id"] == "KC_addition_unlike" and m["mastered"] for m in complete["mastery"]
-    ), "lesson_complete fired without the goal KC being confirmed-mastered"
+    assert any(m["kc_id"] == "KC_addition_unlike" and m["mastered"] for m in complete["mastery"]), (
+        "lesson_complete fired without the goal KC being confirmed-mastered"
+    )

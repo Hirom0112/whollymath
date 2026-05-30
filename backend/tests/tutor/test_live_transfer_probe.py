@@ -161,9 +161,7 @@ def test_audit_trail_verdict_matches_per_step_correctness() -> None:
     corrects = [True, True, False][: len(steps)]
     while len(corrects) < len(steps):
         corrects.append(True)
-    trail = build_probe_audit_trail(
-        steps, submitted_answers=["x"] * len(steps), corrects=corrects
-    )
+    trail = build_probe_audit_trail(steps, submitted_answers=["x"] * len(steps), corrects=corrects)
     assert trail.passed == all(corrects)
     assert trail.representations_covered == {e.representation for e in trail.entries}
     # Reconstructable: the verdict can be recomputed from the entries with no extra state.

@@ -313,7 +313,7 @@ def test_empty_unit_is_zero_percent_and_not_crash() -> None:
 
 
 def test_unit_status_serializes_lowercase() -> None:
-    assert UnitStatus.LOCKED == "locked"
-    assert UnitStatus.AVAILABLE == "available"
-    assert UnitStatus.IN_PROGRESS == "in_progress"
-    assert UnitStatus.MASTERED == "mastered"
+    assert UnitStatus.LOCKED.value == "locked"
+    assert UnitStatus.AVAILABLE.value == "available"
+    assert UnitStatus.IN_PROGRESS.value == "in_progress"
+    assert UnitStatus.MASTERED.value == "mastered"

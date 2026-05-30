@@ -84,7 +84,7 @@ def test_confirm_with_a_corrected_wrong_answer_can_fail_the_gate() -> None:
     draft = HwStatusResponse.model_validate(body).draft
 
     # Blank out three of the five target answers in the confirmation → 2/5 = 0.4 < 0.8.
-    answers = []
+    answers: list[dict[str, object]] = []
     targets_blanked = 0
     for d in draft:
         if d.is_target and targets_blanked < 3:

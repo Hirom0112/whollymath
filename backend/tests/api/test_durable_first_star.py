@@ -104,9 +104,7 @@ def _turn(session_id: str, problem: ProblemView, answer: str) -> TurnRequest:
     )
 
 
-def _drive_to_confirmed(
-    store: SessionStore, *, max_turns: int = 80
-) -> tuple[str, TurnResponse]:
+def _drive_to_confirmed(store: SessionStore, *, max_turns: int = 80) -> tuple[str, TurnResponse]:
     """Start the addition route and answer EVERY problem (practice and probe) correctly until
     the lesson completes (the goal KC is confirmed by passing the S5 probe). Returns the
     session id and the terminal lesson-complete response. Asserts a confirmed pass was reached
@@ -140,11 +138,7 @@ def test_probe_pass_persists_confirmed_mastery_row(
     assert any(m.kc_id == _GOAL_KC and m.mastered for m in terminal.mastery)
     # ...and that confirmation is durably written to the row, not just held in memory.
     with session_factory() as db:
-        row = (
-            db.query(MasteryState)
-            .filter(MasteryState.kc_id == _GOAL_KC.value)
-            .one()
-        )
+        row = db.query(MasteryState).filter(MasteryState.kc_id == _GOAL_KC.value).one()
         assert row.confirmed is True
 
 

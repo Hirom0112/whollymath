@@ -102,7 +102,7 @@ def _scalar(url: str, sql: str) -> int:
 def test_curriculum_migration_upgrade_then_downgrade_round_trips(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """DAT.2: upgrading to the curriculum revision adds the tables + role; downgrade removes them."""
+    """DAT.2: upgrade to the curriculum revision adds tables + role; downgrade removes them."""
     db_path = tmp_path / "round_trip.sqlite"
     url = f"sqlite:///{db_path}"
     # env.py reads DATABASE_URL via database_url_from_env(); point it at the temp file.
