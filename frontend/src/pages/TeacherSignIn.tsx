@@ -28,7 +28,15 @@ const GoogleG = (): React.JSX.Element => (
   </svg>
 );
 
-export function TeacherSignIn({ onSignIn }: { onSignIn: () => void }): React.JSX.Element {
+export function TeacherSignIn({
+  onSignIn,
+  busy = false,
+  error = null,
+}: {
+  onSignIn: () => void;
+  busy?: boolean;
+  error?: string | null;
+}): React.JSX.Element {
   return (
     <div className="wm-tsignin">
       <div className="wm-tsignin-card">
@@ -45,18 +53,22 @@ export function TeacherSignIn({ onSignIn }: { onSignIn: () => void }): React.JSX
         </p>
 
         <div className="wm-tsignin-actions">
-          <button type="button" className="wm-tsignin-google" onClick={onSignIn}>
+          <button type="button" className="wm-tsignin-google" onClick={onSignIn} disabled={busy}>
             <GoogleG />
             Sign in with Google
           </button>
-          <button type="button" className="wm-tsignin-demo" onClick={onSignIn}>
-            Continue as a demo teacher
+          <button type="button" className="wm-tsignin-demo" onClick={onSignIn} disabled={busy}>
+            {busy ? 'Starting…' : 'Continue as a demo teacher'}
           </button>
         </div>
 
-        <p className="wm-tsignin-note">
-          The demo class is synthetic. No real student data.
-        </p>
+        {error !== null ? (
+          <p className="wm-tsignin-error" role="alert">
+            {error}
+          </p>
+        ) : (
+          <p className="wm-tsignin-note">The demo class is synthetic. No real student data.</p>
+        )}
       </div>
     </div>
   );

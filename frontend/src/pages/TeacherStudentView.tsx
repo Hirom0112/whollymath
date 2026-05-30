@@ -112,8 +112,10 @@ export function TeacherStudentView({
             aria-label="Alerts"
             aria-live="polite"
           >
-            {student.alerts.length > 0 ? (
-              student.alerts.map((a) => <AlertBadge key={a.kind} alert={a} variant="full" />)
+            {(student.alerts ?? []).length > 0 ? (
+              (student.alerts ?? []).map((a) => (
+                <AlertBadge key={a.kind} alert={a} variant="full" />
+              ))
             ) : (
               <p className="wm-tstudent-noalerts">No alerts. This student is moving along.</p>
             )}
@@ -130,7 +132,7 @@ export function TeacherStudentView({
                 <p className="wm-tstudent-current-lesson">
                   {student.current_lesson_title ?? 'Not started yet'}
                 </p>
-                {student.current_unit_title !== null ? (
+                {student.current_unit_title != null ? (
                   <p className="wm-tstudent-current-unit">{student.current_unit_title}</p>
                 ) : null}
               </div>
@@ -142,21 +144,21 @@ export function TeacherStudentView({
           <section className="wm-tstudent-card" aria-label="Strengths and weaknesses">
             <h2 className="wm-tstudent-h2">Skills</h2>
             <div className="wm-tstudent-skills">
-              <SkillColumn title="Strengths" tone="strong" skills={student.strengths} />
-              <SkillColumn title="Needs work" tone="weak" skills={student.weaknesses} />
+              <SkillColumn title="Strengths" tone="strong" skills={student.strengths ?? []} />
+              <SkillColumn title="Needs work" tone="weak" skills={student.weaknesses ?? []} />
             </div>
           </section>
 
           {/* (5) Recent-activity timeline. */}
           <section className="wm-tstudent-card" aria-label="Recent activity">
             <h2 className="wm-tstudent-h2">Recent activity</h2>
-            <Timeline events={student.activity} />
+            <Timeline events={student.activity ?? []} />
           </section>
 
           {/* (6) Assign next unit. */}
           <AssignSection
-            units={student.assignable_units}
-            assignedUnitId={student.assigned_unit_id}
+            units={student.assignable_units ?? []}
+            assignedUnitId={student.assigned_unit_id ?? null}
             busy={assigning}
             onAssign={(unitId) => void handleAssign(unitId)}
           />
@@ -174,18 +176,18 @@ function WhySection({ student }: { student: StudentDetail }): React.JSX.Element 
       <p className="wm-tstudent-why-headline">{struggle.headline}</p>
       <p className="wm-tstudent-why-detail">{struggle.detail}</p>
       <div className="wm-tstudent-why-tags">
-        {struggle.matched_misconception !== null ? (
+        {struggle.matched_misconception != null ? (
           <span className="wm-tstudent-tag wm-tstudent-tag--misconception">
             <span className="wm-tstudent-tag-key">Misconception</span>
             {struggle.matched_misconception}
           </span>
         ) : null}
-        {struggle.helpneed_trend !== null ? (
+        {struggle.helpneed_trend != null ? (
           <span className="wm-tstudent-tag wm-tstudent-tag--trend">
             {TREND_LABEL[struggle.helpneed_trend]}
           </span>
         ) : null}
-        {struggle.recent_error_rate !== null ? (
+        {struggle.recent_error_rate != null ? (
           <span className="wm-tstudent-tag wm-tstudent-tag--rate">
             {Math.round(struggle.recent_error_rate * 100)}% recent errors
           </span>

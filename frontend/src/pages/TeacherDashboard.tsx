@@ -43,7 +43,7 @@ export function TeacherDashboard({
     fetchRoster()
       .then((roster) => {
         if (!live) return;
-        setStudents(roster.students);
+        setStudents(roster.students ?? []);
         setHeader({ teacher: roster.teacher_name, klass: roster.class_name });
       })
       .catch(() => {
@@ -159,7 +159,11 @@ export function TeacherDashboard({
           : null}
 
         {filtered !== null && filtered.length === 0 ? (
-          <p className="wm-teacher-empty">No students match “{query}”.</p>
+          <p className="wm-teacher-empty">
+            {query.trim() !== ''
+              ? `No students match “${query}”.`
+              : 'No students on your roster yet. Your class will appear here once it’s set up.'}
+          </p>
         ) : null}
       </main>
     </div>
@@ -173,8 +177,11 @@ function StudentRow({
   student: RosterStudentView;
   onOpen: (studentId: string) => void;
 }): React.JSX.Element {
-  const lesson = student.current_lesson_title;
-  const unit = student.current_unit_title;
+  // The generated wire types make these optional (Pydantic defaults), so normalize to a value
+  // or null and treat both null and undefined as "absent".
+  const lesson = student.current_lesson_title ?? null;
+  const unit = student.current_unit_title ?? null;
+  const alerts = student.alerts ?? [];
   return (
     <li>
       <button
@@ -197,9 +204,9 @@ function StudentRow({
           </span>
         </span>
         <span className="wm-teacher-row-signals">
-          {student.alerts.length > 0 ? (
+          {alerts.length > 0 ? (
             <span className="wm-teacher-row-alerts">
-              {student.alerts.map((a) => (
+              {alerts.map((a) => (
                 <AlertBadge key={a.kind} alert={a} />
               ))}
             </span>

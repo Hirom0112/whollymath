@@ -131,6 +131,22 @@
   text-align: center;
 }
 
+.wm-tsignin-error {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  font-size: var(--wm-fs-meta);
+  color: #8f3a22;
+  background: #f7e0d6;
+  border-radius: var(--wm-r-md);
+  text-align: center;
+}
+
+.wm-tsignin-google:disabled,
+.wm-tsignin-demo:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wm-tsignin-google,
   .wm-tsignin-demo {

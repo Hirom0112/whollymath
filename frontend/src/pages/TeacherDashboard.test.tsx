@@ -1,14 +1,35 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { DEMO_ROSTER } from '../api/teacherDemo';
 
 import { TeacherDashboard } from './TeacherDashboard';
 
 // The teacher roster (TODO TCH.F2). These pin the contract that makes the dashboard useful:
 // students are grouped under RANKED headers (struggling first), each row opens the right
-// student, and the search filters by name. Data comes from the seeded demo client (async),
-// so the queries await the first render of the class.
+// student, and the search filters by name. The live client (TEACHER_API_READY) calls
+// GET /teacher/roster — fetch is stubbed to return the demo roster so the page renders the class.
 
 describe('TeacherDashboard', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url === '/teacher/roster') {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(DEMO_ROSTER),
+          } as Response);
+        }
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+      }),
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('groups students under ranked category sections, struggling first', async () => {
     render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
 

@@ -28,6 +28,8 @@ export default defineConfig({
       '/me': API_TARGET,
       '/events': API_TARGET,
       '/hw': API_TARGET,
+      // Teacher dashboard: roster + per-student drill-in + assign-next-unit (TCH.B8).
+      '/teacher': API_TARGET,
     },
   },
   test: {
