@@ -44,6 +44,7 @@ from app.policy.signal_routing import (
     representation_for_error,
     surface_state_for_representation,
 )
+from app.policy.state_classifier import LearnerState
 from app.policy.surface_states import SurfaceState
 
 # The PROJECT.md §0.D.5 idle timer: idle beyond this many seconds earns a nudge,
@@ -140,8 +141,24 @@ class IdleNudge:
     idle_seconds: int
 
 
+@dataclass(frozen=True)
+class AdaptationProposed:
+    """A SUSTAINED in-session learner state proposes a labeled adaptation (Slice HR.B3).
+
+    The live loop (HR.B1 features → HR.B2 ``classify_state`` → the sustained gate) emits this once
+    a state has held across the gate's window — never on a single noisy reading (RESEARCH §7.5).
+    The policy then maps the state to a labeled morph, honoring the refuse layer: idle yields only a
+    nudge (refuse-rule 3), productive-struggle is protected (no change), and every change carries a
+    one-line reason. ``kc`` lets the morph read the lesson's spec (HR.A3 routing)."""
+
+    state: LearnerState
+    kc: KnowledgeComponentId
+
+
 # A turn can carry any one of these signals into the policy.
-PolicyEvent = AnswerOutcome | InterleavedSetPassed | TransferProbeFailed | IdleNudge
+PolicyEvent = (
+    AnswerOutcome | InterleavedSetPassed | TransferProbeFailed | IdleNudge | AdaptationProposed
+)
 
 
 # ─── Transition (the policy's decision) ───
@@ -277,6 +294,8 @@ def next_transition(current: SurfaceState, event: PolicyEvent) -> Transition:
         )
     if isinstance(event, TransferProbeFailed):
         return _from_transfer_fail(event)
+    if isinstance(event, AdaptationProposed):
+        return _from_adaptation(current, event)
     # IdleNudge — the only remaining variant.
     return _from_idle(current, event)
 
@@ -353,6 +372,51 @@ def _remediation_label_for_representation(representation: Representation) -> str
     return "Let's go back to the bars and rebuild the steps."
 
 
+def _from_adaptation(current: SurfaceState, event: AdaptationProposed) -> Transition:
+    """Map a SUSTAINED learner state to its labeled adaptation (HR.B3), honoring the refuse layer.
+
+    The event arrives ALREADY gated (the live loop emits it only after the state held across the
+    sustained window). Here we translate it to a move, with the refuse layer baked in: a productive
+    struggle is protected, idle yields a nudge (never a state change), and every change carries a
+    one-line on-screen reason. The morph target reuses the spec-driven routing (HR.A3).
+    """
+    state = event.state
+
+    if state is LearnerState.PRODUCTIVE_STRUGGLE:
+        # Refuse: protect a productive struggle — do nothing (the most important non-action).
+        return NoChange(current, "")
+
+    if state is LearnerState.IDLE_AVOIDING:
+        # Refuse-rule 3: a pause never changes state; a gentle, non-destructive nudge only.
+        return Nudge(current, "Take your time — give the next step a try when you're ready.")
+
+    if state is LearnerState.FLUENT_READY:
+        # Offer the fluent symbolic view — fade, not forced (the learner can decline).
+        if current is SurfaceState.SYMBOLIC_FOCUS:
+            return NoChange(current, "")
+        return StateChange(
+            SurfaceState.SYMBOLIC_FOCUS, "You're flying — want the quicker symbolic view?"
+        )
+
+    if state is LearnerState.PATTERN_MATCHING:
+        # Force a representation switch by bringing the transfer probe forward.
+        return StateChange(SurfaceState.TRANSFER_PROBE, "Let's check it holds in a fresh form.")
+
+    # CONFUSED or GUESSING: morph to the lesson's primary manipulative — the surface that EXPOSES
+    # the error (confused) / makes them slow down and see it (guessing) — via the spec (HR.A3).
+    representation = primary_remediation_representation(get_lesson_spec(event.kc))
+    target = surface_state_for_representation(representation)
+    assert target is not None  # noqa: S101 — a remediation rep always maps to a surface state
+    if target is current:
+        return NoChange(current, "")
+    label = (
+        "Let's slow down and build it with the pieces."
+        if state is LearnerState.GUESSING
+        else _remediation_label_for_representation(representation)
+    )
+    return StateChange(target, label)
+
+
 def _from_idle(current: SurfaceState, event: IdleNudge) -> Transition:
     """Idle handling (§3.6 row 8 / §3.8 refuse-rule 3): nudge past 90s, else no-op.
 
@@ -366,6 +430,7 @@ def _from_idle(current: SurfaceState, event: IdleNudge) -> Transition:
 
 
 __all__ = [
+    "AdaptationProposed",
     "AnswerOutcome",
     "IdleNudge",
     "InterleavedSetPassed",
