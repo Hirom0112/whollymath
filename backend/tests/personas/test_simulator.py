@@ -358,3 +358,73 @@ def test_simulator_imports_no_llm() -> None:
     assert "app.llm" not in text
     assert "import openai" not in text
     assert "anthropic" not in text
+
+
+# ─── Yes/no items: the persona judges per its knowledge mode (yes/no answer support) ──────
+#
+# The S5 transfer probe's error-finding step and the number-line "is a > b?" items are
+# YES_NO problems. Layer 3 must answer them as a yes/no judgment (a bool the verifier's
+# _parse_to_bool accepts), not a Rational — otherwise EVERY persona is scored wrong on
+# every yes/no item regardless of what it knows, and no persona can pass the probe. A
+# learner who understands the magnitude answers the judgment correctly; one with no grip
+# answers it wrong (deterministically), which is also the §4.2/§3.9 endorse-the-error tell.
+
+_NL_TRUE_SEED = 1  # 3/4 > 2/3  -> truth True
+_NL_FALSE_SEED = 2  # 1/2 > 2/3 -> truth False
+
+
+def _numberline_yes_no(seed: int) -> Problem:
+    """A 'greater'-relation YES_NO item (the symbolic form of number-line placement)."""
+    return generate_problem(
+        KnowledgeComponentId.NUMBER_LINE_PLACEMENT, seed, Representation.SYMBOLIC
+    )
+
+
+def _single_kc_persona(mode: KnowledgeMode, *, persona_id: str) -> PersonaConfig:
+    """A minimal one-KC persona on NUMBER_LINE_PLACEMENT for exercising yes/no items."""
+    return PersonaConfig(
+        persona_id=persona_id,
+        name=persona_id,
+        knowledge={
+            KnowledgeComponentId.NUMBER_LINE_PLACEMENT: KnowledgeState(
+                kc_id=KnowledgeComponentId.NUMBER_LINE_PLACEMENT, mode=mode
+            )
+        }
+        if mode is not KnowledgeMode.NEITHER
+        else {},  # empty knowledge -> mode_for returns NEITHER
+        misconceptions=(),
+        behavior=BehavioralParameters(
+            response_latency_seconds=5.0,
+            hint_request_probability=0.0,
+            engagement_floor=0.9,
+            scaffold_dependence_rate=0.0,
+        ),
+    )
+
+
+def test_both_mode_answers_yes_no_correctly_true_and_false() -> None:
+    """BOTH: the learner knows the magnitude, so the SAME oracle scores the judgment right.
+
+    Both a true ("3/4 > 2/3") and a false ("1/2 > 2/3") item must verify correct, and the
+    submitted answer is a yes/no bool, not a Rational.
+    """
+    both = _single_kc_persona(KnowledgeMode.BOTH, persona_id="yn_both")
+    for seed in (_NL_TRUE_SEED, _NL_FALSE_SEED):
+        problem = _numberline_yes_no(seed)
+        action = simulate_action(both, problem)
+        assert isinstance(action.submitted_answer, bool), "a yes/no item is answered with a bool"
+        assert verify(problem, action.submitted_answer).is_correct
+        assert action.can_justify is True
+
+
+def test_no_grip_answers_yes_no_wrong_and_deterministically() -> None:
+    """NEITHER: no magnitude grip → the judgment verifies WRONG, the same way every run."""
+    neither = _single_kc_persona(KnowledgeMode.NEITHER, persona_id="yn_neither")
+    for seed in (_NL_TRUE_SEED, _NL_FALSE_SEED):
+        problem = _numberline_yes_no(seed)
+        first = simulate_action(neither, problem)
+        second = simulate_action(neither, problem)
+        assert isinstance(first.submitted_answer, bool)
+        assert not verify(problem, first.submitted_answer).is_correct
+        assert first.can_justify is False
+        assert first.submitted_answer == second.submitted_answer  # deterministic (§4.1)

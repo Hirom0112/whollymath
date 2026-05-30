@@ -47,7 +47,7 @@ from app.domain.misconceptions import (
     natural_number_bias_number_line,
     subtract_across,
 )
-from app.domain.problem_generators import Problem
+from app.domain.problem_generators import AnswerKind, Problem
 from app.personas.persona_config import KnowledgeMode, PersonaConfig
 
 # ─── What the tutor is asking the persona to do this turn ────────────────────
@@ -109,11 +109,12 @@ class SimulatedAction:
     long they 'think', what they type if asked to explain" — plus the justification
     flag the mastery model needs to tell procedural fluency from understanding (§3.4).
 
-    - ``submitted_answer``  the answer the persona submits, as a SymPy ``Rational``
-      magnitude (the form the verifier accepts in-process; ``domain/verifier.py``
-      ``Submitted``). ``None`` only when the turn is purely an EXPLAIN request with
-      no numeric submission. For a FIND_ERROR turn this is the yes/no-equivalent the
-      persona endorses, expressed as the claimed value when they accept it.
+    - ``submitted_answer``  the answer the persona submits — a SymPy ``Rational``
+      magnitude for a numeric item, or a ``bool`` for a YES_NO item (the two forms the
+      verifier accepts in-process; ``domain/verifier.py`` ``Submitted`` /
+      ``_parse_to_bool``). ``None`` only when the turn is purely an EXPLAIN request with
+      no submission. For a FIND_ERROR turn this is the value the persona endorses (the
+      claimed value when they accept it).
     - ``requested_hint``    whether the persona asked for a hint before answering
       (resolved deterministically from ``hint_request_probability``; Hugo's >0.70
       signature, §4.2 P3; the ≥1-unassisted-attempt mastery rule, §3.4).
@@ -131,7 +132,7 @@ class SimulatedAction:
       evidence the mastery model reads — never an LLM judgment.
     """
 
-    submitted_answer: Rational | None
+    submitted_answer: Rational | bool | None
     requested_hint: bool
     think_time_seconds: float
     can_justify: bool
@@ -386,7 +387,7 @@ def _resolve_answer_and_justification(
     ctx: SimulationContext,
     *,
     requested_hint: bool,
-) -> tuple[Rational | None, bool]:
+) -> tuple[Rational | bool | None, bool]:
     """The submitted answer + the can_justify flag for this (mode, request).
 
     Split out of ``simulate_action`` to keep each function under the §6 length
@@ -406,6 +407,14 @@ def _resolve_answer_and_justification(
     # is genuine; no numeric answer is submitted on a pure-explain turn.
     if ctx.request is RequestType.EXPLAIN:
         return None, mode in (KnowledgeMode.BOTH, KnowledgeMode.CONCEPT_ONLY)
+
+    # A YES_NO item (the number-line "is a > b?" comparison, or the transfer probe's
+    # error-finding "is this right?" step) is a JUDGMENT, not a numeric solve — answered
+    # with a bool, per the persona's grip on the magnitude, for EVERY mode. Intercepts
+    # before the numeric mode branches so a yes/no item never collapses to a Rational the
+    # verifier scores wrong regardless of knowledge.
+    if problem.answer_kind is AnswerKind.YES_NO:
+        return _resolve_yes_no(persona, problem, mode, requested_hint=requested_hint)
 
     # ANSWER (routine solve-it) — the common case.
     if mode is KnowledgeMode.BOTH:
@@ -440,6 +449,55 @@ def _resolve_answer_and_justification(
 
     # NEITHER (incl. unconfigured KCs): a deterministic guess, no justification.
     return _deterministic_guess(problem, persona), False
+
+
+def _yes_no_truth(problem: Problem) -> bool:
+    """The truth value of a YES_NO item — the same judgment the verifier scores against.
+
+    Mirrors ``domain.verifier._verify_yes_no`` so the simulator and the oracle agree:
+    a ``"greater"`` item is ``operands[0] > operands[1]``; any other relation
+    (``"equal"``) is ``operands[0] == operands[1]``. A malformed item (no operand pair)
+    is a construction bug, not learner input, so we fail loudly (CLAUDE.md §8.5), exactly
+    as the verifier does.
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(
+            f"yes/no problem {problem.problem_id!r} needs exactly two operands to judge"
+        )
+    if problem.yes_no_relation == "greater":
+        return bool(operands[0] > operands[1])
+    return bool(operands[0] == operands[1])
+
+
+def _resolve_yes_no(
+    persona: PersonaConfig,
+    problem: Problem,
+    mode: KnowledgeMode,
+    *,
+    requested_hint: bool,
+) -> tuple[bool, bool]:
+    """The yes/no judgment + can_justify for a YES_NO item, per the persona's mode.
+
+    The truth is what SymPy computes in the verifier (``_yes_no_truth``). The mode → action
+    map mirrors the numeric path's philosophy (deterministic, §4.1):
+
+      - BOTH / CONCEPT_ONLY (genuine concept) → the correct judgment; can justify.
+      - hint-dependent (Hugo) WITH a hint this turn → the correct judgment, reproduced
+        mechanically (no justification) — the same scaffold-supplies-the-answer rule the
+        numeric path uses.
+      - otherwise (PROCEDURE_ONLY / WITH_MISCONCEPTION / NEITHER, no genuine concept) →
+        the WRONG judgment. On the probe's error-finding "is this right?" item that is the
+        §4.2 P2 / §3.9 endorse-the-error failure (they accept a wrong claim); on a plain
+        comparison it is a misjudged magnitude (verifier ErrorCategory.MAGNITUDE). Never a
+        justification.
+    """
+    truth = _yes_no_truth(problem)
+    if mode in (KnowledgeMode.BOTH, KnowledgeMode.CONCEPT_ONLY):
+        return truth, True
+    if _is_hint_dependent(persona) and requested_hint:
+        return truth, False
+    return (not truth), False
 
 
 def _resolve_with_misconception(persona: PersonaConfig, problem: Problem) -> Rational:
