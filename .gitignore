@@ -25,6 +25,20 @@ LIMITATIONS.md
 PRD_CHECKLIST.md
 PRODUCT.md
 
+# ─── Internal planning / design / audit docs (untracked; added 2026-05-29) ───
+# Curriculum design + build planning + audit/teacher-needs references. On disk only,
+# not repo deliverables. Same rule as the planning docs above: build on them, don't ship them.
+AUDIT.md
+PLAN.md
+TEACHER_NEEDS.md
+CURRICULUM_DRAFT.md
+CURRICULUM_STANDARD.md
+CURRICULUM_MAP.md
+BUILD_PLAN.md
+SYSTEM_FLOW.md
+TEKS_CCSS_COMPARISON.md
+whollymath-sample-homework.md
+
 # ─── Secrets / local env ───
 .env
 .env.*
@@ -33,6 +47,7 @@ PRODUCT.md
 # ─── OS / editor cruft ───
 .DS_Store
 *.swp
+*.bak
 .idea/
 
 # ─── Python (backend) ───
