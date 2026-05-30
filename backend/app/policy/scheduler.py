@@ -50,6 +50,10 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # at which point adding WORD_PROBLEM here makes it masterable with no other change.
     _KC.UNIT_RATE: (_REP.SYMBOLIC,),
     _KC.EQUIVALENT_RATIOS: (_REP.SYMBOLIC,),  # numeric missing-term entry; practice-only
+    _KC.PERCENT: (_REP.SYMBOLIC,),  # numeric "percent of" entry; practice-only
+    # Grade-6 Unit 2 (T2): SYMBOLIC = the product entered in the fraction editor. PRACTICE-ONLY
+    # until the AREA_MODEL multiply widget lands (T3), then adding AREA_MODEL makes it masterable.
+    _KC.MULTIPLY_FRACTIONS: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

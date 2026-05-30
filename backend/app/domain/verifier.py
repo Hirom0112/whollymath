@@ -329,6 +329,24 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         misconception=MisconceptionId.ADDITIVE_RATIO,
         predict=lambda ops: additive_ratio(int(ops[0]), int(ops[1]), int(ops[2])),
     ),
+    # percent-as-amount: answers the percent number itself instead of that percent OF the whole
+    # (operands are (percent, whole)). A wrong OPERATION (ignored the base).
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.PERCENT,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.PERCENT_AS_AMOUNT,
+        predict=lambda ops: ops[0],
+    ),
+    # multiply-as-add: multiplied two fractions by ADDING them instead (operands are the two
+    # fractions). A wrong OPERATION (x treated as +) — the sum is larger than the product.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.MULTIPLY_FRACTIONS,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.MULTIPLY_AS_ADD,
+        predict=lambda ops: ops[0] + ops[1],
+    ),
 )
 
 

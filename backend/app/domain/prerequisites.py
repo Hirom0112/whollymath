@@ -46,6 +46,12 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # Grade-6 Unit 1: a unit rate is a ratio relationship, so it builds on equivalent fractions.
     _KC.UNIT_RATE: frozenset({_KC.EQUIVALENCE}),
     _KC.EQUIVALENT_RATIOS: frozenset({_KC.EQUIVALENCE}),
+    # Percent forward-unlocks on equivalence (a percent is a per-100 ratio). Its decimal-ops
+    # prereq (REMEDIATION_ROUTING) isn't a forward edge — that KC isn't live yet.
+    _KC.PERCENT: frozenset({_KC.EQUIVALENCE}),
+    # Grade-6 Unit 2 (T2): multiplying fractions builds on naming the same number (you reduce
+    # the product), so it forward-unlocks on equivalence.
+    _KC.MULTIPLY_FRACTIONS: frozenset({_KC.EQUIVALENCE}),
 }
 
 
@@ -62,6 +68,8 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.SUBTRACTION_UNLIKE,  # … (add/sub both gated on common denominator)
     _KC.UNIT_RATE,  # Grade-6 Unit 1: a ratio relationship, built on equivalence
     _KC.EQUIVALENT_RATIOS,  # Grade-6 Unit 1: scale a ratio multiplicatively
+    _KC.PERCENT,  # Grade-6 Unit 1: a per-100 ratio
+    _KC.MULTIPLY_FRACTIONS,  # Grade-6 Unit 2: multiply fractions, built on equivalence
 )
 
 
@@ -77,10 +85,12 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
 # Entries cover the lessons §11.1 enumerates; KCs not yet routed get no drop until content lands.
 _KC_ = KnowledgeComponentId
 REMEDIATION_ROUTING: dict[KnowledgeComponentId, tuple[KnowledgeComponentId, ...]] = {
-    # U1 — Ratios & Rates → equivalent fractions (ratio = a fraction relationship)
+    # U1 — Ratios & Rates → equivalent fractions (ratio = a fraction relationship). NOTE: a
+    # grade-6 KC stays a remediation SOURCE even after it is built/live — only the FIVE FOUNDATION
+    # fraction KCs are terminal (§11.1). A struggling percent learner still drops to equivalence.
     _KC_.RATIO_LANGUAGE: (_KC_.EQUIVALENCE,),
-    # KC_unit_rate and KC_equivalent_ratios are now LIVE foundations (built, Grade-6 Unit 1), so
-    # they are NOT remediation keys — a live KC is terminal here (a drop TARGET, not a source).
+    _KC_.EQUIVALENT_RATIOS: (_KC_.EQUIVALENCE,),
+    _KC_.UNIT_RATE: (_KC_.EQUIVALENCE,),
     _KC_.RATE_PROBLEMS: (_KC_.EQUIVALENCE,),
     _KC_.PERCENT: (_KC_.EQUIVALENCE, _KC_.DECIMAL_OPERATIONS),
     _KC_.UNIT_CONVERSION: (_KC_.UNIT_RATE,),

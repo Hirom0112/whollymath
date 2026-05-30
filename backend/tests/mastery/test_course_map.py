@@ -37,6 +37,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.SUBTRACTION_UNLIKE,
         KC.UNIT_RATE,  # Grade-6 Unit 1 (built 2026-05-30)
         KC.EQUIVALENT_RATIOS,  # Grade-6 Unit 1
+        KC.PERCENT,  # Grade-6 Unit 1
+        KC.MULTIPLY_FRACTIONS,  # Grade-6 Unit 2 (built 2026-05-30, T2)
     ]
 
 

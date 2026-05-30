@@ -43,6 +43,9 @@ EXPECTED_CATALOG_IDS = {
     # Grade-6 content build (2026-05-30) — Unit 1 (numeric, on the existing infra).
     "KC_unit_rate",
     "KC_equivalent_ratios",
+    "KC_percent",
+    # Unit 2 (numeric, T2).
+    "KC_multiply_fractions",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -51,6 +54,8 @@ EXPECTED_CATALOG_IDS = {
 GRADE6_BUILT_NOT_IN_BANK = {
     "KC_unit_rate",
     "KC_equivalent_ratios",
+    "KC_percent",
+    "KC_multiply_fractions",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -59,16 +64,15 @@ GRADE6_BUILT_NOT_IN_BANK = {
 # — no generator/spec/hints — so they are absent from the registry, the gem catalog, and
 # LIVE_KCS until their content is built. The full enum is exactly CATALOG ∪ GRADE6.
 EXPECTED_GRADE6_KCS = {
-    # U1 — Ratios & Rates (6.RP). KC_unit_rate + KC_equivalent_ratios moved to
+    # U1 — Ratios & Rates (6.RP). KC_unit_rate + KC_equivalent_ratios + KC_percent moved to
     # EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_ratio_language",
     "KC_rate_problems",
-    "KC_percent",
     "KC_unit_conversion",
-    # U2 — Fractions & Decimals (6.NS.1–4)
+    # U2 — Fractions & Decimals (6.NS.1–4). KC_multiply_fractions moved to EXPECTED_CATALOG_IDS
+    # (built 2026-05-30, T2).
     "KC_gcf_lcm",
     "KC_divide_fractions",
-    "KC_multiply_fractions",
     "KC_multi_digit_division",
     "KC_decimal_operations",
     # U3 — Rational Numbers (6.NS.5–8)
@@ -137,14 +141,15 @@ def test_live_kcs_is_exactly_the_registry_subset() -> None:
     assert LIVE_KCS == {kc.id for kc in KC_REGISTRY.all()}
     assert {kc.value for kc in LIVE_KCS} == EXPECTED_CATALOG_IDS
     assert all(kc in set(KnowledgeComponentId) for kc in LIVE_KCS)
-    # A Grade-6 ontology KC exists in the enum but is NOT live (no content yet).
-    assert KnowledgeComponentId("KC_percent") not in LIVE_KCS
+    # A Grade-6 ontology KC exists in the enum but is NOT live (no content yet). KC_signed_numbers
+    # is still unbuilt (KC_percent became live 2026-05-30, so it is no longer a valid example).
+    assert KnowledgeComponentId("KC_signed_numbers") not in LIVE_KCS
 
 
 def test_unbuilt_kc_has_no_registry_entry() -> None:
     """Resolving an ontology-only KC through the registry fails loudly (not a silent None)."""
     with pytest.raises(KeyError):
-        get_kc(KnowledgeComponentId("KC_percent"))
+        get_kc(KnowledgeComponentId("KC_signed_numbers"))
 
 
 def test_lookup_by_id_returns_the_matching_kc() -> None:

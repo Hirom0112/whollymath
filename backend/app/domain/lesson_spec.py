@@ -309,6 +309,46 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    _spec(
+        _KC.PERCENT,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Find the percent OF the whole — the percent number alone isn't the answer.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "A part of the whole is smaller than the whole — re-check the size.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 2: Fractions & Decimals (T2) ───
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors
+    # route back to SYMBOLIC (the AREA_MODEL multiply widget isn't live yet), so "re-try on the
+    # same surface with a labeled hint" is the honest adaptation until that widget lands (T3).
+    _spec(
+        _KC.MULTIPLY_FRACTIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Multiply the tops and the bottoms — don't add. A common denominator isn't needed.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "A part of a part is smaller than either fraction — re-check the size.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

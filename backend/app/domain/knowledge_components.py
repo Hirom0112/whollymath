@@ -248,6 +248,31 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
     ),
+    # Percent as a rate per 100: find a percent OF a quantity (6.RP.3c). Numeric answer,
+    # practice-only.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.PERCENT,
+        skill_name="Find a percent of a number",
+        description=(
+            "Find a given percent of a quantity, reading a percent as a rate per 100 "
+            "(e.g. 30% of 50 is 15)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 2: Fractions & Decimals (T2) ───
+    # Multiply two proper fractions: the product is a single fraction entered in the symbolic
+    # editor. Advertises SYMBOLIC + AREA_MODEL (the area model is the canonical picture of
+    # fraction multiplication), but LIVE only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS)
+    # — PRACTICE-ONLY like UNIT_RATE; masterability waits on the AREA_MODEL multiply widget (T3).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.MULTIPLY_FRACTIONS,
+        skill_name="Multiply two fractions",
+        description=(
+            "Multiply two proper fractions by multiplying the numerators and the "
+            "denominators (e.g. 2/3 x 3/4 = 6/12 = 1/2), not by adding them."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

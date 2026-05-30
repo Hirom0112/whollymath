@@ -67,6 +67,9 @@ class MisconceptionId(StrEnum):
     # match holds only for the five fraction misconceptions above).
     RATE_INVERSION = "rate-inversion"
     ADDITIVE_RATIO = "additive-ratio"
+    PERCENT_AS_AMOUNT = "percent-as-amount"
+    # Unit 2 (T2): treating fraction multiplication like addition (x as +).
+    MULTIPLY_AS_ADD = "multiply-as-add"
 
 
 @dataclass(frozen=True)
@@ -195,6 +198,27 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "preserves the difference instead of the multiplicative relationship."
         ),
         applicable_kcs=(KnowledgeComponentId.EQUIVALENT_RATIOS,),
+    ),
+    Misconception(
+        id=MisconceptionId.PERCENT_AS_AMOUNT,
+        name="Percent as amount",
+        description=(
+            "Reports the percent NUMBER itself as the answer instead of computing that "
+            "percent OF the whole — '30% of 50' becomes 30, not 15. The learner does not "
+            "engage the base; the percent is read as an absolute count."
+        ),
+        applicable_kcs=(KnowledgeComponentId.PERCENT,),
+    ),
+    Misconception(
+        id=MisconceptionId.MULTIPLY_AS_ADD,
+        name="Multiply as add",
+        description=(
+            "Treats fraction multiplication like addition: instead of multiplying the "
+            "numerators and denominators (2/3 x 3/4 = 6/12), the learner adds the fractions "
+            "(2/3 + 3/4). The operation is confused, so the result is too big — a product of "
+            "two proper fractions is smaller than either factor, never larger."
+        ),
+        applicable_kcs=(KnowledgeComponentId.MULTIPLY_FRACTIONS,),
     ),
 )
 

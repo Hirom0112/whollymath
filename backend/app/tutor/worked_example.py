@@ -400,6 +400,71 @@ def _equivalent_ratios_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _percent_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'per 100, then of the whole' steps for a percent-of problem.
+
+    ``operands = (percent, whole)``; the answer is ``percent/100 * whole ==
+    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"percent problem {problem.problem_id} needs (percent, whole)")
+    percent, whole = int(operands[0]), int(operands[1])
+    answer = problem.correct_value
+    each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
+    return (
+        WorkedStep(
+            shown=f"{percent}% means {percent} out of 100, i.e. the fraction {percent}/100.",
+            why_prompt="Why is a percent just a fraction with a denominator of 100?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Take that fraction OF the whole: {percent}/100 of {whole}.",
+            why_prompt="Why does 'percent of' mean multiply the fraction by the whole?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"That is {each}.",
+            why_prompt="Why should this be smaller than the whole when the percent is under 100?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _multiply_fractions_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'multiply across, then simplify' steps for a fraction product (Grade-6 Unit 2).
+
+    ``operands = (first, second)``; the product is ``first * second ==
+    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"multiply-fractions problem {problem.problem_id} needs (first, second)")
+    first, second = operands
+    answer = problem.correct_value
+    each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
+    return (
+        WorkedStep(
+            shown=(
+                f"Multiply the tops together and the bottoms together: "
+                f"({first.p}x{second.p})/({first.q}x{second.q})."
+            ),
+            why_prompt="Why do you multiply straight across, with no common denominator?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"That is {first.p * second.p}/{first.q * second.q}.",
+            why_prompt="Why is a part OF a part smaller than either fraction you started with?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Simplify: {each}.",
+            why_prompt="Why does reducing keep the same value with smaller numbers?",
+            revealed_value=answer,
+        ),
+    )
+
+
 # ─── The public builder ───────────────────────────────────────────────────────
 
 
@@ -436,6 +501,8 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _number_line_steps,
     KnowledgeComponentId.UNIT_RATE: _unit_rate_steps,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _equivalent_ratios_steps,
+    KnowledgeComponentId.PERCENT: _percent_steps,
+    KnowledgeComponentId.MULTIPLY_FRACTIONS: _multiply_fractions_steps,
 }
 
 

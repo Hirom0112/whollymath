@@ -598,6 +598,70 @@ def _generate_equivalent_ratios(
     )
 
 
+_PERCENT_POOL: tuple[int, ...] = (10, 20, 25, 30, 40, 50, 60, 75)
+_PERCENT_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (10, 50),
+    2: (20, 25, 50),
+    3: (30, 40, 60),
+    4: (25, 60, 75),
+}
+# Wholes exclude 100 so the percent NUMBER itself (the percent-as-amount misconception) is always
+# distinct from the correct value (p% of 100 == p only at whole == 100).
+_PERCENT_WHOLES: tuple[int, ...] = (20, 30, 40, 50, 60, 80)
+
+
+def _generate_percent(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_percent: find a percent OF a quantity (a rate per 100).
+
+    Asks "what is p% of whole?"; the answer is the SymPy ``Rational(p*whole, 100)`` (may reduce
+    to a fraction, which the editor accepts). ``operands = (p, whole)`` so the verifier can replay
+    the percent-as-amount misconception (answering the percent ``p`` itself). Numeric, symbolic.
+    """
+    pool = _PERCENT_BY_DIFFICULTY.get(difficulty, _PERCENT_POOL) if difficulty else _PERCENT_POOL
+    percent = rng.choice(pool)
+    whole = rng.choice(_PERCENT_WHOLES)
+    statement = f"What is {percent}% of {whole}?"
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.PERCENT, seed, surface_format),
+        kc=KnowledgeComponentId.PERCENT,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(percent * whole, 100),
+        representations_available=get_kc(KnowledgeComponentId.PERCENT).representations,
+        operands=(Rational(percent), Rational(whole)),
+    )
+
+
+# ─── Grade-6 content build (2026-05-30) — Unit 2: Fractions & Decimals (T2) ───
+
+
+def _generate_multiply_fractions(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_multiply_fractions: multiply two proper fractions; the product is the answer.
+
+    Two unlike-denominator proper fractions (the existing ``_unlike_pair`` pool, so difficulty
+    ramps the same way the other fraction KCs do). The correct value is the SymPy product
+    ``first * second`` (e.g. 2/3 x 3/4 = 1/2). ``operands = (first, second)`` so the verifier can
+    replay the multiply-as-add misconception (``first + second`` — treating x as +). Rendered
+    symbolically; a product of two proper fractions is strictly smaller than either factor, the
+    property the area model uses and that defeats the "added, so it got bigger" error.
+    """
+    first, second = _unlike_pair(rng, difficulty)
+    product = first * second
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.MULTIPLY_FRACTIONS, seed, surface_format),
+        kc=KnowledgeComponentId.MULTIPLY_FRACTIONS,
+        surface_format=surface_format,
+        statement=f"{first.p}/{first.q} x {second.p}/{second.q} = ?",
+        correct_value=product,
+        representations_available=get_kc(KnowledgeComponentId.MULTIPLY_FRACTIONS).representations,
+        operands=(first, second),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -608,6 +672,8 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _generate_number_line,
     KnowledgeComponentId.UNIT_RATE: _generate_unit_rate,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _generate_equivalent_ratios,
+    KnowledgeComponentId.PERCENT: _generate_percent,
+    KnowledgeComponentId.MULTIPLY_FRACTIONS: _generate_multiply_fractions,
 }
 
 

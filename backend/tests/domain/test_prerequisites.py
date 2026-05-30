@@ -121,10 +121,24 @@ def test_remediation_routing_matches_the_standard_for_sample_lessons() -> None:
 
 
 def test_foundation_kcs_are_terminal_no_remediation_drop() -> None:
-    """The five foundation fraction KCs never auto-drop below themselves (§11.1 terminal)."""
-    for kc in LIVE_KCS:
+    """The five FOUNDATION fraction KCs never auto-drop below themselves (§11.1 terminal).
+
+    Checked against the foundation-five explicitly, NOT LIVE_KCS: a built grade-6 KC (unit_rate,
+    percent, multiply_fractions, …) is live yet legitimately REMAINS a remediation source — it
+    drops to its prerequisite when a learner struggles. Only the foundation fractions are terminal
+    (the §11.1 floor). (Earlier this used LIVE_KCS as a proxy for the foundation set; that held
+    only while the two were identical — before the Grade-6 content build made other KCs live.)
+    """
+    foundation = {
+        KC.NUMBER_LINE_PLACEMENT,
+        KC.EQUIVALENCE,
+        KC.COMMON_DENOMINATOR,
+        KC.ADDITION_UNLIKE,
+        KC.SUBTRACTION_UNLIKE,
+    }
+    for kc in foundation:
         assert remediation_targets(kc) == (), f"{kc.value} should be terminal"
-    assert not (set(REMEDIATION_ROUTING) & LIVE_KCS)  # no foundation appears as a routing key
+    assert not (set(REMEDIATION_ROUTING) & foundation)  # no foundation KC is a routing key
 
 
 def test_remediation_routing_has_no_self_loops() -> None:

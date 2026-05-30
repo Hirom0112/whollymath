@@ -210,6 +210,37 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "How many times bigger is the new second number? Grow the first by that same many.",
         ),
     ),
+    # index 0 (operation) orients toward "OF the whole, not the percent alone"; index 1 (magnitude).
+    KnowledgeComponentId.PERCENT: (
+        _nudge(
+            KnowledgeComponentId.PERCENT,
+            "A percent is a part OF the whole (out of one hundred), not the percent number alone.",
+        ),
+        _nudge(
+            KnowledgeComponentId.PERCENT,
+            "Is your answer bigger than the whole? A part of it should be smaller than the whole.",
+        ),
+        _nudge(
+            KnowledgeComponentId.PERCENT,
+            "Think of the whole as one hundred equal pieces. How many of those do you take?",
+        ),
+    ),
+    # Grade-6 Unit 2 (T2): index 0 (operation) orients toward multiply-not-add; index 1
+    # (magnitude) toward "a part of a part is smaller".
+    KnowledgeComponentId.MULTIPLY_FRACTIONS: (
+        _nudge(
+            KnowledgeComponentId.MULTIPLY_FRACTIONS,
+            "Multiply the tops, then the bottoms. You don't need a common denominator.",
+        ),
+        _nudge(
+            KnowledgeComponentId.MULTIPLY_FRACTIONS,
+            "A fraction OF a fraction is smaller. If your answer grew, you likely added.",
+        ),
+        _nudge(
+            KnowledgeComponentId.MULTIPLY_FRACTIONS,
+            "Two thirds of three quarters: multiply across, then simplify the result.",
+        ),
+    ),
 }
 
 
