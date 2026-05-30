@@ -109,8 +109,12 @@ def test_scoring_does_not_alter_turn_outcome() -> None:
     """
     scored = SessionStore(predictor=load_predictor())
     bare = SessionStore()
-    a = scored.start(_ADDITION_ROUTE_KEY)
-    b = bare.start(_ADDITION_ROUTE_KEY)
+    # Pin the SAME session id in both walks: the problem seed is derived from the id (Fix A),
+    # so an equivalence test must hold identity fixed to isolate the variable under test (the
+    # predictor), not the per-session problem variety.
+    fixed_id = "equivsession00000000000000helpnd"
+    a = scored.start(_ADDITION_ROUTE_KEY, session_id=fixed_id)
+    b = bare.start(_ADDITION_ROUTE_KEY, session_id=fixed_id)
     assert a.problem.problem_id == b.problem.problem_id  # start() is deterministic
 
     answers = [_CORRECT, _WRONG, _WRONG, _CORRECT, _WRONG]

@@ -18,10 +18,29 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 
+from app.api.benchmark_transcript_view import (
+    build_benchmark_transcript_view,
+    list_benchmark_personas,
+)
 from app.api.eval_view import build_three_arm_comparison_view
+from app.api.homework_view import (
+    InvalidPageImageError,
+    assign_response,
+    decode_pages,
+    status_response,
+    submit_response,
+)
 from app.api.schemas import (
+    BenchmarkPersonaSummaryView,
+    BenchmarkTranscriptView,
     EventBatchRequest,
     EventIngestResponse,
+    HwAssignRequest,
+    HwAssignResponse,
+    HwConfirmRequest,
+    HwStatusResponse,
+    HwSubmitRequest,
+    HwSubmitResponse,
     RouteOptionView,
     StartSessionRequest,
     StartSessionResponse,
@@ -35,6 +54,7 @@ from app.api.service import (
     UnknownRouteError,
     routing_menu,
 )
+from app.homework.session import HomeworkStore
 
 # A router rather than decorating the app directly, so the app factory can mount this
 # (and future routers) without this module importing the app — the dependency
@@ -56,6 +76,20 @@ def get_session_store(request: Request) -> SessionStore:
 # The dependency-injected store, as an Annotated alias so the route signatures read
 # cleanly and avoid a Depends() call in an argument default (ruff B008).
 StoreDep = Annotated[SessionStore, Depends(get_session_store)]
+
+
+def get_homework_store(request: Request) -> HomeworkStore:
+    """Resolve the per-app in-memory ``HomeworkStore`` (created in ``create_app``).
+
+    Same one-store-per-app discipline as the turn-loop store, so homework runs are isolated
+    between app instances (a fresh, empty store per test app).
+    """
+    store = request.app.state.homework_store
+    assert isinstance(store, HomeworkStore)  # set by create_app; guard the contract.
+    return store
+
+
+HwStoreDep = Annotated[HomeworkStore, Depends(get_homework_store)]
 
 
 class HealthResponse(BaseModel):
@@ -96,6 +130,105 @@ def three_arm_comparison() -> ThreeArmComparisonView:
     is made here, so viewing the dashboard never spends money (CLAUDE.md §8.1 spirit).
     """
     return build_three_arm_comparison_view()
+
+
+@router.get(
+    "/eval/benchmark-personas",
+    response_model=list[BenchmarkPersonaSummaryView],
+    tags=["eval"],
+)
+def benchmark_personas() -> list[BenchmarkPersonaSummaryView]:
+    """The five adversarial personas for the benchmark-theater switcher (PROJECT.md §4.2).
+
+    Pure data, deterministic, free: just who each learner is and the mastery dimension they
+    attack. No session is created and no LLM is called.
+    """
+    return list_benchmark_personas()
+
+
+@router.get(
+    "/eval/benchmark-transcript/{persona_id}",
+    response_model=BenchmarkTranscriptView,
+    tags=["eval"],
+)
+def benchmark_transcript(persona_id: str) -> BenchmarkTranscriptView:
+    """One persona's run through all three arms, turn by turn (a teaching view of Slice 5.3).
+
+    Deterministic and free — the adaptive + static arms are pure and the chat arm uses a
+    canned illustrative provider (no live LLM call, CLAUDE.md §8.1). An unknown ``persona_id``
+    is a 404 (we do not invent a persona, CLAUDE.md §8.5).
+    """
+    view = build_benchmark_transcript_view(persona_id)
+    if view is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"unknown persona_id: {persona_id!r}",
+        )
+    return view
+
+
+@router.post("/hw/assign", response_model=HwAssignResponse, tags=["homework"])
+def hw_assign(request: HwAssignRequest, store: HwStoreDep) -> HwAssignResponse:
+    """Start a homework run for a skill at lesson end (PROJECT.md §3.4 two-star model).
+
+    Returns the upload ``token`` (the desktop encodes it in the QR) plus the question list for the
+    checklist. Pure setup — no scan, no grade yet.
+    """
+    run = store.assign(request.kc)
+    return assign_response(run)
+
+
+@router.post("/hw/submit", response_model=HwSubmitResponse, tags=["homework"])
+def hw_submit(request: HwSubmitRequest, store: HwStoreDep) -> HwSubmitResponse:
+    """Receive the phone's page photos for a run and transcribe a draft (state → ready_for_review).
+
+    Images arrive base64-encoded (no multipart dependency). Grading does NOT happen here — the
+    learner confirms the transcription first (``/hw/confirm``). Unknown token → 404; a malformed
+    image → 422.
+    """
+    try:
+        pages = decode_pages(request.pages)
+    except InvalidPageImageError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+    run = store.submit(request.token, pages)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"unknown token: {request.token!r}"
+        )
+    return submit_response(run)
+
+
+@router.get("/hw/status", response_model=HwStatusResponse, tags=["homework"])
+def hw_status(token: str, store: HwStoreDep) -> HwStatusResponse:
+    """Poll a run (the desktop, while it waits for the phone): state + draft + the graded verdict.
+
+    The draft is present once photos are in (for the read-back); the result once confirmed. Unknown
+    token → 404.
+    """
+    run = store.get(token)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"unknown token: {token!r}"
+        )
+    return status_response(run)
+
+
+@router.post("/hw/confirm", response_model=HwStatusResponse, tags=["homework"])
+def hw_confirm(request: HwConfirmRequest, store: HwStoreDep) -> HwStatusResponse:
+    """Grade the learner-confirmed answers (after the desktop read-back) and return the verdict.
+
+    ``answers`` is authoritative — what the learner confirmed/corrected, not necessarily the raw
+    draft. SymPy decides correctness; the ★★ verdict is in the returned result. Unknown token → 404.
+    """
+    answers = {a.index: a.answer for a in request.answers}
+    run = store.confirm(request.token, answers)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"unknown token: {request.token!r}"
+        )
+    return status_response(run)
 
 
 @router.post("/session", response_model=StartSessionResponse, tags=["session"])

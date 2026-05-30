@@ -61,9 +61,14 @@ def _turn(session_id: str, problem_id: str, answer: str = _ADDITION_CORRECT_ANSW
     )
 
 
-def _walk(store: SessionStore, n_turns: int) -> list[object]:
-    """Start a session and submit ``n_turns`` correct answers; return the responses."""
-    started = store.start(_ADDITION_ROUTE_KEY)
+def _walk(store: SessionStore, n_turns: int, *, session_id: str | None = None) -> list[object]:
+    """Start a session and submit ``n_turns`` correct answers; return the responses.
+
+    ``session_id`` may be pinned so two stores walk the SAME session: the problem seed is
+    derived from the session id (Fix A), so an equivalence test must hold the id fixed to
+    isolate the variable under test (the factory/predictor/arm), not the session identity.
+    """
+    started = store.start(_ADDITION_ROUTE_KEY, session_id=session_id)
     responses: list[object] = []
     session_id = started.session_id
     problem_id = started.problem.problem_id
@@ -82,8 +87,9 @@ def test_responses_identical_with_and_without_factory(
     plain = SessionStore()
     persisted = SessionStore(session_factory=session_factory)
 
-    plain_responses = _walk(plain, 6)
-    persisted_responses = _walk(persisted, 6)
+    fixed_id = "equivsession0000000000000000pers"
+    plain_responses = _walk(plain, 6, session_id=fixed_id)
+    persisted_responses = _walk(persisted, 6, session_id=fixed_id)
 
     assert plain_responses == persisted_responses
 

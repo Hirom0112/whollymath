@@ -252,9 +252,18 @@ def _build_bank_error_finding_item(kc: KnowledgeComponentId) -> TransferItem:
     correct = first + second if is_addition else first - second
     claim = _BANK_ERROR_FINDING_CLAIM[kc]
     operator = "+" if is_addition else "-"
+    # Display the claim in its UNREDUCED across-error form (1/4 + 1/4 = 2/8, not the SymPy-
+    # reduced 1/4) — that unreduced fraction IS the misconception we want the learner to spot.
+    # Rendering claim.p/claim.q would silently reduce 2/8 → 1/4 and hide the mistake. The
+    # claimed VALUE (claimed_answer below) is unchanged; only the shown text is corrected.
+    across = (
+        add_across(first.p, first.q, second.p, second.q)
+        if is_addition
+        else subtract_across(first.p, first.q, second.p, second.q)
+    )
     statement = (
         f"Tim says {first.p}/{first.q} {operator} {second.p}/{second.q} "
-        f"= {claim.p}/{claim.q}. Is he right? If not, why?"
+        f"= {across.numerator}/{across.denominator}. Is he right? If not, why?"
     )
     problem = Problem(
         problem_id=f"TRANSFER-FINDERR-{kc.value}",

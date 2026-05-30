@@ -17,8 +17,15 @@ suites; this guards the orchestration seam.
 from __future__ import annotations
 
 import pytest
-from app.api.schemas import ActionType, ErrorType, SurfaceState, TurnRequest
+from app.api.schemas import (
+    ActionType,
+    ErrorType,
+    StartSessionResponse,
+    SurfaceState,
+    TurnRequest,
+)
 from app.api.service import SessionNotFoundError, SessionStore, UnknownRouteError
+from app.domain.knowledge_components import KnowledgeComponentId, Representation
 
 _ADDITION_ROUTE_KEY = "combine"
 _ADDITION_CORRECT_ANSWER = "7/12"
@@ -63,22 +70,102 @@ def test_process_turn_verifies_and_advances() -> None:
     assert response.next_problem.problem_id != started.problem.problem_id
 
 
-def test_process_turn_is_deterministic() -> None:
-    """Two fresh sessions walked identically yield the same next problem (§4.1).
+def _walk_first_n_followon_problems(
+    store: SessionStore, started: StartSessionResponse, n: int
+) -> list[str]:
+    """Walk a started session forward ``n`` answer turns, collecting each served
+    next-problem id. Always submits a wrong answer so the served-problem variety check
+    is not confounded by a probe/state transition; the ids are what we compare."""
+    ids: list[str] = []
+    problem_id = started.problem.problem_id
+    for _ in range(n):
+        resp = store.process_turn(_turn(started.session_id, problem_id, answer="0"))
+        assert resp.next_problem is not None
+        problem_id = resp.next_problem.problem_id
+        ids.append(problem_id)
+    return ids
 
-    Only ``session_id`` is non-deterministic (a uuid); the served problem — chosen
-    from the deterministic seed = turn count — must be identical across runs.
+
+def test_two_sessions_get_different_problem_sequences() -> None:
+    """Fix A — problem VARIETY: two fresh sessions on the SAME route get DIFFERENT problem
+    sequences (the seed is derived from the session id, not just the turn index), so a learner
+    no longer sees the identical problems every time. This is the corrected contract; it
+    deliberately supersedes the old "two sessions yield the same problem" assertion, which
+    encoded the reported bug.
     """
-    store_a, store_b = SessionStore(), SessionStore()
-    a = store_a.start(_ADDITION_ROUTE_KEY)
-    b = store_b.start(_ADDITION_ROUTE_KEY)
-    assert a.problem.problem_id == b.problem.problem_id  # start() is deterministic too
+    store = SessionStore()
+    a = store.start(_ADDITION_ROUTE_KEY)
+    b = store.start(_ADDITION_ROUTE_KEY)
 
-    resp_a = store_a.process_turn(_turn(a.session_id, a.problem.problem_id))
-    resp_b = store_b.process_turn(_turn(b.session_id, b.problem.problem_id))
-    assert resp_a.next_problem is not None and resp_b.next_problem is not None
-    assert resp_a.next_problem.problem_id == resp_b.next_problem.problem_id
-    assert resp_a.next_problem.statement == resp_b.next_problem.statement
+    seq_a = _walk_first_n_followon_problems(store, a, 4)
+    seq_b = _walk_first_n_followon_problems(store, b, 4)
+    assert seq_a != seq_b  # different sessions → different problems
+
+
+def test_same_session_is_reproducible_problem_for_problem() -> None:
+    """Fix A — within ONE session the walk stays fully deterministic: replaying the same
+    session id with the same answers yields the identical problem sequence (PROJECT.md §4.1).
+    Two independent stores are seeded with the SAME session id to prove reproducibility comes
+    from the session id, not store identity.
+    """
+    fixed_id = "fixedsession00000000000000000001"
+    store_a, store_b = SessionStore(), SessionStore()
+    a = store_a.start(_ADDITION_ROUTE_KEY, session_id=fixed_id)
+    b = store_b.start(_ADDITION_ROUTE_KEY, session_id=fixed_id)
+
+    seq_a = _walk_first_n_followon_problems(store_a, a, 4)
+    seq_b = _walk_first_n_followon_problems(store_b, b, 4)
+    assert seq_a == seq_b  # same session id → identical, reproducible walk
+
+
+def test_wrong_answer_re_practices_the_same_kc() -> None:
+    """Fix B — adaptive re-practice: after a WRONG answer the next problem stays on the SAME
+    KC the learner just struggled on (more practice on the shaky skill), instead of rotating
+    to a different KC. The addition route's first follow-on is KC_addition_unlike; missing it
+    must serve another KC_addition_unlike item, not the interleaved companion.
+    """
+    store = SessionStore()
+    started = store.start(_ADDITION_ROUTE_KEY)
+    problem_id = started.problem.problem_id
+    # Keep answering WRONG for several turns — including past the §0.D.5 cadence turn (the 3rd
+    # follow-on), which the PLAIN scheduler would hand to the subtraction companion. Under
+    # re-practice every served problem must stay on the struggling KC (addition).
+    for _ in range(5):
+        resp = store.process_turn(_turn(started.session_id, problem_id, answer="0"))
+        assert resp.correct is False
+        assert resp.next_problem is not None
+        assert resp.next_problem.kc is KnowledgeComponentId.ADDITION_UNLIKE
+        problem_id = resp.next_problem.problem_id
+
+
+def test_correct_answer_is_not_pinned_by_re_practice() -> None:
+    """Fix B does not break interleaving: a CORRECT answer routes the next problem through the
+    UNCHANGED interleaving path (``next_spec_after_outcome`` with ``last_correct=True`` ==
+    ``next_spec``), so the cadence/representation rotation the mastery model relies on (§3.4
+    rule 4) is preserved. Re-practice pins ONLY on a wrong answer (the other tests cover that).
+    """
+    from app.policy.scheduler import next_spec, next_spec_after_outcome
+
+    # The wiring contract: a correct last turn must defer to the plain interleaving schedule.
+    for i in range(12):
+        assert next_spec_after_outcome(
+            KnowledgeComponentId.ADDITION_UNLIKE,
+            i,
+            last_correct=True,
+            last_kc=KnowledgeComponentId.ADDITION_UNLIKE,
+            last_format=Representation.SYMBOLIC,
+        ) == next_spec(KnowledgeComponentId.ADDITION_UNLIKE, i)
+
+    # And end-to-end: a correct calibration answer serves a fresh, different problem (it does
+    # not crash or stall), confirming the correct-path wiring runs.
+    store = SessionStore()
+    started = store.start(_ADDITION_ROUTE_KEY)
+    resp = store.process_turn(
+        _turn(started.session_id, started.problem.problem_id, answer=_ADDITION_CORRECT_ANSWER)
+    )
+    assert resp.correct is True
+    assert resp.next_problem is not None
+    assert resp.next_problem.problem_id != started.problem.problem_id
 
 
 def test_unknown_session_raises_named_error() -> None:

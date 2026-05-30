@@ -143,7 +143,27 @@ class ProblemView(BaseModel):
     tick_segments: int | None = Field(
         default=None,
         ge=1,
-        description="Number-line only: equal intervals on the 0–1 line to snap to; null otherwise.",
+        description=(
+            "Number-line only: equal intervals PER UNIT to snap a drag to (the target's "
+            "denominator); null otherwise. The total ticks shown is "
+            "``(axis_max - axis_min) * tick_segments``."
+        ),
+    )
+    axis_min: int = Field(
+        default=0,
+        description=(
+            "Number-line only: the left end of the axis. 0 for a proper-fraction or improper "
+            "placement; negative for a negative target (e.g. −2 to place −5/4) — CCSS 6.NS.6. "
+            "Ignored by non-number-line surfaces."
+        ),
+    )
+    axis_max: int = Field(
+        default=1,
+        description=(
+            "Number-line only: the right end of the axis. 1 for a proper fraction, 2 for an "
+            "improper target (e.g. 5/4), so the marker can sit PAST the '1' whole. Ignored by "
+            "non-number-line surfaces."
+        ),
     )
     given_denominator: int | None = Field(
         default=None,
@@ -394,6 +414,17 @@ class TurnResponse(BaseModel):
             "surface then shows S4 without a walkthrough rather than the loop failing."
         ),
     )
+    lesson_complete: bool = Field(
+        default=False,
+        description=(
+            "True on the turn that FINISHES the lesson — i.e. the goal KC just became "
+            "CONFIRMED (the S5 transfer probe passed). The bounded-lesson terminal signal "
+            "(CP.B; PROJECT.md §3.13): the surface shows the 'you finished it' screen and "
+            "routes the learner home instead of presenting yet another practice problem. "
+            "``next_problem`` may still be populated as an optional 'keep practicing' item, "
+            "but a complete lesson must not silently loop on. False on every other turn."
+        ),
+    )
 
 
 class ArmVerdictView(BaseModel):
@@ -478,6 +509,255 @@ class ThreeArmComparisonView(BaseModel):
     metrics: list[MetricComparisonView] = Field(
         default_factory=list,
         description="The five remaining pre-registered metrics, each across the three arms.",
+    )
+
+
+class BenchmarkPersonaSummaryView(BaseModel):
+    """One entry in the benchmark-theater persona switcher: who, and the mastery dimension
+    they attack (PROJECT.md §4.2). Display-ready; the surface renders these verbatim."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    persona_id: str = Field(description="Opaque persona id; sent back to load that transcript.")
+    persona_name: str = Field(description="Display name, e.g. 'Procedure Priya'.")
+    attacks: str = Field(description="The one mastery rule/dimension this learner attacks.")
+    kc: str = Field(description="The knowledge component the run targets.")
+
+
+class AdaptiveTurnView(BaseModel):
+    """One adaptive-arm turn, display-ready (Slice 5.3 theater). The verified path: the
+    persona's answer, the SymPy verdict, the labelled error class, the one-line feedback, the
+    resulting surface state, and the §3.4 effort/scaffold flags (hinted, below engagement floor)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    problem_statement: str
+    format_label: str = Field(description="The representation shown, e.g. 'Number line'.")
+    student_answer: str = Field(description="The persona's submitted answer, or '—' for none.")
+    correct: bool = Field(description="The SymPy verdict for this turn (domain decides).")
+    result_label: str = Field(description="'Correct' or the labelled error, e.g. 'Magnitude'.")
+    feedback: str = Field(description="The tutor's one-line labelled feedback for the turn.")
+    state_label: str = Field(description="Surface state after the turn, e.g. 'S1 · symbolic'.")
+    hint_used: bool = Field(description="Whether the attempt was scaffolded (down-weighted).")
+    below_engagement_floor: bool = Field(
+        description="Whether the answer landed under the 2s engagement floor (non-evidence)."
+    )
+    latency_label: str = Field(description="How long the persona 'thought', e.g. '12.0s'.")
+
+
+class ChatTurnView(BaseModel):
+    """One chat-arm exchange, display-ready. ``tutor_reply`` is an ILLUSTRATIVE placeholder in
+    the offline theater (no live model is called) — the arm's real signal is its self-
+    certification verdict on the transcript, not this wording (CLAUDE.md §5, §8.2)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    problem_statement: str
+    student_answer: str = Field(description="The persona's typed answer (same as every arm).")
+    tutor_reply: str = Field(description="Illustrative chat reply (offline placeholder, labelled).")
+
+
+class StaticTurnView(BaseModel):
+    """One static-arm screen, display-ready: the fixed worked-example walkthrough shown, and the
+    answer the learner submitted — recorded UNVERIFIED (the arm has no verifier, by design)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    problem_statement: str
+    walkthrough: str = Field(description="The pre-rendered linear walkthrough shown for the item.")
+    student_answer: str = Field(description="The submitted answer, recorded but never checked.")
+
+
+class TransferProbeStepView(BaseModel):
+    """One item of the S5 transfer probe, made visible (PROJECT.md §3.9): the step that tests
+    understanding rather than computation — a same-skill-new-format item, or an error-finding
+    'Tim says ¼+¼=2/8, why is he wrong?' item — with its pass/fail and a plain-language line."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    item_type: str = Field(description="'representation' (new format) or 'error_finding'.")
+    prompt: str = Field(description="What the learner was shown for this probe item.")
+    surface_format: str = Field(description="The representation of the item, e.g. 'number_line'.")
+    passed: bool = Field(description="Whether the learner passed this transfer item.")
+    detail: str = Field(description="Plain-language line on what the persona did here.")
+
+
+class BenchmarkTranscriptView(BaseModel):
+    """One persona run through all three arms, turn by turn, with each arm's verdict — the
+    on-screen "benchmark theater" (a teaching view of Slice 5.3 / PROJECT.md §3.11).
+
+    The adaptive verdict is the real two-stage gate (provisional ``declare_mastery`` then the
+    S5 transfer probe); the chat verdict is the recorded LIVE self-certification (or the §9
+    prediction when no live run is committed); static has no mastery construct by design."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    persona_id: str
+    persona_name: str
+    attacks: str
+    kc: str
+    problems: list[str] = Field(description="The problem statements, the same set fed every arm.")
+
+    adaptive_turns: list[AdaptiveTurnView]
+    adaptive_verdict: str = Field(description="Display label, e.g. 'Denied ✓ — refused mastery'.")
+    adaptive_tone: str = Field(description="good | bad — drives the surface styling.")
+    adaptive_why: str = Field(description="Plain-language, demo-ready explanation of the verdict.")
+    adaptive_blocked_at: str = Field(
+        description="Stage that caught the learner (provisional | transfer_probe | NOT BLOCKED)."
+    )
+    adaptive_reasons: list[str] = Field(
+        default_factory=list, description="The exact rule(s) that denied mastery."
+    )
+    adaptive_probe_ran: bool = Field(
+        description="True when the learner reached provisional and the transfer probe ran."
+    )
+    adaptive_probe_steps: list[TransferProbeStepView] = Field(
+        default_factory=list, description="The transfer-probe items, shown when the probe ran."
+    )
+
+    chat_turns: list[ChatTurnView]
+    chat_verdict: str = Field(description="Display label, e.g. 'Mastered ✗ (false positive)'.")
+    chat_tone: str = Field(description="good | bad | pending — drives the surface styling.")
+    chat_why: str = Field(description="Plain-language, demo-ready explanation of the chat verdict.")
+    chat_self_assessment: str = Field(
+        description="The chat tutor's own MASTERED/NOT_YET word (or a prediction note)."
+    )
+    chat_live: bool = Field(description="True when the verdict reflects a real recorded LLM run.")
+    chat_illustrative_note: str = Field(
+        description="The standing caveat that the chat replies above are offline placeholders."
+    )
+
+    static_turns: list[StaticTurnView]
+    static_verdict: str = Field(description="Always 'N/A — certifies nothing' (no mastery model).")
+    static_tone: str = Field(description="neutral — the static arm has no verdict to style.")
+    static_note: str = Field(description="One-line note that the arm never checks or tracks.")
+
+
+class HwQuestionView(BaseModel):
+    """One homework question, for the desktop checklist + the mobile capture screen."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    index: int = Field(ge=0, description="0-based position in the set (the grading/scan index).")
+    statement: str = Field(description="The kid-facing problem text.")
+    is_target: bool = Field(
+        description="True for the anchored target skill; False for spaced review."
+    )
+
+
+class HwAssignRequest(BaseModel):
+    """Start a homework run for a skill (the desktop, at lesson end). Returns a token for the QR."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kc: KnowledgeComponentId = Field(description="The just-learned skill the set is anchored to.")
+    session_id: str | None = Field(
+        default=None, description="Optional session this homework belongs to (carried for context)."
+    )
+
+
+class HwAssignResponse(BaseModel):
+    """The freshly-created homework run: the upload token (QR payload) + the question list."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, description="One-time upload token; the QR encodes it.")
+    target_kc: str = Field(description="The anchored target skill.")
+    questions: list[HwQuestionView] = Field(description="The set, in order (target first).")
+
+
+class HwSubmitRequest(BaseModel):
+    """The phone's page photos for a run — base64-encoded images (no multipart dependency)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, description="The run's upload token (from the QR).")
+    pages: list[str] = Field(
+        min_length=1,
+        description="One or more page images, base64-encoded (data may be raw or data-URL).",
+    )
+
+
+class HwSubmitResponse(BaseModel):
+    """Acknowledges the upload and reports the new run state (``ready_for_review``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    state: str = Field(
+        description="Run state after the upload (waiting | ready_for_review | graded)."
+    )
+    question_count: int = Field(ge=0, description="How many questions the draft now covers.")
+
+
+class HwDraftItemView(BaseModel):
+    """One question's DRAFT transcription, shown for the read-back ('I read this as 1/4 — yes?')."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    index: int = Field(ge=0)
+    statement: str
+    is_target: bool
+    read_as: str | None = Field(
+        default=None, description="What the scanner read for this question; null if unreadable."
+    )
+
+
+class HwConfirmAnswer(BaseModel):
+    """One learner-confirmed answer from the read-back (may differ from the draft if corrected)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    index: int = Field(ge=0)
+    answer: str | None = Field(
+        default=None, description="The confirmed answer text, or null if left blank."
+    )
+
+
+class HwConfirmRequest(BaseModel):
+    """The confirmed answers to grade (after the desktop read-back)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1)
+    answers: list[HwConfirmAnswer] = Field(description="Confirmed answer per question index.")
+
+
+class HwQuestionResultView(BaseModel):
+    """One graded question — for the 1-on-1 walk-through (right or wrong)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    index: int = Field(ge=0)
+    statement: str
+    is_target: bool
+    submitted: str | None
+    correct: bool
+    unreadable: bool
+
+
+class HwGradeResultView(BaseModel):
+    """The graded set + the ★★ verdict (target-skill score ≥ 0.8 = passed)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    results: list[HwQuestionResultView]
+    target_correct: int = Field(ge=0)
+    target_total: int = Field(ge=0)
+    target_score: float = Field(ge=0.0, le=1.0)
+    passed: bool = Field(description="True = ★★ earned; False = redo the lesson + a fresh set.")
+
+
+class HwStatusResponse(BaseModel):
+    """What the desktop polls: the run state, the draft (for the read-back), and the verdict."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    state: str = Field(description="waiting | ready_for_review | graded.")
+    draft: list[HwDraftItemView] = Field(
+        default_factory=list, description="The transcribed draft (present once photos are in)."
+    )
+    result: HwGradeResultView | None = Field(
+        default=None, description="The graded verdict (present once confirmed)."
     )
 
 
@@ -662,14 +942,29 @@ class MeResponse(BaseModel):
 
 __all__ = [
     "ActionType",
+    "AdaptiveTurnView",
     "AnswerKind",
     "ArmVerdictView",
+    "BenchmarkPersonaSummaryView",
+    "BenchmarkTranscriptView",
+    "ChatTurnView",
     "CourseNodeView",
     "CourseView",
     "CourseNodeStatus",
     "ErrorType",
     "EventBatchRequest",
     "EventIngestResponse",
+    "HwAssignRequest",
+    "HwAssignResponse",
+    "HwConfirmAnswer",
+    "HwConfirmRequest",
+    "HwDraftItemView",
+    "HwGradeResultView",
+    "HwQuestionResultView",
+    "HwQuestionView",
+    "HwStatusResponse",
+    "HwSubmitRequest",
+    "HwSubmitResponse",
     "InteractionEventIn",
     "InterventionKind",
     "InterventionView",
@@ -683,8 +978,10 @@ __all__ = [
     "RouteOptionView",
     "StartSessionRequest",
     "StartSessionResponse",
+    "StaticTurnView",
     "SurfaceState",
     "ThreeArmComparisonView",
+    "TransferProbeStepView",
     "TurnRequest",
     "TurnResponse",
     "WorkedStepView",

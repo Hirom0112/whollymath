@@ -483,7 +483,9 @@ class TutorSession:
         is all that is needed. Determinism is preserved (generate_problem is seed-only).
         """
         session = cls.cold_start(chosen_kc=None)
-        session.current_problem = generate_problem(kc, seed, surface_format)
+        # The lesson opens on the easiest ramp tier (CP.B easy→hard; the scheduler climbs the
+        # tier from here on each served problem via ``difficulty_for``).
+        session.current_problem = generate_problem(kc, seed, surface_format, difficulty=1)
         return session
 
     # ── reads ──
@@ -564,6 +566,7 @@ class TutorSession:
         kc: KnowledgeComponentId,
         seed: int,
         surface_format: Representation = Representation.SYMBOLIC,
+        difficulty: int | None = None,
     ) -> Problem:
         """Present a fresh generated problem for ``kc``, deterministically.
 
@@ -572,10 +575,12 @@ class TutorSession:
         transitions are applied at ANSWER time, between problems (refuse-rule 1,
         §3.8). The caller chooses which KC/format to present next (the harness
         interleaves KCs and formats here); the surface state the learner sees is
-        whatever the last applied transition left it in. Returns the problem now
+        whatever the last applied transition left it in. ``difficulty`` is the CP.B
+        easy→hard ramp tier the scheduler picks for this rung (None = full-set default,
+        so the persona harness is byte-for-byte unchanged). Returns the problem now
         showing so a caller can read its correct value.
         """
-        problem = generate_problem(kc, seed, surface_format)
+        problem = generate_problem(kc, seed, surface_format, difficulty)
         self.current_problem = problem
         return problem
 

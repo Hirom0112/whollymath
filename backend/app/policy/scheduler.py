@@ -47,22 +47,32 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     _KC.COMMON_DENOMINATOR: (_REP.SYMBOLIC,),
 }
 
-# The companion KC interleaved alongside each goal so a session always spans ≥2 KCs (rule 4).
-# Chosen to be pedagogically adjacent and to have a live answer widget.
-_COMPANION: dict[KnowledgeComponentId, KnowledgeComponentId] = {
-    _KC.ADDITION_UNLIKE: _KC.SUBTRACTION_UNLIKE,
-    _KC.SUBTRACTION_UNLIKE: _KC.ADDITION_UNLIKE,
-    _KC.EQUIVALENCE: _KC.ADDITION_UNLIKE,
-    _KC.NUMBER_LINE_PLACEMENT: _KC.EQUIVALENCE,
-    # Common denominator interleaves with equivalence (it IS applied equivalence — §3.4.1) so a
-    # CD lesson spans ≥2 KCs and next_spec never lacks a companion on the cadence turn.
-    _KC.COMMON_DENOMINATOR: _KC.EQUIVALENCE,
-}
+# NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a
+# number-line lesson is number-line questions only; product-owner decision). The mastery
+# model's varied-practice gate (rule 4) is now met within the skill by rotating its
+# representations (see ``next_spec`` + ``mastery_model._has_interleaved_mastery_set``), so the
+# old ``_COMPANION`` map and companion cadence are gone.
 
-# Every third served problem is the companion KC; the other two are the goal. This keeps the
-# session focused on the route the learner chose while guaranteeing the interleaving the
-# mastery rule needs (≥2 KCs, with the goal among them) — 0.D.5 cadence, applied live.
-_COMPANION_EVERY = 3
+# The easy→hard difficulty ramp (CP.B; CURRICULUM_DRAFT.md §1.1). Each served problem gets a
+# difficulty tier (1=friendliest … 4=hardest, matching ``problem_generators._DENOM_BY_DIFFICULTY``)
+# that climbs every ``_RAMP_STEP`` problems, so a lesson opens with a gentle warm-up and quickly
+# works up to genuine 6th-grade rigor (large denominators, then improper, then negatives on the
+# number-line skill) — "warm up, then increase difficulty". Capped at the top tier, so a learner
+# practising past the ramp stays hard (never wraps back to easy). A SMALL step keeps the climb
+# brisk so the hard content shows up early, not buried 8+ problems in. Deterministic in
+# ``served_index`` like the rest of the scheduler.
+_RAMP_STEP = 2
+_MAX_DIFFICULTY = 4
+
+
+def difficulty_for(served_index: int) -> int:
+    """The difficulty tier for the problem at ``served_index`` (0-based, after the cold-start
+    item). Climbs one tier every ``_RAMP_STEP`` problems, capped at ``_MAX_DIFFICULTY`` — an
+    easy→hard ramp that never regresses (CP.B). ``served_index`` < 0 is treated as the first
+    rung (tier 1) so a caller need not special-case the opening problem."""
+    if served_index < 0:
+        return 1
+    return min(_MAX_DIFFICULTY, 1 + served_index // _RAMP_STEP)
 
 
 def live_representations(kc: KnowledgeComponentId) -> tuple[Representation, ...]:
@@ -76,29 +86,71 @@ def next_spec(
 ) -> tuple[KnowledgeComponentId, Representation]:
     """Pick the next ``(kc, representation)`` to serve.
 
-    ``served_index`` is the 0-based index of the problem being served AFTER the cold-start
-    item (0 = the first follow-on problem). Every ``_COMPANION_EVERY``-th item is the
-    companion KC; the rest are the goal KC, rotated through its live representations so the
-    learner answers it more than one way (rule 2). Deterministic in its two inputs.
+    **Single-skill lessons (2026-05-29 product-owner decision).** A lesson stays on the GOAL
+    KC the whole way — a "number-line lesson" is number-line questions only, never a different
+    skill mixed in. We rotate the goal KC through its live representations (e.g. number-line
+    PLACING then COMPARING) so the learner answers it more than one way; that representation
+    mix is what now satisfies the mastery model's varied-practice gate (rule 4, within-skill
+    path) and its representation-diversity rule (rule 2). No cross-skill companion is served.
+
+    ``served_index`` is the 0-based index of the problem being served AFTER the first item.
+    Deterministic in its two inputs.
     """
     if served_index < 0:
         raise ValueError("served_index must be >= 0")
-
-    if (served_index + 1) % _COMPANION_EVERY == 0:
-        companion = _COMPANION[goal_kc]
-        return companion, live_representations(companion)[0]
-
     reps = live_representations(goal_kc)
-    goal_items_before = sum(1 for i in range(served_index) if (i + 1) % _COMPANION_EVERY != 0)
-    return goal_kc, reps[goal_items_before % len(reps)]
+    return goal_kc, reps[served_index % len(reps)]
+
+
+def next_spec_after_outcome(
+    goal_kc: KnowledgeComponentId,
+    served_index: int,
+    *,
+    last_correct: bool,
+    last_kc: KnowledgeComponentId,
+    last_format: Representation,
+) -> tuple[KnowledgeComponentId, Representation]:
+    """Pick the next ``(kc, representation)`` taking the LAST answer's outcome into account.
+
+    This wraps ``next_spec`` with the adaptive re-practice rule. On a CORRECT answer the
+    schedule interleaves exactly as before (``next_spec`` — the goal rotated through its
+    representations, the companion on the §0.D.5 cadence), so the interleaving the mastery
+    model needs (§3.4 rule 4) is unchanged.
+
+    On a WRONG answer the learner gets MORE practice on the SAME skill they just struggled
+    on — the next problem stays on ``last_kc`` (the KC actually answered, which may be the
+    goal or the interleaved companion) in the SAME representation they missed (``last_format``,
+    a similar type/difficulty), rather than rotating to a different KC. This is the fix for the
+    reported "wrong answer rotates to another skill" symptom: a struggling learner should not be
+    pulled onto a new KC the moment they slip. ``last_format`` is honored only if it is a live
+    representation for ``last_kc`` (so we never serve a dead surface); otherwise we fall back to
+    that KC's first live representation.
+
+    Pure and deterministic in its inputs, like ``next_spec`` — the surface-transition policy
+    (S1↔S5) is decided separately by ``policy.transitions`` and is unaffected here; this only
+    chooses WHICH KC/representation to draw the next problem from.
+    """
+    if last_correct:
+        return next_spec(goal_kc, served_index)
+    reps = live_representations(last_kc)
+    repractice_format = last_format if last_format in reps else reps[0]
+    return last_kc, repractice_format
 
 
 def is_masterable_live(goal_kc: KnowledgeComponentId) -> bool:
     """Whether a learner can reach the mastery model's bar on this KC with the CURRENT live
-    surface — i.e. the KC has ≥2 live representations (rule 2) and a companion to interleave
-    with (rule 4). Honest signal for the experience: a route that returns False can be
-    practiced and shows progress, but cannot yet hit declared mastery."""
-    return len(live_representations(goal_kc)) >= 2 and goal_kc in _COMPANION
+    surface. With single-skill lessons (no cross-KC companion), the gate is simply ≥2 live
+    representations: that satisfies BOTH rule 2 (representation diversity) and the within-skill
+    path of rule 4 (varied practice across representations). A KC with only one live
+    representation (common-denominator, until the fraction-bars widget ships) can be practiced
+    and show progress but cannot yet hit declared mastery — an honest signal for the experience."""
+    return len(live_representations(goal_kc)) >= 2
 
 
-__all__ = ["is_masterable_live", "live_representations", "next_spec"]
+__all__ = [
+    "difficulty_for",
+    "is_masterable_live",
+    "live_representations",
+    "next_spec",
+    "next_spec_after_outcome",
+]

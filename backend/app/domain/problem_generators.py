@@ -122,10 +122,10 @@ class Problem:
     yes_no_relation: YesNoRelation = "equal"
 
 
-# A generator takes a seeded RNG, the seed (for the stable id), and the chosen
-# surface format, and returns a Problem. Keeping the signature uniform lets
-# ``GENERATORS`` be a flat KC -> generator map.
-_KcGenerator = Callable[[random.Random, int, Representation], Problem]
+# A generator takes a seeded RNG, the seed (for the stable id), the chosen surface
+# format, and a difficulty tier, and returns a Problem. Keeping the signature uniform
+# lets ``GENERATORS`` be a flat KC -> generator map.
+_KcGenerator = Callable[[random.Random, int, Representation, "int | None"], Problem]
 
 
 # ─── Scope-safe building blocks (PROJECT.md §3.1: positive proper fractions) ──
@@ -138,31 +138,53 @@ _KcGenerator = Callable[[random.Random, int, Representation], Problem]
 
 _DENOMINATORS: tuple[int, ...] = (2, 3, 4, 5, 6, 8, 10, 12)
 
+# Difficulty tiers (CP.B easy→hard ramp; CURRICULUM_DRAFT.md §1.1). A tier narrows the
+# denominator pool a generated operand may draw from, so a lesson that walks tiers 1→4
+# ramps from friendly halves/thirds/quarters to the larger denominators where
+# natural-number bias bites. Every tier has ≥3 denominators, so unlike-pairs are always
+# feasible. ``None`` = the full set (the pre-ramp default, kept so callers that don't ask
+# for a tier are unchanged and deterministic).
+_DENOM_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4),
+    2: (3, 4, 5, 6),
+    3: (5, 6, 8),
+    4: (6, 8, 10, 12),
+}
 
-def _proper_fraction(rng: random.Random) -> Rational:
-    """Sample one positive proper fraction 0 < n/d < 1 with d > 1 (in-scope)."""
-    denominator = rng.choice(_DENOMINATORS)
+
+def _denoms(difficulty: int | None) -> tuple[int, ...]:
+    """The denominator pool for a difficulty tier (the full set when ``difficulty`` is None
+    or out of range — never empty, so sampling is always well-defined)."""
+    return _DENOM_BY_DIFFICULTY.get(difficulty, _DENOMINATORS) if difficulty else _DENOMINATORS
+
+
+def _proper_fraction(rng: random.Random, difficulty: int | None = None) -> Rational:
+    """Sample one positive proper fraction 0 < n/d < 1 with d > 1 (in-scope); the
+    denominator is drawn from ``difficulty``'s pool (the full set when None)."""
+    denominator = rng.choice(_denoms(difficulty))
     numerator = rng.randint(1, denominator - 1)  # 1..d-1 keeps it strictly in (0, 1)
     return Rational(numerator, denominator)
 
 
-def _unlike_pair(rng: random.Random) -> tuple[Rational, Rational]:
+def _unlike_pair(rng: random.Random, difficulty: int | None = None) -> tuple[Rational, Rational]:
     """Sample two positive proper fractions with UNLIKE denominators.
 
     The add/subtract KCs are "with unlike denominators" (PROJECT.md §3.1), so the
     two pieces must be different sizes — otherwise the common-denominator step the
     KC is named for is never exercised. We resample the second fraction until its
-    denominator differs; the loop is bounded in practice because the denominator
-    set has eight members.
+    denominator differs; the loop is bounded because every difficulty pool has ≥3
+    denominators.
     """
-    first = _proper_fraction(rng)
-    second = _proper_fraction(rng)
+    first = _proper_fraction(rng, difficulty)
+    second = _proper_fraction(rng, difficulty)
     while second.q == first.q:
-        second = _proper_fraction(rng)
+        second = _proper_fraction(rng, difficulty)
     return first, second
 
 
-def _unlike_pair_sum_below_one(rng: random.Random) -> tuple[Rational, Rational]:
+def _unlike_pair_sum_below_one(
+    rng: random.Random, difficulty: int | None = None
+) -> tuple[Rational, Rational]:
     """An unlike-denominator pair whose SUM is < 1, for number-line addition.
 
     The number-line surface spans 0–1, so an addition answered by placing the total must
@@ -170,26 +192,28 @@ def _unlike_pair_sum_below_one(rng: random.Random) -> tuple[Rational, Rational]:
     a known-good in-scope pair (1/4 + 1/3 = 7/12) so the generator is always deterministic
     and never loops forever (CLAUDE.md §8.5)."""
     for _ in range(50):
-        first, second = _unlike_pair(rng)
+        first, second = _unlike_pair(rng, difficulty)
         if first + second < 1:
             return first, second
     return Rational(1, 4), Rational(1, 3)
 
 
-def _ordered_unlike_pair(rng: random.Random) -> tuple[Rational, Rational]:
+def _ordered_unlike_pair(
+    rng: random.Random, difficulty: int | None = None
+) -> tuple[Rational, Rational]:
     """An unlike-denominator pair ordered larger-first, for well-formed subtraction.
 
     Subtraction stays in scope (positive result) only if the minuend exceeds the
     subtrahend, so we sample an unlike pair and return it largest-first.
     """
-    first, second = _unlike_pair(rng)
+    first, second = _unlike_pair(rng, difficulty)
     if first > second:
         return first, second
     if second > first:
         return second, first
     # Equal magnitude with unlike denominators (e.g. 1/2 vs 2/4 cannot occur since
     # denominators differ, but guard anyway): resample to guarantee a strict order.
-    return _ordered_unlike_pair(rng)
+    return _ordered_unlike_pair(rng, difficulty)
 
 
 def _require_supported_format(kc: KnowledgeComponentId, surface_format: Representation) -> None:
@@ -233,7 +257,9 @@ def _generated_id(kc: KnowledgeComponentId, seed: int, surface_format: Represent
 # bank's phrasing style (PROJECT.md learner-facing-language rule via the bank).
 
 
-def _generate_equivalence(rng: random.Random, seed: int, surface_format: Representation) -> Problem:
+def _generate_equivalence(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
     """KC_equivalence in two REAL representations (so mastery rule 2 is reachable live):
 
     - **SYMBOLIC** (default): "fill in the missing top number so both names show the same
@@ -247,14 +273,14 @@ def _generate_equivalence(rng: random.Random, seed: int, surface_format: Represe
       mastery rule 2, answered with the same yes/no control.
     """
     if surface_format is Representation.WORD_PROBLEM:
-        base = _proper_fraction(rng)  # the a/b the story is compared against
+        base = _proper_fraction(rng, difficulty)  # the a/b the story is compared against
         if rng.random() < 0.5:  # the story amount is an equal rename (answer YES)
             scale = rng.randint(2, 4)
             taken, pieces, other = base.p * scale, base.q * scale, base
         else:  # a genuinely different amount (answer NO)
-            other = _proper_fraction(rng)
+            other = _proper_fraction(rng, difficulty)
             while other == base:
-                other = _proper_fraction(rng)
+                other = _proper_fraction(rng, difficulty)
             taken, pieces = other.p, other.q
         name = rng.choice(("Maria", "Sam", "Leo", "Ava", "Theo"))
         thing = rng.choice(("pizza", "cake", "ribbon", "chocolate bar"))
@@ -273,7 +299,7 @@ def _generate_equivalence(rng: random.Random, seed: int, surface_format: Represe
             answer_kind=AnswerKind.YES_NO,
         )
 
-    base = _proper_fraction(rng)
+    base = _proper_fraction(rng, difficulty)
     scale = rng.randint(2, 4)  # bigger-bottom rename; keeps numbers curriculum-sized
     new_denominator = base.q * scale
     statement = (
@@ -293,7 +319,7 @@ def _generate_equivalence(rng: random.Random, seed: int, surface_format: Represe
 
 
 def _generate_common_denominator(
-    rng: random.Random, seed: int, surface_format: Representation
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
     """KC_common_denominator: a shared piece-size for two fractions (§3.4.1).
 
@@ -311,7 +337,7 @@ def _generate_common_denominator(
     Both are answered with the SAME whole-number value (NUMERIC), so the simulator/verifier are
     representation-agnostic; only the framing and the surface widget differ.
     """
-    first, second = _unlike_pair(rng)
+    first, second = _unlike_pair(rng, difficulty)
     shared = ilcm(first.q, second.q)
     if surface_format is Representation.AREA_MODEL:
         statement = (
@@ -334,7 +360,9 @@ def _generate_common_denominator(
     )
 
 
-def _generate_addition(rng: random.Random, seed: int, surface_format: Representation) -> Problem:
+def _generate_addition(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
     """KC_addition_unlike: add two positive proper fractions with unlike bottoms.
 
     The correct value is the SymPy sum (ADD items, e.g. 1/2 + 1/4 = 3/4). A sum of
@@ -346,14 +374,14 @@ def _generate_addition(rng: random.Random, seed: int, surface_format: Representa
     the learner places the TOTAL on the 0–1 line (operands sampled so the sum fits 0–1).
     """
     if surface_format is Representation.NUMBER_LINE:
-        first, second = _unlike_pair_sum_below_one(rng)
+        first, second = _unlike_pair_sum_below_one(rng, difficulty)
         total = first + second
         statement = (
             f"Add {first.p}/{first.q} + {second.p}/{second.q}, then drag the marker to where "
             f"the total sits on the line from 0 to 1."
         )
     else:
-        first, second = _unlike_pair(rng)
+        first, second = _unlike_pair(rng, difficulty)
         total = first + second
         statement = f"{first.p}/{first.q} + {second.p}/{second.q} = ?"
     return Problem(
@@ -367,7 +395,9 @@ def _generate_addition(rng: random.Random, seed: int, surface_format: Representa
     )
 
 
-def _generate_subtraction(rng: random.Random, seed: int, surface_format: Representation) -> Problem:
+def _generate_subtraction(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
     """KC_subtraction_unlike: subtract, larger minus smaller, unlike bottoms.
 
     Ordered larger-first so the difference is positive (in-scope). The correct value
@@ -377,7 +407,7 @@ def _generate_subtraction(rng: random.Random, seed: int, surface_format: Represe
     NUMBER_LINE form placing the result on 0–1 (a proper-fraction difference is always in
     that interval).
     """
-    minuend, subtrahend = _ordered_unlike_pair(rng)
+    minuend, subtrahend = _ordered_unlike_pair(rng, difficulty)
     difference = minuend - subtrahend
     if surface_format is Representation.NUMBER_LINE:
         statement = (
@@ -397,18 +427,49 @@ def _generate_subtraction(rng: random.Random, seed: int, surface_format: Represe
     )
 
 
-def _generate_number_line(rng: random.Random, seed: int, surface_format: Representation) -> Problem:
+def _number_line_target(rng: random.Random, difficulty: int | None) -> Rational:
+    """A number-line placement target whose sign/magnitude matches the difficulty tier
+    (CP.B ramp + the authorized improper/negative scope expansion, PROJECT.md §3.1):
+
+      - tiers 1–2 (or None) → a positive PROPER fraction in (0,1);
+      - tier 3              → a positive IMPROPER fraction in (1,2) — placed PAST the '1'
+        landmark, the most concrete refutation of "n<d so it fits in the box";
+      - tier 4              → a NEGATIVE fraction (proper or improper) in (−2,0) — left of 0
+        (CCSS 6.NS.6), where magnitude is distance from 0, not the digits.
+
+    Whole-number values are excluded (numerator never a multiple of the denominator) so the
+    target is always a real fraction to place, never a trivial landmark.
+    """
+    if difficulty == 3:
+        denominator = rng.choice(_denoms(2))
+        numerator = rng.randint(denominator + 1, 2 * denominator - 1)  # (1,2), never the whole 2
+        return Rational(numerator, denominator)
+    if difficulty is not None and difficulty >= 4:
+        denominator = rng.choice(_denoms(2))
+        numerator = rng.randint(1, 2 * denominator - 1)
+        while numerator == denominator:  # avoid −1 (a whole number)
+            numerator = rng.randint(1, 2 * denominator - 1)
+        return Rational(-numerator, denominator)
+    return _proper_fraction(rng, difficulty)
+
+
+def _generate_number_line(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
     """KC_number_line_placement in two REAL representations (so mastery rule 2 is reachable):
 
-    - **NUMBER_LINE** (default): place one proper fraction on the 0–1 line — "drag the marker
-      to where 3/4 belongs" (the bank's NL placement shape). correct_value = the fraction.
+    - **NUMBER_LINE** (default): place one fraction on the line — proper on 0–1, then (as the
+      ramp climbs) IMPROPER on 0–2 and NEGATIVE on −2…0 (CP.B; PROJECT.md §3.1 magnitude scope).
+      correct_value = the fraction; the surface reads the axis bounds off its magnitude.
     - **SYMBOLIC**: a magnitude COMPARISON — "is a/b greater than c/d?" — the same
-      reason-about-magnitude-not-digits skill, without the line. Answered yes/no; truth is
-      SymPy a > b. A genuinely different surface from the drag, so a learner correct in both
-      has shown the magnitude skill two ways (rule 2).
+      reason-about-magnitude-not-digits skill, without the line. At the hardest tier both
+      fractions are NEGATIVE ("is −1/4 greater than −3/4?"), baiting negative-magnitude bias —
+      the negative twin of natural-number bias. Answered yes/no; truth is SymPy a > b.
     """
     if surface_format is Representation.SYMBOLIC:
-        first, second = _unlike_pair(rng)
+        first, second = _unlike_pair(rng, difficulty)
+        if difficulty is not None and difficulty >= 4:
+            first, second = -first, -second  # negative-magnitude-bias comparison (6.NS.7)
         return Problem(
             problem_id=_generated_id(
                 KnowledgeComponentId.NUMBER_LINE_PLACEMENT, seed, surface_format
@@ -425,8 +486,16 @@ def _generate_number_line(rng: random.Random, seed: int, surface_format: Represe
             yes_no_relation="greater",
         )
 
-    target = _proper_fraction(rng)
-    statement = f"Drag the marker to where {target.p}/{target.q} belongs on the line from 0 to 1."
+    target = _number_line_target(rng, difficulty)
+    # The axis just contains the target: [0,1] for a proper fraction, [0,2] for improper,
+    # [floor,1] for a negative — always anchored on 0 and ≥1 so the learner has a reference.
+    # floor/ceil via integer arithmetic on the Rational (Python // floors toward −∞).
+    floor_target = target.p // target.q
+    ceil_target = -((-target.p) // target.q)
+    axis_lo = min(0, floor_target)
+    axis_hi = max(1, ceil_target)
+    span = f"the line from {axis_lo} to {axis_hi}"
+    statement = f"Drag the marker to where {target.p}/{target.q} belongs on {span}."
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.NUMBER_LINE_PLACEMENT, seed, surface_format),
         kc=KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
@@ -455,6 +524,7 @@ def generate_problem(
     kc: KnowledgeComponentId,
     seed: int,
     surface_format: Representation | None = None,
+    difficulty: int | None = None,
 ) -> Problem:
     """Generate one in-scope ``Problem`` for ``kc``, deterministically from ``seed``.
 
@@ -464,11 +534,16 @@ def generate_problem(
     KC's default (first registered) representation is used. Requesting a format the
     KC does not support raises ``ValueError`` (CLAUDE.md §8.5 — fail loudly).
 
-    Determinism: the seed alone fixes the operands and the correct answer, so the
-    SAME seed yields an identical ``Problem`` every call (PROJECT.md §4.1
-    reproducibility). The format does not perturb the RNG draw (the math is sampled
-    before the format is applied), so the same seed in two different formats yields
-    the same underlying operands and answer — only the presentation differs.
+    ``difficulty`` is the CP.B easy→hard ramp tier (1=friendliest … 4=hardest; see
+    ``_DENOM_BY_DIFFICULTY``). It narrows the denominator pool so a lesson that walks the
+    tiers ramps from small to large bottoms. ``None`` keeps the full-set default — so the
+    persona harness, the transfer probe, and any caller that doesn't ramp are byte-for-byte
+    unchanged (PROJECT.md §4.1 reproducibility).
+
+    Determinism: the seed alone (with the difficulty tier) fixes the operands and the correct
+    answer, so the SAME (seed, difficulty) yields an identical ``Problem`` every call. The
+    format does not perturb the RNG draw (the math is sampled before the format is applied),
+    so the same seed in two different formats yields the same underlying operands.
     """
     chosen_format = surface_format if surface_format is not None else _default_format(kc)
     _require_supported_format(kc, chosen_format)
@@ -478,7 +553,7 @@ def generate_problem(
     rng = random.Random(seed)
 
     generator = GENERATORS[kc]
-    return generator(rng, seed, chosen_format)
+    return generator(rng, seed, chosen_format, difficulty)
 
 
 # ─── The diagnostic-gem bank adapter (decision 0.D.1: one shared type) ───────

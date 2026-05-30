@@ -25,6 +25,7 @@ is runtime identity, not part of the reproducible harness, so a ``uuid`` is corr
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -67,7 +68,12 @@ from app.mastery.progression import plan_study
 from app.mastery.retention import ReviewableSkill
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
-from app.policy.scheduler import is_masterable_live, live_representations, next_spec
+from app.policy.scheduler import (
+    difficulty_for,
+    is_masterable_live,
+    live_representations,
+    next_spec_after_outcome,
+)
 from app.tutor.hints import HintLevel, build_validated_hint, select_nudge
 from app.tutor.live_transfer_probe import build_live_probe_steps
 from app.tutor.session import (
@@ -121,6 +127,15 @@ def _problem_view(problem: Problem) -> ProblemView:
     do not snap a drag, so they need no grid.
     """
     is_number_line = problem.surface_format is Representation.NUMBER_LINE
+    # Axis bounds for a number-line item, derived from the target's magnitude: a proper
+    # fraction sits on 0–1, an improper target stretches the right end to its ceiling (5/4 →
+    # 0–2), a negative target stretches the left end to its floor (−5/4 → −2…1). Always anchored
+    # on 0 and ≥1 so the learner keeps the whole as a reference (CP.B; PROJECT.md §3.1).
+    value = problem.correct_value
+    floor_value = value.p // value.q
+    ceil_value = -((-value.p) // value.q)
+    axis_min = min(0, floor_value) if is_number_line else 0
+    axis_max = max(1, ceil_value) if is_number_line else 1
     return ProblemView(
         problem_id=problem.problem_id,
         kc=problem.kc,
@@ -129,6 +144,8 @@ def _problem_view(problem: Problem) -> ProblemView:
         answer_kind=problem.answer_kind,
         yes_no_relation=problem.yes_no_relation,
         tick_segments=int(problem.correct_value.q) if is_number_line else None,
+        axis_min=axis_min,
+        axis_max=axis_max,
         given_denominator=problem.given_denominator,
     )
 
@@ -190,24 +207,67 @@ def _route_for_key(route_key: str) -> RouteOption:
     raise UnknownRouteError(route_key)
 
 
-def _serve_next(session: TutorSession) -> Problem:
+def _seed_base_from_session_id(session_id: str) -> int:
+    """A stable, non-negative integer seed BASE derived from an opaque session id.
+
+    The problem generators are intentionally seed-deterministic (same seed ⇒ same problem —
+    that is what makes the persona harness reproducible, PROJECT.md §4.1). The reported "same
+    problems every session" symptom came from the scheduler seeding every session's turns from
+    the turn index alone (0, 1, 2, …): every session on a route therefore drew the identical
+    problems. The fix is to vary the SEED SOURCE per session — NOT to make the generators
+    random. We fold the session id (a uuid hex, runtime identity) into a stable integer base;
+    the per-turn seed is then ``base + turn_index``, so a session's walk is unique to that
+    session yet fully reproducible WITHIN the session (PROJECT.md §4.1). SHA-256 (not Python's
+    salted ``hash``) keeps it stable across processes, so a fixed session id replays identically.
+
+    Masked to 32 bits to stay a small, friendly seed for ``random.Random`` and the generated
+    problem id. No crypto purpose — this is a deterministic spreader, not a security boundary.
+    """
+    digest = hashlib.sha256(session_id.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], "big")
+
+
+def _serve_next(live: _LiveSession) -> Problem:
     """Choose and present the next problem after a turn, via the interleaving scheduler.
 
-    The goal KC is the cold-start route's KC (the first turn). The scheduler
-    (``policy.scheduler.next_spec``) interleaves a companion KC on a fixed cadence (so the
-    mastery model's ≥2-KC interleaving rule can fire) and rotates the goal KC through the
+    The goal KC is the cold-start route's KC (the first turn). On a CORRECT last answer the
+    scheduler (``policy.scheduler.next_spec``) interleaves a companion KC on a fixed cadence (so
+    the mastery model's ≥2-KC interleaving rule can fire) and rotates the goal KC through the
     representations the live surface can render and answer (so the ≥2-representations rule can
-    fire). Both were impossible under the old "stay on one KC, one format" stub — which made
-    the experience monotonous AND mastery unreachable live (PROJECT.md §3.4/§3.6, 0.D.5).
+    fire). On a WRONG last answer the scheduler keeps the learner on the SAME KC they just
+    struggled on, in the same representation, for more practice on the shaky skill
+    (``next_spec_after_outcome`` — the adaptive re-practice fix) rather than rotating them onto a
+    different KC the moment they slip. The surface-transition policy (S1↔S5) is decided
+    separately by the tutor and is unaffected here; this only chooses which KC/representation to
+    draw the next problem from (PROJECT.md §3.4/§3.6, 0.D.5).
 
     Every served ``(kc, format)`` pair has a real answer widget (scheduler only emits live
-    representations), so the learner never sees a statement with no usable input. The seed is
-    the session's turn count, so the walk is deterministic and fresh (PROJECT.md §4.1).
+    representations), so the learner never sees a statement with no usable input.
+
+    The seed is ``seed_base + turn_index``: the per-session ``seed_base`` (derived from the
+    session id) makes each session draw a DIFFERENT problem sequence, while the turn index keeps
+    the walk deterministic and reproducible WITHIN the session (PROJECT.md §4.1). The generators
+    stay seed-deterministic — only the seed SOURCE varies per session.
     """
+    session = live.tutor
     goal_kc = session.history[0].observation.kc
     served_index = len(session.history) - 1  # 0 = the first problem after the cold-start item
-    kc, surface_format = next_spec(goal_kc, served_index)
-    return session.present_problem(kc=kc, seed=len(session.history), surface_format=surface_format)
+    last = session.history[-1]
+    kc, surface_format = next_spec_after_outcome(
+        goal_kc,
+        served_index,
+        last_correct=last.observation.correct,
+        last_kc=last.observation.kc,
+        last_format=last.problem.surface_format,
+    )
+    seed = live.seed_base + len(session.history)
+    # The easy→hard ramp tier for this rung (CP.B): the next problem's difficulty climbs with
+    # how far into the lesson we are, so a lesson opens friendly and works up to bias-baiting
+    # large denominators instead of feeling flat (CURRICULUM_DRAFT.md §1.1).
+    difficulty = difficulty_for(served_index)
+    return session.present_problem(
+        kc=kc, seed=seed, surface_format=surface_format, difficulty=difficulty
+    )
 
 
 def _help_need(
@@ -284,6 +344,16 @@ def _maybe_intervene(
 # would otherwise re-trigger the probe every turn. The learner practices a little more first.
 _PROBE_COOLDOWN = 3
 
+# Minimum practice problems a lesson serves before the S5 probe can fire — the "~10 then
+# probe" bounded-lesson shape (CP.B; CURRICULUM_DRAFT.md §1.1). Without this floor the probe
+# fired as soon as BKT crossed τ (~turn 7), ending the lesson BEFORE the easy→hard ramp reached
+# its 6th-grade top rungs (improper, then negative placements), so the hard content never
+# appeared. Holding the probe until the ramp is walked guarantees the learner meets the full
+# difficulty progression first. 10 problems: with single-skill lessons every problem is the
+# goal KC (no companion turns), and the steeper ramp reaches improper/negative by ~problem 6–8,
+# so 10 walks the full easy→hard progression and clears the §3.4 evidence floors before the gate.
+_LESSON_RAMP_MIN = 10
+
 
 def _mastery_view(
     snapshot: tuple[TutorMasterySnapshot, ...], live: _LiveSession
@@ -329,7 +399,7 @@ def _probe_turn(live: _LiveSession, request: TurnRequest) -> TurnResponse:
         live.probe_steps = []
         live.probe_index = 0
         live.probe_cooldown = _PROBE_COOLDOWN
-        next_problem = _serve_next(session)
+        next_problem = _serve_next(live)
         return TurnResponse(
             correct=False,
             error_type=verdict.error_category,
@@ -347,7 +417,7 @@ def _probe_turn(live: _LiveSession, request: TurnRequest) -> TurnResponse:
         live.confirmed.add(goal_kc)
         live.probe_steps = []
         live.probe_index = 0
-        next_problem = _serve_next(session)
+        next_problem = _serve_next(live)
         return TurnResponse(
             correct=True,
             error_type=ErrorType.NONE,
@@ -358,6 +428,10 @@ def _probe_turn(live: _LiveSession, request: TurnRequest) -> TurnResponse:
             help_need=None,
             intervention=None,
             next_problem=_problem_view(next_problem),
+            # The goal KC is now CONFIRMED — the lesson is finished. Signal the surface to
+            # show the completion screen and route home instead of looping on practice
+            # (CP.B bounded-lesson terminal state; fixes the never-ending-lesson bug).
+            lesson_complete=True,
         )
 
     return TurnResponse(
@@ -417,6 +491,9 @@ def _answer_response(
         and goal_kc not in live.confirmed
         and live.probe_cooldown == 0
         and is_masterable_live(goal_kc)
+        # Walk the full easy→hard ramp (incl. the improper/negative top rungs) before the gate —
+        # the "~10 then probe" bounded-lesson shape (CP.B; see ``_LESSON_RAMP_MIN``).
+        and len(session.history) >= _LESSON_RAMP_MIN
     ):
         # Provisional reached → present the S5 transfer probe before declaring mastery (§3.9).
         live.probe_steps = build_live_probe_steps(
@@ -435,7 +512,7 @@ def _answer_response(
             next_problem=_problem_view(live.probe_steps[0]),
         )
 
-    next_problem = _serve_next(session)
+    next_problem = _serve_next(live)
     # A fresh practice problem was just served → reset the per-problem hint-escalation
     # counter so the next REQUEST_HINT on it starts again at a NUDGE (Feature B). The probe
     # paths above return before here, so entering/leaving the probe never touches the counter.
@@ -537,6 +614,12 @@ class _LiveSession:
     learner_session_id: str = ""
     db_session_id: int | None = None
     persisted_turn_count: int = 0
+    # The per-session base for the problem-generator seed (Fix A: problem variety). Derived
+    # from the session id at construction (``_seed_base_from_session_id``); the per-turn seed
+    # is ``seed_base + turn_index`` so each session draws a DIFFERENT problem sequence while
+    # staying reproducible WITHIN the session (PROJECT.md §4.1). Default 0 reproduces the old
+    # turn-index-only seeding for a bare ``_LiveSession`` built without a session id (tests).
+    seed_base: int = 0
     # S5 transfer-probe state (the live confirm-gate). When ``probe_steps`` is non-empty a
     # probe is in progress: the learner is answering ``probe_steps[probe_index]``. ``confirmed``
     # holds the KCs whose provisional mastery the learner has CONFIRMED by passing the probe —
@@ -723,7 +806,13 @@ class SessionStore:
     session_factory: sessionmaker[OrmSession] | None = None
     _sessions: dict[str, _LiveSession] = field(default_factory=dict)
 
-    def start(self, route_key: str, *, proactive_enabled: bool = False) -> StartSessionResponse:
+    def start(
+        self,
+        route_key: str,
+        *,
+        proactive_enabled: bool = False,
+        session_id: str | None = None,
+    ) -> StartSessionResponse:
         """Start a session from a Turn-0 route key and return its Turn-1 problem (0.D.2).
 
         Derives everything server-side from the locked routing table: the chosen
@@ -733,17 +822,23 @@ class SessionStore:
         every subsequent turn. ``proactive_enabled`` is the session's A/B arm (default
         OFF = observe-only); the Slice 5.4 harness sets it, not the client.
 
+        ``session_id`` is normally minted here (a uuid — runtime identity, not harness
+        state). It can be supplied to pin the id (the deterministic-harness/test path):
+        because the problem-seed base is derived from the id (Fix A), a fixed id replays
+        the identical, reproducible problem walk (PROJECT.md §4.1).
+
         When a ``session_factory`` is wired (Slice PL.1) we also open the Learner +
         Session rows so turns have something to hang off — best-effort: a DB failure
         here is logged and swallowed (``db_session_id`` stays ``None``) so the live
         session still boots in-memory and the demo runs with no Postgres (invariant 7).
         """
         option = _route_for_key(route_key)
-        session_id = uuid.uuid4().hex
+        session_id = session_id if session_id is not None else uuid.uuid4().hex
         live = _LiveSession(
             tutor=TutorSession.from_route(option),
             proactive_enabled=proactive_enabled,
             learner_session_id=session_id,
+            seed_base=_seed_base_from_session_id(session_id),
         )
         if self.session_factory is not None:
             live.db_session_id = self._open_persisted_session(session_id, route_key)
@@ -769,10 +864,16 @@ class SessionStore:
         """
         session_id = uuid.uuid4().hex
         surface_format = live_representations(kc)[0]
+        # Seed the FIRST problem from the per-session base too (not the fixed seed 0), so every
+        # lesson opens with a DIFFERENT easy question instead of always "2/3 on 0–1". The base is
+        # derived from the opaque session id, so a brand-new session draws a fresh opening while a
+        # pinned id still replays deterministically (PROJECT.md §4.1).
+        seed_base = _seed_base_from_session_id(session_id)
         live = _LiveSession(
-            tutor=TutorSession.for_goal_kc(kc, surface_format=surface_format),
+            tutor=TutorSession.for_goal_kc(kc, surface_format=surface_format, seed=seed_base),
             proactive_enabled=proactive_enabled,
             learner_session_id=session_id,
+            seed_base=seed_base,
         )
         if self.session_factory is not None:
             live.db_session_id = self._open_persisted_session(session_id, kc.value)
@@ -981,6 +1082,7 @@ class SessionStore:
             db_session_id=db_session_id,
             persisted_turn_count=persisted_turns,
             confirmed=confirmed,
+            seed_base=_seed_base_from_session_id(session_id),
         )
 
     def mastery_summary_for_learner(self, learner_id: int) -> list[MasterySnapshot]:

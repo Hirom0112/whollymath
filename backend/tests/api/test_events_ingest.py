@@ -212,9 +212,14 @@ def test_posting_events_does_not_change_turn_outcome(
             hint_used=False,
         )
 
+    # Pin the SAME session id in both walks: the problem seed is derived from the id (Fix A),
+    # so an equivalence test must hold identity fixed to isolate the variable under test (the
+    # interleaved /events POSTs), not the per-session problem variety.
+    fixed_id = "equivsession00000000000000events"
+
     # Baseline: a plain in-memory walk with no events posted.
     plain = SessionStore()
-    started_p = plain.start(_ADDITION_ROUTE_KEY)
+    started_p = plain.start(_ADDITION_ROUTE_KEY, session_id=fixed_id)
     pid_p = started_p.problem.problem_id
     plain_responses = []
     for _ in range(3):
@@ -225,7 +230,7 @@ def test_posting_events_does_not_change_turn_outcome(
 
     # Same walk, but interleave /events POSTs between turns.
     store = SessionStore(session_factory=session_factory)
-    started = store.start(_ADDITION_ROUTE_KEY)
+    started = store.start(_ADDITION_ROUTE_KEY, session_id=fixed_id)
     client = TestClient(_app(store))
     pid = started.problem.problem_id
     interleaved_responses = []

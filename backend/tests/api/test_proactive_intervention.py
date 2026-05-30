@@ -97,8 +97,12 @@ def test_arm_does_not_alter_deterministic_turn_outcome() -> None:
     """
     on = SessionStore(predictor=load_predictor(), gate=SustainedHelpNeedGate(k=3, threshold=0.5))
     off = SessionStore(predictor=load_predictor(), gate=SustainedHelpNeedGate(k=3, threshold=0.5))
-    a = on.start(_ADDITION_ROUTE_KEY, proactive_enabled=True)
-    b = off.start(_ADDITION_ROUTE_KEY)  # arm OFF
+    # Pin the SAME session id in both walks: the problem seed is derived from the id (Fix A),
+    # so an equivalence test must hold identity fixed to isolate the variable under test (the
+    # arm), not the per-session problem variety.
+    fixed_id = "equivsession0000000000000000proa"
+    a = on.start(_ADDITION_ROUTE_KEY, proactive_enabled=True, session_id=fixed_id)
+    b = off.start(_ADDITION_ROUTE_KEY, session_id=fixed_id)  # arm OFF
     assert a.problem.problem_id == b.problem.problem_id
 
     pid_a, pid_b = a.problem.problem_id, b.problem.problem_id
