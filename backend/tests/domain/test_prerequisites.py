@@ -12,8 +12,10 @@ from __future__ import annotations
 from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.prerequisites import (
     KC_PREREQUISITES,
+    REMEDIATION_ROUTING,
     SPINE_ORDER,
     prerequisites_of,
+    remediation_targets,
     unlocked,
 )
 
@@ -101,3 +103,56 @@ def test_spine_order_is_a_valid_topological_order() -> None:
 def test_spine_order_starts_at_the_root() -> None:
     """The foundational, prerequisite-free skill (a fraction is a number) comes first."""
     assert SPINE_ORDER[0] == KC.NUMBER_LINE_PLACEMENT
+
+
+# ─── Reactive-remediation routing table (CURRICULUM_STANDARD.md §11.1) ───
+
+
+def test_remediation_routing_matches_the_standard_for_sample_lessons() -> None:
+    """Spot-check the §11.1 drop-down edges against the standard's routing table."""
+    assert remediation_targets(KC.DIVIDE_FRACTIONS) == (
+        KC.ADDITION_UNLIKE,
+        KC.SUBTRACTION_UNLIKE,
+        KC.EQUIVALENCE,
+    )
+    assert remediation_targets(KC.VOLUME_FRACTIONAL_EDGES) == (KC.MULTIPLY_FRACTIONS,)
+    assert remediation_targets(KC.COORDINATE_PLANE) == (KC.RATIONALS_ON_LINE,)
+    assert remediation_targets(KC.PERCENT) == (KC.EQUIVALENCE, KC.DECIMAL_OPERATIONS)
+
+
+def test_foundation_kcs_are_terminal_no_remediation_drop() -> None:
+    """The five foundation fraction KCs never auto-drop below themselves (§11.1 terminal)."""
+    for kc in LIVE_KCS:
+        assert remediation_targets(kc) == (), f"{kc.value} should be terminal"
+    assert not (set(REMEDIATION_ROUTING) & LIVE_KCS)  # no foundation appears as a routing key
+
+
+def test_remediation_routing_has_no_self_loops() -> None:
+    """A KC never lists itself as its own prerequisite to drop to."""
+    for kc, targets in REMEDIATION_ROUTING.items():
+        assert kc not in targets, f"{kc.value} drops to itself"
+
+
+def test_remediation_targets_are_distinct_within_a_row() -> None:
+    """No duplicate target in a single drop-down (the selector ranges over a clean set)."""
+    for kc, targets in REMEDIATION_ROUTING.items():
+        assert len(targets) == len(set(targets)), f"{kc.value} has duplicate targets"
+
+
+def test_remediation_routing_is_acyclic() -> None:
+    """Following drops never cycles — remediation always bottoms out (no infinite drop)."""
+    for start in REMEDIATION_ROUTING:
+        seen: set[KnowledgeComponentId] = set()
+        frontier = [start]
+        while frontier:
+            node = frontier.pop()
+            for target in remediation_targets(node):
+                assert target != start, f"cycle back to {start.value} via {node.value}"
+                if target not in seen:
+                    seen.add(target)
+                    frontier.append(target)
+
+
+def test_unrouted_kc_returns_empty_not_keyerror() -> None:
+    """A KC with no routing entry returns () — never raises (defensive for partial coverage)."""
+    assert remediation_targets(KC.STATISTICAL_QUESTIONS) == ()

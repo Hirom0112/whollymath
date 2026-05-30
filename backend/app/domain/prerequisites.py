@@ -60,9 +60,68 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
 )
 
 
+# ─── Reactive-remediation routing table (CURRICULUM_STANDARD.md §11.1) ───
+#
+# A SEPARATE graph from KC_PREREQUISITES above. That one is the 5-KC forward-unlock spine (what to
+# teach NEXT). This is the Grade-6 reactive DROP-DOWN map: when the help gate trips inside a
+# grade-level lesson, which prerequisite ONE LEVEL DOWN to remediate (§11). Kept separate so the
+# forward graph (and its course-map / unlocked() consumers) is untouched. Each grade-6 KC → its
+# direct prerequisite(s); the §11.3 selector picks ONE from the tuple (error-category bias +
+# lowest mastery). The five FOUNDATION fraction KCs are deliberately ABSENT — they are terminal
+# (§11.1: no auto-drop below the foundation; a learner struggling there stays and works it).
+# Entries cover the lessons §11.1 enumerates; KCs not yet routed get no drop until content lands.
+_KC_ = KnowledgeComponentId
+REMEDIATION_ROUTING: dict[KnowledgeComponentId, tuple[KnowledgeComponentId, ...]] = {
+    # U1 — Ratios & Rates → equivalent fractions (ratio = a fraction relationship)
+    _KC_.RATIO_LANGUAGE: (_KC_.EQUIVALENCE,),
+    _KC_.EQUIVALENT_RATIOS: (_KC_.EQUIVALENCE,),
+    _KC_.UNIT_RATE: (_KC_.EQUIVALENCE,),
+    _KC_.RATE_PROBLEMS: (_KC_.EQUIVALENCE,),
+    _KC_.PERCENT: (_KC_.EQUIVALENCE, _KC_.DECIMAL_OPERATIONS),
+    _KC_.UNIT_CONVERSION: (_KC_.UNIT_RATE,),
+    # U2 — Fractions & Decimals
+    _KC_.DIVIDE_FRACTIONS: (_KC_.ADDITION_UNLIKE, _KC_.SUBTRACTION_UNLIKE, _KC_.EQUIVALENCE),
+    _KC_.MULTIPLY_FRACTIONS: (_KC_.EQUIVALENCE,),
+    _KC_.GCF_LCM: (_KC_.COMMON_DENOMINATOR,),
+    _KC_.DECIMAL_OPERATIONS: (_KC_.MULTI_DIGIT_DIVISION,),
+    # U3 — Rational Numbers
+    _KC_.RATIONALS_ON_LINE: (_KC_.NUMBER_LINE_PLACEMENT,),
+    _KC_.ORDERING_INEQUALITIES: (_KC_.NUMBER_LINE_PLACEMENT, _KC_.SIGNED_NUMBERS),
+    _KC_.CLASSIFY_NUMBER_SETS: (_KC_.SIGNED_NUMBERS,),
+    _KC_.COORDINATE_PLANE: (_KC_.RATIONALS_ON_LINE,),
+    # U-INT — Integer Arithmetic (rides the rational-number line)
+    _KC_.INTEGER_ADD_SUBTRACT: (
+        _KC_.RATIONALS_ON_LINE,
+        _KC_.ADDITION_UNLIKE,
+        _KC_.SUBTRACTION_UNLIKE,
+    ),
+    _KC_.INTEGER_MULTIPLY_DIVIDE: (_KC_.INTEGER_ADD_SUBTRACT,),
+    # U4–U5 — Expressions & Equations
+    _KC_.EVALUATE_EXPRESSIONS: (_KC_.EXPONENTS,),
+    _KC_.ONE_STEP_EQUATIONS: (_KC_.EVALUATE_EXPRESSIONS,),
+    # U6 — Geometry
+    _KC_.AREA_POLYGONS: (_KC_.EVALUATE_EXPRESSIONS,),
+    _KC_.VOLUME_FRACTIONAL_EDGES: (_KC_.MULTIPLY_FRACTIONS,),
+    _KC_.POLYGONS_COORDINATE_PLANE: (_KC_.COORDINATE_PLANE,),
+    # U8 — Financial Literacy (TEKS)
+    _KC_.CHECK_REGISTER: (_KC_.INTEGER_ADD_SUBTRACT,),
+    _KC_.LIFETIME_INCOME: (_KC_.MULTIPLY_FRACTIONS, _KC_.DECIMAL_OPERATIONS),
+}
+
+
 def prerequisites_of(kc: KnowledgeComponentId) -> frozenset[KnowledgeComponentId]:
     """The KCs that must be confirmed before ``kc`` is the right next skill to introduce."""
     return KC_PREREQUISITES[kc]
+
+
+def remediation_targets(kc: KnowledgeComponentId) -> tuple[KnowledgeComponentId, ...]:
+    """The direct prerequisite(s) ``kc`` reactively drops to when its help gate trips (§11.1).
+
+    Empty for a KC with no routed drop — including the five foundation fraction KCs, which are
+    TERMINAL (§11.1: no auto-drop below the foundation). The §11.3 selector chooses ONE of the
+    returned targets; the order here is the §11.1 listing order (the natural primary first).
+    """
+    return REMEDIATION_ROUTING.get(kc, ())
 
 
 def unlocked(confirmed: frozenset[KnowledgeComponentId]) -> frozenset[KnowledgeComponentId]:
@@ -81,4 +140,11 @@ def unlocked(confirmed: frozenset[KnowledgeComponentId]) -> frozenset[KnowledgeC
     )
 
 
-__all__ = ["KC_PREREQUISITES", "SPINE_ORDER", "prerequisites_of", "unlocked"]
+__all__ = [
+    "KC_PREREQUISITES",
+    "REMEDIATION_ROUTING",
+    "SPINE_ORDER",
+    "prerequisites_of",
+    "remediation_targets",
+    "unlocked",
+]
