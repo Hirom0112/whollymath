@@ -35,6 +35,7 @@ from app.db.engine import (
     create_session_factory,
     database_url_from_env,
 )
+from app.db.seed import seed_curriculum
 from app.helpneed.artifact import load_predictor
 from app.homework.scanner import MathpixScanner, MockScanner
 from app.homework.session import HomeworkStore
@@ -91,8 +92,21 @@ def _build_session_factory() -> sessionmaker[OrmSession] | None:
             _DEFAULT_SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
             engine = create_db_engine(f"sqlite:///{_DEFAULT_SQLITE_PATH}")
             create_all(engine)
+            factory = create_session_factory(engine)
+            # Seed the curriculum catalog so a fresh default SQLite app boots with populated
+            # unit/lesson tables (DAT.4 bootstrap half). Prod Postgres is seeded by the Alembic
+            # migration, but this SQLite default path has no migration runner, so seed here.
+            # seed_curriculum upserts and is idempotent: re-boot over an existing file is a no-op.
+            # Best-effort like the rest of this path (ARCHITECTURE.md §14 invariant 7) — a seed
+            # failure must not break persistence, which is off the decision path.
+            try:
+                with factory() as seed_session:
+                    seed_curriculum(seed_session)
+                    seed_session.commit()
+            except Exception:  # noqa: BLE001 — seeding is best-effort; persistence still works.
+                _log.warning("could not seed curriculum into default SQLite store")
             _log.info("no DATABASE_URL; persisting to default SQLite at %s", _DEFAULT_SQLITE_PATH)
-            return create_session_factory(engine)
+            return factory
         except Exception:  # noqa: BLE001 — even the default store is best-effort (invariant 7).
             _log.warning("could not open default SQLite store; running in-memory (no persistence)")
             return None

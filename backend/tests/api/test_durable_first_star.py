@@ -29,9 +29,10 @@ from app.api.app import create_app
 from app.api.schemas import ActionType, ProblemView, SurfaceState, TurnRequest, TurnResponse
 from app.api.service import SessionStore
 from app.db.engine import create_all, create_session_factory
-from app.db.models import MasteryState
+from app.db.models import Lesson, MasteryState, Unit
+from app.domain.curriculum import all_units
 from app.domain.knowledge_components import KnowledgeComponentId
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, func, select
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -188,3 +189,32 @@ def test_default_app_persists_with_no_database_url(
     resumed = restarted.resume(session_id)
     assert resumed is not None
     assert _GOAL_KC in resumed.confirmed
+
+
+def test_default_app_seeds_curriculum_on_boot(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The DEFAULT app (no ``DATABASE_URL``) seeds the curriculum catalog at boot, so a fresh
+    SQLite store has populated ``unit``/``lesson`` tables (DAT.4 bootstrap half). Prod Postgres
+    is seeded by the Alembic migration; this SQLite default path has no migration runner, so the
+    factory builder seeds it directly. Seeding is idempotent, so a restart over the same file is
+    a no-op (the row counts stay at the catalog totals)."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(app_module, "_DEFAULT_SQLITE_PATH", tmp_path / "whollymath.db")
+
+    catalog = all_units()
+    expected_units = len(catalog)
+    expected_lessons = sum(len(u.lessons) for u in catalog)
+
+    factory = create_app().state.session_store.session_factory
+    assert factory is not None
+    with factory() as db:
+        assert db.scalar(select(func.count()).select_from(Unit)) == expected_units
+        assert db.scalar(select(func.count()).select_from(Lesson)) == expected_lessons
+
+    # Restart over the SAME default store: idempotent seed leaves the counts unchanged.
+    factory2 = create_app().state.session_store.session_factory
+    assert factory2 is not None
+    with factory2() as db2:
+        assert db2.scalar(select(func.count()).select_from(Unit)) == expected_units
+        assert db2.scalar(select(func.count()).select_from(Lesson)) == expected_lessons
