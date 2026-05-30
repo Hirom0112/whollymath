@@ -36,8 +36,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.knowledge_components import KnowledgeComponentId, Representation
+from app.domain.lesson_spec import get_lesson_spec
 from app.domain.verifier import ErrorCategory
+from app.policy.signal_routing import (
+    primary_remediation_representation,
+    surface_state_for_representation,
+)
 from app.policy.surface_states import SurfaceState
 
 # The PROJECT.md §0.D.5 idle timer: idle beyond this many seconds earns a nudge,
@@ -108,9 +113,9 @@ class TransferProbeFailed:
     """The transfer probe (S5) was failed (§3.6 row 7) — diagnostic data, not a verdict.
 
     "Treat transfer fail as diagnostic data" (PROJECT.md §3.6 rationale). The policy
-    routes back to the scaffolded state that exposes the failed KC's error kind:
-    a magnitude KC -> S2, an operation KC -> S3 (see ``_state_for_error_kind`` and
-    ``_error_kind_for_kc``).
+    routes back to the scaffolded state that exposes the failed KC's primary remediation
+    representation — a magnitude KC -> S2, an operation KC -> S3 (spec-driven via
+    ``signal_routing.primary_remediation_representation``, HR.A3).
     """
 
     failed_kc: KnowledgeComponentId
@@ -224,29 +229,6 @@ def _state_for_error_kind(error_category: ErrorCategory) -> SurfaceState | None:
     return None
 
 
-def _error_kind_for_kc(kc: KnowledgeComponentId) -> ErrorCategory:
-    """Map a failed KC to the error kind its failure represents (§3.6 row 7 routing).
-
-    The §3.6 table says transfer fail routes "Back to S3 or S2 based on which KC
-    failed" but does not enumerate the KC->state mapping; we ground it in the same
-    representation logic the rest of §3.6 uses (the verifier.py mapping):
-
-      - the number-line PLACEMENT KC is the MAGNITUDE skill — failing it is a
-        magnitude problem -> route to S2 (the number line);
-      - the four operative KCs (equivalence, common-denominator, addition,
-        subtraction) are PROCEDURE skills — failing one is an operation problem ->
-        route to S3 (the fraction bars, where part-manipulation makes the operation
-        visible).
-
-    This is the one routing decision not spelled out cell-by-cell in §3.6; it is
-    recorded here (and in the commit message per CLAUDE.md §8.4) as a documented
-    extension consistent with the table's own magnitude/operation -> S2/S3 logic.
-    """
-    if kc is KnowledgeComponentId.NUMBER_LINE_PLACEMENT:
-        return ErrorCategory.MAGNITUDE
-    return ErrorCategory.OPERATION
-
-
 # ─── The policy ───
 
 
@@ -323,17 +305,29 @@ def _label_for_error_kind(error_category: ErrorCategory) -> str:
 
 
 def _from_transfer_fail(event: TransferProbeFailed) -> Transition:
-    """Route a transfer-probe failure back to scaffolded practice (§3.6 row 7)."""
-    error_kind = _error_kind_for_kc(event.failed_kc)
-    target = _state_for_error_kind(error_kind)
-    # error_kind is always MAGNITUDE or OPERATION here, so target is never None;
-    # assert it for the type-checker and as a guard against a future mapping change.
-    assert target is not None  # noqa: S101 — invariant of _error_kind_for_kc
-    if error_kind is ErrorCategory.MAGNITUDE:
-        label = "Let's revisit the number line to nail down the size."
-    else:
-        label = "Let's go back to the bars and rebuild the steps."
-    return StateChange(target, label)
+    """Route a transfer-probe failure back to scaffolded practice (§3.6 row 7).
+
+    Spec-driven (HR.A3): the failed lesson's PRIMARY remediation representation — the first route
+    in its ``LessonSpec.error_routes`` — picks the target surface, replacing the old
+    KC→error-kind→state branch (``_error_kind_for_kc``, removed). Behavior-identical for the 5
+    fraction KCs: each spec's first route reproduces the §3.6 mapping (number-line placement → S2;
+    the operative KCs → S3). A KC that runs a transfer probe must have a spec (the hyperreactive
+    invariant), so ``get_lesson_spec`` resolving it is part of the contract.
+    """
+    spec = get_lesson_spec(event.failed_kc)
+    representation = primary_remediation_representation(spec)
+    target = surface_state_for_representation(representation)
+    # A remediation representation always has a dedicated surface state (the routing table covers
+    # SYMBOLIC/NUMBER_LINE/AREA_MODEL); assert for the type-checker and against a future map gap.
+    assert target is not None  # noqa: S101 — remediation reps always map to a surface state
+    return StateChange(target, _remediation_label_for_representation(representation))
+
+
+def _remediation_label_for_representation(representation: Representation) -> str:
+    """The §3.8-rule-4 label for a transfer-fail remediation, by the representation routed to."""
+    if representation is Representation.NUMBER_LINE:
+        return "Let's revisit the number line to nail down the size."
+    return "Let's go back to the bars and rebuild the steps."
 
 
 def _from_idle(current: SurfaceState, event: IdleNudge) -> Transition:
