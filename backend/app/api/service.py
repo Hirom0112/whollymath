@@ -538,6 +538,11 @@ def _answer_response(
     worked_example: list[WorkedStepView] = []
     if result.surface_state is SurfaceState.WORKED_EXAMPLE:
         worked_example = _worked_example_view(session.history[-1].problem)
+    # Beat 2 (explain-after-correct): on a CORRECT answer, surface the worked steps of the problem
+    # they JUST SOLVED so the surface can affirm WHY it works before the next problem. Distinct
+    # from the stuck-path worked_example (a rescue); mutually exclusive (a correct answer never
+    # routes to S4) and empty on a wrong answer or a non-buildable problem.
+    explanation = _worked_example_view(session.history[-1].problem) if result.correct else []
     return TurnResponse(
         correct=result.correct,
         error_type=result.error_category,
@@ -549,6 +554,7 @@ def _answer_response(
         intervention=_maybe_intervene(live, gate, next_problem, voice_provider),
         next_problem=_problem_view(next_problem),
         worked_example=worked_example,
+        explanation=explanation,
     )
 
 

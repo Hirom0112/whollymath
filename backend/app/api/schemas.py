@@ -448,6 +448,18 @@ class TurnResponse(BaseModel):
             "surface then shows S4 without a walkthrough rather than the loop failing."
         ),
     )
+    explanation: list[WorkedStepView] = Field(
+        default_factory=list,
+        description=(
+            "The worked steps of the problem the learner JUST SOLVED, present only after a "
+            "CORRECT answer so the surface can affirm WHY it works ('Nice — here's why "
+            "1/2 + 1/4 = 3/4') before the next problem (live loop Beat 2). Distinct from "
+            "``worked_example`` (the stuck-path S4 walkthrough): this is a celebrate-and-"
+            "consolidate beat, not a rescue. Empty on a wrong answer, a hint turn, or when the "
+            "solved problem has no buildable walkthrough. The mascot may voice it; no LLM "
+            "decides correctness (§8.1)."
+        ),
+    )
     lesson_complete: bool = Field(
         default=False,
         description=(

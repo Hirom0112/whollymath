@@ -235,6 +235,7 @@ def test_turn_response_has_exactly_the_contract_keys() -> None:
         "adaptation",
         "next_problem",
         "worked_example",
+        "explanation",
         "lesson_complete",
     }
 
@@ -354,3 +355,28 @@ def test_turn_rejects_extra_unknown_field_with_422() -> None:
     body["smuggled_field"] = "nope"
     status_code, _ = post_json(app, "/turn", body)
     assert status_code == 422
+
+
+def test_explanation_present_after_correct_answer() -> None:
+    """Beat 2: a correct answer carries the solved problem's worked steps (explain-after-correct).
+
+    The "here's why it works" consolidation walkthrough."""
+    app = create_app()
+    started = _start_session(app)
+    _, body = post_json(app, "/turn", _turn_body(started.session_id, started.problem.problem_id))
+    response = TurnResponse.model_validate(body)
+    assert response.correct is True
+    assert response.explanation  # the just-solved problem's "here's why" walkthrough
+    assert response.explanation[0].shown.strip()
+    assert response.worked_example == []  # not the stuck path
+
+
+def test_no_explanation_after_wrong_answer() -> None:
+    """A wrong answer is a rescue path, not a celebration — no explain-after-correct."""
+    app = create_app()
+    started = _start_session(app)
+    body = _turn_body(started.session_id, started.problem.problem_id, answer="2/7")
+    _, payload = post_json(app, "/turn", body)
+    response = TurnResponse.model_validate(payload)
+    assert response.correct is False
+    assert response.explanation == []
