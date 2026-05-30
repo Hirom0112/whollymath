@@ -35,6 +35,7 @@ from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 
 from app.api.live_adaptation import propose_adaptation_view
+from app.api.remediation_view import build_remediation_view
 from app.api.schemas import (
     ActionType,
     CourseNodeView,
@@ -80,6 +81,18 @@ from app.mastery.unit_progress import UnitProgress, build_unit_progress
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.policy.mid_problem_help import should_offer_mid_problem_help
+from app.policy.remediation_flow import (
+    LessonFlow,
+    LessonFlowState,
+    RemediationCleared,
+    RemediationContext,
+    RemediationTriggered,
+    in_lesson,
+)
+from app.policy.remediation_flow import (
+    apply as apply_remediation,
+)
+from app.policy.remediation_router import select_remediation_target
 from app.policy.scheduler import (
     difficulty_for,
     is_masterable_live,
@@ -453,6 +466,24 @@ def _probe_turn(live: _LiveSession, request: TurnRequest) -> TurnResponse:
         live.confirmed.add(goal_kc)
         live.probe_steps = []
         live.probe_index = 0
+        # §11.4 hard gate: if this confirmed KC is a NESTED PREREQUISITE lesson (we are in
+        # remediation), mastering it CLEARS the gate — resume the paused parent at its paused index
+        # instead of finishing (the parent is not done). The remediation panel goes away (flow →
+        # IN_LESSON) and the next problem is the parent's. Otherwise this is an ordinary lesson
+        # completion (CP.B bounded-lesson terminal state).
+        if live.flow.state is LessonFlowState.IN_REMEDIATION:
+            resumed = _resume_parent(live)
+            return TurnResponse(
+                correct=True,
+                error_type=ErrorType.NONE,
+                next_surface_state=live.tutor.surface_state,
+                feedback="Great — basic shored up. Back to where you left off.",
+                hint=None,
+                mastery=_probe_mastery_view(live.tutor, live, live.tutor.history[0].observation.kc),
+                help_need=None,
+                intervention=None,
+                next_problem=_problem_view(resumed),
+            )
         next_problem = _serve_next(live)
         return TurnResponse(
             correct=True,
@@ -481,6 +512,115 @@ def _probe_turn(live: _LiveSession, request: TurnRequest) -> TurnResponse:
         intervention=None,
         next_problem=_problem_view(live.probe_steps[live.probe_index]),
     )
+
+
+def _reason_label(prerequisite_kc: KnowledgeComponentId) -> str:
+    """The §11.5 on-screen drop label, naming the prerequisite ('shore up a basic first: …').
+
+    Mirrors the labelling discipline of the §3.8 refuse-rule 4 (every adaptation carries a reason)
+    and the example in CURRICULUM_STANDARD.md §11.5. Plain, pre-written text — no LLM (§8.1)."""
+    return f"Let's shore up a basic first: {get_kc(prerequisite_kc).skill_name}."
+
+
+def _begin_remediation(
+    live: _LiveSession, parent_kc: KnowledgeComponentId, prerequisite_kc: KnowledgeComponentId
+) -> Problem:
+    """Pause the parent lesson and start the nested prerequisite lesson (CURRICULUM_STANDARD §11).
+
+    Snapshots the ACTIVE (parent) lesson into ``live.paused_parent`` — its tutor, HelpNeed stream,
+    S5-probe progress, confirmed set, hint counter, and the resume index (the parent's served
+    count) — then resets those fields and swaps in a FRESH ``TutorSession`` for the prerequisite
+    KC (the same bounded-lesson construct ``start_kc`` uses; §11.6 item 2). It routes the ``flow``
+    to the "R" state via the committed ``remediation_flow.apply`` carrying the resolved context, so
+    the surface projection (``build_remediation_view``) lights up. Returns the prereq lesson's first
+    problem — what the caller serves in place of the parent's next problem.
+
+    The parent PAUSES, never resets (§11.4): everything needed to resume it exactly is in the
+    snapshot. Pure restructuring of in-memory state — no SymPy/LLM/DB on this path (§8.1/§8.2)."""
+    paused_at_index = len(live.tutor.history)
+    live.paused_parent = _PausedParent(
+        tutor=live.tutor,
+        help_need_history=live.help_need_history,
+        probe_steps=live.probe_steps,
+        probe_index=live.probe_index,
+        confirmed=live.confirmed,
+        probe_cooldown=live.probe_cooldown,
+        hints_this_problem=live.hints_this_problem,
+        paused_at_index=paused_at_index,
+    )
+    # Fresh active-lesson state for the nested prereq lesson (started like any goal-KC lesson).
+    surface_format = live_representations(prerequisite_kc)[0]
+    live.tutor = TutorSession.for_goal_kc(
+        prerequisite_kc, surface_format=surface_format, seed=live.seed_base
+    )
+    live.help_need_history = []
+    live.probe_steps = []
+    live.probe_index = 0
+    live.confirmed = set()
+    live.probe_cooldown = 0
+    live.hints_this_problem = 0
+    context = RemediationContext(
+        parent_kc=parent_kc,
+        prerequisite_kc=prerequisite_kc,
+        paused_at_index=paused_at_index,
+        reason=_reason_label(prerequisite_kc),
+    )
+    live.flow = apply_remediation(live.flow, RemediationTriggered(context=context))
+    return live.tutor.current_problem
+
+
+def _maybe_remediate(
+    live: _LiveSession, gate: SustainedHelpNeedGate, served_parent_problem: Problem
+) -> Problem | None:
+    """If sustained struggle should drop the learner one level, pause and return the prereq problem.
+
+    The §11.2 trigger is the EXISTING §3.7 sustained-help ``gate`` firing on the accumulated
+    HelpNeed stream (``live.help_need_history``) — the same signal the proactive arm uses; this
+    invents no new trigger and is NOT gated on the proactive A/B arm (remediation is a core
+    curriculum behavior, not an experiment). It fires only when ALL of: the gate trips, the learner
+    is currently IN_LESSON (one level only — §11.1: a learner already in remediation STAYS and works
+    the prereq, no nested drop), and the active lesson's KC has a routed prerequisite the §11.3
+    selector picks (terminal foundation KCs return None — no drop). That selector reads the live
+    per-KC BKT mastery and the last turn's error category to choose WHICH prereq (error-category
+    bias + lowest mastery).
+
+    Returns the prerequisite lesson's first problem (and pauses the parent) when it fires, else None
+    (the caller keeps serving ``served_parent_problem``). Off the sub-100ms decision path — it runs
+    after the turn is graded and the next problem already chosen, like the proactive read (§8.1)."""
+    if live.flow.state is not LessonFlowState.IN_LESSON:
+        return None  # one level only (§11.1) — already remediating
+    if not gate.should_intervene(live.help_need_history):
+        return None
+    parent_kc = live.tutor.history[0].observation.kc
+    last_error = live.tutor.history[-1].result.error_category
+    mastery = {kc: live.tutor.mastery_probability(kc) for kc in KnowledgeComponentId}
+    target = select_remediation_target(parent_kc, error_category=last_error, mastery=mastery)
+    if target is None:
+        return None  # terminal foundation KC — no drop (§11.1)
+    return _begin_remediation(live, parent_kc, target)
+
+
+def _resume_parent(live: _LiveSession) -> Problem:
+    """Clear remediation and resume the paused parent lesson where it paused (§11.4 gate passed).
+
+    Called when the nested prerequisite lesson has been MASTERED (its goal KC CONFIRMED by the S5
+    probe — the existing "must master to unlock" bar, one level down). Restores the parent-lesson
+    snapshot verbatim (tutor, HelpNeed stream, probe progress, confirmed set, hint counter) so the
+    parent continues at the exact problem it paused on (§11.4: pauses, never resets), routes the
+    ``flow`` back to IN_LESSON via the committed ``RemediationCleared`` edge, and serves the
+    parent's NEXT problem via the normal scheduler. Returns that resumed parent problem."""
+    snapshot = live.paused_parent
+    assert snapshot is not None, "resume requires a paused parent (begin_remediation set it)"
+    live.tutor = snapshot.tutor
+    live.help_need_history = snapshot.help_need_history
+    live.probe_steps = snapshot.probe_steps
+    live.probe_index = snapshot.probe_index
+    live.confirmed = snapshot.confirmed
+    live.probe_cooldown = snapshot.probe_cooldown
+    live.hints_this_problem = snapshot.hints_this_problem
+    live.paused_parent = None
+    live.flow = apply_remediation(live.flow, RemediationCleared())
+    return _serve_next(live)
 
 
 def _answer_response(
@@ -556,6 +696,25 @@ def _answer_response(
     help_need = _help_need(session, next_problem, predictor)
     if help_need is not None:
         live.help_need_history.append(help_need)
+    # §11 reactive remediation: with the HelpNeed score now on the stream, the §3.7 sustained gate
+    # may trip. If it does (and we are IN_LESSON on a KC with a routed prerequisite), PAUSE the
+    # parent and serve the nested prerequisite lesson's first problem instead of the parent's next.
+    # Read off the settled turn, like the proactive read — it never perturbs correctness/mastery/
+    # surface-state, only swaps which lesson's problem comes next (§8.1 ordering).
+    prereq_problem = _maybe_remediate(live, gate, next_problem)
+    if prereq_problem is not None:
+        return TurnResponse(
+            correct=result.correct,
+            error_type=result.error_category,
+            next_surface_state=live.tutor.surface_state,
+            feedback=result.feedback,
+            hint=None,
+            mastery=_mastery_view(result.mastery_snapshot, live),
+            help_need=help_need,
+            intervention=None,
+            next_problem=_problem_view(prereq_problem),
+            remediation=build_remediation_view(live.flow),
+        )
     # When the policy routed to S4 (≥2 consecutive errors, §3.6 row 4), serve the worked
     # solution of the problem the learner JUST got stuck on — history[-1] is that answered
     # problem (submit_answer appended it). NOT next_problem: that is the fresh practice item,
@@ -633,6 +792,32 @@ def _hint_response(
     )
 
 
+@dataclass(frozen=True)
+class _PausedParent:
+    """A snapshot of the PAUSED grade-level lesson taken when remediation fires (Slice P0.4 / §11).
+
+    CURRICULUM_STANDARD.md §11.4: remediation PAUSES the parent lesson, never resets it — on
+    completion the learner resumes at the exact problem they paused on. The live loop's per-lesson
+    state (the ``TutorSession``, the HelpNeed stream, the S5-probe progress, the confirmed-KC set,
+    the per-problem hint counter) all describe the ACTIVE lesson; to run a nested prereq lesson we
+    swap fresh ones in and stash the parent's here, frozen, so resume is an exact restore. Session
+    IDENTITY/persistence fields (id, db row, seed base, proactive arm) are NOT snapshotted — they
+    belong to the session, not the lesson, and carry across the pause unchanged.
+
+    ``paused_at_index`` is the parent's served-problem count at the pause — the §11.5 "filled dots"
+    and the resume point the ``RemediationContext`` carries for the surface.
+    """
+
+    tutor: TutorSession
+    help_need_history: list[float]
+    probe_steps: list[Problem]
+    probe_index: int
+    confirmed: set[KnowledgeComponentId]
+    probe_cooldown: int
+    hints_this_problem: int
+    paused_at_index: int
+
+
 @dataclass
 class _LiveSession:
     """The per-session runtime record behind a ``session_id`` (Slices 4.4/4.5).
@@ -642,6 +827,14 @@ class _LiveSession:
     gate reads, and ``proactive_enabled`` — this session's A/B arm. The arm defaults OFF
     (observe-only), so a session never sees a proactive intervention unless it was started
     into the proactive arm; the Slice 5.4 A/B is what turns it on per session.
+
+    ``flow`` is the reactive-remediation axis (Slice P0.4, CURRICULUM_STANDARD.md §11): IN_LESSON
+    normally, IN_REMEDIATION ("R") while a nested prerequisite lesson runs because the learner
+    struggled on the grade-level lesson. ``paused_parent`` holds the frozen snapshot of the paused
+    parent lesson while in remediation (``None`` otherwise) — restored verbatim on resume so the
+    parent continues where it paused (§11.4: pauses, never resets). The ``tutor`` / probe /
+    confirmed / help-need fields below always describe the CURRENTLY-ACTIVE lesson (the parent, or
+    the nested prerequisite while remediating); the router swaps them on pause/resume.
     """
 
     tutor: TutorSession
@@ -679,6 +872,11 @@ class _LiveSession:
     # The problem_id we last offered a MID-PROBLEM proactive nudge for (live loop Beat 1), so the
     # /events stream nudges a struggling learner at most ONCE per problem instead of on every batch.
     mid_problem_nudged_problem_id: str | None = None
+    # The reactive-remediation axis (Slice P0.4, CURRICULUM_STANDARD.md §11). ``flow`` is IN_LESSON
+    # normally and IN_REMEDIATION ("R") while a nested prerequisite lesson runs; ``paused_parent``
+    # holds the frozen parent-lesson snapshot to resume to while in remediation (None otherwise).
+    flow: LessonFlow = field(default_factory=in_lesson)
+    paused_parent: _PausedParent | None = None
 
 
 @dataclass(frozen=True)
@@ -1005,6 +1203,14 @@ class SessionStore:
             )
             # Beat 3: attach the live between-problem adaptation (observe-then-act, gated).
             response = self._with_live_adaptation(live, response)
+        # §11.5: keep the remediation panel in sync with the post-turn flow on EVERY turn (practice,
+        # probe step, hint) — it shows whenever the learner is in the "R" state, null otherwise.
+        # The pause/resume turns already routed the flow; this projects whatever it now is, so a
+        # mid-remediation hint or probe-step turn still carries the panel rather than dropping it.
+        if response.remediation is None:
+            response = response.model_copy(
+                update={"remediation": build_remediation_view(live.flow)}
+            )
         if self.session_factory is not None:
             _persist_turn(self.session_factory, live, request, response)
         return response

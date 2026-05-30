@@ -1526,6 +1526,10 @@ export interface TurnResponse {
    * True on the turn that FINISHES the lesson — i.e. the goal KC just became CONFIRMED (the S5 transfer probe passed). The bounded-lesson terminal signal (CP.B; PROJECT.md §3.13): the surface shows the 'you finished it' screen and routes the learner home instead of presenting yet another practice problem. ``next_problem`` may still be populated as an optional 'keep practicing' item, but a complete lesson must not silently loop on. False on every other turn.
    */
   lesson_complete?: boolean;
+  /**
+   * The reactive-remediation panel (CURRICULUM_STANDARD.md §11.5), present only when the learner has been dropped to a prerequisite — the grade-level lesson is PAUSED while a nested foundation lesson runs (the 'R' flow state). null while working the grade-level lesson normally (invisible for a fluent learner). The surface renders it as the lesson box expanding in place: the parent shows paused, a sub-row reveals the prerequisite dropped to, with the on-screen reason and resume hint. While present, ``next_problem`` is the PREREQUISITE lesson's problem; the parent resumes at ``remediation.parent_progress_done`` once the prerequisite is mastered (§11.4 hard gate — it pauses, never resets).
+   */
+  remediation?: RemediationView | null;
 }
 /**
  * One revealed step of an S4 worked example, on the wire (Slice 3.6 → API).

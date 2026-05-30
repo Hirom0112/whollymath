@@ -515,6 +515,20 @@ class TurnResponse(BaseModel):
             "but a complete lesson must not silently loop on. False on every other turn."
         ),
     )
+    remediation: RemediationView | None = Field(
+        default=None,
+        description=(
+            "The reactive-remediation panel (CURRICULUM_STANDARD.md §11.5), present only when "
+            "the learner has been dropped to a prerequisite — the grade-level lesson is PAUSED "
+            "while a nested foundation lesson runs (the 'R' flow state). null while working the "
+            "grade-level lesson normally (invisible for a fluent learner). The surface renders it "
+            "as the lesson box expanding in place: the parent shows paused, a sub-row reveals the "
+            "prerequisite dropped to, with the on-screen reason and resume hint. While present, "
+            "``next_problem`` is the PREREQUISITE lesson's problem; the parent resumes at "
+            "``remediation.parent_progress_done`` once the prerequisite is mastered (§11.4 hard "
+            "gate — it pauses, never resets)."
+        ),
+    )
 
 
 class ArmVerdictView(BaseModel):
