@@ -52,6 +52,17 @@ class HomeworkScanner(Protocol):
 
     def scan(self, images: Sequence[bytes], assignment: Assignment) -> dict[int, str | None]: ...
 
+    def transcribe(self, image: bytes) -> str:
+        """Read ONE snapped answer image to recognized text — the live mid-lesson camera beat.
+
+        Unlike ``scan`` (a whole homework set, indexed by question), this is a single image with no
+        assignment context: a child photographs the one answer they are working on. Returns the raw
+        transcription (LaTeX/plain), which ``read_back_answer`` then normalizes to a submittable
+        string; ``""`` when nothing could be read, so the read-back asks for a rewrite rather than
+        grading a misread (CLAUDE.md §8.2). Transcription only — SymPy still grades the confirm.
+        """
+        ...
+
 
 def _correct_answer_text(correct_value: object) -> str:
     """Render an item's expected answer the way a learner would write it (e.g. '41/60', '6')."""
@@ -96,6 +107,19 @@ class MockScanner:
             else:
                 reading[index] = _correct_answer_text(item.problem.correct_value)
         return reading
+
+    def transcribe(self, image: bytes) -> str:
+        """Echo the image bytes as UTF-8 — a deterministic, no-OCR reading for tests/demos.
+
+        The 'handwriting' is the image bytes, so a demo or test scripts the exact transcription
+        (e.g. ``b"\\frac{3}{4}"`` or ``b"3/4"``) and gets it back verbatim, exercising the read-back
+        path without a real photo or OCR key. Undecodable bytes → ``""`` (unreadable), mirroring the
+        Mathpix fail-safe.
+        """
+        try:
+            return image.decode("utf-8")
+        except UnicodeDecodeError:
+            return ""
 
 
 def _latex_to_plain(text: str) -> str:
@@ -164,6 +188,12 @@ class MathpixScanner:
     def scan(self, images: Sequence[bytes], assignment: Assignment) -> dict[int, str | None]:
         text = "\n".join(self._ocr_page(image) for image in images)
         return _extract_answers(text, len(assignment.problems))
+
+    def transcribe(self, image: bytes) -> str:
+        """OCR one snapped answer image → recognized text (the live multimodal beat). Empty on any
+        failure (no key, network, parse) so the read-back asks for a rewrite, never a silent
+        misread (§8.2). Same fail-safe ``_ocr_page`` the full-page ``scan`` uses, one image."""
+        return self._ocr_page(image)
 
 
 __all__ = ["HomeworkScanner", "MathpixScanner", "MockScanner"]

@@ -18,29 +18,50 @@ from app.api.schemas import (
     HwQuestionView,
     HwStatusResponse,
     HwSubmitResponse,
+    ReadBackView,
 )
 from app.homework.grading import GradeResult
+from app.homework.scanner import HomeworkScanner
 from app.homework.session import HwRun
+from app.tutor.transcribed_answer import read_back_answer
 
 
 class InvalidPageImageError(ValueError):
     """A submitted page image was not valid base64 (the route maps this to a 422)."""
 
 
+def decode_image(image: str) -> bytes:
+    """Decode one base64 image to raw bytes (tolerating a ``data:`` URL prefix).
+
+    A malformed image is a client error, not a server crash — we raise ``InvalidPageImageError`` so
+    the route can 422. Shared by the homework page upload and the single-answer camera beat.
+    """
+    payload = image.split(",", 1)[1] if image.startswith("data:") else image
+    try:
+        return base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise InvalidPageImageError("a page image was not valid base64") from exc
+
+
 def decode_pages(pages: list[str]) -> list[bytes]:
     """Decode the phone's base64 page images to raw bytes (tolerating a ``data:`` URL prefix).
 
-    The scanner only needs the bytes; the mock ignores them entirely. A malformed image is a
-    client error, not a server crash — we raise ``InvalidPageImageError`` so the route can 422.
+    The scanner only needs the bytes; the mock ignores them entirely. A malformed image raises
+    ``InvalidPageImageError`` (per ``decode_image``) so the route can 422.
     """
-    out: list[bytes] = []
-    for page in pages:
-        payload = page.split(",", 1)[1] if page.startswith("data:") else page
-        try:
-            out.append(base64.b64decode(payload, validate=True))
-        except (binascii.Error, ValueError) as exc:
-            raise InvalidPageImageError("a page image was not valid base64") from exc
-    return out
+    return [decode_image(page) for page in pages]
+
+
+def read_back_response(scanner: HomeworkScanner, image: bytes) -> ReadBackView:
+    """Transcribe one snapped answer image and normalize it into a read-back (Slice HR.C1/C3).
+
+    The scanner reads the image to text; ``read_back_answer`` flattens it to a submittable string
+    (the SAME one the typed path produces). ``readable`` is false when nothing could be read, so the
+    surface asks the learner to rewrite rather than grade a misread — SymPy still owns correctness
+    on the eventual confirm (CLAUDE.md §8.2). No LLM (§8.1).
+    """
+    answer = read_back_answer(scanner.transcribe(image))
+    return ReadBackView(transcribed_answer=answer, readable=answer is not None)
 
 
 def assign_response(run: HwRun) -> HwAssignResponse:
@@ -98,7 +119,9 @@ def status_response(run: HwRun) -> HwStatusResponse:
 __all__ = [
     "InvalidPageImageError",
     "assign_response",
+    "decode_image",
     "decode_pages",
+    "read_back_response",
     "status_response",
     "submit_response",
 ]

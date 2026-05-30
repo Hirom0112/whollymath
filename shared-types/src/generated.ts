@@ -1271,6 +1271,19 @@ export interface ThreeArmComparisonView {
   metrics?: MetricComparisonView[];
 }
 /**
+ * One snapped handwritten answer image to read back (the live multimodal beat, Slice HR.C1).
+ *
+ * Mid-lesson, a child photographs the answer they are working on instead of typing it. The image
+ * is base64-encoded (raw or data-URL) so no multipart dependency is needed — same wire shape as
+ * ``/hw/submit``. The response is a ``ReadBackView`` the learner confirms BEFORE grading.
+ */
+export interface TranscribeAnswerRequest {
+  /**
+   * The answer image, base64-encoded (data may be raw or a data-URL).
+   */
+  image: string;
+}
+/**
  * One learner action entering the turn loop (ARCHITECTURE.md §10 steps 1-2).
  *
  * This is the ``submit`` payload the surface sends. Fields mirror exactly what

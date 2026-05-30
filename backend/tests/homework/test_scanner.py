@@ -53,6 +53,26 @@ def test_mathpix_without_a_key_degrades_to_none_not_crash() -> None:
     assert all(v is None for v in reading.values())
 
 
+def test_mock_transcribe_echoes_the_image_bytes() -> None:
+    """The single-image ``transcribe`` (the live multimodal beat) is a deterministic echo for the
+    mock: the 'handwriting' is the image bytes, returned verbatim so the read-back path can be
+    exercised without a real photo or OCR key."""
+    assert MockScanner().transcribe(b"\\frac{3}{4}") == "\\frac{3}{4}"
+    assert MockScanner().transcribe(b"3/4") == "3/4"
+
+
+def test_mock_transcribe_undecodable_bytes_is_empty() -> None:
+    """Undecodable bytes read as unreadable ('' ), mirroring the Mathpix fail-safe — the read-back
+    then asks the learner to rewrite rather than grading a misread."""
+    assert MockScanner().transcribe(b"\xff\xfe") == ""
+
+
+def test_mathpix_transcribe_without_a_key_is_empty_not_crash() -> None:
+    """Single-image OCR is fail-safe too: no key (or any API failure) → '' so the read-back is a
+    rewrite prompt, never a blocking error."""
+    assert MathpixScanner(app_key=None).transcribe(b"fake-image-bytes") == ""
+
+
 def test_extract_answers_maps_after_equals_positionally() -> None:
     """The answer-extraction heuristic: take what follows the last '=' on each line, in order,
     flattening \\frac{a}{b} → a/b, and map positionally (unread questions stay None)."""

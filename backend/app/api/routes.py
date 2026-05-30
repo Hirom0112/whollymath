@@ -26,7 +26,9 @@ from app.api.eval_view import build_three_arm_comparison_view
 from app.api.homework_view import (
     InvalidPageImageError,
     assign_response,
+    decode_image,
     decode_pages,
+    read_back_response,
     status_response,
     submit_response,
 )
@@ -41,10 +43,12 @@ from app.api.schemas import (
     HwStatusResponse,
     HwSubmitRequest,
     HwSubmitResponse,
+    ReadBackView,
     RouteOptionView,
     StartSessionRequest,
     StartSessionResponse,
     ThreeArmComparisonView,
+    TranscribeAnswerRequest,
     TurnRequest,
     TurnResponse,
 )
@@ -229,6 +233,26 @@ def hw_confirm(request: HwConfirmRequest, store: HwStoreDep) -> HwStatusResponse
             status_code=status.HTTP_404_NOT_FOUND, detail=f"unknown token: {request.token!r}"
         )
     return status_response(run)
+
+
+@router.post("/transcribe-answer", response_model=ReadBackView, tags=["homework"])
+def transcribe_answer(request: TranscribeAnswerRequest, store: HwStoreDep) -> ReadBackView:
+    """Read back one snapped handwritten answer for confirmation (the multimodal beat, HR.C1/C3).
+
+    Mid-lesson, a child photographs the answer they are working on instead of typing it. The image
+    (base64, like ``/hw/submit``) is transcribed by the injected scanner and normalized into a
+    submittable string the surface shows back — "I read this as 3/4 — right?" — BEFORE grading. On
+    confirm, that string is submitted through the normal ``/turn`` (the SAME SymPy verifier as a
+    typed answer, CLAUDE.md §8.2). Best-effort and fail-safe: an unreadable image returns
+    ``readable=false`` (the surface asks for a rewrite), never a silent misread. Malformed → 422.
+    """
+    try:
+        image = decode_image(request.image)
+    except InvalidPageImageError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+    return read_back_response(store.scanner, image)
 
 
 @router.post("/session", response_model=StartSessionResponse, tags=["session"])

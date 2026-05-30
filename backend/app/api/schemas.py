@@ -1152,6 +1152,21 @@ class MeResponse(BaseModel):
     )
 
 
+class TranscribeAnswerRequest(BaseModel):
+    """One snapped handwritten answer image to read back (the live multimodal beat, Slice HR.C1).
+
+    Mid-lesson, a child photographs the answer they are working on instead of typing it. The image
+    is base64-encoded (raw or data-URL) so no multipart dependency is needed — same wire shape as
+    ``/hw/submit``. The response is a ``ReadBackView`` the learner confirms BEFORE grading."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    image: str = Field(
+        min_length=1,
+        description="The answer image, base64-encoded (data may be raw or a data-URL).",
+    )
+
+
 class ReadBackView(BaseModel):
     """The read-back of a snapped handwritten answer, for the learner to confirm (Slice HR.C2).
 
@@ -1397,6 +1412,7 @@ __all__ = [
     "TeacherAlertView",
     "TeacherRosterView",
     "TeacherStudentView",
+    "TranscribeAnswerRequest",
     "AdaptiveTurnView",
     "AnswerKind",
     "ArmVerdictView",
