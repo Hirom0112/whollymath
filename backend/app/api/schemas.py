@@ -1281,6 +1281,9 @@ class AlertKind(StrEnum):
     FAILING_TREND = "FAILING_TREND"
     IDLE = "IDLE"
     REMEDIATION_STUCK = "REMEDIATION_STUCK"
+    # Correct answers that almost always lean on a hint (hint-hunter signature): real correctness
+    # but no unscaffolded grip, so it trips none of the wrong/stuck/trend rules (TCH Finding #2).
+    HINT_DEPENDENT = "HINT_DEPENDENT"
 
 
 class HelpNeedTrend(StrEnum):

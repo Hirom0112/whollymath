@@ -103,6 +103,32 @@ def test_idle_fires_after_inactivity() -> None:
     assert "5 days" in idle[0].message
 
 
+def test_hint_dependent_fires_when_corrects_are_all_hinted() -> None:
+    """Hint-hunter Hugo: many correct answers, but every one used a hint (0 unscaffolded).
+
+    Finding #2 (T1_T2_COORDINATION): without this rule Hugo shows on_track because none of the
+    other rules fire (he's not wrong/stuck/idle). His corrects are real but scaffold-supplied,
+    so he should surface as needs_attention (WARN).
+    """
+    turns = [_t(True, hint=True) for _ in range(10)]
+    alerts = evaluate_alerts(turns, _NOW)
+    hd = [a for a in alerts if a.kind is AlertKind.HINT_DEPENDENT]
+    assert len(hd) == 1
+    assert hd[0].severity is AlertSeverity.WARN
+
+
+def test_hint_dependent_silent_for_unscaffolded_solver() -> None:
+    """Procedure Priya: mostly unscaffolded corrects → genuine fluency, no hint-dependency flag."""
+    turns = [_t(True) for _ in range(8)] + [_t(True, hint=True) for _ in range(2)]
+    assert AlertKind.HINT_DEPENDENT not in _kinds(evaluate_alerts(turns, _NOW))
+
+
+def test_hint_dependent_needs_enough_corrects() -> None:
+    """A single hinted correct isn't a pattern — don't flag on thin evidence."""
+    turns = [_t(True, hint=True), _t(False, error="operation")]
+    assert AlertKind.HINT_DEPENDENT not in _kinds(evaluate_alerts(turns, _NOW))
+
+
 def test_remediation_stuck_replaces_stuck_when_in_remediation() -> None:
     turns = [_t(True), _t(False), _t(False), _t(False)]
     alerts = evaluate_alerts(turns, _NOW, in_remediation=True)

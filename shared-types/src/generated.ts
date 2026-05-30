@@ -18,7 +18,8 @@ export type AlertKind =
   | "LOW_ENGAGEMENT"
   | "FAILING_TREND"
   | "IDLE"
-  | "REMEDIATION_STUCK";
+  | "REMEDIATION_STUCK"
+  | "HINT_DEPENDENT";
 /**
  * Alert severity (TCH.B5). Color is never the sole cue — paired with an icon + word.
  */

@@ -43,6 +43,12 @@ _TREND_DROP = 0.25
 _TREND_LATE_MAX = 0.6
 # At most this many total attempts reads as barely-engaged.
 _LOW_ENGAGEMENT_MAX = 2
+# Hint-dependency (Finding #2): need at least this many CORRECT answers before judging whether the
+# learner can solve unscaffolded — fewer is too thin to call a pattern.
+_HINT_DEP_MIN_CORRECT = 4
+# …and if at most this fraction of those corrects were unscaffolded (no hint), the learner is
+# leaning on scaffolds (Hint-hunter Hugo: ~0 unscaffolded; PROJECT.md §4.2 P3).
+_HINT_DEP_MAX_UNSCAFFOLDED_RATE = 0.15
 # No activity for at least this long fires IDLE.
 _IDLE_AFTER = timedelta(days=3)
 
@@ -103,6 +109,30 @@ def _failing_trend(turns: Sequence[TurnFact]) -> TeacherAlertView | None:
     return None
 
 
+def _hint_dependent(turns: Sequence[TurnFact]) -> TeacherAlertView | None:
+    """Correct answers that almost always used a hint — the hint-hunter signature (Finding #2).
+
+    A learner can look fine on the other rules (not wrong, not stuck, not idle) while never solving
+    unscaffolded: every correct answer leaned on a hint. That is real but fragile, so it should
+    surface as needs_attention (WARN). Computed over CORRECT turns only — wrong answers say nothing
+    about scaffold-dependence — and gated on a minimum count so one hinted correct is not a pattern.
+    """
+    corrects = [t for t in turns if t.correct]
+    if len(corrects) < _HINT_DEP_MIN_CORRECT:
+        return None
+    unscaffolded_rate = sum(1 for t in corrects if not t.hint_used) / len(corrects)
+    if unscaffolded_rate > _HINT_DEP_MAX_UNSCAFFOLDED_RATE:
+        return None
+    return TeacherAlertView(
+        kind=AlertKind.HINT_DEPENDENT,
+        severity=AlertSeverity.WARN,
+        message=(
+            f"Gets answers right but only {_pct(unscaffolded_rate)} were unscaffolded; "
+            "leaning on hints rather than solving independently."
+        ),
+    )
+
+
 def _low_engagement(turns: Sequence[TurnFact]) -> TeacherAlertView | None:
     if 0 < len(turns) <= _LOW_ENGAGEMENT_MAX:
         return TeacherAlertView(
@@ -159,7 +189,7 @@ def evaluate_alerts(
                 )
             )
 
-    for rule in (_repeated_misconception, _failing_trend, _low_engagement):
+    for rule in (_repeated_misconception, _failing_trend, _low_engagement, _hint_dependent):
         alert = rule(turns)
         if alert is not None:
             alerts.append(alert)

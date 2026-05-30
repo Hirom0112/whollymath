@@ -139,6 +139,7 @@ const ALERT_LABEL: Record<AlertKind, string> = {
   FAILING_TREND: 'Falling accuracy',
   IDLE: 'Idle',
   REMEDIATION_STUCK: 'Stuck in remediation',
+  HINT_DEPENDENT: 'Hint dependent',
 };
 
 const SEVERITY_META: Record<
