@@ -53,6 +53,7 @@ from app.domain.misconceptions import (
     gcf_lcm_confusion,
     invert_conversion,
     invert_rate,
+    multiply_without_inverting,
     natural_number_bias_number_line,
     part_part_ratio,
     subtract_across,
@@ -359,6 +360,15 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.MULTIPLY_AS_ADD,
         predict=lambda ops: ops[0] + ops[1],
+    ),
+    # multiply-without-inverting: divided two fractions by multiplying straight across, skipping the
+    # flip (operands are the two fractions). A wrong OPERATION (ran multiplication on a division).
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.DIVIDE_FRACTIONS,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.MULTIPLY_WITHOUT_INVERTING,
+        predict=lambda ops: multiply_without_inverting(ops[0], ops[1]),
     ),
     # conversion-inversion: converted to the smaller unit by DIVIDING by the factor instead of
     # multiplying (operands are (quantity, factor)). A wrong OPERATION (applied the factor upside-

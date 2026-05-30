@@ -55,6 +55,9 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # Grade-6 Unit 2 (T2): multiplying fractions builds on naming the same number (you reduce
     # the product), so it forward-unlocks on equivalence.
     _KC.MULTIPLY_FRACTIONS: frozenset({_KC.EQUIVALENCE}),
+    # Grade-6 Unit 2 (T2): dividing fractions IS multiplying once you invert the divisor, so it
+    # forward-unlocks on fraction multiplication.
+    _KC.DIVIDE_FRACTIONS: frozenset({_KC.MULTIPLY_FRACTIONS}),
     # Grade-6 Unit 1: a unit conversion via proportions IS unit-rate reasoning applied to a
     # known factor, so it forward-unlocks on the unit rate.
     _KC.UNIT_CONVERSION: frozenset({_KC.UNIT_RATE}),
@@ -81,6 +84,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.EQUIVALENT_RATIOS,  # Grade-6 Unit 1: scale a ratio multiplicatively
     _KC.PERCENT,  # Grade-6 Unit 1: a per-100 ratio
     _KC.MULTIPLY_FRACTIONS,  # Grade-6 Unit 2: multiply fractions, built on equivalence
+    _KC.DIVIDE_FRACTIONS,  # Grade-6 Unit 2: divide fractions (invert & multiply), on multiplication
     _KC.UNIT_CONVERSION,  # Grade-6 Unit 1: convert via proportions, built on the unit rate
     _KC.GCF_LCM,  # Grade-6 Unit 2: GCF/LCM, generalizes the common denominator (LCM = LCD)
 )

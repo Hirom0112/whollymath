@@ -286,6 +286,21 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # Divide a fraction by a fraction (6.NS.1) — the headline Grade-6 fraction standard. Invert
+    # the divisor and multiply; the quotient is a single fraction entered in the symbolic editor
+    # (reuses the editor, NO new widget, like MULTIPLY_FRACTIONS). Advertises SYMBOLIC + AREA_MODEL
+    # (the area/measurement picture of "how many c/d fit in a/b"), but LIVE only on SYMBOLIC for
+    # now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like MULTIPLY_FRACTIONS; masterability
+    # waits on the AREA_MODEL division widget (T3).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.DIVIDE_FRACTIONS,
+        skill_name="Divide two fractions",
+        description=(
+            "Divide a fraction by a fraction by inverting the divisor and multiplying "
+            "(e.g. 1/2 div 3/4 = 1/2 x 4/3 = 2/3), not by multiplying straight across."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
     # Convert units via ratio reasoning / proportions (TEKS 6.4H; partial CCSS 6.RP.3d). Given a
     # conversion factor ("12 inches = 1 foot") and a quantity in the larger unit, find the
     # quantity in the smaller unit — a single numeric answer entered in the symbolic editor.

@@ -78,6 +78,8 @@ class MisconceptionId(StrEnum):
     # Unit 2: swapping the two whole-number aggregates — answering the LCM when the GCF was
     # asked, or the GCF when the LCM was asked.
     GCF_LCM_CONFUSION = "gcf-lcm-confusion"
+    # Unit 2 (6.NS.1): dividing fractions by multiplying straight across without inverting.
+    MULTIPLY_WITHOUT_INVERTING = "multiply-without-inverting"
 
 
 @dataclass(frozen=True)
@@ -262,6 +264,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "multiples (what both divide into)."
         ),
         applicable_kcs=(KnowledgeComponentId.GCF_LCM,),
+    ),
+    Misconception(
+        id=MisconceptionId.MULTIPLY_WITHOUT_INVERTING,
+        name="Multiply without inverting",
+        description=(
+            "Divides fractions by multiplying straight across without inverting the divisor: "
+            "a/b ÷ c/d is done as a/b × c/d (so 1/2 ÷ 3/4 becomes 3/8 instead of the correct "
+            "1/2 × 4/3 = 2/3). The learner skips the 'flip the second fraction' step — running "
+            "the multiplication procedure on the division problem unchanged."
+        ),
+        applicable_kcs=(KnowledgeComponentId.DIVIDE_FRACTIONS,),
     ),
 )
 
@@ -464,6 +477,19 @@ def gcf_lcm_confusion(a: int, b: int, *, lcm_asked: bool) -> Rational:
     """
     other = gcd(a, b) if lcm_asked else lcm(a, b)
     return Rational(int(other))
+
+
+def multiply_without_inverting(dividend: Rational, divisor: Rational) -> Rational:
+    """multiply-without-inverting: do a/b ÷ c/d as a/b × c/d (skip flipping the divisor).
+
+    The correct quotient is ``dividend * (1/divisor)`` — invert the divisor, then multiply. The
+    learner who skips the flip multiplies straight across instead, getting ``dividend * divisor``
+    — e.g. 1/2 ÷ 3/4 becomes 1/2 × 3/4 = 3/8 instead of 1/2 × 4/3 = 2/3. Returned as a SymPy
+    ``Rational`` so the verifier can compare values directly; it differs from the correct quotient
+    whenever the divisor is not its own reciprocal (i.e. divisor != 1), which holds for any proper
+    divisor c/d with c < d.
+    """
+    return dividend * divisor
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

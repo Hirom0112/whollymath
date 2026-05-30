@@ -720,6 +720,31 @@ def _generate_multiply_fractions(
     )
 
 
+def _generate_divide_fractions(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_divide_fractions: divide a fraction by a fraction; the quotient is the answer.
+
+    Two unlike-denominator proper fractions (the existing ``_unlike_pair`` pool, so difficulty
+    ramps the same way the other fraction KCs do). The correct value is the SymPy quotient
+    ``first / second`` (invert and multiply, e.g. 1/2 div 3/4 = 2/3). ``operands = (first, second)``
+    so the verifier can replay the multiply-without-inverting misconception (``first * second`` —
+    skipping the flip). The divisor is a PROPER fraction (numerator < denominator), so its
+    reciprocal differs from itself and the no-invert error is always a distinct value. Symbolic.
+    """
+    first, second = _unlike_pair(rng, difficulty)
+    quotient = first / second
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.DIVIDE_FRACTIONS, seed, surface_format),
+        kc=KnowledgeComponentId.DIVIDE_FRACTIONS,
+        surface_format=surface_format,
+        statement=f"{first.p}/{first.q} div {second.p}/{second.q} = ?",
+        correct_value=quotient,
+        representations_available=get_kc(KnowledgeComponentId.DIVIDE_FRACTIONS).representations,
+        operands=(first, second),
+    )
+
+
 # Conversion contexts: (larger-unit, smaller-unit, factor) — small units per ONE large unit.
 # Chosen through the seeded RNG so the same seed yields the same scenario (PROJECT.md §4.1).
 # Every factor is > 1 (a genuine convert-down), so the inversion error (quantity/factor) is
@@ -845,6 +870,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.EQUIVALENT_RATIOS: _generate_equivalent_ratios,
     KnowledgeComponentId.PERCENT: _generate_percent,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _generate_multiply_fractions,
+    KnowledgeComponentId.DIVIDE_FRACTIONS: _generate_divide_fractions,
     KnowledgeComponentId.UNIT_CONVERSION: _generate_unit_conversion,
     KnowledgeComponentId.GCF_LCM: _generate_gcf_lcm,
 }

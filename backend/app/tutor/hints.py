@@ -257,6 +257,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Two thirds of three quarters: multiply across, then simplify the result.",
         ),
     ),
+    # Grade-6 Unit 2 (T2): index 0 (operation) orients toward flipping the divisor before
+    # multiplying; index 1 (magnitude) toward "dividing by a part-of-one makes it bigger".
+    KnowledgeComponentId.DIVIDE_FRACTIONS: (
+        _nudge(
+            KnowledgeComponentId.DIVIDE_FRACTIONS,
+            "To divide by a fraction, FLIP the second one and multiply. Did you flip it?",
+        ),
+        _nudge(
+            KnowledgeComponentId.DIVIDE_FRACTIONS,
+            "Dividing by less than a whole makes the answer BIGGER. If yours shrank, did you flip?",
+        ),
+        _nudge(
+            KnowledgeComponentId.DIVIDE_FRACTIONS,
+            "How many of the second fraction fit inside the first? That count is the quotient.",
+        ),
+    ),
     # Grade-6 Unit 1: index 0 (operation) orients toward multiplying by the factor, not dividing;
     # index 1 (magnitude) toward "smaller units means MORE of them".
     KnowledgeComponentId.UNIT_CONVERSION: (

@@ -498,6 +498,43 @@ def _multiply_fractions_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _divide_fractions_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'flip the divisor, then multiply across' steps for a fraction quotient (Grade-6 Unit 2).
+
+    ``operands = (first, second)``; the quotient is ``first / second ==
+    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"divide-fractions problem {problem.problem_id} needs (first, second)")
+    first, second = operands
+    answer = problem.correct_value
+    each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
+    return (
+        WorkedStep(
+            shown=(
+                f"Flip the second fraction (the divisor): {second.p}/{second.q} "
+                f"becomes {second.q}/{second.p}."
+            ),
+            why_prompt="Why does dividing by a fraction mean multiplying by its reciprocal?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"Now multiply across: ({first.p}x{second.q})/({first.q}x{second.p}) = "
+                f"{first.p * second.q}/{first.q * second.p}."
+            ),
+            why_prompt="Why is dividing by a number less than one whole making the answer bigger?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Simplify: {each}.",
+            why_prompt="Why does reducing keep the same value with smaller numbers?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _unit_conversion_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'each big unit holds this many small ones, so multiply' steps for a unit conversion.
 
@@ -616,6 +653,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _equivalent_ratios_steps,
     KnowledgeComponentId.PERCENT: _percent_steps,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _multiply_fractions_steps,
+    KnowledgeComponentId.DIVIDE_FRACTIONS: _divide_fractions_steps,
     KnowledgeComponentId.UNIT_CONVERSION: _unit_conversion_steps,
     KnowledgeComponentId.GCF_LCM: _gcf_lcm_steps,
 }

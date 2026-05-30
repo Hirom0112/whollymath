@@ -268,7 +268,10 @@ _U2 = CatalogUnit(
             unit_slug="u2",
             order=4,
             title="Divide a fraction by a fraction",
-            kc_id="KC_fraction_division",
+            # Aligned to the enum/model label-space id ``KC_divide_fractions`` (was the stray
+            # ``KC_fraction_division``, which matched no KnowledgeComponentId member and so could
+            # never resolve or be built — Grade-6 build, 2026-05-30).
+            kc_id="KC_divide_fractions",
             ccss_code="6.NS.1",
             teks_code="6.3A",
             description=(

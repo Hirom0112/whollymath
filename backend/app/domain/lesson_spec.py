@@ -366,6 +366,27 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # Unit 2 (T2): practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires.
+    # Errors route back to SYMBOLIC (the AREA_MODEL division widget isn't live yet), so "re-try on
+    # the same surface with a labeled hint" is the honest adaptation until that widget lands (T3).
+    _spec(
+        _KC.DIVIDE_FRACTIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Flip the second fraction and multiply — don't multiply straight across.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Dividing by less than one whole makes the answer bigger — re-check the size.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
     # Unit 1: practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires.
     # Errors route back to SYMBOLIC — there is no richer surface for a conversion yet (WORD_PROBLEM
     # has no surface state, and NUMBER_LINE/AREA_MODEL don't model a unit conversion), so "re-try on
