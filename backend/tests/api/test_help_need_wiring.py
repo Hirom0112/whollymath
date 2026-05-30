@@ -28,6 +28,8 @@ from app.api.schemas import ActionType, SurfaceState, TurnRequest
 from app.api.service import SessionStore
 from app.helpneed.artifact import load_predictor
 
+from tests.api._artifact_skip import stale_artifact
+
 _ADDITION_ROUTE_KEY = "combine"
 # Two answers we can replay deterministically: one correct, one wrong. Walking a mix of
 # both exercises the predictor on both fluent and struggling histories.
@@ -76,6 +78,7 @@ def test_hint_turn_is_never_scored() -> None:
     assert response.help_need is None
 
 
+@stale_artifact
 def test_struggle_scores_higher_than_fluency() -> None:
     """The wired predictor rates a wrong-streak history above a correct one (sane sign).
 

@@ -24,6 +24,7 @@ from app.api.schemas import ActionType, StartSessionResponse, SurfaceState
 from app.auth.google import GoogleIdentity, InvalidIdTokenError
 from app.db import repositories as repo
 from app.db.engine import create_all, create_session_factory
+from app.domain.knowledge_components import LIVE_KCS
 from app.domain.knowledge_components import KnowledgeComponentId as KCId
 from fastapi import FastAPI
 from sqlalchemy import Engine, create_engine
@@ -99,7 +100,7 @@ def test_anonymous_no_session_gets_fresh_default_map(app: FastAPI) -> None:
     status_code, body = get(app, "/course")
     assert status_code == 200, body
     nodes = {n["kc_id"]: n for n in body["nodes"]}
-    assert set(nodes) == {kc.value for kc in KCId}
+    assert set(nodes) == {kc.value for kc in LIVE_KCS}
     assert nodes[KCId.NUMBER_LINE_PLACEMENT.value]["status"] == "available"
     assert nodes[KCId.EQUIVALENCE.value]["status"] == "locked"
 
@@ -156,7 +157,7 @@ def test_fresh_learner_gets_full_path_root_available(
     nodes = {n["kc_id"]: n for n in body["nodes"]}
     # Every KC is a node, in teaching (spine) order with number-line first.
     assert [n["kc_id"] for n in body["nodes"]][0] == KCId.NUMBER_LINE_PLACEMENT.value
-    assert set(nodes) == {kc.value for kc in KCId}
+    assert set(nodes) == {kc.value for kc in LIVE_KCS}
     assert nodes[KCId.NUMBER_LINE_PLACEMENT.value]["status"] == "available"
     assert nodes[KCId.EQUIVALENCE.value]["status"] == "locked"
     # A node carries display fields + prereq edges + a null probability when untouched.

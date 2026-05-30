@@ -7,7 +7,7 @@ the generator's difficulty pools (``problem_generators._DENOM_BY_DIFFICULTY``).
 
 from __future__ import annotations
 
-from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.problem_generators import generate_problem
 from app.policy.scheduler import difficulty_for
 
@@ -32,7 +32,7 @@ def test_generator_difficulty_narrows_denominators() -> None:
     """Tier 1 draws only small denominators; tier 4 reaches the large ones — for every KC whose
     hard tier is a denominator-size ramp. Number-line is excluded: its hard tiers ramp by
     sign/magnitude (improper, then negative), not denominator size — covered separately below."""
-    for kc in KnowledgeComponentId:
+    for kc in LIVE_KCS:
         if kc is KnowledgeComponentId.NUMBER_LINE_PLACEMENT:
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

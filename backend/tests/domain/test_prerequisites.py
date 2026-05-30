@@ -9,7 +9,7 @@ graph is a sound DAG and that ``unlocked`` gates new skills on confirmed prerequ
 
 from __future__ import annotations
 
-from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.prerequisites import (
     KC_PREREQUISITES,
     SPINE_ORDER,
@@ -22,7 +22,7 @@ KC = KnowledgeComponentId  # local shorthand (a constant alias; ruff-clean, unli
 
 def test_every_kc_has_a_prerequisite_entry() -> None:
     """The graph is total over the catalog — no KC is missing from the map."""
-    assert set(KC_PREREQUISITES) == set(KC)
+    assert set(KC_PREREQUISITES) == LIVE_KCS
 
 
 def test_number_line_is_the_foundational_root() -> None:
@@ -47,7 +47,7 @@ def test_graph_is_acyclic() -> None:
                 return True
         return False
 
-    for kc in KC:
+    for kc in LIVE_KCS:
         assert not reaches(kc, kc, set()), f"{kc} is in a prerequisite cycle"
 
 
@@ -82,8 +82,8 @@ def test_a_confirmed_kc_is_not_returned_as_newly_unlocked() -> None:
 
 def test_spine_order_covers_every_kc_exactly_once() -> None:
     """The canonical teaching order is a permutation of the whole catalog — no gaps, no dupes."""
-    assert set(SPINE_ORDER) == set(KC)
-    assert len(SPINE_ORDER) == len(set(SPINE_ORDER)) == len(list(KC))
+    assert set(SPINE_ORDER) == LIVE_KCS
+    assert len(SPINE_ORDER) == len(set(SPINE_ORDER)) == len(LIVE_KCS)
 
 
 def test_spine_order_is_a_valid_topological_order() -> None:

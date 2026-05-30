@@ -33,7 +33,7 @@ from app.domain.curriculum import (
     get_unit,
     lessons_for_unit,
 )
-from app.domain.knowledge_components import KnowledgeComponentId, get_kc
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId, get_kc
 
 
 def _all_lessons() -> list[CatalogLesson]:
@@ -169,7 +169,7 @@ def test_present_kc_ids_are_well_formed() -> None:
 
 
 def test_the_five_existing_kc_ids_resolve_via_get_kc() -> None:
-    known = {kc.value for kc in KnowledgeComponentId}
+    known = {kc.value for kc in LIVE_KCS}
     resolved_at_least_one = False
     for lesson in _all_lessons():
         if lesson.kc_id in known:

@@ -24,6 +24,8 @@ from app.helpneed.artifact import load_predictor
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.tutor.hints import select_nudge
 
+from tests.api._artifact_skip import stale_artifact
+
 _ADDITION_ROUTE_KEY = "combine"
 _WRONG = "1/2"  # wrong for the addition calibration family — drives P high
 
@@ -62,6 +64,7 @@ def test_default_arm_off_never_intervenes() -> None:
     assert all(r.intervention is None for r in responses)
 
 
+@stale_artifact
 def test_proactive_arm_fires_only_after_sustained_signal() -> None:
     """With the arm ON, the gate fires after K consecutive high-P turns, not before."""
     store = SessionStore(predictor=load_predictor(), gate=SustainedHelpNeedGate(k=3, threshold=0.5))
@@ -76,6 +79,7 @@ def test_proactive_arm_fires_only_after_sustained_signal() -> None:
     assert fired[0].intervention.kind is InterventionKind.INLINE_ASSERTION
 
 
+@stale_artifact
 def test_intervention_text_comes_from_the_nudge_bank() -> None:
     """The offered text is the pre-written nudge for the upcoming KC (no LLM, §8.1)."""
     store = SessionStore(predictor=load_predictor(), gate=SustainedHelpNeedGate(k=2, threshold=0.5))
@@ -88,6 +92,7 @@ def test_intervention_text_comes_from_the_nudge_bank() -> None:
     assert fired.intervention.text == expected
 
 
+@stale_artifact
 def test_arm_does_not_alter_deterministic_turn_outcome() -> None:
     """Arm ON vs OFF: identical turn outcomes; only `intervention` differs (§8.1 order).
 

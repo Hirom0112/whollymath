@@ -126,6 +126,16 @@ class HelpNeedPredictor:
         model.fit(x, y)
         return cls(model=model, kind=kind, feature_names=FEATURE_NAMES)
 
+    def is_compatible_with_live_features(self) -> bool:
+        """Whether this artifact can score the CURRENT live one-hot (``FEATURE_NAMES``).
+
+        Public read of the width-guard's verdict: ``True`` when scoring is active, ``False``
+        when the artifact is stale-width and ``predict_proba`` would return the neutral fallback
+        (the KC enum widened ahead of a re-fit). Lets callers/tests detect the degraded window —
+        e.g. skip artifact-scoring assertions until a re-fit at the new width lands.
+        """
+        return self._is_width_compatible(len(FEATURE_NAMES))
+
     def _is_width_compatible(self, live_len: int) -> bool:
         """Whether this model can score the current live feature vector.
 

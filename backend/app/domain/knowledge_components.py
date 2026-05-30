@@ -26,20 +26,87 @@ from enum import StrEnum
 
 
 class KnowledgeComponentId(StrEnum):
-    """Stable KC identifiers, matching `diagnostic_gems.json` `_meta.kc_catalog`.
+    """Stable KC identifiers — the full Grade-6 ontology AND the HelpNeed model's label space.
 
-    ``StrEnum`` makes a member compare equal to and serialize as its catalog
-    string, so the diagnostic-gem bank, the DB, and the API all speak the same
-    id, while still giving us guaranteed-unique members and a typed handle for
-    code that should not pass raw strings around. The string VALUES are the
-    contract with the catalog and must not change without updating the catalog.
+    Two tiers (see the member groups below):
+      - the five CONTENT-COMPLETE foundation skills, which have a full Layer-1 stack and match
+        the `diagnostic_gems.json` `_meta.kc_catalog` verbatim (``LIVE_KCS`` / the registry); and
+      - the Grade-6 ontology KCs (one per CURRICULUM_STANDARD.md §3–§7 lesson), added so the
+        cross-topic HelpNeed one-hot (`KC_ORDER = tuple(KnowledgeComponentId)`) has a column per
+        topic. These are label-space-only until their content is built — not in the registry, the
+        gem catalog, or ``LIVE_KCS`` (T1_T2_COORDINATION.md §4).
+
+    ``StrEnum`` makes a member compare equal to and serialize as its id string, so the gem bank,
+    the DB (plain-string columns), and the API all speak the same id, with guaranteed-unique
+    members and a typed handle. A content-complete KC's VALUE is the contract with the gem catalog
+    and must not change without updating the catalog.
     """
 
+    # ── The five CONTENT-COMPLETE foundation skills (PROJECT.md §3.1) ──
+    # These have the full Layer-1 stack (registry metadata + generator + lesson spec + hints)
+    # and are the set the tutor actually schedules today. ``LIVE_KCS`` (below) tracks them.
     EQUIVALENCE = "KC_equivalence"
     COMMON_DENOMINATOR = "KC_common_denominator"
     ADDITION_UNLIKE = "KC_addition_unlike"
     SUBTRACTION_UNLIKE = "KC_subtraction_unlike"
     NUMBER_LINE_PLACEMENT = "KC_number_line_placement"
+
+    # ── The Grade-6 ontology (CURRICULUM_STANDARD.md §3–§7; one KC per lesson) ──
+    # Added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4): these are the
+    # model's one-hot label space (``KC_ORDER``) and the curriculum ontology, but are NOT yet
+    # content-complete — no generator/spec/hints, no registry entry, no gem-catalog entry —
+    # so the tutor never schedules them and ``get_kc``/the content registries raise for them
+    # until their content is built. Each enters ``LIVE_KCS`` the moment it gets a registry entry.
+    # U1 — Ratios & Rates (6.RP)
+    RATIO_LANGUAGE = "KC_ratio_language"
+    EQUIVALENT_RATIOS = "KC_equivalent_ratios"
+    UNIT_RATE = "KC_unit_rate"
+    RATE_PROBLEMS = "KC_rate_problems"
+    PERCENT = "KC_percent"
+    UNIT_CONVERSION = "KC_unit_conversion"
+    # U2 — Fractions & Decimals (6.NS.1–4)
+    GCF_LCM = "KC_gcf_lcm"
+    DIVIDE_FRACTIONS = "KC_divide_fractions"
+    MULTIPLY_FRACTIONS = "KC_multiply_fractions"
+    MULTI_DIGIT_DIVISION = "KC_multi_digit_division"
+    DECIMAL_OPERATIONS = "KC_decimal_operations"
+    # U3 — Rational Numbers (6.NS.5–8)
+    SIGNED_NUMBERS = "KC_signed_numbers"
+    RATIONALS_ON_LINE = "KC_rationals_on_line"
+    ORDERING_INEQUALITIES = "KC_ordering_inequalities"
+    ABSOLUTE_VALUE = "KC_absolute_value"
+    CLASSIFY_NUMBER_SETS = "KC_classify_number_sets"
+    COORDINATE_PLANE = "KC_coordinate_plane"
+    # U-INT — Integer Arithmetic (TEKS 6.3C/D)
+    INTEGER_ADD_SUBTRACT = "KC_integer_add_subtract"
+    INTEGER_MULTIPLY_DIVIDE = "KC_integer_multiply_divide"
+    # U4 — Expressions (6.EE.1–4, 6)
+    EXPONENTS = "KC_exponents"
+    WRITE_EXPRESSIONS = "KC_write_expressions"
+    EXPRESSION_PARTS = "KC_expression_parts"
+    EVALUATE_EXPRESSIONS = "KC_evaluate_expressions"
+    EQUIVALENT_EXPRESSIONS = "KC_equivalent_expressions"
+    DEPENDENT_VARS = "KC_dependent_vars"
+    # U5 — Equations & Inequalities (6.EE.5–9)
+    EQUATION_SOLUTIONS = "KC_equation_solutions"
+    ONE_STEP_EQUATIONS = "KC_one_step_equations"
+    INEQUALITIES = "KC_inequalities"
+    # U6 — Geometry (6.G)
+    TRIANGLE_PROPERTIES = "KC_triangle_properties"
+    AREA_POLYGONS = "KC_area_polygons"
+    VOLUME_FRACTIONAL_EDGES = "KC_volume_fractional_edges"
+    POLYGONS_COORDINATE_PLANE = "KC_polygons_coordinate_plane"
+    SURFACE_AREA_NETS = "KC_surface_area_nets"
+    # U7 — Statistics (6.SP)
+    STATISTICAL_QUESTIONS = "KC_statistical_questions"
+    DATA_DISPLAYS = "KC_data_displays"
+    CENTER_SPREAD_SHAPE = "KC_center_spread_shape"
+    SUMMARY_STATISTICS = "KC_summary_statistics"
+    MEAN_ABSOLUTE_DEVIATION = "KC_mean_absolute_deviation"
+    CATEGORICAL_DATA = "KC_categorical_data"
+    # U8 — Personal Financial Literacy (TEKS 6.14)
+    CHECK_REGISTER = "KC_check_register"
+    LIFETIME_INCOME = "KC_lifetime_income"
 
 
 class Representation(StrEnum):
@@ -200,6 +267,16 @@ class KnowledgeComponentRegistry:
 # The module-level registry is the single source of truth referenced across the
 # system (ARCHITECTURE.md §4). Built once at import; immutable contents.
 KC_REGISTRY = KnowledgeComponentRegistry(_KNOWLEDGE_COMPONENTS)
+
+
+# The CONTENT-COMPLETE KCs — those with a full Layer-1 stack (registry metadata above +
+# a problem generator + a lesson spec + a hint bank). Derived from the registry so it
+# cannot drift: a KC becomes "live" exactly when it gets a registry entry here, and the
+# generator/spec/hint coverage tests then require the rest of its stack. The other
+# ``KnowledgeComponentId`` members are the Grade-6 ontology + the HelpNeed label space
+# (``KC_ORDER``) but are not built — the tutor never schedules them, and ``get_kc`` /
+# the content registries raise for them until their content lands (T1_T2_COORDINATION.md §4).
+LIVE_KCS: frozenset[KnowledgeComponentId] = frozenset(kc.id for kc in _KNOWLEDGE_COMPONENTS)
 
 
 def get_kc(kc_id: KnowledgeComponentId | str) -> KnowledgeComponent:

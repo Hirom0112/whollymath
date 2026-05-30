@@ -29,7 +29,7 @@ from __future__ import annotations
 import re
 
 import pytest
-from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.verifier import ErrorCategory
 from app.tutor.hints import (
     NUDGE_BANK,
@@ -38,7 +38,7 @@ from app.tutor.hints import (
     select_nudge,
 )
 
-_ALL_KCS = tuple(KnowledgeComponentId)
+_ALL_KCS = tuple(LIVE_KCS)
 
 
 # ─── HintLevel pins the locked 0.D.3 vocabulary ──────────────────────────────

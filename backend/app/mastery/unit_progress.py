@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from app.domain.curriculum import CatalogUnit
-from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.prerequisites import unlocked
 from app.mastery.course_map import CourseNode, CourseNodeStatus
 
@@ -117,23 +117,28 @@ class UnitProgress:
 
 
 def _resolve_kc(kc_id: str | None) -> KnowledgeComponentId | None:
-    """Resolve a catalog ``kc_id`` to a real :class:`KnowledgeComponentId`.
+    """Resolve a catalog ``kc_id`` to a real, CONTENT-COMPLETE :class:`KnowledgeComponentId`.
 
-    Returns ``None`` when ``kc_id`` is ``None`` or a forward-declared string
-    that is not (yet) a member of the enum.
+    Returns ``None`` when ``kc_id`` is ``None``, not a member of the enum, **or** a member
+    that is not yet content-complete (a Grade-6 ontology KC in ``KnowledgeComponentId`` but
+    not in ``LIVE_KCS`` — no generator/spec/hints). Those are treated as forward-declared,
+    exactly as they were before they entered the enum, so the course/gating behavior is
+    unchanged until their content is built (T1_T2_COORDINATION.md §4; this keeps the KC
+    label-space expansion behavior-preserving for the tutor).
 
     Args:
         kc_id: The raw catalog ``kc_id``.
 
     Returns:
-        The matching enum member, or ``None`` if unresolvable.
+        The matching live enum member, or ``None`` if unresolvable / not yet built.
     """
     if kc_id is None:
         return None
     try:
-        return KnowledgeComponentId(kc_id)
+        kc = KnowledgeComponentId(kc_id)
     except ValueError:
         return None
+    return kc if kc in LIVE_KCS else None
 
 
 def _lesson_progress(

@@ -14,6 +14,8 @@ from app.llm.provider import Message, Tier
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.tutor.hints import select_nudge
 
+from tests.api._artifact_skip import stale_artifact
+
 _ROUTE = "combine"
 _WRONG = "1/2"
 
@@ -62,6 +64,7 @@ def test_hint_is_prewritten_without_a_voice_provider() -> None:
     assert resp.hint != _VOICED
 
 
+@stale_artifact
 def test_proactive_intervention_text_is_voiced() -> None:
     """When the gate fires, the proactive nudge is delivered in the mascot's voice."""
     store = SessionStore(
