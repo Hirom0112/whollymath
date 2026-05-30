@@ -46,6 +46,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
+from app.domain.lesson_spec import get_lesson_spec
 from app.domain.problem_generators import AnswerKind, Problem, generate_problem
 from app.policy.scheduler import live_representations
 from app.tutor.transfer_probe import build_error_finding_transfer_item
@@ -92,10 +93,9 @@ def build_live_probe_steps(
     # would collapse to symbolic-only and fail the ≥2-representations gate (AUDIT.md §7,
     # PROJECT.md §3.4 rule 2). Prefer the first not-recently-worked NON-symbolic live format;
     # only fall back to symbolic if the KC has no other live representation.
-    has_error_finding = kc in (
-        KnowledgeComponentId.ADDITION_UNLIKE,
-        KnowledgeComponentId.SUBTRACTION_UNLIKE,
-    )
+    # Spec-driven (HR.A4): whether this lesson can pose a "reject this claim" error-finding item
+    # is declared on its LessonSpec, not a hard-coded KC tuple — a new lesson opts in via its spec.
+    has_error_finding = get_lesson_spec(kc).transfer_probe.has_error_finding
     if has_error_finding:
         transfer_format = next(
             (rep for rep in transfer_formats if rep is not Representation.SYMBOLIC),

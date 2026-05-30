@@ -45,6 +45,7 @@ worked through, so we raise loudly (CLAUDE.md §8.5) rather than ship a hollow e
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from sympy import Rational
@@ -350,21 +351,27 @@ def worked_example_for(problem: Problem) -> WorkedExample:
     Raises ``ValueError`` for a problem whose KC procedure needs operands it does not
     carry (CLAUDE.md §8.5 — fail loudly rather than ship a hollow example).
     """
-    kc = problem.kc
-    if kc is KnowledgeComponentId.ADDITION_UNLIKE:
-        steps = _addition_or_subtraction_steps(problem, is_addition=True)
-    elif kc is KnowledgeComponentId.SUBTRACTION_UNLIKE:
-        steps = _addition_or_subtraction_steps(problem, is_addition=False)
-    elif kc is KnowledgeComponentId.COMMON_DENOMINATOR:
-        steps = _common_denominator_steps(problem)
-    elif kc is KnowledgeComponentId.EQUIVALENCE:
-        steps = _equivalence_steps(problem)
-    elif kc is KnowledgeComponentId.NUMBER_LINE_PLACEMENT:
-        steps = _number_line_steps(problem)
-    else:  # pragma: no cover - the enum is exhaustive above; guard for the reader
-        raise ValueError(f"no worked-example procedure for KC {kc.value}")
+    builder = _STEP_BUILDERS.get(problem.kc)
+    if builder is None:
+        raise ValueError(f"no worked-example procedure for KC {problem.kc.value}")
+    return WorkedExample(problem=problem, steps=builder(problem))
 
-    return WorkedExample(problem=problem, steps=steps)
+
+# The per-KC step builders, table-driven (HR.A4) so the engine looks up the procedure rather than
+# branching on the KC id — a new lesson registers its builder as a ROW, not an ``elif``. The step
+# TEXT stays tutor-rendered here (it is not domain data, so it does not live on the LessonSpec —
+# see lesson_spec.py's layering note); table-driving is the generalization, KC-by-KC content stays.
+_STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep, ...]]] = {
+    KnowledgeComponentId.ADDITION_UNLIKE: lambda p: _addition_or_subtraction_steps(
+        p, is_addition=True
+    ),
+    KnowledgeComponentId.SUBTRACTION_UNLIKE: lambda p: _addition_or_subtraction_steps(
+        p, is_addition=False
+    ),
+    KnowledgeComponentId.COMMON_DENOMINATOR: _common_denominator_steps,
+    KnowledgeComponentId.EQUIVALENCE: _equivalence_steps,
+    KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _number_line_steps,
+}
 
 
 __all__ = [
