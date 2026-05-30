@@ -124,6 +124,35 @@ def get_or_create_learner_by_google_sub(
     return learner
 
 
+# The stable external key (``Learner.session_id``) of the single, shared DEMO teacher. The
+# one-click "Teacher demo" tab (Slice TCH.B2) authenticates by echoing a NON-secret handle —
+# ``demo:<this id>`` — back as a Bearer credential; there is no password, by owner decision. A
+# fixed id keeps the demo teacher (and, at TCH.B9, their demo class) idempotent across reboots.
+DEMO_TEACHER_SESSION_ID = "demo-teacher"
+_DEMO_TEACHER_EMAIL = "demo.teacher@whollymath.dev"
+
+
+def get_or_create_demo_teacher(db: OrmSession) -> Learner:
+    """Return the shared demo teacher, creating (and forcing ``role="teacher"``) if new.
+
+    Backs ``POST /teacher/demo-login`` (Slice TCH.B2). Keyed on the fixed
+    ``DEMO_TEACHER_SESSION_ID`` so clicking the demo button repeatedly maps to ONE learner row
+    (idempotent — the same contract as the other ``get_or_create`` helpers). The row is forced to
+    ``role="teacher"`` (a fresh ``Learner`` defaults to ``"student"``); a no-op if already so.
+    ``add``/mutate only — the caller owns the commit (so the route's unit of work is atomic).
+    """
+    existing = db.scalars(
+        select(Learner).where(Learner.session_id == DEMO_TEACHER_SESSION_ID)
+    ).first()
+    if existing is not None:
+        if existing.role != "teacher":
+            existing.role = "teacher"
+        return existing
+    teacher = Learner(session_id=DEMO_TEACHER_SESSION_ID, email=_DEMO_TEACHER_EMAIL, role="teacher")
+    db.add(teacher)
+    return teacher
+
+
 def create_session(db: OrmSession, *, learner_id: int, route_key: str | None = None) -> Session:
     """Open a new tutoring ``Session`` row for a learner and return it.
 
@@ -488,12 +517,14 @@ def get_assigned_unit(db: OrmSession, student_id: int) -> Assignment | None:
 
 
 __all__ = [
+    "DEMO_TEACHER_SESSION_ID",
     "EventRow",
     "add_student_to_roster",
     "create_session",
     "end_session",
     "get_assigned_unit",
     "get_learner",
+    "get_or_create_demo_teacher",
     "get_or_create_learner",
     "get_or_create_learner_by_google_sub",
     "get_student_if_on_roster",

@@ -764,6 +764,18 @@ def _persist_turn(
         )
 
 
+@dataclass(frozen=True)
+class DemoTeacherHandle:
+    """The seeded demo teacher's persistence handle (Slice TCH.B2), HTTP-free.
+
+    Returned by ``SessionStore.provision_demo_teacher`` so the route can shape the wire
+    ``DemoLoginResponse`` (including the ``demo:`` bearer token, which is an auth-layer concern
+    the store stays out of). Carries only the stable ``learner_id`` and the email label."""
+
+    learner_id: int
+    email: str | None
+
+
 @dataclass
 class SessionStore:
     """In-memory ``session_id -> _LiveSession`` map — the live-session boundary.
@@ -1116,6 +1128,21 @@ class SessionStore:
                 for s in states
             ]
 
+    def provision_demo_teacher(self) -> DemoTeacherHandle | None:
+        """Seed-or-return the shared demo teacher and its handle (Slice TCH.B2, for demo-login).
+
+        Idempotent (``repo.get_or_create_demo_teacher`` keys on a fixed session id), so clicking
+        the one-click "Teacher demo" tab repeatedly maps to ONE teacher row. Commits its own
+        short unit of work — the demo teacher must be a durable row so a later request bearing the
+        ``demo:`` handle resolves to it. Returns ``None`` when there is no ``session_factory`` (a
+        pure in-memory app cannot persist a demo teacher); the route maps that to 503."""
+        if self.session_factory is None:
+            return None
+        with self.session_factory() as db:
+            teacher = repo.get_or_create_demo_teacher(db)
+            db.commit()
+            return DemoTeacherHandle(learner_id=teacher.id, email=teacher.email)
+
     def _reviewable_skills_for_learner(self, learner_id: int) -> list[ReviewableSkill]:
         """Project a learner's persisted ``MasteryState`` rows → the retention model's inputs.
 
@@ -1457,6 +1484,7 @@ class SessionStore:
 
 
 __all__ = [
+    "DemoTeacherHandle",
     "SessionNotFoundError",
     "SessionStore",
     "UnknownRouteError",

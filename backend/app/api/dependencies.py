@@ -45,11 +45,14 @@ class AuthedLearner:
 
     Deliberately NOT the ORM ``Learner`` (which would be detached once its session closes) and
     deliberately NOT the Google ``sub`` (an identifier we key on but never re-expose). Only the
-    stable persistence handle (``learner_id``) and the email display label cross this seam, so
-    identity cannot leak into the turn decision (invariant 8)."""
+    stable persistence handle (``learner_id``), the email display label, and the ``role`` tag
+    cross this seam, so identity cannot leak into the turn decision (invariant 8). ``role`` is
+    carried because it gates which API SURFACE a request may use (student tutor vs. teacher
+    dashboard, Slice TCH.B2) — it is still never read by the mastery/policy/tutor/llm path."""
 
     learner_id: int
     email: str | None
+    role: str
 
 
 def _extract_bearer_token(authorization: str | None) -> str | None:
@@ -114,7 +117,7 @@ def current_learner(
     with store.session_factory() as db:
         learner = repo.get_or_create_learner_by_google_sub(db, identity.sub, email=identity.email)
         db.commit()
-        return AuthedLearner(learner_id=learner.id, email=learner.email)
+        return AuthedLearner(learner_id=learner.id, email=learner.email, role=learner.role)
 
 
 # The dependency-injected authenticated learner, as an Annotated alias so route signatures read
@@ -139,10 +142,93 @@ def require_learner(learner: CurrentLearnerDep) -> AuthedLearner:
 RequireLearnerDep = Annotated[AuthedLearner, Depends(require_learner)]
 
 
+# The Bearer prefix that marks the password-free DEMO teacher handle (Slice TCH.B2). The
+# one-click "Teacher demo" tab echoes ``demo:<demo-teacher session_id>`` back as a Bearer
+# credential; it is NON-secret by design (a free demo, not an account — owner decision). The
+# suffix is the demo teacher's external key (``Learner.session_id``), resolved WITHOUT Google.
+_DEMO_BEARER_PREFIX = "demo:"
+
+_TEACHER_ROLE = "teacher"
+
+
+def demo_bearer_for(demo_session_id: str) -> str:
+    """Build the demo teacher's Bearer credential from its external key (Slice TCH.B2).
+
+    The single source of truth for the ``demo:`` scheme, so the route that issues the handle and
+    ``current_teacher`` that consumes it can never drift on the format."""
+    return f"{_DEMO_BEARER_PREFIX}{demo_session_id}"
+
+
+def current_teacher(
+    store: StoreDep,
+    authorization: Annotated[str | None, Header()] = None,
+) -> AuthedLearner:
+    """Resolve the authenticated TEACHER, or raise (Slice TCH.B2). Behavior matrix:
+
+      - no Bearer credential                    → 401 (anonymous is not a teacher).
+      - a ``demo:<id>`` handle for a seeded demo teacher → 200 (the one-click demo path; no
+        Google verification — the handle is public by design).
+      - a ``demo:<id>`` handle that resolves to no teacher row → 401 (nothing to authenticate).
+      - a valid Google learner whose row is ``role="teacher"`` → 200 (the real-teacher path).
+      - a valid Google learner who is a STUDENT → 403 (authenticated, not authorized).
+      - an invalid/unconfigured Google token    → 401 (raised by ``current_learner`` first).
+
+    The demo branch is handled here, BEFORE delegating, because a ``demo:`` token is not a Google
+    ID token — passing it to ``current_learner`` would (correctly) 401 it as an invalid Google
+    credential. Real teachers reuse the unchanged PL.3 ``current_learner`` seam (no second
+    credential scheme). Role still never reaches the turn loop (invariant 8)."""
+    token = _extract_bearer_token(authorization)
+    if token is not None and token.startswith(_DEMO_BEARER_PREFIX):
+        return _resolve_demo_teacher(store, token[len(_DEMO_BEARER_PREFIX) :])
+
+    learner = current_learner(store, authorization)
+    if learner is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="authentication required",
+        )
+    if learner.role != _TEACHER_ROLE:
+        # Authenticated, but not a teacher: 403 (not 401) — the credential is valid, the
+        # authorization is not. The frontend uses this to keep a student off the teacher surface.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="teacher access required",
+        )
+    return learner
+
+
+def _resolve_demo_teacher(store: StoreDep, demo_session_id: str) -> AuthedLearner:
+    """Resolve a ``demo:<session_id>`` handle to its seeded demo teacher, or 401.
+
+    No Google verification: the demo handle is a public, password-free credential (owner
+    decision, TCH.B2). We require a persistence factory (the demo teacher is a real row seeded by
+    ``/teacher/demo-login``) and that the resolved row actually carries ``role="teacher"`` — a
+    handle that resolves to nothing, or to a non-teacher, is a 401 (there is no teacher to be)."""
+    if store.session_factory is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="account persistence is unavailable",
+        )
+    with store.session_factory() as db:
+        learner = repo.get_learner(db, demo_session_id)
+        if learner is None or learner.role != _TEACHER_ROLE:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid credentials",
+            )
+        return AuthedLearner(learner_id=learner.id, email=learner.email, role=learner.role)
+
+
+CurrentTeacherDep = Annotated[AuthedLearner, Depends(current_teacher)]
+
+
 __all__ = [
     "AuthedLearner",
     "CurrentLearnerDep",
+    "CurrentTeacherDep",
     "RequireLearnerDep",
     "current_learner",
+    "current_teacher",
+    "demo_bearer_for",
     "require_learner",
 ]

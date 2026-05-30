@@ -1088,6 +1088,36 @@ class MeResponse(BaseModel):
     )
 
 
+class TeacherHandle(BaseModel):
+    """The authenticated teacher's identity handle (Slice TCH.B2).
+
+    Returned by ``GET /teacher/me`` once ``current_teacher`` has authorized the request (a Google
+    learner with ``role="teacher"`` or the demo teacher). Carries only the stable ``learner_id``,
+    the email display label, and the ``role`` tag — never the Google ``sub`` and never anything
+    the turn loop reads (ARCHITECTURE.md §14 invariant 8)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    learner_id: int = Field(description="Stable persistence handle for the teacher (TCH.B2).")
+    email: str | None = Field(
+        default=None, description="The teacher's email, if known — a display label only."
+    )
+    role: str = Field(description="Identity role tag; always 'teacher' on this surface.")
+
+
+class DemoLoginResponse(TeacherHandle):
+    """The one-click demo-teacher handle returned by ``POST /teacher/demo-login`` (Slice TCH.B2).
+
+    Extends ``TeacherHandle`` with the NON-secret ``token`` the frontend echoes back as
+    ``Authorization: Bearer <token>`` on subsequent teacher requests. The token is public by
+    design — the "Teacher demo" tab is a free, password-free demo, not an account (owner
+    decision). There is no second credential scheme: real teachers use their Google ID token."""
+
+    token: str = Field(
+        description="Non-secret Bearer credential to echo back (form: 'demo:<id>'); free demo."
+    )
+
+
 __all__ = [
     "ActionType",
     "AdaptiveTurnView",
@@ -1099,6 +1129,7 @@ __all__ = [
     "CourseNodeView",
     "CourseView",
     "CourseNodeStatus",
+    "DemoLoginResponse",
     "ErrorType",
     "EventBatchRequest",
     "EventIngestResponse",
@@ -1129,6 +1160,7 @@ __all__ = [
     "StartSessionResponse",
     "StaticTurnView",
     "SurfaceState",
+    "TeacherHandle",
     "ThreeArmComparisonView",
     "TransferProbeStepView",
     "TurnRequest",

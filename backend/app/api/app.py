@@ -28,6 +28,7 @@ from app.api.auth_routes import auth_router
 from app.api.course_routes import course_router
 from app.api.routes import router
 from app.api.service import SessionStore
+from app.api.teacher_routes import teacher_router
 from app.api.units_routes import units_router
 from app.db.engine import (
     create_all,
@@ -170,6 +171,11 @@ def create_app() -> FastAPI:
     # + the course map, off the turn loop, surfacing the teacher-assigned unit for a signed-in
     # learner (DAT.10).
     app.include_router(units_router)
+    # The teacher endpoints (Slice TCH.B2) — additive and behind their own auth dependency
+    # (current_teacher: Google-teacher or one-click demo). /teacher/demo-login mints the demo
+    # teacher; /teacher/me is the teacher-surface guard. Role gates the surface only, never the
+    # turn loop (invariant 8).
+    app.include_router(teacher_router)
     return app
 
 

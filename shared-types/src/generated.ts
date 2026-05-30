@@ -383,6 +383,32 @@ export interface CourseView {
   nodes?: CourseNodeView[];
 }
 /**
+ * The one-click demo-teacher handle returned by ``POST /teacher/demo-login`` (Slice TCH.B2).
+ *
+ * Extends ``TeacherHandle`` with the NON-secret ``token`` the frontend echoes back as
+ * ``Authorization: Bearer <token>`` on subsequent teacher requests. The token is public by
+ * design — the "Teacher demo" tab is a free, password-free demo, not an account (owner
+ * decision). There is no second credential scheme: real teachers use their Google ID token.
+ */
+export interface DemoLoginResponse {
+  /**
+   * Stable persistence handle for the teacher (TCH.B2).
+   */
+  learner_id: number;
+  /**
+   * The teacher's email, if known — a display label only.
+   */
+  email?: string | null;
+  /**
+   * Identity role tag; always 'teacher' on this surface.
+   */
+  role: string;
+  /**
+   * Non-secret Bearer credential to echo back (form: 'demo:<id>'); free demo.
+   */
+  token: string;
+}
+/**
  * A buffered batch of interaction events for one session (Slice PL.2).
  *
  * The surface accumulates events client-side and flushes them in one POST to ``/events``.
@@ -959,6 +985,28 @@ export interface StudyPlanView1 {
    * The single best next KC (due review > new skill > null if all done/fresh).
    */
   recommended?: string | null;
+}
+/**
+ * The authenticated teacher's identity handle (Slice TCH.B2).
+ *
+ * Returned by ``GET /teacher/me`` once ``current_teacher`` has authorized the request (a Google
+ * learner with ``role="teacher"`` or the demo teacher). Carries only the stable ``learner_id``,
+ * the email display label, and the ``role`` tag — never the Google ``sub`` and never anything
+ * the turn loop reads (ARCHITECTURE.md §14 invariant 8).
+ */
+export interface TeacherHandle {
+  /**
+   * Stable persistence handle for the teacher (TCH.B2).
+   */
+  learner_id: number;
+  /**
+   * The teacher's email, if known — a display label only.
+   */
+  email?: string | null;
+  /**
+   * Identity role tag; always 'teacher' on this surface.
+   */
+  role: string;
 }
 /**
  * The full three-arm comparison for display (Slice 5.3, PROJECT.md §3.11).
