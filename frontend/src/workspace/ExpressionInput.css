@@ -1,0 +1,77 @@
+/* Algebra expression / equation input (Unit 4–5: write / evaluate / equivalent expressions).
+   Calm/editorial to match the in-tutor register — one wide field for a typed expression plus a
+   small ×/÷/() palette. The field allows letters (a variable is the point), unlike the numeric
+   widgets. Class names unique app-wide (global CSS). */
+
+.wm-expr {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wm-expr-prompt {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}
+
+.wm-expr-field {
+  width: 100%;
+  max-width: 320px;
+  font-family: var(--wm-font-sans);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 10px 14px;
+  color: var(--wm-ink);
+  background: var(--wm-cream-2);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.wm-expr-field::placeholder {
+  color: var(--wm-ink-soft);
+  font-weight: 600;
+  opacity: 0.65;
+}
+
+.wm-expr-field:focus-visible {
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-expr-field:disabled {
+  opacity: 0.6;
+}
+
+.wm-expr-palette {
+  display: inline-flex;
+  gap: 8px;
+  width: max-content;
+}
+
+.wm-expr-key {
+  min-width: 48px;
+  padding: 6px 12px;
+  font-family: var(--wm-font-sans);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--wm-ink);
+  background: var(--wm-cream-2);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.wm-expr-key:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--wm-blue-soft);
+}
+
+.wm-expr-key:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
