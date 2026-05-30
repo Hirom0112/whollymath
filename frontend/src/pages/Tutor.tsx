@@ -23,6 +23,7 @@ import {
   fractionToAnswer,
   NumberEntry,
   NumberLine,
+  selectWidget,
   SymbolicEditor,
   tickFraction,
   YesNo,
@@ -261,20 +262,15 @@ export function Tutor({
     });
   }
 
-  // The answer widget is chosen by what the problem asks (surface_format / answer_kind), so it
-  // always matches the question — and so the SAME KC can be answered in more than one
-  // representation (addition symbolically AND on the line), which mastery rule 2 needs. A
-  // number-line surface (placement OR an arithmetic result in 0–1) → the draggable marker;
-  // a yes/no judgment → the buttons; otherwise the fraction editor.
-  const isNumberLine = problem.surface_format === 'number_line' && problem.tick_segments != null;
-  // A relational-judgment problem ("Is X the same amount as Y?") is answered yes/no, not
-  // by typing a fraction — the server tells us via answer_kind so the surface matches the
-  // question (the coherence fix: a yes/no question must not land on a fraction input).
-  const isYesNo = problem.answer_kind === 'yes_no';
-  // Common denominator's answer is a single WHOLE number (a shared piece-size), not a
-  // fraction — so it gets the one-box number entry, never the two-box fraction editor
-  // (§3.4.1: matching the input to the construct). It is the only KC answered this way.
-  const isNumberEntry = problem.kc === 'KC_common_denominator';
+  // The answer widget is chosen by what the problem ASKS, via the one shared `selectWidget`
+  // contract (workspace/WidgetContract.ts, HR.A5) — not by inline checks here — so the surface
+  // always matches the question and the SAME KC can be answered in more than one representation
+  // (addition symbolically AND on the line), which mastery rule 2 needs. New lessons get the right
+  // widget for free from the backend WidgetId mapping (domain/lesson_spec.py, HR.A1).
+  const widgetKind = selectWidget(problem);
+  const isNumberLine = widgetKind === 'number_line';
+  const isYesNo = widgetKind === 'yes_no';
+  const isNumberEntry = widgetKind === 'number_entry';
 
   // Number-line axis (CP.B / 6.NS.6): proper targets sit on 0–1, improper stretch the right
   // end (5/4 → 0–2), negatives the left (−3/4 → −1…1). `unitSegments` is ticks-per-whole (the
