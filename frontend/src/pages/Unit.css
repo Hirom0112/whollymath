@@ -54,9 +54,17 @@
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32);
 }
 
+/* Top row of the unit header: "← All units" on the left, Pi's foundation-work button on the right. */
+.wm-unit-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+}
+
 .wm-unit-back {
   display: inline-block;
-  margin: 0 0 10px;
   padding: 0;
   border: none;
   background: none;
@@ -73,6 +81,75 @@
   outline: 2px solid var(--wm-blue);
   outline-offset: 3px;
   border-radius: 6px;
+}
+
+/* Pi's foundation-work button — the little mascot rolls in and acts as the affordance that drops the
+   learner to the CourseMap's basic fraction skills (owner request). A soft pill so Pi reads as a
+   friendly shortcut, not heavy chrome. */
+.wm-unit-foundation {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 5px 14px 5px 6px;
+  border: 1.5px solid var(--wm-cream-2);
+  border-radius: 999px;
+  background: rgba(247, 240, 222, 0.12);
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wm-cream);
+  cursor: pointer;
+  transition:
+    transform 0.1s ease,
+    background 0.12s ease;
+}
+.wm-unit-foundation:hover {
+  transform: translateY(-1px);
+  background: rgba(247, 240, 222, 0.22);
+}
+.wm-unit-foundation:active {
+  transform: translateY(1px);
+}
+.wm-unit-foundation:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 2px;
+}
+
+/* The mascot inside the button: capped small, and it ROLLS IN on mount (reuses the world's wheel
+   motion). The shared Mascot is a 130x100 figure; scale it down to sit in the pill. */
+.wm-unit-foundation-pi {
+  flex: none;
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 28px;
+  transform-origin: center;
+  animation: wm-unit-pi-rollin 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+.wm-unit-foundation-pi .wm-mascot-figure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: scale(0.26);
+  transform-origin: top left;
+}
+.wm-unit-foundation-label {
+  white-space: nowrap;
+}
+
+@keyframes wm-unit-pi-rollin {
+  0% {
+    transform: translateX(-60px) rotate(-540deg);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
 }
 
 .wm-unit-headline {
@@ -130,9 +207,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wm-unit-panel {
+  .wm-unit-panel,
+  .wm-unit-foundation-pi {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+  .wm-unit-foundation {
+    transition: none;
   }
 }

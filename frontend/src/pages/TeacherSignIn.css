@@ -1,144 +1,399 @@
-/* Teacher sign-in gate (TODO TCH.F0). Calm professional register: a navy field with one cream
-   card. Unique classes app-wide (.wm-tsignin-*). */
+/* Teacher sign-in gate (TODO TCH.F0). Split-panel register (redesign, user 2026-05-30, from the
+   approved Gemini mock): a navy "world" panel (geometric brand art + floating dashboard preview)
+   beside a white sign-in panel. All art is pure CSS/SVG — no raster asset. Unique classes
+   app-wide (.wm-tsignin-*); reuses the shared brand tokens. */
 
 .wm-tsignin {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: var(--wm-navy-deep);
+  display: grid;
+  grid-template-columns: 1fr 1.04fr;
   font-family: var(--wm-font-sans);
+  /* The right panel is the warm cream from the mock (sampled ~#f5edd8 ≈ --wm-cream), NOT white. */
+  background: var(--wm-cream);
+}
+/* Grid items default to min-width:auto, which floors each track at its content's min-content and
+   blows past the viewport on narrow screens — pin both panels to 0 so the column can shrink. */
+.wm-tsignin-art,
+.wm-tsignin-panel {
+  min-width: 0;
 }
 
-.wm-tsignin-card {
+/* ── Left: the navy "world" panel — the supplied brand artwork as the panel background ── */
+
+.wm-tsignin-art {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--wm-navy-deep);
+}
+/* The artwork lives on its own layer so we can lift its contrast — the source circles are a very
+   low-contrast lavender on navy and read as flat otherwise. The lift keeps the navy but makes the
+   circles visible, matching the mock. Painted behind the dashboard-preview child. */
+.wm-tsignin-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* NB: named OFF the /teacher* prefix — vite proxies /teacher to the backend, so a /teacher-*.png
+     asset 404s. The asset is pre-cropped to a ~0.75 portrait slice that matches the panel, so cover
+     fills the full height with no letterbox and minimal edge crop. */
+  background-image: url('/class-signin-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(1.18) contrast(1.18) saturate(1.08);
+}
+
+/* The floating dashboard preview — stylized, non-interactive, sits center-left of the panel. */
+.wm-tsignin-preview {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(380px, 78%);
+  transform: translate(-50%, -50%) rotate(-3deg);
+  display: flex;
+  background: #fff;
+  border-radius: var(--wm-r-md);
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(20, 30, 70, 0.06);
+  overflow: hidden;
+}
+
+.wm-tsignin-pv-rail {
+  flex: 0 0 36px;
+  background: var(--wm-navy-deep);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+}
+.wm-tsignin-pv-rail > span {
+  width: 16px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.wm-tsignin-pv-mark {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  background: conic-gradient(
+    var(--wm-yellow) 0 25%,
+    var(--wm-coral) 25% 50%,
+    var(--wm-blue-bright) 50% 75%,
+    var(--wm-teal) 75% 100%
+  ) !important;
+  margin-bottom: 4px;
+}
+
+.wm-tsignin-pv-body {
+  flex: 1;
+  padding: 12px 14px 14px;
+  min-width: 0;
+}
+.wm-tsignin-pv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.wm-tsignin-pv-title {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--wm-ink);
+}
+.wm-tsignin-pv-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--wm-blue-soft);
+}
+
+.wm-tsignin-pv-stats {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.wm-tsignin-pv-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wm-tsignin-pv-big {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  color: var(--wm-navy);
+}
+.wm-tsignin-pv-mid {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--wm-mean-correct-ink);
+}
+.wm-tsignin-pv-cap {
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(20, 30, 70, 0.14);
+}
+.wm-tsignin-pv-stat-sm .wm-tsignin-pv-cap {
+  width: 22px;
+}
+
+.wm-tsignin-pv-chart {
   width: 100%;
-  max-width: 440px;
-  background: var(--wm-cream);
-  border-radius: var(--wm-r-xl);
-  padding: 36px 34px 30px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+  height: 42px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.wm-tsignin-pv-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.wm-tsignin-pv-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.wm-tsignin-pv-pip {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.wm-tsignin-pv-pip-struggling {
+  background: var(--wm-mean-wrong);
+}
+.wm-tsignin-pv-pip-attention {
+  background: var(--wm-mean-attention);
+}
+.wm-tsignin-pv-pip-ontrack {
+  background: var(--wm-mean-correct);
+}
+.wm-tsignin-pv-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(20, 30, 70, 0.12);
+}
+.wm-tsignin-pv-prog {
+  margin-left: auto;
+  flex: 0 0 46px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(20, 30, 70, 0.08);
+  overflow: hidden;
+}
+.wm-tsignin-pv-prog > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--wm-blue-bright);
+}
+
+/* ── Right: the white sign-in panel ── */
+
+.wm-tsignin-panel {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 40px 48px;
+}
+.wm-tsignin-inner {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
 }
 
 .wm-tsignin-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 26px;
 }
 .wm-tsignin-mark {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
+  /* Identical to the home-page brand mark (.wm-brand-mark, Landing.css): same conic palette,
+     navy border, navy bottom-shadow, and the slow spin. */
   background: conic-gradient(
-    var(--wm-yellow) 0 25%,
-    var(--wm-coral) 25% 50%,
-    var(--wm-blue-bright) 50% 75%,
-    var(--wm-teal) 75% 100%
+    from 0deg,
+    var(--wm-coral) 0 25%,
+    var(--wm-cream) 25% 50%,
+    var(--wm-navy) 50% 75%,
+    var(--wm-blue-tile) 75% 100%
   );
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+  border: 2px solid var(--wm-navy-deep);
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+  animation: wm-spin 14s linear infinite;
 }
 .wm-tsignin-name {
   font-family: var(--wm-font-serif);
   font-weight: 600;
-  font-size: 19px;
+  font-size: 20px;
   letter-spacing: -0.3px;
   color: var(--wm-ink);
 }
 .wm-tsignin-role {
+  margin-left: auto;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1px;
-  padding: 3px 8px;
+  padding: 4px 11px;
   border-radius: var(--wm-r-pill);
-  background: var(--wm-navy);
-  color: var(--wm-cream);
+  background: var(--wm-page-bg);
+  color: var(--wm-navy);
+  border: 1.5px solid rgba(47, 67, 166, 0.2);
+}
+
+/* The headline block is vertically centered; the brand sits above, the note below. */
+.wm-tsignin-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 36px 0;
 }
 
 .wm-tsignin-headline {
-  margin: 0 0 10px;
+  /* nudged a touch left of the column so the display caps optically sit further left */
+  margin: 0 0 14px -8px;
   font-family: var(--wm-font-serif);
   font-weight: 600;
-  font-size: var(--wm-fs-h1);
-  line-height: 1.2;
-  letter-spacing: -0.5px;
-  color: var(--wm-ink);
+  font-size: var(--wm-fs-display);
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: var(--wm-navy-deep);
 }
+/* The three value props as bullets — serif, navy, each with a coral dot + soft halo. */
+.wm-tsignin-points {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.wm-tsignin-points li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--wm-font-serif);
+  font-size: var(--wm-fs-lead);
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--wm-navy-deep);
+}
+.wm-tsignin-points li::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--wm-coral);
+  box-shadow: 0 0 0 4px rgba(217, 102, 63, 0.16);
+}
+
 .wm-tsignin-sub {
-  margin: 0 0 26px;
+  /* shrink to the longer line + center so "No guesswork" sits centered under the statement,
+     while the block itself stays left-aligned with the bullets above. */
+  align-self: flex-start;
+  width: fit-content;
+  text-align: center;
+  margin: 0 0 30px;
   font-size: var(--wm-fs-body);
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--wm-ink-soft);
 }
 
 .wm-tsignin-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: stretch;
+  gap: 16px;
 }
 
-.wm-tsignin-google,
+.wm-tsignin-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-body);
+  font-weight: 700;
+  color: var(--wm-ink);
+  /* A raised cream pill (the mock's button is the panel cream, lifted), not a white button. */
+  background: #fffdf7;
+  border: 1.5px solid var(--wm-navy-deep);
+  border-radius: var(--wm-r-pill);
+  padding: 15px 20px;
+  cursor: pointer;
+  box-shadow:
+    0 2px 0 rgba(20, 30, 70, 0.06),
+    0 8px 18px rgba(31, 44, 92, 0.08);
+  transition:
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease,
+    border-color var(--wm-motion-press) ease;
+}
+.wm-tsignin-google:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(20, 30, 70, 0.12);
+}
+.wm-tsignin-google:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+.wm-tsignin-gicon {
+  width: 20px;
+  height: 20px;
+}
+
+/* The yellow demo pill — same chunky treatment as the student sign-in's demo button
+   (.wm-signin-demo, SignIn.css): yellow fill, navy ink, navy border + chunky bottom shadow,
+   press-down on hover/active. */
 .wm-tsignin-demo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-family: var(--wm-font-sans);
-  font-size: var(--wm-fs-body);
+  font-family: var(--wm-font-serif);
+  font-size: 18px;
   font-weight: 700;
+  color: var(--wm-navy-deep);
+  background: var(--wm-yellow);
+  border: 2px solid var(--wm-navy-deep);
   border-radius: var(--wm-r-pill);
-  padding: 14px 20px;
+  padding: 13px 22px;
   cursor: pointer;
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
   transition:
     transform var(--wm-motion-press) ease,
-    box-shadow var(--wm-motion-press) ease,
-    background var(--wm-motion-press) ease;
-}
-
-.wm-tsignin-google {
-  color: var(--wm-cream);
-  background: var(--wm-navy);
-  border: none;
-}
-.wm-tsignin-google:hover {
-  background: var(--wm-blue);
-  transform: translateY(-1px);
-}
-.wm-tsignin-gicon {
-  width: 20px;
-  height: 20px;
-  background: #fff;
-  border-radius: 50%;
-  padding: 2px;
-  box-sizing: border-box;
-}
-
-.wm-tsignin-demo {
-  color: var(--wm-navy);
-  background: transparent;
-  border: 2px solid rgba(47, 67, 166, 0.35);
+    box-shadow var(--wm-motion-press) ease;
 }
 .wm-tsignin-demo:hover {
-  background: rgba(47, 67, 166, 0.08);
-  border-color: var(--wm-navy);
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--wm-navy-deep);
 }
-
-.wm-tsignin-note {
-  margin: 18px 0 0;
-  font-size: var(--wm-fs-meta);
-  color: var(--wm-ink-soft);
-  text-align: center;
+.wm-tsignin-demo:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--wm-navy-deep);
 }
-
-.wm-tsignin-error {
-  margin: 18px 0 0;
-  padding: 12px 14px;
-  font-size: var(--wm-fs-meta);
-  color: #8f3a22;
-  background: #f7e0d6;
-  border-radius: var(--wm-r-md);
-  text-align: center;
+.wm-tsignin-demo:focus-visible {
+  outline: 3px solid var(--wm-navy-deep);
+  outline-offset: 3px;
 }
 
 .wm-tsignin-google:disabled,
@@ -147,12 +402,58 @@
   cursor: progress;
 }
 
+.wm-tsignin-error {
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  font-size: var(--wm-fs-meta);
+  color: #8f3a22;
+  background: #f7e0d6;
+  border-radius: var(--wm-r-md);
+  text-align: center;
+}
+
+.wm-tsignin-note {
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(20, 30, 70, 0.1);
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+}
+
+/* ── Responsive: drop the art panel; center the form ── */
+@media (max-width: 880px) {
+  .wm-tsignin {
+    grid-template-columns: 1fr;
+  }
+  .wm-tsignin-art {
+    display: none;
+  }
+  .wm-tsignin-panel {
+    padding: 32px 24px;
+  }
+  .wm-tsignin-body {
+    justify-content: flex-start;
+    padding-top: 28px;
+  }
+  .wm-tsignin-headline {
+    font-size: var(--wm-fs-h1);
+  }
+  .wm-tsignin-sub {
+    font-size: var(--wm-fs-body);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wm-tsignin-google,
   .wm-tsignin-demo {
     transition: none;
   }
-  .wm-tsignin-google:hover {
+  .wm-tsignin-google:hover,
+  .wm-tsignin-demo:hover,
+  .wm-tsignin-demo:active {
     transform: none;
+  }
+  .wm-tsignin-mark {
+    animation: none;
   }
 }

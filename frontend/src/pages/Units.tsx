@@ -6,16 +6,22 @@ import { Mascot } from '../components/Mascot';
 import './Units.css';
 
 /**
- * The unit overview — the student "course shelf" (STU.3). Above the CourseMap's per-skill path,
- * this lists the whole Grade 6 curriculum as UNITS (Ratios, Fractions, …), each a card with its
- * status + percent-complete from `GET /units`. Clicking an unlocked unit opens its lesson list
- * (`onOpenUnit`). Add-don't-redesign: this is an ADDED surface; the CourseMap home is untouched
- * (the units-vs-coursemap-as-home call is the owner's, DEC.2). Read-only, off the turn loop.
+ * The unit overview — the student's HOME after sign-in (units-first flow, DEC.2). Lists the whole
+ * Grade 6 curriculum as UNITS in teaching order (Ratios, Fractions, …), each a card with its status
+ * + percent-complete from `GET /units`. Clicking an UNLOCKED unit opens its lesson list
+ * (`onOpenUnit`). The CourseMap "foundation work" (the 5 fraction skills) is reachable via a button
+ * (`onFoundation`) so the basics stay one tap away; the CourseMap itself is kept unchanged.
  *
  * Data source mirrors the course map: a signed-in learner's progress comes from persisted mastery;
  * an anonymous demo learner passes `sessionId` so the list reflects in-session progress; a brand-new
  * visitor gets the fresh default. A teacher-assigned unit (DAT.10) is surfaced as a banner + a star
  * on its card, and is the primary "Keep going" target — absent gracefully for demo learners.
+ *
+ * Unit gating (owner: "unit 1 open, the rest unlock on mastery of the previous unit"): SERVER-
+ * PREFERRED, CLIENT STOPGAP. When the backend already gates units (any unit returns `locked`) we
+ * trust it verbatim. Only when every unit is `available` — the current ungated backend for a fresh
+ * student — do we apply the progression lock here, so the flow is correct now. Flagged to T1 in
+ * T1_T2_COORDINATION.md to make this authoritative server-side (`status` from mastery).
  */
 
 // Per unit-status: a label + a call-to-action. The label always renders (status is never color-only).
@@ -33,6 +39,29 @@ const TINTS: readonly PathNodeTint[] = ['sky', 'mint', 'butter', 'warm', 'lavend
 function tintFor(order: number): PathNodeTint {
   // order is 1-based in the catalog; fall back to 1 so a missing order still tints stably.
   return TINTS[(Math.max(1, order) - 1) % TINTS.length];
+}
+
+// Fresh-student unit gating (the owner rule), as a STOPGAP that takes the STRICTER of the server's
+// lock and the progressive rule — it never UNLOCKS a unit the server locked, it only adds the
+// "finish the previous unit first" lock the ungated backend is missing. (The live backend is
+// inconsistent today — e.g. it locks u2 but leaves u3+ open with u1 at 0% — so trusting it verbatim
+// would show a broken ladder; flagged to T1 to make `status` authoritative from mastery.)
+//
+// A unit is unlocked only when the server didn't lock it AND (it's first in order, the previous unit
+// is complete, it's already in progress / mastered, or a teacher assigned it).
+function gateUnits(units: readonly UnitView[], assignedSlug: string | null): UnitView[] {
+  const ordered = [...units].sort((a, b) => a.order - b.order);
+  let prevComplete = true; // the first unit in order is always open
+  return ordered.map((u) => {
+    const progressionOpen =
+      prevComplete ||
+      u.status === 'in_progress' ||
+      u.status === 'mastered' ||
+      u.unit_slug === assignedSlug;
+    prevComplete = u.status === 'mastered' || u.percent_complete >= 100;
+    // Stricter of the two: locked if the server locked it OR the progression hasn't reached it.
+    return u.status !== 'locked' && progressionOpen ? u : { ...u, status: 'locked' };
+  });
 }
 
 function UnitCard({
@@ -102,11 +131,12 @@ function UnitCard({
 export function Units({
   sessionId,
   onOpenUnit,
-  onBack,
+  onFoundation,
 }: {
   sessionId?: string | null;
   onOpenUnit: (slug: string) => void;
-  onBack: () => void;
+  /** Open the CourseMap "foundation work" (the 5 fraction skills). */
+  onFoundation: () => void;
 }): React.JSX.Element {
   const [data, setData] = useState<UnitListView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -131,26 +161,31 @@ export function Units({
     };
   }, [sessionId]);
 
-  const units = data?.units ?? [];
   const assignedSlug = data?.assigned_unit_slug ?? null;
+  // Units in teaching order with the fresh-student progression gate applied (stopgap; see docstring).
+  const units = data !== null ? gateUnits(data.units ?? [], assignedSlug) : [];
   const assignedUnit = assignedSlug != null ? units.find((u) => u.unit_slug === assignedSlug) : undefined;
 
   return (
     <main className="wm-units">
       <div className="wm-units-panel">
         <header className="wm-units-head">
+          {/* Pi rolls in from the side when the units page mounts (owner request); the roll is
+              dropped under reduced-motion (CSS). */}
           <span className="wm-units-pi" aria-hidden="true">
             <Mascot />
           </span>
           <div className="wm-units-headtext">
-            <button type="button" className="wm-units-back" onClick={onBack}>
-              ← Back to my path
-            </button>
             <h1 className="wm-units-headline">Your units</h1>
             <p className="wm-units-subhead">
-              Each unit is a little set of lessons. Pick one to see its lessons — finish a unit to
-              unlock the next.
+              Start with Unit 1 — each unit is a little set of lessons, and finishing one unlocks the
+              next.
             </p>
+            {/* Foundation work = the CourseMap's 5 fraction skills. Kept one tap away so a student
+                who needs the basics can always drop down to them. */}
+            <button type="button" className="wm-units-foundation" onClick={onFoundation}>
+              Need the basics? Go to foundation work →
+            </button>
           </div>
         </header>
 

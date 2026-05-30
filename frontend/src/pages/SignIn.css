@@ -207,10 +207,6 @@
   box-sizing: border-box;
   flex: none;
 }
-.wm-signin-tag {
-  color: var(--wm-coral);
-  font-size: 18px;
-}
 
 /* number line with running children (bottom left) */
 .wm-signin-numberline {

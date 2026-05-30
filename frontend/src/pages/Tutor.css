@@ -8,6 +8,7 @@
    (MEMORY: reused class names collide app-wide). */
 
 .wm-tutor {
+  position: relative;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -15,52 +16,30 @@
   box-sizing: border-box;
 }
 
-/* ───────────────────────── SLIM CREAM TOP BAR ─────────────────────────
-   The only chrome above the world (the user's "space on top for course path + spark"):
-   the ← Course-path plaque (left) and the sparks plaque (right) are carved-wood plaques —
-   the requested "wood behind course path and spark" — with the big serif lesson title
-   centred between them. A cream parchment strip with a navy base line. */
+/* ───────────────────────── FLOATING TOP BAR ─────────────────────────
+   The only chrome above the world: the ← Course-path plaque (left) and the sparks plaque
+   (right), both carved-wood plaques — the requested "wood behind course path and spark".
+   The bar is now TRANSPARENT and absolutely positioned over the top of the world, so the
+   lesson background runs ALL the way up behind it (owner request). The lesson title moved
+   down onto the big wood banner below. */
 .wm-tutor-topbar {
-  flex: none;
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
-  padding: 12px 22px;
-  background: var(--wm-cream);
-  border-bottom: 2px solid var(--wm-navy-deep);
+  padding: 14px 22px;
+  background: transparent;
 }
 .wm-tutor-topbar-left {
   justify-self: start;
 }
 .wm-tutor-topbar-right {
   justify-self: end;
-}
-.wm-tutor-topbar-title {
-  text-align: center;
-  min-width: 0;
-}
-
-.wm-tutor-eyebrow {
-  margin: 0 0 1px;
-  font-family: var(--wm-font-sans);
-  font-size: var(--wm-fs-meta);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--wm-coral);
-}
-
-.wm-tutor-title {
-  margin: 0;
-  font-family: var(--wm-font-serif);
-  font-size: clamp(20px, 3vw, 30px);
-  line-height: 1.08;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-  color: var(--wm-navy-deep);
 }
 
 /* Both top-bar chips (← Course path, sparks) are mini <WoodBanner> frames (the wide carved
@@ -99,7 +78,9 @@
   position: relative;
   flex: 1 1 auto;
   background: var(--wm-page-bg);
-  padding: 22px 20px 52px;
+  /* Extra top padding clears the floating plaques and nudges the title banner DOWN a touch so the
+     whole thing has room (owner request). The background fills behind, all the way up. */
+  padding: 88px 20px 52px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -122,7 +103,10 @@
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  filter: blur(2.5px) brightness(0.97) saturate(0.9);
+  /* Keep the photo readable as a backdrop but let its real depth + colour show (owner: "unblue a
+     bit / give slightly more colour — they look low quality"): much lighter blur, a hair brighter,
+     and a touch MORE saturation rather than the old desaturate. */
+  filter: blur(1.3px) brightness(1.02) saturate(1.16);
   transform: scale(1.03);
   z-index: 0;
 }
@@ -135,32 +119,45 @@
   content: '';
   position: absolute;
   inset: -16px;
-  background: linear-gradient(rgba(34, 58, 102, 0.2), rgba(28, 48, 88, 0.34));
+  background: linear-gradient(rgba(36, 54, 92, 0.09), rgba(26, 42, 78, 0.19));
   z-index: 0;
   pointer-events: none;
 }
 
-/* The S1–S5 progress tracker banner — a <WoodBanner> 9-slice frame supplies the wood; this
-   rule only sizes + positions it in the stage (the frame's own border-width + content padding
-   inset the caption/steps clear of the carved corners). Widened to match the bigger card. */
-.wm-tutor-stepper-row {
+/* The lesson-TITLE banner — a <WoodBanner> 9-slice frame supplies the wood; this rule sizes +
+   positions it in the stage (the frame's own border-width + content padding inset the title clear
+   of the carved corners). The long carved plank now carries the lesson's NAME where the old
+   progress tracker used to sit (owner request). Widened to match the card. */
+.wm-tutor-titlebanner {
   z-index: 1;
   width: 100%;
   max-width: 1080px;
+  text-align: center;
 }
 
-/* Caption clarifying the stepper is FIVE WAYS to show ONE skill, not five skills. Parchment
-   text on the dark plank. */
-.wm-tutor-steps-caption {
-  margin: 0 0 12px;
-  text-align: center;
+/* Small parchment eyebrow over the title, nudged down a touch off the carved top rope. */
+.wm-tutor-banner-eyebrow {
+  margin: 6px 0 2px;
   font-family: var(--wm-font-sans);
   font-size: var(--wm-fs-meta);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--wm-gold);
+  text-shadow: 0 1px 2px rgba(40, 22, 8, 0.6);
+}
+
+/* The big serif lesson title, parchment-on-wood with a soft carved shadow so it reads on the
+   plank at any of the background photos. */
+.wm-tutor-banner-title {
+  margin: 0 0 4px;
+  font-family: var(--wm-font-serif);
+  font-size: clamp(22px, 3.2vw, 34px);
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.4px;
   color: var(--wm-on-wood);
-  text-shadow: 0 1px 2px rgba(40, 22, 8, 0.55);
+  text-shadow: 0 2px 4px rgba(40, 22, 8, 0.6);
 }
 
 /* The floating cream problem card — the calm working surface, raised off the world. Widened
@@ -176,6 +173,20 @@
   box-shadow: 0 22px 48px rgba(20, 30, 70, 0.32);
   padding: 38px 52px 44px;
   box-sizing: border-box;
+}
+
+/* A small problem counter tucked into the card's bottom-right corner (owner request), e.g.
+   "1/13". Sits in the card's bottom padding so it never crowds the working content. */
+.wm-tutor-card-counter {
+  position: absolute;
+  right: 20px;
+  bottom: 14px;
+  font-family: var(--wm-font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--wm-ink-soft);
+  opacity: 0.78;
 }
 
 /* Pi + the help-speech bubble live at the bottom-right of the world (the mock's placement). */
@@ -530,6 +541,147 @@
 .wm-tutor-hint-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ── Camera "snap your work" beat (HR.C1/C3) ──────────────────────────────────────────────
+   A quiet secondary action beside the hint link: a pill that opens the camera/file picker. The
+   real <input type=file> is visually hidden inside the label (the label IS the button). */
+.wm-tutor-snap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  background: var(--wm-cream-2);
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    background 0.12s ease;
+}
+.wm-tutor-snap:hover {
+  background: var(--wm-card-sky);
+}
+.wm-tutor-snap:active {
+  transform: translateY(2px);
+}
+.wm-tutor-snap:focus-within {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 2px;
+}
+.wm-tutor-snap[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wm-tutor-snap-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+}
+.wm-tutor-snap-icon svg {
+  width: 100%;
+  height: 100%;
+}
+/* Visually-hidden file input — the label is the affordance; the input stays keyboard-reachable. */
+.wm-tutor-snap-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The read-back card — "I read this as 3/4 — right?" — a calm sky panel that appears under the
+   actions while the learner confirms a snapped answer (before it is graded). */
+.wm-tutor-readback {
+  margin: 16px 0 0;
+  padding: 16px 18px;
+  background: var(--wm-card-sky);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+}
+.wm-tutor-readback-prompt {
+  margin: 0;
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wm-navy-deep);
+}
+.wm-tutor-readback-answer {
+  margin: 8px 0 14px;
+  font-family: var(--wm-font-serif);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--wm-navy-deep);
+}
+.wm-tutor-readback-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.wm-tutor-readback-confirm {
+  font-family: var(--wm-font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--wm-cream);
+  background: var(--wm-blue);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    background 0.12s ease;
+}
+.wm-tutor-readback-confirm:hover:not(:disabled) {
+  background: var(--wm-blue-bright);
+}
+.wm-tutor-readback-confirm:active:not(:disabled) {
+  transform: translateY(2px);
+  background: var(--wm-blue-press);
+}
+.wm-tutor-readback-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Retake — a quiet link-style label (also wraps a hidden file input). */
+.wm-tutor-readback-retake {
+  font-family: var(--wm-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.wm-tutor-readback-retake:hover {
+  color: var(--wm-ink);
+}
+.wm-tutor-readback-retake--solo {
+  display: inline-block;
+  margin-top: 12px;
+}
+.wm-tutor-readback-retake:focus-within {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-tutor-snap,
+  .wm-tutor-readback-confirm {
+    transition: none;
+  }
 }
 
 .wm-tutor-feedback-block {

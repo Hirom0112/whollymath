@@ -80,8 +80,9 @@
    footprint (~78x60). We scale the PiMenu trigger's figure down and shrink the trigger box to
    match, so the clickable area tracks what's visible and the fanned popover anchors correctly. */
 .wm-coursemap-mascot-wrap .wm-pimenu-fig {
-  width: 78px;
-  height: 60px;
+  display: inline-block;
+  width: 104px;
+  height: 80px;
 }
 .wm-coursemap-mascot-wrap .wm-pimenu-trigger,
 .wm-coursemap-mascot-wrap .wm-coursemap-mascot-solo {
@@ -98,7 +99,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  transform: scale(0.6);
+  transform: scale(0.8);
   transform-origin: top left;
 }
 

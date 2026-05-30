@@ -68,7 +68,7 @@ afterEach(() => {
 describe('Units', () => {
   it('renders a card per unit with title, dual-standard codes, and status', async () => {
     mockUnits(LIST);
-    render(<Units onOpenUnit={vi.fn()} onBack={vi.fn()} />);
+    render(<Units onOpenUnit={vi.fn()} onFoundation={vi.fn()} />);
     expect(await screen.findByText('Ratios & Rates')).toBeInTheDocument();
     expect(screen.getByText('Fractions & Decimals')).toBeInTheDocument();
     // CCSS · TEKS cluster surfaced in the learner view.
@@ -79,7 +79,7 @@ describe('Units', () => {
   it('opens an unlocked unit on click', async () => {
     mockUnits(LIST);
     const onOpenUnit = vi.fn();
-    render(<Units onOpenUnit={onOpenUnit} onBack={vi.fn()} />);
+    render(<Units onOpenUnit={onOpenUnit} onFoundation={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: /Ratios & Rates/ }));
     expect(onOpenUnit).toHaveBeenCalledWith('u1');
   });
@@ -87,7 +87,7 @@ describe('Units', () => {
   it('disables a locked unit and does not open it', async () => {
     mockUnits(LIST);
     const onOpenUnit = vi.fn();
-    render(<Units onOpenUnit={onOpenUnit} onBack={vi.fn()} />);
+    render(<Units onOpenUnit={onOpenUnit} onFoundation={vi.fn()} />);
     const locked = await screen.findByRole('button', { name: /Rational Numbers/ });
     expect(locked).toBeDisabled();
     fireEvent.click(locked);
@@ -97,7 +97,7 @@ describe('Units', () => {
   it('surfaces the teacher-assigned-unit banner and opens it on tap', async () => {
     mockUnits(LIST);
     const onOpenUnit = vi.fn();
-    render(<Units onOpenUnit={onOpenUnit} onBack={vi.fn()} />);
+    render(<Units onOpenUnit={onOpenUnit} onFoundation={vi.fn()} />);
     const banner = await screen.findByRole('button', { name: /Your teacher set this/ });
     fireEvent.click(banner);
     expect(onOpenUnit).toHaveBeenCalledWith('u2');
@@ -105,22 +105,41 @@ describe('Units', () => {
 
   it('shows no assigned banner when there is no assignment (demo learner)', async () => {
     mockUnits({ ...LIST, assigned_unit_slug: null });
-    render(<Units onOpenUnit={vi.fn()} onBack={vi.fn()} />);
+    render(<Units onOpenUnit={vi.fn()} onFoundation={vi.fn()} />);
     await screen.findByText('Ratios & Rates');
     expect(screen.queryByText(/Your teacher set this/)).not.toBeInTheDocument();
   });
 
   it('shows an empty state when there are no units', async () => {
     mockUnits({ units: [], assigned_unit_slug: null });
-    render(<Units onOpenUnit={vi.fn()} onBack={vi.fn()} />);
+    render(<Units onOpenUnit={vi.fn()} onFoundation={vi.fn()} />);
     expect(await screen.findByText(/No units yet/)).toBeInTheDocument();
   });
 
-  it('calls onBack from the back affordance', async () => {
+  it('drops to foundation work from the foundation affordance', async () => {
     mockUnits(LIST);
-    const onBack = vi.fn();
-    render(<Units onOpenUnit={vi.fn()} onBack={onBack} />);
-    fireEvent.click(await screen.findByRole('button', { name: /Back to my path/ }));
-    expect(onBack).toHaveBeenCalled();
+    const onFoundation = vi.fn();
+    render(<Units onOpenUnit={vi.fn()} onFoundation={onFoundation} />);
+    fireEvent.click(await screen.findByRole('button', { name: /foundation work/i }));
+    expect(onFoundation).toHaveBeenCalled();
+  });
+
+  it('gates later units when the backend is ungated (fresh-student stopgap)', async () => {
+    // Two units, both `available` (current ungated backend): unit 1 opens, unit 2 locks until unit 1
+    // is complete. unit 1 has 0% so unit 2 must read as locked and ignore clicks.
+    mockUnits({
+      assigned_unit_slug: null,
+      units: [
+        { ...LIST.units![0], unit_slug: 'a', title: 'Alpha', order: 1, status: 'available', percent_complete: 0, assigned: false },
+        { ...LIST.units![0], unit_slug: 'b', title: 'Beta', order: 2, status: 'available', percent_complete: 0, assigned: false },
+      ],
+    });
+    const onOpenUnit = vi.fn();
+    render(<Units onOpenUnit={onOpenUnit} onFoundation={vi.fn()} />);
+    expect(await screen.findByText('Alpha')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Beta/ }));
+    expect(onOpenUnit).not.toHaveBeenCalledWith('b');
+    fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
+    expect(onOpenUnit).toHaveBeenCalledWith('a');
   });
 });

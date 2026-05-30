@@ -40,10 +40,12 @@ export interface WorkspaceWidgetProps<TValue> {
  * state, so the same KC can be answered in more than one representation (mastery rule 2). Order
  * matters: the most specific signal wins.
  *
- * TODO(T3→T1, HR.A5): the `kc === 'KC_common_denominator'` branch is the one case the wire contract
- * can't yet express — its answer is a whole number, but `surface_format`/`answer_kind` read exactly
- * like the fraction editor ('symbolic' + 'numeric'). Flagged to T1 to surface the HR.A1 `WidgetId`
- * on `ProblemView`; once it does, this branch reads `problem.widget_id` and the kc reference drops.
+ * TODO(T3→T1, HR.A5): the whole-number-answer branch below is the one case the wire contract can't
+ * yet express. These KCs' answers are a single whole number, but `surface_format`/`answer_kind` read
+ * exactly like the fraction editor ('symbolic' + 'numeric'), and the backend `widget_id` is derived
+ * from representation alone (SYMBOLIC → 'fraction_editor'), so it can't distinguish them. Flagged to
+ * T1 to extend the HR.A1 `WidgetId` to carry 'number_entry'; once it does, this branch reads
+ * `problem.widget_id` and the kc references drop.
  */
 export function selectWidget(problem: ProblemView): WidgetKind {
   // A relational yes/no judgment is answered with the buttons, never a fraction input — the server
@@ -56,10 +58,17 @@ export function selectWidget(problem: ProblemView): WidgetKind {
     return 'number_line';
   }
 
-  // Common-denominator's answer is a single shared piece-size (a whole number), so it gets the
-  // one-box entry, not the two-box fraction editor (§3.4.1). The only kc-keyed case — see the
-  // TODO above; it collapses into the widget-id path when T1 surfaces it.
-  if (problem.kc === 'KC_common_denominator') return 'number_entry';
+  // A handful of symbolic KCs answer with a single whole number, not a fraction, so they get the
+  // one-box entry rather than the two-box fraction editor: common-denominator's shared piece-size
+  // (§3.4.1), a unit rate ("2 mph"), and an equivalent-ratio missing term. The only kc-keyed case —
+  // see the TODO above; it collapses into the widget-id path when T1 surfaces 'number_entry'.
+  if (
+    problem.kc === 'KC_common_denominator' ||
+    problem.kc === 'KC_unit_rate' ||
+    problem.kc === 'KC_equivalent_ratios'
+  ) {
+    return 'number_entry';
+  }
 
   // Everything else (symbolic equivalence/add/sub, incl. the locked-denominator fill-the-top variant
   // signalled by `given_denominator`) is the fraction editor.

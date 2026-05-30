@@ -22,8 +22,10 @@ import type {
   InteractionEventIn,
   KnowledgeComponentId,
   MeResponse,
+  ReadBackView,
   StartSessionResponse,
   ThreeArmComparisonView,
+  TranscribeAnswerRequest,
   TurnRequest,
   TurnResponse,
   UnitDetailView,
@@ -78,6 +80,7 @@ export type {
   MetricComparisonView,
   PersonaComparisonView,
   ProblemView,
+  ReadBackView,
   Representation,
   RouteOptionView,
   StartSessionRequest,
@@ -151,6 +154,18 @@ export async function startLesson(
 /** Submit one learner action (answer or hint request) and get the turn result. */
 export async function submitTurn(request: TurnRequest): Promise<TurnResponse> {
   return postJson<TurnResponse>('/turn', request);
+}
+
+/**
+ * Mid-lesson "snap your work" read-back (HR.C1/C3). Stateless: POST a base64 image (raw or a
+ * `data:` URL) and get back what the scanner read, normalized to a submittable answer. The Tutor
+ * shows "I read this as 3/4 — right?" and, on confirm, submits `transcribed_answer` through the
+ * normal {@link submitTurn} — so the same SymPy verifier grades a snapped answer as a typed one
+ * (§8.2). An unreadable image returns `readable=false` so the surface can ask for a rewrite.
+ */
+export async function transcribeAnswer(image: string): Promise<ReadBackView> {
+  const body: TranscribeAnswerRequest = { image };
+  return postJson<ReadBackView>('/transcribe-answer', body);
 }
 
 /**

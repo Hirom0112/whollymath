@@ -37,7 +37,7 @@ const DETAIL: UnitDetailView = {
     {
       lesson_slug: 'u1_l1',
       title: 'Ratio language',
-      kc_id: 'KC_ratio_meaning',
+      kc_id: 'KC_equivalence', // a LIVE KC (has a generator) → launches the Tutor
       ccss_code: '6.RP.1',
       teks_code: '6.4A',
       status: 'available',
@@ -45,10 +45,10 @@ const DETAIL: UnitDetailView = {
     },
     {
       lesson_slug: 'u1_l2',
-      title: 'Unit rate',
-      kc_id: null, // not yet wired to a live KC → "coming soon"
-      ccss_code: '6.RP.2',
-      teks_code: '6.4D',
+      title: 'Unit conversion',
+      kc_id: 'KC_unit_conversion', // catalog KC with NO live generator yet → "coming soon"
+      ccss_code: '6.RP.3d',
+      teks_code: '6.4H',
       status: 'available',
       probability: null,
     },
@@ -71,39 +71,39 @@ afterEach(() => {
 describe('Unit', () => {
   it('renders the unit header with title and dual-standard cluster', async () => {
     mockUnit(DETAIL);
-    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={vi.fn()} />);
+    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={vi.fn()} onFoundation={vi.fn()} />);
     expect(await screen.findByText('Ratios & Rates')).toBeInTheDocument();
     expect(screen.getByText('6.RP.A · 6.4 / 6.5')).toBeInTheDocument();
   });
 
   it('renders the unit lessons on the shared rail with their CCSS·TEKS codes', async () => {
     mockUnit(DETAIL);
-    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={vi.fn()} />);
+    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={vi.fn()} onFoundation={vi.fn()} />);
     expect(await screen.findByText('Ratio language')).toBeInTheDocument();
-    expect(screen.getByText('Unit rate')).toBeInTheDocument();
+    expect(screen.getByText('Unit conversion')).toBeInTheDocument();
     expect(screen.getByText('6.RP.1 · 6.4A')).toBeInTheDocument();
   });
 
   it('launches the Tutor with the lesson KC when a built, unlocked lesson is clicked', async () => {
     mockUnit(DETAIL);
     const onStartLesson = vi.fn();
-    render(<Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} />);
+    render(<Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} onFoundation={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: /Ratio language/ }));
-    expect(onStartLesson).toHaveBeenCalledWith('KC_ratio_meaning');
+    expect(onStartLesson).toHaveBeenCalledWith('KC_equivalence');
   });
 
   it('shows a "coming soon" notice (not a dead click) for a lesson with no live KC', async () => {
     mockUnit(DETAIL);
     const onStartLesson = vi.fn();
-    render(<Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} />);
-    fireEvent.click(await screen.findByRole('button', { name: /Unit rate/ }));
+    render(<Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} onFoundation={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Unit conversion/ }));
     expect(onStartLesson).not.toHaveBeenCalled();
     expect(await screen.findByText(/coming soon/)).toBeInTheDocument();
   });
 
   it('disables a locked lesson', async () => {
     mockUnit(DETAIL);
-    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={vi.fn()} />);
+    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={vi.fn()} onFoundation={vi.fn()} />);
     const locked = await screen.findByRole('button', { name: /Percent/ });
     expect(locked).toBeDisabled();
   });
@@ -113,15 +113,23 @@ describe('Unit', () => {
       'fetch',
       vi.fn(() => Promise.resolve(notFound())),
     );
-    render(<Unit slug="nope" onStartLesson={vi.fn()} onBack={vi.fn()} />);
+    render(<Unit slug="nope" onStartLesson={vi.fn()} onBack={vi.fn()} onFoundation={vi.fn()} />);
     expect(await screen.findByText(/couldn't find that unit/i)).toBeInTheDocument();
   });
 
   it('calls onBack from the back affordance', async () => {
     mockUnit(DETAIL);
     const onBack = vi.fn();
-    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={onBack} />);
+    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={onBack} onFoundation={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: /All units/ }));
     expect(onBack).toHaveBeenCalled();
+  });
+
+  it('drops to foundation work via Pi', async () => {
+    mockUnit(DETAIL);
+    const onFoundation = vi.fn();
+    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={vi.fn()} onFoundation={onFoundation} />);
+    fireEvent.click(await screen.findByRole('button', { name: /foundation work/i }));
+    expect(onFoundation).toHaveBeenCalled();
   });
 });

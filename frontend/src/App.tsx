@@ -165,8 +165,11 @@ export function App(): React.JSX.Element {
     );
   }
 
+  // After sign-in the student lands on the UNITS page (the owner-approved units-first flow): the
+  // Grade-6 units in teaching order, unit 1 open and the rest gated. The CourseMap home is no longer
+  // the entry — it is kept as "foundation work" reached from a button on the units/unit pages (DEC.2).
   if (view === 'sign_in') {
-    return <SignIn onContinue={() => setView('home')} />;
+    return <SignIn onContinue={() => setView('units')} />;
   }
 
   if (view === 'home') {
@@ -185,9 +188,9 @@ export function App(): React.JSX.Element {
     );
   }
 
-  // The unit overview — the added student "course shelf" (STU.3). Reachable from the home via Pi's
-  // menu; the CourseMap home itself is unchanged (units-vs-coursemap-as-home is the owner's call,
-  // DEC.2).
+  // The unit overview — now the student's HOME after sign-in (units-first flow, DEC.2). Lists the
+  // Grade-6 units in teaching order; opening one shows its lessons. The CourseMap "foundation work"
+  // is reachable via a button here too (onFoundation), so the basics are always one tap away.
   if (view === 'units') {
     return (
       <Units
@@ -196,7 +199,7 @@ export function App(): React.JSX.Element {
           setUnitSlug(slug);
           setView('unit');
         }}
-        onBack={() => setView('home')}
+        onFoundation={() => setView('home')}
       />
     );
   }
@@ -212,6 +215,7 @@ export function App(): React.JSX.Element {
             void handleStartLesson(kc, 'unit');
           }}
           onBack={() => setView('units')}
+          onFoundation={() => setView('home')}
         />
         {error !== null ? <FloatingError message={error} /> : null}
       </>

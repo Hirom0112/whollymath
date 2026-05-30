@@ -2,7 +2,10 @@ import './TeacherSignIn.css';
 
 /**
  * Teacher sign-in gate (TODO TCH.F0 / TCH.Q1). A calm, professional entry — the adult
- * counterpart to the kid landing. Two ways in: a real Google/OIDC path (wired to lane T1's
+ * counterpart to the kid landing. Split-panel layout (redesign, user 2026-05-30, from the
+ * approved Gemini mock): a navy "world" panel on the left (geometric brand art + a floating
+ * dashboard preview, recreated in pure CSS so it stays crisp and ships no raster asset) and a
+ * white sign-in panel on the right. Two ways in: a real Google/OIDC path (wired to lane T1's
  * teacher auth, TCH.B2, once it lands) and a demo-teacher path that drops straight into the
  * seeded class for the pitch. Both call `onSignIn`; the container sets the demo token.
  */
@@ -28,6 +31,79 @@ const GoogleG = (): React.JSX.Element => (
   </svg>
 );
 
+/** The floating dashboard preview that anchors the navy panel — a stylized, non-interactive
+ *  abstraction of the real roster (ranked categories + a class-progress trend). Decorative
+ *  chrome only, so it carries no live data and is hidden from assistive tech. */
+const DashboardPreview = (): React.JSX.Element => {
+  const rows: { tone: string; w: number; p: number }[] = [
+    { tone: 'struggling', w: 62, p: 28 },
+    { tone: 'attention', w: 74, p: 55 },
+    { tone: 'attention', w: 54, p: 61 },
+    { tone: 'ontrack', w: 70, p: 88 },
+  ];
+  return (
+    <div className="wm-tsignin-preview" aria-hidden="true">
+      <div className="wm-tsignin-pv-rail">
+        <span className="wm-tsignin-pv-mark" />
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="wm-tsignin-pv-body">
+        <div className="wm-tsignin-pv-head">
+          <span className="wm-tsignin-pv-title">Dashboard</span>
+          <span className="wm-tsignin-pv-dot" />
+        </div>
+        <div className="wm-tsignin-pv-stats">
+          <div className="wm-tsignin-pv-stat">
+            <span className="wm-tsignin-pv-big">200</span>
+            <span className="wm-tsignin-pv-cap" />
+          </div>
+          <div className="wm-tsignin-pv-stat wm-tsignin-pv-stat-sm">
+            <span className="wm-tsignin-pv-mid">13%</span>
+            <span className="wm-tsignin-pv-cap" />
+          </div>
+          <div className="wm-tsignin-pv-stat wm-tsignin-pv-stat-sm">
+            <span className="wm-tsignin-pv-mid">15%</span>
+            <span className="wm-tsignin-pv-cap" />
+          </div>
+        </div>
+        <svg className="wm-tsignin-pv-chart" viewBox="0 0 200 64" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="wm-pv-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--wm-blue-bright)" stopOpacity="0.34" />
+              <stop offset="100%" stopColor="var(--wm-blue-bright)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M0 50 L28 44 L56 47 L84 32 L112 36 L140 20 L168 24 L200 10 L200 64 L0 64 Z"
+            fill="url(#wm-pv-fill)"
+          />
+          <path
+            d="M0 50 L28 44 L56 47 L84 32 L112 36 L140 20 L168 24 L200 10"
+            fill="none"
+            stroke="var(--wm-blue-bright)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <ul className="wm-tsignin-pv-rows">
+          {rows.map((r, i) => (
+            <li key={i} className="wm-tsignin-pv-row">
+              <span className={`wm-tsignin-pv-pip wm-tsignin-pv-pip-${r.tone}`} />
+              <span className="wm-tsignin-pv-bar" style={{ width: `${r.w}%` }} />
+              <span className="wm-tsignin-pv-prog">
+                <span style={{ width: `${r.p}%` }} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
 export function TeacherSignIn({
   onSignIn,
   busy = false,
@@ -39,37 +115,60 @@ export function TeacherSignIn({
 }): React.JSX.Element {
   return (
     <div className="wm-tsignin">
-      <div className="wm-tsignin-card">
-        <div className="wm-tsignin-brand">
-          <span className="wm-tsignin-mark" aria-hidden="true" />
-          <span className="wm-tsignin-name">WhollyMath</span>
-          <span className="wm-tsignin-role">Teacher</span>
-        </div>
+      <aside className="wm-tsignin-art" aria-hidden="true">
+        <DashboardPreview />
+      </aside>
 
-        <h1 className="wm-tsignin-headline">See your class at a glance.</h1>
-        <p className="wm-tsignin-sub">
-          Who needs help first, why they’re stuck, and what to assign next, built on the same
-          mastery evidence your students earn.
-        </p>
+      <main className="wm-tsignin-panel">
+        <div className="wm-tsignin-inner">
+          <div className="wm-tsignin-brand">
+            <span className="wm-tsignin-mark" aria-hidden="true" />
+            <span className="wm-tsignin-name">WhollyMath</span>
+            <span className="wm-tsignin-role">Teacher</span>
+          </div>
 
-        <div className="wm-tsignin-actions">
-          <button type="button" className="wm-tsignin-google" onClick={onSignIn} disabled={busy}>
-            <GoogleG />
-            Sign in with Google
-          </button>
-          <button type="button" className="wm-tsignin-demo" onClick={onSignIn} disabled={busy}>
-            {busy ? 'Starting…' : 'Continue as a demo teacher'}
-          </button>
-        </div>
+          <div className="wm-tsignin-body">
+            <h1 className="wm-tsignin-headline">
+              See your class
+              <br />
+              at a glance.
+            </h1>
+            <ul className="wm-tsignin-points">
+              <li>Who needs help first</li>
+              <li>Why they’re stuck</li>
+              <li>What to assign next</li>
+            </ul>
+            <p className="wm-tsignin-sub">
+              Straight from your students’ real work
+              <br />
+              No guesswork
+            </p>
 
-        {error !== null ? (
-          <p className="wm-tsignin-error" role="alert">
-            {error}
-          </p>
-        ) : (
+            <div className="wm-tsignin-actions">
+              <button
+                type="button"
+                className="wm-tsignin-google"
+                onClick={onSignIn}
+                disabled={busy}
+              >
+                <GoogleG />
+                Sign in with Google
+              </button>
+              <button type="button" className="wm-tsignin-demo" onClick={onSignIn} disabled={busy}>
+                {busy ? 'Starting…' : 'Continue as a demo teacher'}
+              </button>
+            </div>
+
+            {error !== null ? (
+              <p className="wm-tsignin-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+          </div>
+
           <p className="wm-tsignin-note">The demo class is synthetic. No real student data.</p>
-        )}
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

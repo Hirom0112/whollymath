@@ -2,21 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   submitTurn,
+  transcribeAnswer,
   type AdaptationView,
   type InterventionView,
   type MasterySnapshot,
   type ProblemView,
+  type ReadBackView,
   type StartSessionResponse,
   type SurfaceState,
   type TurnResponse,
 } from '../api';
 import {
-  LessonTracker,
   Mascot,
   PiMenu,
   SparkCount,
   WoodBanner,
-  type LessonPhase,
   type PiMenuItem,
 } from '../components';
 import { useTelemetry } from '../telemetry';
@@ -34,6 +34,22 @@ import {
 import './Tutor.css';
 
 const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
+
+// Reads a photo File into a base64 data URL — the wire format /transcribe-answer accepts (same
+// contract as the homework scan). Kept local; the only place the camera beat turns a photo into a
+// string. Mirrors HomeworkUpload's helper (one obvious shape, not a shared util for a 2-line fn).
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(typeof reader.result === 'string' ? reader.result : '');
+    };
+    reader.onerror = () => {
+      reject(new Error('Could not read the photo.'));
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // The pool of storybook-world backdrops a lesson can wear (frontend/public/tutor-bg-*.jpg).
 // Each is pre-toned: edge-cropped (no generator watermark), softened, and faintly blue so it
@@ -256,6 +272,12 @@ export function Tutor({
   // or advance. null unless the proactive arm fired (default OFF), like `intervention`.
   const [midNudge, setMidNudge] = useState<InterventionView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The camera "snap your work" beat (HR.C1/C3): the read-back the scanner returned for the photo
+  // the learner just took, shown as "I read this as 3/4 — right?" before it is graded. null when no
+  // snap is in flight. `scanning` is true while the image is uploading/transcribing (shows a
+  // spinner, blocks a double-snap). A successful confirm submits the read answer through /turn.
+  const [readBack, setReadBack] = useState<ReadBackView | null>(null);
+  const [scanning, setScanning] = useState(false);
   // The per-KC mastery snapshot the backend returns each turn (BKT probability + declared
   // mastery). Merged across turns so the progress strip shows every skill touched.
   const [mastery, setMastery] = useState<MasterySnapshot[]>([]);
@@ -280,16 +302,11 @@ export function Tutor({
   // the learner knows this confirms mastery — it isn't just another practice problem.
   const isProbe = surfaceState === 'S5_transfer_probe';
 
-  // The lesson-progress tracker (CURRICULUM_DRAFT.md §1.1): one skill = a ~10-problem practice
-  // ramp → the transfer-probe gate → done. We show the learner's POSITION in that ramp
-  // (problem N of ~length) and fill the rail by it; the phase is which leg of the arc we're on.
-  // `lessonLength` is the curriculum's per-skill target (number-line runs deeper, ~13; CP.B
-  // §1.1). The bounded-lesson backend that enforces this length is redesign slice 1 — until it
-  // lands the old loop can run past the target, so the caption drops "of N" past the target and
-  // the rail simply stays full rather than showing a nonsensical "12 of 10".
+  // The per-skill lesson length (CURRICULUM_DRAFT.md §1.1: number-line runs ~13, the rest ~10).
+  // Drives the small "N/length" problem counter in the bottom-right of the card (owner request).
+  // The old S1–S5 surface stepper + "Problem N of M" caption were removed — the wood banner now
+  // carries the lesson TITLE instead — so the progress/phase the tracker consumed are gone here.
   const lessonLength = LESSON_LENGTH[goalKc] ?? 10;
-  const lessonProgress = Math.min(problemNumber / lessonLength, 1);
-  const lessonPhase: LessonPhase = goalMastered ? 'done' : isProbe ? 'check' : 'practice';
 
   // The big header title is the human skill name for the CURRENT problem's KC (the mock's
   // serif headline), falling back gracefully so an unmapped KC still reads.
@@ -378,13 +395,11 @@ export function Tutor({
     canSubmit = submittedAnswer !== '';
   }
 
-  async function handleSubmit(event: React.FormEvent): Promise<void> {
-    event.preventDefault();
-    if (phase !== 'answering' || !canSubmit) return;
-    setPhase('submitting');
-    setError(null);
-    setIntervention(null); // the offer pertained to this attempt; it is now spent
-    setMidNudge(null); // a mid-problem nudge is spent once the learner answers
+  // Submit one answer string through the turn loop and fold in the verdict. Shared by the normal
+  // form submit (the widget-derived answer) and the camera read-back confirm (the OCR'd answer) —
+  // both land at the SAME /turn, so a snapped answer is graded by the same SymPy verifier as a typed
+  // one (HR.C1/C3, §8.2). Assumes phase is already 'submitting' and the spent offers are cleared.
+  async function submitAnswerValue(answer: string): Promise<void> {
     telemetry.track('submit', {
       problem_id: problem.problem_id,
       latency_ms: Date.now() - startedAt.current,
@@ -395,13 +410,13 @@ export function Tutor({
         session_id: sessionId,
         problem_id: problem.problem_id,
         action: 'submit_answer',
-        submitted_answer: submittedAnswer,
+        submitted_answer: answer,
         surface_state: surfaceState,
         latency_ms: Date.now() - startedAt.current,
         hint_used: hintUsed,
       });
       setResult(response);
-      setLastAnswer(submittedAnswer);
+      setLastAnswer(answer);
       setMastery((prev) => mergeMastery(prev, response.mastery ?? []));
       setTransitionReason(null); // the reason for THIS problem has done its job
       setAdaptation(null); // the live adaptation banner clears once the learner answers
@@ -417,6 +432,16 @@ export function Tutor({
       setError('Something went wrong sending your answer. Give it another try.');
       setPhase('answering');
     }
+  }
+
+  async function handleSubmit(event: React.FormEvent): Promise<void> {
+    event.preventDefault();
+    if (phase !== 'answering' || !canSubmit) return;
+    setPhase('submitting');
+    setError(null);
+    setIntervention(null); // the offer pertained to this attempt; it is now spent
+    setMidNudge(null); // a mid-problem nudge is spent once the learner answers
+    await submitAnswerValue(submittedAnswer);
   }
 
   async function handleHint(): Promise<void> {
@@ -440,6 +465,43 @@ export function Tutor({
     } catch {
       setError('Could not load a hint right now.');
     }
+  }
+
+  // The camera beat (HR.C1/C3) — the learner photographs the work they did on paper instead of
+  // typing it. Read the file → POST /transcribe-answer → show the read-back ("I read this as 3/4 —
+  // right?"). It NEVER grades off the scan directly: an unreadable image asks for a retake, and a
+  // readable one waits for the learner to confirm before it goes through the normal /turn (§8.2).
+  async function handleSnap(event: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.target.files?.[0];
+    // Clear the input so picking the same file again still fires onChange (retake the same photo).
+    event.target.value = '';
+    if (!file || phase !== 'answering') return;
+    setError(null);
+    setScanning(true);
+    setReadBack(null);
+    // (No telemetry event for the snap itself: `answer_scan` isn't in TelemetryEventType / the
+    // backend /events vocabulary yet. Flagged to T1; cheap to add when wanted.)
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setReadBack(await transcribeAnswer(dataUrl));
+    } catch {
+      setError('We could not read that photo. You can try again or type your answer.');
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  // Confirm a readable scan ("yes, that's my answer") → submit the transcribed string through the
+  // SAME /turn the typed path uses. Mirrors handleSubmit's guards.
+  async function handleConfirmScan(): Promise<void> {
+    if (phase !== 'answering' || readBack?.transcribed_answer == null) return;
+    const answer = readBack.transcribed_answer;
+    setPhase('submitting');
+    setError(null);
+    setReadBack(null);
+    setIntervention(null);
+    setMidNudge(null);
+    await submitAnswerValue(answer);
   }
 
   function handleNext(): void {
@@ -475,6 +537,8 @@ export function Tutor({
     setHintUsed(false);
     setRevealCount(1);
     setLastAnswer(null);
+    setReadBack(null); // a fresh problem starts with no scan in flight (it's per-problem)
+    setScanning(false);
     // Carry any proactive offer the just-finished turn produced onto this next problem.
     setIntervention(result.intervention ?? null);
     setMidNudge(null); // a fresh problem starts with no mid-problem nudge (it's per-problem)
@@ -538,9 +602,10 @@ export function Tutor({
 
   return (
     <main className="wm-tutor">
-      {/* Slim CREAM top bar (the mock's top strip): the ← Course-path plaque and the sparks
-          plaque are carved-wood plaques (the "wood behind course path and spark"), with the
-          big serif lesson title between them. This is the only chrome above the world. */}
+      {/* The ← Course-path plaque and the sparks plaque are carved-wood plaques (the "wood behind
+          course path and spark"). The bar floats transparently over the top of the world so the
+          lesson background runs ALL the way up behind it (owner request); the lesson title moved
+          down onto the big wood banner below. */}
       <header className="wm-tutor-topbar">
         <div className="wm-tutor-topbar-left">
           {onExit !== undefined ? (
@@ -551,10 +616,6 @@ export function Tutor({
             </button>
           ) : null}
         </div>
-        <div className="wm-tutor-topbar-title">
-          <p className="wm-tutor-eyebrow">Lesson</p>
-          <h1 className="wm-tutor-title">{lessonTitle}</h1>
-        </div>
         <div className="wm-tutor-topbar-right">
           <WoodBanner variant="wide" className="wm-tutor-chip-banner">
             <SparkCount total={sparks} />
@@ -562,22 +623,19 @@ export function Tutor({
         </div>
       </header>
 
-      {/* The storybook WORLD stage: the lesson plays out over the village background. A carved
-          wooden BANNER (9-slice PNG frame) holds the S1–S5 progress tracker at the top of the
-          world, then the floating cream problem card (the calm working surface — every answer
-          widget, the actions, feedback / mastered / worked-example blocks). Pi, the companion +
-          global nav, stands at the bottom-right. */}
+      {/* The storybook WORLD stage: the lesson plays out over the village background, which now
+          runs all the way up behind the floating top bar. A carved wooden BANNER (9-slice PNG
+          frame) carries the lesson TITLE at the top of the world (owner request), then the
+          floating cream problem card (the calm working surface — every answer widget, the actions,
+          feedback / mastered / worked-example blocks). Pi, the companion + global nav, stands at
+          the bottom-right. */}
       <section
         className="wm-tutor-stage"
         style={{ '--wm-tutor-bg': lessonBackground(problem.kc) } as React.CSSProperties}
       >
-        <WoodBanner variant="long" className="wm-tutor-stepper-row">
-          <p className="wm-tutor-steps-caption">
-            {problemNumber <= lessonLength
-              ? `Problem ${String(problemNumber)} of ${String(lessonLength)}`
-              : `Problem ${String(problemNumber)}`}
-          </p>
-          <LessonTracker progress={lessonProgress} phase={lessonPhase} />
+        <WoodBanner variant="long" className="wm-tutor-titlebanner">
+          <p className="wm-tutor-banner-eyebrow">Lesson</p>
+          <h1 className="wm-tutor-banner-title">{lessonTitle}</h1>
         </WoodBanner>
 
         <section className="wm-tutor-card" aria-live="polite">
@@ -708,7 +766,92 @@ export function Tutor({
                 >
                   I'd like a hint
                 </button>
+                {/* Camera beat (HR.C1/C3): "snap your work" — a label wrapping a hidden file input
+                    that opens the camera on a phone (capture="environment") or a file picker on
+                    desktop. The photo is read back for confirmation before it's graded. */}
+                <label
+                  className={`wm-tutor-snap${scanning ? ' wm-tutor-snap--busy' : ''}`}
+                  aria-disabled={phase === 'submitting' || scanning}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="wm-tutor-snap-input"
+                    onChange={(e) => {
+                      void handleSnap(e);
+                    }}
+                    disabled={phase === 'submitting' || scanning}
+                  />
+                  <span className="wm-tutor-snap-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path
+                        d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.2-1.8A1 1 0 0 1 9.5 5h5a1 1 0 0 1 .8.4L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5z"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="12" cy="12.5" r="3.2" />
+                    </svg>
+                  </span>
+                  {scanning ? 'Reading…' : 'Snap your work'}
+                </label>
               </div>
+
+              {/* The read-back: what the scanner read, shown for confirmation BEFORE grading. A
+                  readable scan offers "Yes, use it" (→ /turn) + "Retake"; an unreadable one only
+                  asks for a retake. Never grades a scan the learner hasn't confirmed (HR.C3). */}
+              {readBack !== null ? (
+                <div className="wm-tutor-readback" role="status" aria-live="polite">
+                  <p className="wm-tutor-readback-prompt">
+                    {readBack.readable && readBack.transcribed_answer != null
+                      ? 'I read your work — does this look right?'
+                      : "I couldn't read that one. Try a clearer photo, or just type your answer."}
+                  </p>
+                  {readBack.readable && readBack.transcribed_answer != null ? (
+                    <>
+                      <p className="wm-tutor-readback-answer">{readBack.transcribed_answer}</p>
+                      <div className="wm-tutor-readback-actions">
+                        <button
+                          type="button"
+                          className="wm-tutor-readback-confirm"
+                          onClick={() => {
+                            void handleConfirmScan();
+                          }}
+                          disabled={phase === 'submitting'}
+                        >
+                          Yes, use it
+                        </button>
+                        <label className="wm-tutor-readback-retake">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="wm-tutor-snap-input"
+                            onChange={(e) => {
+                              void handleSnap(e);
+                            }}
+                            disabled={phase === 'submitting' || scanning}
+                          />
+                          Retake
+                        </label>
+                      </div>
+                    </>
+                  ) : (
+                    <label className="wm-tutor-readback-retake wm-tutor-readback-retake--solo">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="wm-tutor-snap-input"
+                        onChange={(e) => {
+                          void handleSnap(e);
+                        }}
+                        disabled={phase === 'submitting' || scanning}
+                      />
+                      Retake the photo
+                    </label>
+                  )}
+                </div>
+              ) : null}
             </form>
           ) : (
             <div className="wm-tutor-feedback-block">
@@ -822,6 +965,12 @@ export function Tutor({
               {error}
             </p>
           ) : null}
+          {/* A small problem counter in the card's bottom-right corner (owner request) — the
+              learner's position in the ramp, e.g. "1/13". Capped at the lesson length so the old
+              unbounded loop can't render a nonsensical "14/13". */}
+          <span className="wm-tutor-card-counter" aria-label="Problem number">
+            {Math.min(problemNumber, lessonLength)}/{lessonLength}
+          </span>
         </section>
 
         {/* Pi stands at the bottom-right of the world (the mock's placement) — the companion AND

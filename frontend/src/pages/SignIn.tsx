@@ -181,9 +181,6 @@ export function SignIn({
               }}
             >
               Student Demo Free
-              <span className="wm-signin-tag" aria-hidden="true">
-                ✦
-              </span>
             </button>
           </div>
         </div>
