@@ -1,0 +1,96 @@
+/* Number-set classification input (KC_classify_number_sets, TEKS 6.2A). Concentric rings —
+   Rational ⊃ Integers ⊃ Whole — drawn as nested rounded rectangles so subset containment reads at
+   a glance; each ring is an independent toggle. Calm/editorial to match the in-tutor register.
+   Class names unique app-wide (global CSS). The requested wm-venn-* prefix is kept even though the
+   component is ClassifySets (the widget_id is "classify_sets"). */
+
+.wm-venn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--wm-sp-3);
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.wm-venn-prompt {
+  margin: 0;
+  align-self: flex-start;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+}
+
+.wm-venn-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* A region group — the whole ring + label is one toggle target. */
+.wm-venn-region {
+  cursor: pointer;
+  outline: none;
+}
+
+.wm-venn-region:disabled,
+.wm-venn-region[aria-disabled='true'] {
+  cursor: default;
+}
+
+/* The ring outline — navy on cream; fills with the "correct" semantic teal when selected, so a
+   chosen set reads as marked (shape + fill, not colour alone — the label stays readable). */
+.wm-venn-ring {
+  fill: var(--wm-cream);
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2.5;
+  transition:
+    fill 0.12s ease,
+    stroke-width 0.12s ease;
+}
+
+.wm-venn-region--selected > .wm-venn-ring {
+  fill: var(--wm-mean-correct, #9ad17c);
+  fill-opacity: 0.55;
+  stroke-width: 4;
+}
+
+.wm-venn-region:focus-visible > .wm-venn-ring {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 0 4px var(--wm-blue-soft));
+}
+
+.wm-venn-region:hover > .wm-venn-ring {
+  fill: var(--wm-cream-2);
+}
+
+.wm-venn-region--selected:hover > .wm-venn-ring {
+  fill: var(--wm-mean-correct, #9ad17c);
+  fill-opacity: 0.7;
+}
+
+/* Set labels — bold navy serif, near the top edge of each ring. */
+.wm-venn-label {
+  fill: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 17px;
+  font-weight: 700;
+  pointer-events: none; /* clicks fall through to the region group */
+}
+
+/* The stimulus number, centered — display only. */
+.wm-venn-number {
+  fill: var(--wm-ink);
+  font-family: var(--wm-font-serif);
+  font-size: 40px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-venn-ring {
+    transition: none;
+  }
+}

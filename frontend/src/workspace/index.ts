@@ -6,6 +6,7 @@ export { YesNo, yesNoToAnswer } from './YesNo';
 export { NumberEntry } from './NumberEntry';
 export { ExpressionInput } from './ExpressionInput';
 export { InequalityInput, inequalityToAnswer } from './InequalityInput';
+export { ClassifySets, selectionToAnswer, answerToSelection } from './ClassifySets';
 export {
   CoordinatePlane,
   pointsToAnswer,
