@@ -9,7 +9,6 @@ import { TeacherStudentView } from './TeacherStudentView';
 // The client runs in demo mode (bots deferred), so it serves the seeded class directly.
 
 describe('TeacherStudentView', () => {
-
   it('renders the alerts banner before the rest of the sections', async () => {
     render(<TeacherStudentView studentId="stu-maya" onBack={vi.fn()} />);
     await screen.findByRole('heading', { level: 1, name: /Maya R\./ });

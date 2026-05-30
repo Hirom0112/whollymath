@@ -89,9 +89,7 @@ export function TeacherDashboard({
         <div className="wm-teacher-headline">
           <div>
             <h1 className="wm-teacher-title">{header?.klass ?? 'Your class'}</h1>
-            {header !== null ? (
-              <p className="wm-teacher-subtitle">{header.teacher}</p>
-            ) : null}
+            {header !== null ? <p className="wm-teacher-subtitle">{header.teacher}</p> : null}
           </div>
           <div className="wm-teacher-summary" aria-hidden={students === null}>
             {CATEGORY_ORDER.map((cat) => (
@@ -184,11 +182,7 @@ function StudentRow({
   const alerts = student.alerts ?? [];
   return (
     <li>
-      <button
-        type="button"
-        className="wm-teacher-row"
-        onClick={() => onOpen(student.student_id)}
-      >
+      <button type="button" className="wm-teacher-row" onClick={() => onOpen(student.student_id)}>
         <span className="wm-teacher-row-main">
           <span className="wm-teacher-row-name">{student.name}</span>
           <span className="wm-teacher-row-reason">{student.category_reason}</span>

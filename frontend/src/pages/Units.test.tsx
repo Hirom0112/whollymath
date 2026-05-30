@@ -130,8 +130,24 @@ describe('Units', () => {
     mockUnits({
       assigned_unit_slug: null,
       units: [
-        { ...LIST.units![0], unit_slug: 'a', title: 'Alpha', order: 1, status: 'available', percent_complete: 0, assigned: false },
-        { ...LIST.units![0], unit_slug: 'b', title: 'Beta', order: 2, status: 'available', percent_complete: 0, assigned: false },
+        {
+          ...LIST.units![0],
+          unit_slug: 'a',
+          title: 'Alpha',
+          order: 1,
+          status: 'available',
+          percent_complete: 0,
+          assigned: false,
+        },
+        {
+          ...LIST.units![0],
+          unit_slug: 'b',
+          title: 'Beta',
+          order: 2,
+          status: 'available',
+          percent_complete: 0,
+          assigned: false,
+        },
       ],
     });
     const onOpenUnit = vi.fn();

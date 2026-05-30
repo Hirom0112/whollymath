@@ -229,7 +229,9 @@ export async function fetchCourse(sessionId?: string | null): Promise<CourseView
 // the list/detail reflects their in-session progress; a signed-in learner (auth token) gets it
 // from persisted mastery and the server ignores the session id (units_routes.py).
 function sessionQuery(sessionId?: string | null): string {
-  return sessionId != null && sessionId !== '' ? `?session_id=${encodeURIComponent(sessionId)}` : '';
+  return sessionId != null && sessionId !== ''
+    ? `?session_id=${encodeURIComponent(sessionId)}`
+    : '';
 }
 
 /**
@@ -247,10 +249,7 @@ export async function fetchUnits(sessionId?: string | null): Promise<UnitListVie
  * Resolves progress like {@link fetchUnits}. Throws ApiError(404) for a slug not in the catalog,
  * which the unit page surfaces as a gentle "unit not found". The student unit-detail page (STU.4).
  */
-export async function fetchUnit(
-  slug: string,
-  sessionId?: string | null,
-): Promise<UnitDetailView> {
+export async function fetchUnit(slug: string, sessionId?: string | null): Promise<UnitDetailView> {
   return getJson<UnitDetailView>(`/unit/${encodeURIComponent(slug)}${sessionQuery(sessionId)}`);
 }
 

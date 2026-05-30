@@ -87,7 +87,9 @@ describe('Unit', () => {
   it('launches the Tutor with the lesson KC when a built, unlocked lesson is clicked', async () => {
     mockUnit(DETAIL);
     const onStartLesson = vi.fn();
-    render(<Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} onFoundation={vi.fn()} />);
+    render(
+      <Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} onFoundation={vi.fn()} />,
+    );
     fireEvent.click(await screen.findByRole('button', { name: /Ratio language/ }));
     expect(onStartLesson).toHaveBeenCalledWith('KC_equivalence');
   });
@@ -95,7 +97,9 @@ describe('Unit', () => {
   it('shows a "coming soon" notice (not a dead click) for a lesson with no live KC', async () => {
     mockUnit(DETAIL);
     const onStartLesson = vi.fn();
-    render(<Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} onFoundation={vi.fn()} />);
+    render(
+      <Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} onFoundation={vi.fn()} />,
+    );
     fireEvent.click(await screen.findByRole('button', { name: /Unit conversion/ }));
     expect(onStartLesson).not.toHaveBeenCalled();
     expect(await screen.findByText(/coming soon/)).toBeInTheDocument();

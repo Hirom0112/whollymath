@@ -45,7 +45,9 @@ const STATUS_META: Record<PathNodeStatus, { label: string; cta: string | null }>
 
 function StatusBadge({ status }: { status: PathNodeStatus }): React.JSX.Element {
   return (
-    <span className={`wm-pathrail-badge wm-pathrail-badge--${status}`}>{STATUS_META[status].label}</span>
+    <span className={`wm-pathrail-badge wm-pathrail-badge--${status}`}>
+      {STATUS_META[status].label}
+    </span>
   );
 }
 

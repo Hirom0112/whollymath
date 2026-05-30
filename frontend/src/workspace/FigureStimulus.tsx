@@ -126,7 +126,12 @@ function Prism({
       <text x={262} y={180} textAnchor="start" className="wm-fig-dim">
         {height}
       </text>
-      <text x={String(250 + dx + 6)} y={String(120 + dy / 2)} textAnchor="start" className="wm-fig-dim">
+      <text
+        x={String(250 + dx + 6)}
+        y={String(120 + dy / 2)}
+        textAnchor="start"
+        className="wm-fig-dim"
+      >
         {width}
       </text>
     </>

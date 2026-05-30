@@ -42,12 +42,15 @@ function expressionSafe(raw: string): string {
 }
 
 /** The operator palette: kid-facing glyph → the SymPy token it inserts into the value. */
-const PALETTE: readonly { readonly label: string; readonly insert: string; readonly aria: string }[] =
-  [
-    { label: '×', insert: '*', aria: 'multiply' },
-    { label: '÷', insert: '/', aria: 'divide' },
-    { label: '( )', insert: '()', aria: 'parentheses' },
-  ];
+const PALETTE: readonly {
+  readonly label: string;
+  readonly insert: string;
+  readonly aria: string;
+}[] = [
+  { label: '×', insert: '*', aria: 'multiply' },
+  { label: '÷', insert: '/', aria: 'divide' },
+  { label: '( )', insert: '()', aria: 'parentheses' },
+];
 
 export function ExpressionInput({
   value,

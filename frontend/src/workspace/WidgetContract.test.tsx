@@ -44,15 +44,19 @@ describe('selectWidget', () => {
   it('picks the number line for a number-line surface with snap intervals', () => {
     expect(
       selectWidget(
-        problem({ kc: 'KC_number_line_placement', surface_format: 'number_line', tick_segments: 4 }),
+        problem({
+          kc: 'KC_number_line_placement',
+          surface_format: 'number_line',
+          tick_segments: 4,
+        }),
       ),
     ).toBe('number_line');
   });
 
   it('falls back off the number line when it has no snap intervals', () => {
-    expect(
-      selectWidget(problem({ surface_format: 'number_line', tick_segments: null })),
-    ).toBe('fraction_editor');
+    expect(selectWidget(problem({ surface_format: 'number_line', tick_segments: null }))).toBe(
+      'fraction_editor',
+    );
   });
 
   it('picks the one-box number entry for common-denominator (a whole-number answer)', () => {
@@ -79,8 +83,8 @@ describe('selectWidget', () => {
   });
 
   it('prioritizes a yes/no answer even on a non-symbolic surface', () => {
-    expect(
-      selectWidget(problem({ kc: 'KC_number_line_placement', answer_kind: 'yes_no' })),
-    ).toBe('yes_no');
+    expect(selectWidget(problem({ kc: 'KC_number_line_placement', answer_kind: 'yes_no' }))).toBe(
+      'yes_no',
+    );
   });
 });

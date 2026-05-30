@@ -227,7 +227,13 @@ export function CoordinatePlane({
         {/* The keyboard cursor — a hollow ring at the cursor coord, shown only while the grid has
             keyboard focus, so pointer users never see it. */}
         {focused && !disabled ? (
-          <circle cx={sx(cursor.x)} cy={sy(cursor.y)} r={9} className="wm-coord-cursor" aria-hidden="true" />
+          <circle
+            cx={sx(cursor.x)}
+            cy={sy(cursor.y)}
+            r={9}
+            className="wm-coord-cursor"
+            aria-hidden="true"
+          />
         ) : null}
         {points.map((p, i) => (
           <g key={`${String(p.x)}:${String(p.y)}`}>

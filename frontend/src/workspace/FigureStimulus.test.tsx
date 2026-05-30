@@ -16,9 +16,9 @@ describe('describeFigure', () => {
     expect(describeFigure({ shape: 'triangle', labels: { base: '10 in', height: '4 in' } })).toBe(
       'Triangle, base 10 in, height 4 in',
     );
-    expect(
-      describeFigure({ shape: 'parallelogram', labels: { base: '6 m', height: '5 m' } }),
-    ).toBe('Parallelogram, base 6 m, height 5 m');
+    expect(describeFigure({ shape: 'parallelogram', labels: { base: '6 m', height: '5 m' } })).toBe(
+      'Parallelogram, base 6 m, height 5 m',
+    );
     expect(
       describeFigure({
         shape: 'prism',
@@ -32,11 +32,15 @@ describe('FigureStimulus', () => {
   it('renders as a labeled image describing the figure for screen readers', () => {
     const spec: FigureSpec = { shape: 'rectangle', labels: { base: '8 cm', height: '3 cm' } };
     render(<FigureStimulus spec={spec} />);
-    expect(screen.getByRole('img', { name: /rectangle, base 8 cm, height 3 cm/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /rectangle, base 8 cm, height 3 cm/i }),
+    ).toBeInTheDocument();
   });
 
   it('shows the dimension labels on the drawing', () => {
-    render(<FigureStimulus spec={{ shape: 'triangle', labels: { base: '10 in', height: '4 in' } }} />);
+    render(
+      <FigureStimulus spec={{ shape: 'triangle', labels: { base: '10 in', height: '4 in' } }} />,
+    );
     expect(screen.getByText('10 in')).toBeInTheDocument();
     expect(screen.getByText('4 in')).toBeInTheDocument();
   });
@@ -48,7 +52,9 @@ describe('FigureStimulus', () => {
       />,
     );
     expect(
-      screen.getByRole('img', { name: /right rectangular prism, length 5 cm, width 2 cm, height 3 cm/i }),
+      screen.getByRole('img', {
+        name: /right rectangular prism, length 5 cm, width 2 cm, height 3 cm/i,
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText('5 cm')).toBeInTheDocument();
     expect(screen.getByText('2 cm')).toBeInTheDocument();

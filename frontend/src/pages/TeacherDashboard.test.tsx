@@ -9,7 +9,6 @@ import { TeacherDashboard } from './TeacherDashboard';
 // fetchRoster serves the seeded demo class directly — no network to stub.
 
 describe('TeacherDashboard', () => {
-
   it('groups students under ranked category sections, struggling first', async () => {
     render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
 

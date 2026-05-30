@@ -15,11 +15,14 @@ describe('CategoryChip', () => {
     ['struggling', /struggling/i],
     ['needs_attention', /needs attention/i],
     ['on_track', /on track/i],
-  ] as const)('%s renders both a word and a drawn icon (color is never the only cue)', (cat, word) => {
-    const { container } = render(<CategoryChip category={cat} />);
-    expect(container.textContent ?? '').toMatch(word);
-    expect(container.querySelector('svg')).not.toBeNull();
-  });
+  ] as const)(
+    '%s renders both a word and a drawn icon (color is never the only cue)',
+    (cat, word) => {
+      const { container } = render(<CategoryChip category={cat} />);
+      expect(container.textContent ?? '').toMatch(word);
+      expect(container.querySelector('svg')).not.toBeNull();
+    },
+  );
 });
 
 describe('AlertBadge', () => {

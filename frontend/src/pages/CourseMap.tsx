@@ -75,7 +75,12 @@ export function CourseMap({
   // onExit; with no items, Pi is just the friendly mascot (no menu to open).
   const navItems: PiMenuItem[] = [];
   if (onBrowseUnits !== undefined) {
-    navItems.push({ id: 'units', label: 'Explore units', icon: 'dashboard', onSelect: onBrowseUnits });
+    navItems.push({
+      id: 'units',
+      label: 'Explore units',
+      icon: 'dashboard',
+      onSelect: onBrowseUnits,
+    });
   }
   if (onExit !== undefined) {
     navItems.push({ id: 'exit', label: 'Save & exit', icon: 'exit', onSelect: onExit });
@@ -153,10 +158,7 @@ export function CourseMap({
         ) : null}
 
         {course !== null ? (
-          <LearningPathRail
-            nodes={(course.nodes ?? []).map(toPathNode)}
-            onSelect={onStartLesson}
-          />
+          <LearningPathRail nodes={(course.nodes ?? []).map(toPathNode)} onSelect={onStartLesson} />
         ) : null}
       </div>
     </main>

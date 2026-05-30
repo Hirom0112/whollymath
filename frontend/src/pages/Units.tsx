@@ -120,7 +120,10 @@ function UnitCard({
           </span>
         </span>
         <span className="wm-units-progress" aria-hidden="true">
-          <span className="wm-units-progress-fill" style={{ width: `${String(unit.percent_complete)}%` }} />
+          <span
+            className="wm-units-progress-fill"
+            style={{ width: `${String(unit.percent_complete)}%` }}
+          />
         </span>
         <span className="wm-units-cta">{meta.cta}</span>
       </button>
@@ -164,7 +167,8 @@ export function Units({
   const assignedSlug = data?.assigned_unit_slug ?? null;
   // Units in teaching order with the fresh-student progression gate applied (stopgap; see docstring).
   const units = data !== null ? gateUnits(data.units ?? [], assignedSlug) : [];
-  const assignedUnit = assignedSlug != null ? units.find((u) => u.unit_slug === assignedSlug) : undefined;
+  const assignedUnit =
+    assignedSlug != null ? units.find((u) => u.unit_slug === assignedSlug) : undefined;
 
   return (
     <main className="wm-units">
@@ -178,8 +182,8 @@ export function Units({
           <div className="wm-units-headtext">
             <h1 className="wm-units-headline">Your units</h1>
             <p className="wm-units-subhead">
-              Start with Unit 1 — each unit is a little set of lessons, and finishing one unlocks the
-              next.
+              Start with Unit 1 — each unit is a little set of lessons, and finishing one unlocks
+              the next.
             </p>
             {/* Foundation work = the CourseMap's 5 fraction skills. Kept one tap away so a student
                 who needs the basics can always drop down to them. */}

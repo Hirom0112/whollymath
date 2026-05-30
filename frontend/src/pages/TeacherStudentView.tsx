@@ -94,9 +94,7 @@ export function TeacherStudentView({
         </p>
       ) : null}
 
-      {student === null && error === null ? (
-        <p className="wm-tstudent-loading">Loading…</p>
-      ) : null}
+      {student === null && error === null ? <p className="wm-tstudent-loading">Loading…</p> : null}
 
       {student !== null ? (
         <main className="wm-tstudent-main">
@@ -107,11 +105,7 @@ export function TeacherStudentView({
           <p className="wm-tstudent-reason">{student.category_reason}</p>
 
           {/* (1) ALERTS — first, and announced. aria-live so a screen reader reads new alerts. */}
-          <section
-            className="wm-tstudent-alerts"
-            aria-label="Alerts"
-            aria-live="polite"
-          >
+          <section className="wm-tstudent-alerts" aria-label="Alerts" aria-live="polite">
             {(student.alerts ?? []).length > 0 ? (
               (student.alerts ?? []).map((a) => (
                 <AlertBadge key={a.kind} alert={a} variant="full" />
@@ -171,7 +165,10 @@ export function TeacherStudentView({
 function WhySection({ student }: { student: StudentDetail }): React.JSX.Element {
   const { struggle } = student;
   return (
-    <section className="wm-tstudent-card wm-tstudent-why" aria-label="Why this student is struggling">
+    <section
+      className="wm-tstudent-card wm-tstudent-why"
+      aria-label="Why this student is struggling"
+    >
       <h2 className="wm-tstudent-h2">What’s going on</h2>
       <p className="wm-tstudent-why-headline">{struggle.headline}</p>
       <p className="wm-tstudent-why-detail">{struggle.detail}</p>
@@ -224,9 +221,7 @@ function SkillColumn({
                   style={{ width: `${String(Math.round(skill.probability * 100))}%` }}
                 />
               </span>
-              <span className="wm-tstudent-skill-pct">
-                {Math.round(skill.probability * 100)}%
-              </span>
+              <span className="wm-tstudent-skill-pct">{Math.round(skill.probability * 100)}%</span>
             </li>
           ))}
         </ul>

@@ -79,7 +79,11 @@ const SEED: DemoSeed[] = [
         { ...SKILL.common, probability: 0.18, status: 'locked' },
       ],
       activity: [
-        { at: '20m ago', label: 'Compared 3/8 and 1/2, chose 3/8 (bigger denominator)', outcome: 'incorrect' },
+        {
+          at: '20m ago',
+          label: 'Compared 3/8 and 1/2, chose 3/8 (bigger denominator)',
+          outcome: 'incorrect',
+        },
         { at: '22m ago', label: 'Asked for a hint on equivalent fractions', outcome: 'neutral' },
         { at: '25m ago', label: 'Compared 2/3 and 3/4, chose 2/3', outcome: 'incorrect' },
         { at: '1d ago', label: 'Placed 3/4 on the number line', outcome: 'correct' },
@@ -125,10 +129,18 @@ const SEED: DemoSeed[] = [
         { ...SKILL.equivalence, probability: 0.15, status: 'locked' },
       ],
       activity: [
-        { at: '5m ago', label: 'Placed 2/3 on a line marked 0 to 2, landed on 2/6', outcome: 'incorrect' },
+        {
+          at: '5m ago',
+          label: 'Placed 2/3 on a line marked 0 to 2, landed on 2/6',
+          outcome: 'incorrect',
+        },
         { at: '8m ago', label: 'Worked example shown (re-teach)', outcome: 'neutral' },
         { at: '10m ago', label: 'Placed 2/3, landed at the second tick', outcome: 'incorrect' },
-        { at: '2d ago', label: 'Entered remediation from Equivalent fractions', outcome: 'neutral' },
+        {
+          at: '2d ago',
+          label: 'Entered remediation from Equivalent fractions',
+          outcome: 'neutral',
+        },
       ],
       assignable_units: ALL_UNITS,
       assigned_unit_id: null,
@@ -206,8 +218,16 @@ const SEED: DemoSeed[] = [
       ],
       weaknesses: [{ ...SKILL.common, probability: 0.38, status: 'in_progress' }],
       activity: [
-        { at: '30m ago', label: 'Common denominator for 1/4 and 1/6, answered 10', outcome: 'incorrect' },
-        { at: '32m ago', label: 'Common denominator for 1/2 and 1/3, answered 5', outcome: 'incorrect' },
+        {
+          at: '30m ago',
+          label: 'Common denominator for 1/4 and 1/6, answered 10',
+          outcome: 'incorrect',
+        },
+        {
+          at: '32m ago',
+          label: 'Common denominator for 1/2 and 1/3, answered 5',
+          outcome: 'incorrect',
+        },
         { at: '4h ago', label: 'Mastered Equivalent fractions', outcome: 'correct' },
       ],
       assignable_units: ALL_UNITS,

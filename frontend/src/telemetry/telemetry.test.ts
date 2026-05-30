@@ -63,9 +63,16 @@ describe('TelemetryBuffer', () => {
   });
 
   it('surfaces a mid-problem nudge from the flush response to onNudge (Beat 1)', async () => {
-    mockFetchOk(true, { accepted: 1, nudge: { text: 'Try same-size pieces first.', kind: 'offer' } });
+    mockFetchOk(true, {
+      accepted: 1,
+      nudge: { text: 'Try same-size pieces first.', kind: 'offer' },
+    });
     const nudges: string[] = [];
-    const buffer = new TelemetryBuffer('sess-1', () => 1000, (n) => nudges.push(n.text));
+    const buffer = new TelemetryBuffer(
+      'sess-1',
+      () => 1000,
+      (n) => nudges.push(n.text),
+    );
     buffer.track('idle', { after_ms: 30000 });
     await buffer.flush();
     expect(nudges).toEqual(['Try same-size pieces first.']);

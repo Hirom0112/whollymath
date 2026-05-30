@@ -24,7 +24,15 @@ function IconAlertTriangle(): React.JSX.Element {
         strokeWidth="2.2"
         strokeLinejoin="round"
       />
-      <line x1="12" y1="9" x2="12" y2="14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <line
+        x1="12"
+        y1="9"
+        x2="12"
+        y2="14"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
       <circle cx="12" cy="17.3" r="1.3" fill="currentColor" />
     </svg>
   );
@@ -65,7 +73,15 @@ function IconInfo(): React.JSX.Element {
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.2" />
       <circle cx="12" cy="7.6" r="1.3" fill="currentColor" />
-      <line x1="12" y1="11" x2="12" y2="17" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <line
+        x1="12"
+        y1="11"
+        x2="12"
+        y2="17"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -180,9 +196,7 @@ export function AlertBadge({
           <span className="wm-teacher-alert-sev">{sev.word}</span>
           {label}
         </span>
-        {variant === 'full' ? (
-          <span className="wm-teacher-alert-msg">{alert.message}</span>
-        ) : null}
+        {variant === 'full' ? <span className="wm-teacher-alert-msg">{alert.message}</span> : null}
       </span>
     </span>
   );
