@@ -289,10 +289,12 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0; /* let long activity labels wrap instead of forcing horizontal overflow */
 }
 .wm-tstudent-tl-label {
   font-size: var(--wm-fs-ui);
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .wm-tstudent-tl-time {
   font-size: var(--wm-fs-meta);
@@ -328,6 +330,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0; /* title shrinks/wraps rather than pushing the Assign button off-screen */
 }
 .wm-tstudent-assign-title {
   font-weight: 700;
