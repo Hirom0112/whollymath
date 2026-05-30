@@ -63,6 +63,7 @@ from app.db.models import Unit
 from app.db.repositories import EventRow
 from app.domain.curriculum import CatalogUnit, all_units, get_unit
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
+from app.domain.lesson_spec import widget_for_representation
 from app.domain.problem_generators import Problem
 from app.domain.verifier import verify
 from app.events.ingest import ingest_events
@@ -152,6 +153,7 @@ def _problem_view(problem: Problem) -> ProblemView:
         problem_id=problem.problem_id,
         kc=problem.kc,
         surface_format=problem.surface_format,
+        widget_id=widget_for_representation(problem.surface_format).value,
         statement=problem.statement,
         answer_kind=problem.answer_kind,
         yes_no_relation=problem.yes_no_relation,

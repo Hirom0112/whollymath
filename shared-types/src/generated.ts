@@ -1009,6 +1009,10 @@ export interface ProblemView {
   kc: KnowledgeComponentId;
   surface_format: Representation;
   /**
+   * The live workspace widget for this problem's representation, e.g. 'number_line' (HR.A5). The single source of truth for selectWidget(problemView) — the surface reads this instead of branching on the KC, so a new widget plugs in for free.
+   */
+  widget_id: string;
+  /**
    * Kid-friendly problem text.
    */
   statement: string;
@@ -1151,6 +1155,10 @@ export interface ProblemView1 {
   problem_id: string;
   kc: KnowledgeComponentId;
   surface_format: Representation;
+  /**
+   * The live workspace widget for this problem's representation, e.g. 'number_line' (HR.A5). The single source of truth for selectWidget(problemView) — the surface reads this instead of branching on the KC, so a new widget plugs in for free.
+   */
+  widget_id: string;
   /**
    * Kid-friendly problem text.
    */

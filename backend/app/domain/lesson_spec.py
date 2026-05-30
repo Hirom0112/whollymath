@@ -53,6 +53,15 @@ _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
 }
 
 
+def widget_for_representation(representation: Representation) -> WidgetId:
+    """The live widget that renders a representation — the single source of truth (HR.A1/A5).
+
+    The wire carries this on each ``ProblemView`` so the frontend ``selectWidget(problemView)``
+    reads ``widget_id`` directly instead of branching on the KC (HR.A5 — a new widget plugs in for
+    free). Raises ``KeyError`` for an unmapped representation (every representation maps today)."""
+    return _WIDGET_FOR_REPRESENTATION[representation]
+
+
 @dataclass(frozen=True)
 class ErrorRoute:
     """Where an error category sends the learner — the table HR.A3's signal routing reads.
@@ -275,4 +284,5 @@ __all__ = [
     "TransferProbeSpec",
     "WidgetId",
     "get_lesson_spec",
+    "widget_for_representation",
 ]

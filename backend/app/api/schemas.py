@@ -155,6 +155,13 @@ class ProblemView(BaseModel):
     problem_id: str = Field(min_length=1, description="Stable id; echoed on the next turn.")
     kc: KnowledgeComponentId
     surface_format: Representation = Field(description="Representation to render (§3.5).")
+    widget_id: str = Field(
+        description=(
+            "The live workspace widget for this problem's representation, e.g. 'number_line' "
+            "(HR.A5). The single source of truth for selectWidget(problemView) — the surface "
+            "reads this instead of branching on the KC, so a new widget plugs in for free."
+        ),
+    )
     statement: str = Field(min_length=1, description="Kid-friendly problem text.")
     answer_kind: AnswerKind = Field(
         default=AnswerKind.NUMERIC,
