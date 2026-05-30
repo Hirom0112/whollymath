@@ -375,6 +375,22 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer Arithmetic (TEKS 6.3C/D) ───
+    # Add & subtract integers (TEKS-primary; adjacent-grade CCSS 7.NS.A.1): the answer is a single
+    # signed integer entered in the symbolic editor (reuses the editor, NO new widget). Advertises
+    # SYMBOLIC + NUMBER_LINE (the number line is the canonical picture of integer combination —
+    # directed jumps from a starting point), but LIVE only on SYMBOLIC for now
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the other Grade-6 KCs; the NUMBER_LINE
+    # widget exists, so this is a natural candidate to promote to a masterable second rep later.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.INTEGER_ADD_SUBTRACT,
+        skill_name="Add and subtract integers",
+        description=(
+            "Add and subtract positive and negative integers, accounting for the signs "
+            "(e.g. -5 + 3 = -2; 4 - 7 = -3), not by combining the magnitudes as whole numbers."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
 )
 
 

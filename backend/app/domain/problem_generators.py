@@ -1004,6 +1004,57 @@ def _generate_absolute_value(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer Arithmetic (TEKS 6.3C/D) ───
+
+# The integer-magnitude pool for "a + b" items by difficulty tier (the easy→hard ramp; CP.B):
+# higher tiers use larger magnitudes. The two operands always take OPPOSITE signs (the diagnostic
+# hard case), so the magnitude is drawn per operand and the signs are assigned + then -.
+_INTEGER_MAGNITUDE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3, 4, 5),
+    2: (3, 5, 6, 7, 8),
+    3: (6, 8, 9, 11, 13),
+    4: (10, 12, 15, 18, 20),
+}
+_INTEGER_MAGNITUDE_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15)
+
+
+def _generate_integer_add_subtract(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_integer_add_subtract: add two opposite-sign integers; the signed sum is the answer.
+
+    Builds ``a + b`` with ``a`` and ``b`` of OPPOSITE signs (the diagnostic hard case where the
+    add-the-magnitudes error bites). The correct value is the SymPy sum ``a + b``.
+    ``operands = (a, b)`` so the verifier can replay the sign-handling misconception
+    (``|a| + |b|`` — combine as whole numbers). Rendered symbolically (a negative second operand is
+    parenthesised, e.g. ``5 + (-3)``); ``difficulty`` widens the magnitude pool. With opposite signs
+    and both nonzero, ``|a| + |b| > |a + b|`` always, so the misconception is always diagnostic.
+    """
+    pool = (
+        _INTEGER_MAGNITUDE_BY_DIFFICULTY.get(difficulty, _INTEGER_MAGNITUDE_POOL)
+        if difficulty
+        else _INTEGER_MAGNITUDE_POOL
+    )
+    mag_a = rng.choice(pool)
+    mag_b = rng.choice(pool)
+    # Opposite signs: the seeded RNG decides which operand is the positive one.
+    if rng.random() < 0.5:
+        a, b = mag_a, -mag_b
+    else:
+        a, b = -mag_a, mag_b
+    b_text = f"({b})" if b < 0 else str(b)
+    statement = f"{a} + {b_text} = ?"
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.INTEGER_ADD_SUBTRACT, seed, surface_format),
+        kc=KnowledgeComponentId.INTEGER_ADD_SUBTRACT,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(a + b),
+        representations_available=get_kc(KnowledgeComponentId.INTEGER_ADD_SUBTRACT).representations,
+        operands=(Rational(a), Rational(b)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1023,6 +1074,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.MULTI_DIGIT_DIVISION: _generate_multi_digit_division,
     KnowledgeComponentId.DECIMAL_OPERATIONS: _generate_decimal_operations,
     KnowledgeComponentId.ABSOLUTE_VALUE: _generate_absolute_value,
+    KnowledgeComponentId.INTEGER_ADD_SUBTRACT: _generate_integer_add_subtract,
 }
 
 

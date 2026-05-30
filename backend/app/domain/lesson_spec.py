@@ -499,6 +499,29 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer Arithmetic (TEKS 6.3C/D) ───
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors
+    # route back to SYMBOLIC — the NUMBER_LINE rep is advertised (its widget exists) but isn't
+    # live yet, so "re-try on the same surface with a labeled hint" is the honest adaptation until
+    # NUMBER_LINE is promoted live. The OPERATION route names the sign-handling error directly.
+    _spec(
+        _KC.INTEGER_ADD_SUBTRACT,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Combine WITH the signs — opposite signs partly cancel; don't add the sizes.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Opposite signs make the result smaller than either size — re-check the amount.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

@@ -450,7 +450,10 @@ _UINT = CatalogUnit(
             unit_slug="uint",
             order=1,
             title="Integer add & subtract (models)",
-            kc_id="KC_integer_add_sub",
+            # Aligned to the enum/model label-space id ``KC_integer_add_subtract`` (was the stray
+            # ``KC_integer_add_sub``, which matched no KnowledgeComponentId member and so could
+            # never resolve or be built — Grade-6 build, 2026-05-30).
+            kc_id="KC_integer_add_subtract",
             ccss_code=None,
             teks_code="6.3C",
             description=(
@@ -463,7 +466,7 @@ _UINT = CatalogUnit(
             unit_slug="uint",
             order=2,
             title="Integer add/subtract fluency",
-            kc_id="KC_integer_add_sub",  # reuses
+            kc_id="KC_integer_add_subtract",  # reuses the models lesson's KC (uint_l1)
             ccss_code=None,
             teks_code="6.3D",
             description="Fluent signed add/subtract without the manipulative.",

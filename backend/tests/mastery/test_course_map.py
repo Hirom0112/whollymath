@@ -45,7 +45,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.GCF_LCM,  # Grade-6 Unit 2 (built 2026-05-30)
         KC.MULTI_DIGIT_DIVISION,  # Grade-6 Unit 2 (built 2026-05-30)
         KC.DECIMAL_OPERATIONS,  # Grade-6 Unit 2 (built 2026-05-30)
-        KC.ABSOLUTE_VALUE,  # Grade-6 Unit 3 (built 2026-05-30), last on the spine
+        KC.ABSOLUTE_VALUE,  # Grade-6 Unit 3 (built 2026-05-30)
+        KC.INTEGER_ADD_SUBTRACT,  # Grade-6 Unit-INT (built 2026-05-30), last on the spine
     ]
 
 

@@ -48,6 +48,7 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # size, not by a fraction-denominator pool.
             KnowledgeComponentId.DECIMAL_OPERATIONS,
             KnowledgeComponentId.ABSOLUTE_VALUE,  # whole-number operand; ramps by magnitude
+            KnowledgeComponentId.INTEGER_ADD_SUBTRACT,  # signed-integer operands; magnitude ramp
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

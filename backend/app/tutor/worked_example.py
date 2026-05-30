@@ -681,6 +681,37 @@ def _decimal_operations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _integer_add_subtract_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'move along the number line by the signed amount' steps for an integer sum (Unit-INT).
+
+    ``operands = (a, b)`` of opposite signs; the sum is ``a + b == problem.correct_value``. Raises
+    if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"integer problem {problem.problem_id} needs (a, b) operands")
+    a, b = int(operands[0]), int(operands[1])
+    answer = problem.correct_value
+    direction = "right (up)" if b > 0 else "left (down)"
+    return (
+        WorkedStep(
+            shown=f"Start at {a} on the number line.",
+            why_prompt="Why is the first number where you begin, before moving?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Adding {b} moves you {abs(b)} to the {direction} — toward the other sign.",
+            why_prompt="Why does a negative move you the opposite way from a positive?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"You land on {answer.p}.",
+            why_prompt="Why is the result smaller than just adding the two sizes together?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _absolute_value_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'distance from zero, drop the sign' steps for an absolute-value problem (Unit 3).
 
@@ -785,6 +816,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.MULTI_DIGIT_DIVISION: _multi_digit_division_steps,
     KnowledgeComponentId.DECIMAL_OPERATIONS: _decimal_operations_steps,
     KnowledgeComponentId.ABSOLUTE_VALUE: _absolute_value_steps,
+    KnowledgeComponentId.INTEGER_ADD_SUBTRACT: _integer_add_subtract_steps,
 }
 
 

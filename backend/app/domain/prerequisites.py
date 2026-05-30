@@ -78,6 +78,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # number-line placement — reading where a number sits relative to 0 is the readiness for "how
     # far from 0", and underpins the signed-vs-magnitude distinction the lesson targets.
     _KC.ABSOLUTE_VALUE: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit-INT: adding/subtracting integers is combining directed moves on the number
+    # line, so it forward-unlocks on number-line placement (judging where a number sits and which
+    # way its sign points is the readiness for the signed combination).
+    _KC.INTEGER_ADD_SUBTRACT: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -103,6 +107,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.MULTI_DIGIT_DIVISION,  # Grade-6 Unit 2: whole-number division, on number-line placement
     _KC.DECIMAL_OPERATIONS,  # Grade-6 Unit 2: multiply decimals, built on equivalence
     _KC.ABSOLUTE_VALUE,  # Grade-6 Unit 3: distance from 0, on number-line placement
+    _KC.INTEGER_ADD_SUBTRACT,  # Grade-6 Unit-INT: signed add/subtract, on number-line placement
 )
 
 

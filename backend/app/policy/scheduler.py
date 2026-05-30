@@ -81,6 +81,10 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # PRACTICE-ONLY until a signed NUMBER_LINE distance widget lands (T3), then adding NUMBER_LINE
     # makes it masterable with no other change.
     _KC.ABSOLUTE_VALUE: (_REP.SYMBOLIC,),
+    # Grade-6 Unit-INT: SYMBOLIC = the signed sum entered in the editor. PRACTICE-ONLY for now; the
+    # NUMBER_LINE rep (its widget exists) is the natural masterable second surface — adding
+    # NUMBER_LINE here promotes it, deferred to avoid over-scoping this build.
+    _KC.INTEGER_ADD_SUBTRACT: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

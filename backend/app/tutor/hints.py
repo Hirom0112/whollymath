@@ -353,6 +353,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Picture the number on the line — how many steps back to zero, ignoring the side?",
         ),
     ),
+    # Grade-6 Unit-INT: index 0 (operation) orients toward combining WITH the signs, not adding
+    # magnitudes; index 1 (magnitude) toward "opposite signs partly cancel, so it's smaller".
+    KnowledgeComponentId.INTEGER_ADD_SUBTRACT: (
+        _nudge(
+            KnowledgeComponentId.INTEGER_ADD_SUBTRACT,
+            "Opposite signs pull in opposite directions — they partly cancel, not pile up.",
+        ),
+        _nudge(
+            KnowledgeComponentId.INTEGER_ADD_SUBTRACT,
+            "Start at the first number and move by the second — which way does its sign send you?",
+        ),
+        _nudge(
+            KnowledgeComponentId.INTEGER_ADD_SUBTRACT,
+            "If you just added the sizes, you ignored the signs. The result should be smaller.",
+        ),
+    ),
 }
 
 

@@ -50,6 +50,7 @@ from app.domain.misconceptions import (
     MisconceptionId,
     WrongFraction,
     add_across,
+    add_magnitudes_ignoring_sign,
     additive_ratio,
     decimal_point_misplacement,
     gcf_lcm_confusion,
@@ -440,6 +441,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.MAGNITUDE,
         misconception=MisconceptionId.SIGNED_NOT_MAGNITUDE,
         predict=lambda ops: signed_not_magnitude(int(ops[0])),
+    ),
+    # sign-handling-error: combined two opposite-sign integers by ADDING their magnitudes, ignoring
+    # the signs (operands are (a, b)). A wrong OPERATION — applied whole-number addition instead of
+    # signed combination, so the answer is |a| + |b| rather than a + b.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.INTEGER_ADD_SUBTRACT,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.SIGN_HANDLING_ERROR,
+        predict=lambda ops: add_magnitudes_ignoring_sign(ops[0], ops[1]),
     ),
 )
 

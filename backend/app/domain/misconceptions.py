@@ -89,6 +89,9 @@ class MisconceptionId(StrEnum):
     # Unit 3 (6.NS.7c): "absolute value of a negative stays negative" — reports the signed value
     # itself instead of its distance from 0 (conflates magnitude with signed order).
     SIGNED_NOT_MAGNITUDE = "signed-not-magnitude"
+    # Unit-INT (TEKS 6.3C/D): a sign-handling error on integer addition — combining two
+    # opposite-sign numbers by ADDING their magnitudes instead of accounting for the signs.
+    SIGN_HANDLING_ERROR = "sign-handling-error"
 
 
 @dataclass(frozen=True)
@@ -317,6 +320,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "its order on the line; a magnitude can never be negative."
         ),
         applicable_kcs=(KnowledgeComponentId.ABSOLUTE_VALUE,),
+    ),
+    Misconception(
+        id=MisconceptionId.SIGN_HANDLING_ERROR,
+        name="Sign-handling error",
+        description=(
+            "Combines two opposite-sign integers by ADDING their magnitudes and ignoring the "
+            "signs — treats -5 + 3 like 5 + 3 = 8 instead of -2. The learner applies whole-number "
+            "addition to the magnitudes rather than reasoning about direction on the number line, "
+            "so the result is too big (its magnitude is |a| + |b|, never the smaller |a + b|)."
+        ),
+        applicable_kcs=(KnowledgeComponentId.INTEGER_ADD_SUBTRACT,),
     ),
 )
 
@@ -591,6 +605,18 @@ def signed_not_magnitude(value: int) -> Rational:
     it differs from ``abs(value)`` for any negative input (which the generator guarantees).
     """
     return Rational(value)
+
+
+def add_magnitudes_ignoring_sign(a: Rational, b: Rational) -> Rational:
+    """sign-handling-error: combine two integers by ADDING their magnitudes, ignoring the signs.
+
+    The correct integer sum is ``a + b`` (direction matters). The learner who makes the sign error
+    treats it like whole-number addition of the magnitudes, getting ``|a| + |b|`` — e.g. -5 + 3
+    becomes 5 + 3 = 8 instead of -2. Returned as a SymPy ``Rational`` so the verifier compares
+    values directly; for OPPOSITE-sign operands ``|a| + |b| > |a + b|`` always, so it is always a
+    distinct, wrong value.
+    """
+    return abs(a) + abs(b)
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

@@ -71,6 +71,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "place-value-slip",  # KC_multi_digit_division (Unit 2)
     "decimal-point-misplacement",  # KC_decimal_operations (Unit 2)
     "signed-not-magnitude",  # KC_absolute_value (Unit 3)
+    "sign-handling-error",  # KC_integer_add_subtract (Unit-INT)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 
