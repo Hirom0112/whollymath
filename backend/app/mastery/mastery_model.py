@@ -17,7 +17,10 @@ touched here.
 
 Locked tunings used (PROJECT.md §8 decision 0.D.5; all tunable in weeks 4–5
 with the change recorded in the decision log):
-  - τ (mastery threshold) = 0.85
+  - τ (mastery threshold) = 0.90 (raised from 0.85; product-owner authorized
+    2026-05-29 — "2 right ≠ mastered", make luck-mastery harder)
+  - minimum scored attempts before mastery = 5 (new gate, 2026-05-29: BKT alone
+    can cross τ in 2 corrects; a real tutor needs more evidence than that)
   - interleaving cadence = 3 items across ≥2 KCs
   - productive-struggle window = 60s (the engagement floor lives well below it)
 
@@ -39,7 +42,20 @@ from app.domain.knowledge_components import KnowledgeComponentId, Representation
 
 # τ: a KC's BKT probability must exceed this before mastery can even be considered
 # (PROJECT.md §3.4 rule 1, §8 0.D.5). Named so the week-4/5 tuning is one edit.
-MASTERY_THRESHOLD: float = 0.85
+# Raised 0.85 -> 0.90 on 2026-05-29 (product-owner authorized; supersedes the
+# 0.D.5 lock): crossing τ in two corrects was too easy, so we demand a higher
+# posterior before mastery is even considered.
+MASTERY_THRESHOLD: float = 0.90
+
+# Minimum scored attempts on a KC before mastery may be declared, regardless of
+# BKT probability (new gate, 2026-05-29; ANDed with the §3.4 rules below). BKT
+# can cross τ in as few as two corrects, but "two right" is not mastery in a
+# real tutor — we require a floor of distinct scored attempts on the KC so a
+# lucky short streak cannot trip the declaration. Counts every scored attempt on
+# the KC (correct or not, hinted or not, engaged or not): the floor is about
+# *how much was attempted*, not how it scored — the quality gates are the other
+# rules. Strictly > 0 is the load-bearing property; 5 is the initial pick.
+MIN_ATTEMPTS_FOR_MASTERY: int = 5
 
 # §3.4 rule 2: correctness across at least this many distinct representations of
 # the same KC. Defeats Natural-number Nate (symbolic-pass / magnitude-fail).
@@ -322,21 +338,41 @@ def _has_unscaffolded_correct(kc: KnowledgeComponentId, observations: list[Obser
 
 
 def _has_interleaved_mastery_set(kc: KnowledgeComponentId, observations: list[Observation]) -> bool:
-    """§3.6 / 0.D.5: ≥ INTERLEAVE_CADENCE correct, engaged items spanning
-    ≥ INTERLEAVE_MIN_KCS KCs, with at least one of them being the target KC.
+    """§3.6 / 0.D.5: the mastery evidence must be a VARIED (non-blocked) set of
+    ≥ INTERLEAVE_CADENCE correct, engaged items — not a blocked drill of one identical
+    item type. Two ways to satisfy it (either suffices):
 
-    This is the set-level interleaving gate: mastery evidence must come from a
-    practice set that mixed KCs, not a blocked run of the target KC alone
-    (defeats Surface Sam). We count engaged corrects across the whole log and
-    require the target KC to be among the KCs represented.
+    1. **Cross-KC interleaving** (the original gate): the set spans ≥ INTERLEAVE_MIN_KCS
+       KCs, with the target among them. This is the multi-skill mixed practice the eval
+       harness feeds (Rohrer 2015; the original Surface-Sam defense).
+    2. **Within-skill representation interleaving** (added 2026-05-29, product-owner
+       decision: single-skill lessons): a lesson on the target KC ALONE still counts as
+       varied practice when its correct, engaged items span ≥ MIN_REPRESENTATIONS distinct
+       representations of the KC (e.g. number-line PLACING and COMPARING) — i.e. the learner
+       did not just repeat one identical format. This is strictly within rule 2's bar, so
+       Surface Sam (tied to one representation) still fails it; the S5 transfer probe remains
+       the second gate. PROJECT.md §3.4 rule 4 / §3.6 updated accordingly.
+
+    Sub-floor (low-engagement) corrects never count toward either path.
     """
     engaged_correct = [o for o in observations if o.correct and not o.is_low_engagement()]
+    if len(engaged_correct) < INTERLEAVE_CADENCE:
+        return False
     kcs_present = {o.kc for o in engaged_correct}
-    return (
-        len(engaged_correct) >= INTERLEAVE_CADENCE
-        and len(kcs_present) >= INTERLEAVE_MIN_KCS
-        and kc in kcs_present
-    )
+    if len(kcs_present) >= INTERLEAVE_MIN_KCS and kc in kcs_present:
+        return True  # path 1: cross-KC interleaving
+    target_reps = {o.representation for o in engaged_correct if o.kc == kc}
+    return len(target_reps) >= MIN_REPRESENTATIONS  # path 2: within-skill representation mix
+
+
+def _scored_attempt_count(kc: KnowledgeComponentId, observations: list[Observation]) -> int:
+    """Number of scored attempts on ``kc`` (the minimum-attempts floor counts these).
+
+    Every attempt on the KC counts — correct or not, hinted or not, engaged or
+    not. The floor is a quantity-of-evidence gate ("two right ≠ mastered"); the
+    quality of that evidence is judged by the other §3.4 rules.
+    """
+    return sum(1 for o in observations if o.kc == kc)
 
 
 def _is_engagement_floored(kc: KnowledgeComponentId, observations: list[Observation]) -> bool:
@@ -366,7 +402,8 @@ def declare_mastery(
       3. ≥ 1 unscaffolded (non-hinted) correct attempt.
       4. Evidence from an interleaved set (≥ cadence items across ≥ 2 KCs),
          not a blocked same-KC run.
-    Plus: not engagement-floored.
+    Plus: not engagement-floored, and ≥ MIN_ATTEMPTS_FOR_MASTERY scored attempts
+    on the KC (the minimum-attempts floor: "two right ≠ mastered").
 
     Returns ``(mastered, reasons)``. When ``mastered`` is False, ``reasons``
     names every failing rule (so the caller / decision log sees exactly which
@@ -385,6 +422,13 @@ def declare_mastery(
         reasons.append(
             "engagement floor: every attempt on this KC was below the time-to-answer "
             "floor (no engaged evidence)"
+        )
+
+    attempts = _scored_attempt_count(kc, observations)
+    if attempts < MIN_ATTEMPTS_FOR_MASTERY:
+        reasons.append(
+            f"minimum attempts: {attempts} scored attempt(s) on this KC, "
+            f"need >= {MIN_ATTEMPTS_FOR_MASTERY} (two right != mastered)"
         )
 
     prob = kc_mastery_probability(kc, observations, params=params)

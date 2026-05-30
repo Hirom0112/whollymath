@@ -32,6 +32,7 @@ from app.mastery.mastery_model import (
     INTERLEAVE_CADENCE,
     INTERLEAVE_MIN_KCS,
     MASTERY_THRESHOLD,
+    MIN_ATTEMPTS_FOR_MASTERY,
     MIN_REPRESENTATIONS,
     BktParams,
     Observation,
@@ -69,17 +70,24 @@ def _obs(
 
 def _interleaved_mastery_log() -> list[Observation]:
     """A clean happy-path log: BKT well over τ, ≥2 reps, an unhinted correct,
-    and the KC's correct items interleaved across ≥2 KCs at cadence.
+    the KC's correct items interleaved across ≥2 KCs at cadence, and ≥ the
+    minimum-attempts floor (MIN_ATTEMPTS_FOR_MASTERY) of scored attempts on KC.
 
     Correct EQUIVALENCE items appear in two representations (symbolic + area
     model) and are separated by correct COMMON_DENOMINATOR items, so the KC's
-    successes are interleaved, not a blocked run.
+    successes are interleaved, not a blocked run. Five EQUIVALENCE attempts clear
+    the minimum-attempts floor (a genuine learner accumulates more than two
+    corrects before mastery).
     """
     return [
         _obs(kc=KC, representation=Representation.SYMBOLIC),
         _obs(kc=OTHER_KC, representation=Representation.SYMBOLIC),
         _obs(kc=KC, representation=Representation.AREA_MODEL),
         _obs(kc=OTHER_KC, representation=Representation.AREA_MODEL),
+        _obs(kc=KC, representation=Representation.SYMBOLIC),
+        _obs(kc=OTHER_KC, representation=Representation.SYMBOLIC),
+        _obs(kc=KC, representation=Representation.AREA_MODEL),
+        _obs(kc=OTHER_KC, representation=Representation.SYMBOLIC),
         _obs(kc=KC, representation=Representation.SYMBOLIC),
     ]
 
@@ -228,23 +236,25 @@ def test_rule3_hinted_correct_is_downweighted_in_bkt() -> None:
     assert kc_mastery_probability(KC, hinted) < kc_mastery_probability(KC, unhinted)
 
 
-def test_rule4_blocked_run_blocks_mastery() -> None:
-    """§3.4 rule 4 (defeats Surface Sam): a BLOCKED run of same-KC correct
-    answers must NOT reach mastery, even across ≥2 representations.
+def test_rule4_single_representation_blocked_run_blocks_mastery() -> None:
+    """§3.4 rule 4 (defeats Surface Sam): a BLOCKED run in ONE representation must NOT reach
+    mastery, however many corrects. This is Sam's signature — near-100% inside one format,
+    no evidence he can reason any other way.
 
-    Sam is near-100% inside a format/KC block and collapses when interleaved.
-    A blocked run is block-fluency, not mastery evidence (Rohrer).
+    NOTE (2026-05-29): rule 4 was relaxed for single-skill lessons — a single KC across ≥2
+    representations now counts as varied practice (see
+    ``test_single_skill_lesson_masters_via_two_representations``). So the Surface-Sam guard now
+    rests on representation diversity (rule 2) + the S5 transfer probe, which this
+    one-representation run still fails. A blocked run in a SINGLE format is the case that must
+    keep failing.
     """
-    log = [
-        _obs(
-            kc=KC,
-            representation=Representation.SYMBOLIC if i % 2 == 0 else Representation.AREA_MODEL,
-        )
-        for i in range(8)
-    ]  # all KC, no other-KC items between them → blocked
+    log = [_obs(kc=KC, representation=Representation.SYMBOLIC) for _ in range(10)]
     mastered, reasons = declare_mastery(KC, log)
     assert not mastered
-    assert any("interleav" in r.lower() or "block" in r.lower() for r in reasons)
+    assert any(
+        "interleav" in r.lower() or "block" in r.lower() or "representation" in r.lower()
+        for r in reasons
+    )
 
 
 def test_rule4_blocked_run_counts_for_less_than_interleaved() -> None:
@@ -262,6 +272,20 @@ def test_rule4_blocked_run_counts_for_less_than_interleaved() -> None:
         _obs(kc=KC),
     ]  # same 4 KC corrects, but interleaved
     assert kc_mastery_probability(KC, blocked) < kc_mastery_probability(KC, interleaved)
+
+
+def test_single_skill_lesson_masters_via_two_representations() -> None:
+    """Within-skill interleaving (2026-05-29 single-skill lessons): a lesson on ONE KC reaches
+    mastery when its correct, engaged items span ≥2 representations of that KC (e.g. number-line
+    PLACING + COMPARING), with NO second KC. Rule 4's cross-KC requirement is satisfied by the
+    representation mix instead."""
+    nl = KnowledgeComponentId.NUMBER_LINE_PLACEMENT
+    two_rep = []
+    for _ in range(5):  # alternate the two representations, enough attempts to clear τ + the floor
+        two_rep.append(_obs(kc=nl, representation=Representation.NUMBER_LINE))
+        two_rep.append(_obs(kc=nl, representation=Representation.SYMBOLIC))
+    mastered, reasons = declare_mastery(nl, two_rep)
+    assert mastered, f"single-skill two-representation lesson should master; blocked by: {reasons}"
 
 
 def test_interleave_cadence_traces_to_locked_tuning() -> None:
@@ -300,9 +324,36 @@ def test_engagement_floor_constant_traces_to_locked_tuning() -> None:
 
 
 def test_threshold_traces_to_locked_tuning() -> None:
-    """0.D.5: τ = 0.85."""
-    assert MASTERY_THRESHOLD == 0.85
+    """τ = 0.90 (raised from the 0.D.5 lock of 0.85 on 2026-05-29, product-owner
+    authorized: crossing τ in two corrects was too easy)."""
+    assert MASTERY_THRESHOLD == 0.90
     assert MIN_REPRESENTATIONS == 2
+
+
+def test_minimum_attempts_floor_blocks_mastery() -> None:
+    """Minimum-attempts floor (2026-05-29): BKT > τ and every other §3.4 rule
+    satisfied, but FEWER than MIN_ATTEMPTS_FOR_MASTERY scored attempts on the KC
+    → NOT mastered. "Two right != mastered": a lucky short streak that clears the
+    threshold must still be denied until enough attempts have accumulated.
+    """
+    assert MIN_ATTEMPTS_FOR_MASTERY == 5
+    # Three engaged, unhinted, interleaved, multi-rep corrects on KC: enough to
+    # clear τ AND satisfy rules 2/3/4, but only 3 scored attempts on KC. The
+    # floor must be the lone blocker — proving it bites independently of τ.
+    log = [
+        _obs(kc=KC, representation=Representation.SYMBOLIC),
+        _obs(kc=OTHER_KC, representation=Representation.AREA_MODEL),
+        _obs(kc=KC, representation=Representation.AREA_MODEL),
+        _obs(kc=OTHER_KC, representation=Representation.SYMBOLIC),
+        _obs(kc=KC, representation=Representation.SYMBOLIC),
+    ]
+    assert kc_mastery_probability(KC, log) > MASTERY_THRESHOLD  # τ is satisfied
+    assert sum(1 for o in log if o.kc == KC) < MIN_ATTEMPTS_FOR_MASTERY
+    mastered, reasons = declare_mastery(KC, log)
+    assert not mastered
+    assert any("minimum attempt" in r.lower() for r in reasons)
+    # And ONLY the floor blocks: no other rule's reason is present.
+    assert len(reasons) == 1
 
 
 def test_below_threshold_blocks_even_with_all_rules_met() -> None:
