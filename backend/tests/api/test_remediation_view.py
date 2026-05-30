@@ -10,6 +10,7 @@ from __future__ import annotations
 from app.api.remediation_view import build_remediation_view
 from app.domain.knowledge_components import KnowledgeComponentId, get_kc
 from app.policy.remediation_flow import (
+    LessonFlow,
     RemediationContext,
     RemediationTriggered,
     apply,
@@ -20,7 +21,7 @@ _PARENT = KnowledgeComponentId.ADDITION_UNLIKE
 _PREREQ = KnowledgeComponentId.EQUIVALENCE
 
 
-def _paused_flow(paused_at: int = 3) -> object:
+def _paused_flow(paused_at: int = 3) -> LessonFlow:
     ctx = RemediationContext(
         parent_kc=_PARENT,
         prerequisite_kc=_PREREQ,

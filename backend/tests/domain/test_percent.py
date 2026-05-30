@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.misconceptions import MisconceptionId
-from app.domain.problem_generators import AnswerKind, generate_problem
+from app.domain.problem_generators import AnswerKind, Problem, generate_problem
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -19,7 +19,7 @@ from sympy import Rational
 _KC = KnowledgeComponentId.PERCENT
 
 
-def _problem(seed: int):
+def _problem(seed: int) -> Problem:
     return generate_problem(_KC, seed)
 
 
@@ -46,7 +46,8 @@ def test_percent_as_amount_is_classified() -> None:
     """Answering the percent NUMBER itself is flagged OPERATION + percent-as-amount."""
     for seed in range(1, 12):
         problem = _problem(seed)
-        percent = int(problem.operands[0])  # type: ignore[index]
+        assert problem.operands is not None
+        percent = int(problem.operands[0])
         # The generator excludes whole == 100, so the percent itself is always wrong here.
         assert Rational(percent) != problem.correct_value
         result = verify(problem, str(percent))

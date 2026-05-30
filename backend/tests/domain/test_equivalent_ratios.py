@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.misconceptions import MisconceptionId, additive_ratio
-from app.domain.problem_generators import AnswerKind, generate_problem
+from app.domain.problem_generators import AnswerKind, Problem, generate_problem
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -18,7 +18,7 @@ from app.tutor.worked_example import worked_example_for
 _KC = KnowledgeComponentId.EQUIVALENT_RATIOS
 
 
-def _problem(seed: int):
+def _problem(seed: int) -> Problem:
     return generate_problem(_KC, seed)
 
 
@@ -47,7 +47,8 @@ def test_additive_answer_is_classified() -> None:
     """The additive (add-the-difference) answer is flagged OPERATION + additive-ratio."""
     for seed in range(1, 12):
         problem = _problem(seed)
-        a, b, target_den = (int(o) for o in problem.operands)  # type: ignore[misc]
+        assert problem.operands is not None
+        a, b, target_den = (int(o) for o in problem.operands)
         additive = additive_ratio(a, b, target_den)
         # The generator keeps scale factor ≥3, so the additive answer is always wrong here.
         assert additive != problem.correct_value

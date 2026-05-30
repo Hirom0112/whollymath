@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.misconceptions import MisconceptionId
-from app.domain.problem_generators import AnswerKind, generate_problem
+from app.domain.problem_generators import AnswerKind, Problem, generate_problem
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -20,7 +20,7 @@ from app.tutor.worked_example import worked_example_for
 _KC = KnowledgeComponentId.MULTIPLY_FRACTIONS
 
 
-def _problem(seed: int):  # type: ignore[no-untyped-def]
+def _problem(seed: int) -> Problem:
     return generate_problem(_KC, seed)
 
 
@@ -53,7 +53,8 @@ def test_multiply_as_add_is_classified() -> None:
     """Adding instead of multiplying (x treated as +) is flagged OPERATION + multiply-as-add."""
     for seed in range(1, 12):
         problem = _problem(seed)
-        first, second = problem.operands  # type: ignore[misc]
+        assert problem.operands is not None
+        first, second = problem.operands
         added = first + second  # the "treats x as +" wrong value
         result = verify(problem, str(added))
         assert not result.is_correct

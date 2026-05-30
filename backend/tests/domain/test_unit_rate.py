@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
 from app.domain.misconceptions import MisconceptionId, invert_rate
-from app.domain.problem_generators import AnswerKind, generate_problem
+from app.domain.problem_generators import AnswerKind, Problem, generate_problem
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -19,7 +19,7 @@ from app.tutor.worked_example import worked_example_for
 _KC = KnowledgeComponentId.UNIT_RATE
 
 
-def _problem(seed: int):
+def _problem(seed: int) -> Problem:
     return generate_problem(_KC, seed)
 
 
@@ -52,7 +52,8 @@ def test_rate_inversion_is_classified() -> None:
     """The inverted rate (count/total) is flagged OPERATION + the rate-inversion misconception."""
     for seed in range(1, 12):
         problem = _problem(seed)
-        total, count = problem.operands  # type: ignore[misc]
+        assert problem.operands is not None
+        total, count = problem.operands
         inverted = invert_rate(int(total), int(count))
         # Only assert classification when the inverted rate is genuinely a DIFFERENT, wrong value
         # (it always is here: total > count > 0 ⇒ total/count != count/total).
