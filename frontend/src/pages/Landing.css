@@ -69,12 +69,6 @@
   right: 7%;
   width: 30px;
 }
-.wm-s4 {
-  bottom: 4%;
-  right: 9%;
-  width: 18px;
-  color: #6b86e8;
-}
 
 /* brand */
 .wm-brand {
@@ -132,10 +126,13 @@
 }
 .wm-subhead {
   margin: 22px auto 0;
-  max-width: 640px;
+  max-width: 620px;
   color: var(--wm-ink-soft);
-  font-size: 18px;
-  line-height: 1.45;
+  font-family: var(--wm-font-serif);
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.5;
+  letter-spacing: -0.1px;
 }
 
 /* CTA card */
@@ -194,30 +191,35 @@
   outline-offset: 3px;
 }
 
-/* Quiet secondary entry to the teacher dashboard (TODO TCH.F0) — sits under the student CTA
-   without competing with it. */
+/* Secondary entry to the teacher dashboard (TODO TCH.F0) — a yellow pill that stays smaller
+   than the student CTA, so the student path still leads. */
 .wm-teacher-link {
   display: inline-block;
   margin-top: 16px;
+  padding: 11px 28px;
+  border-radius: 999px;
+  background: var(--wm-yellow);
   font-family: var(--wm-font-sans);
   font-size: var(--wm-fs-ui);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--wm-navy-deep);
   text-decoration: none;
-  opacity: 0.78;
+  box-shadow: 0 4px 0 var(--wm-gold-deep);
   transition:
-    opacity var(--wm-motion-press) ease,
-    transform var(--wm-motion-press) ease;
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease;
 }
 .wm-teacher-link:hover {
-  opacity: 1;
-  transform: translateX(2px);
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--wm-gold-deep);
+}
+.wm-teacher-link:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--wm-gold-deep);
 }
 .wm-teacher-link:focus-visible {
   outline: 3px solid var(--wm-navy-deep);
   outline-offset: 3px;
-  border-radius: 4px;
-  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

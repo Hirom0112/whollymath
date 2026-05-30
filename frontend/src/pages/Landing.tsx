@@ -60,17 +60,15 @@ export function Landing({ onStart }: { onStart: () => void }): React.JSX.Element
         <div className="wm-sparkle wm-s3">
           <Sparkle />
         </div>
-        <div className="wm-sparkle wm-s4">
-          <Sparkle />
-        </div>
 
         <div className="wm-copy">
           <h1 className="wm-headline">
             Math, made <em>whole.</em>
           </h1>
           <p className="wm-subhead">
-            An AI fraction tutor for 6th and 7th graders. The workspace adapts to how your child is
-            thinking, not just whether they got the answer right.
+            A tutor for 6th graders!
+            <br />
+            The workspace adapts to how your child is thinking.
           </p>
 
           <div className="wm-cta-card">
