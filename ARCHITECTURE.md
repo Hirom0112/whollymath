@@ -185,14 +185,21 @@ updates after each observation. But a probability over a threshold is not enough
 exactly how guessing and pattern-matching slip through. Mastery on a KC is declared **only when
 all of the following hold**:
 
-1. **BKT probability > τ** (initial τ = 0.85, tuned against persona results).
+1. **BKT probability > τ** (**τ = 0.90**, raised from 0.85 on 2026-05-29 by product-owner
+   authorization — at 0.85 BKT could cross the threshold in as few as two corrects; still tuned
+   against persona results).
 2. **Correctness across ≥ 2 representations** of the same KC (e.g., symbolic *and* number line).
    — defeats *Natural-number Nate*.
 3. **≥ 1 correct attempt with no scaffolding** (no hint, no UI assistance). Hinted attempts are
    downweighted. — defeats *Hint-hunter Hugo*.
-4. **Computed on interleaved practice, not blocked.** A run of correct answers from one KC in a
-   row counts for less than correct answers interleaved across KCs. — defeats *Surface Sam*;
-   grounded in the most-replicated finding in math-practice scheduling research.
+4. **Computed on varied (interleaved) practice, not a blocked drill.** A run of correct answers
+   from one KC *in one representation* counts for less than varied practice — satisfied either by
+   interleaving across ≥ 2 KCs or, in a single-skill lesson, by spanning ≥ 2 representations of the
+   one KC. — defeats *Surface Sam* (together with rule 2 + the S5 transfer probe); grounded in the
+   most-replicated finding in math-practice scheduling research.
+5. **≥ 5 scored attempts on the KC** before mastery may be declared — a quantity-of-evidence floor
+   so a lucky short streak that clears τ is not mistaken for mastery. Pairs with the raised τ: at
+   0.90 two corrects can no longer reach the threshold, and the floor guarantees it.
 
 Plus an **engagement floor**: responses below a time-to-answer floor are flagged, and repeated
 low-engagement responses trigger a re-engagement prompt rather than counting as evidence. —

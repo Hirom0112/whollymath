@@ -31,7 +31,7 @@ from app.domain.knowledge_components import KnowledgeComponentId
 # for a within-unit skill.
 DEFAULT_HALF_LIFE: timedelta = timedelta(days=3)
 
-# Retained mastery below this bar ⇒ due for review. Sits below τ=0.85 (a skill needn't have
+# Retained mastery below this bar ⇒ due for review. Sits below τ=0.90 (a skill needn't have
 # decayed all the way to "forgotten" to be worth a refresh) but well above chance.
 REVIEW_THRESHOLD: float = 0.7
 
