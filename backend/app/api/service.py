@@ -1611,6 +1611,29 @@ class SessionStore:
             return None
         return live.tutor.prior_for(kc)
 
+    def current_problem(self, session_id: str) -> Problem | None:
+        """The exact problem the learner is looking at in a live session, or ``None``.
+
+        The honest "what is on screen now": during an S5 transfer probe the live item is
+        the current probe STEP (``probe_steps[probe_index]``), not ``tutor.current_problem``
+        (which still holds the practice item the probe paused on); otherwise it is the
+        tutor's current problem. This mirrors exactly how the store itself decides which
+        problem becomes the response's ``next_problem``.
+
+        A thin read for callers that must see the un-projected domain ``Problem`` — its
+        ``correct_value`` and operands, which ``ProblemView`` deliberately drops (§8.2) —
+        without reaching into ``_LiveSession`` (cf. :meth:`prior_for`). The persona-bot
+        data runner (``app.personas.student_bots``) uses it to ask the Layer-3 simulator
+        for the persona's action on the real served problem. ``None`` when the session is
+        unknown (e.g. never started or lost to a restart).
+        """
+        live = self._sessions.get(session_id)
+        if live is None:
+            return None
+        if live.probe_steps:
+            return live.probe_steps[live.probe_index]
+        return live.tutor.current_problem
+
 
 __all__ = [
     "DemoTeacherHandle",
