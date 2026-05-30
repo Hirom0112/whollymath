@@ -37,6 +37,7 @@ deferral. There is NO LLM and NO DB here (CLAUDE.md §8.1/§8.2).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TypeAlias
@@ -46,6 +47,7 @@ from sympy import Rational
 from app.domain.knowledge_components import KnowledgeComponentId
 from app.domain.misconceptions import (
     MisconceptionId,
+    WrongFraction,
     add_across,
     natural_number_bias_number_line,
     subtract_across,
@@ -247,73 +249,91 @@ def _verify_common_denominator(problem: Problem, submitted: Submitted) -> Verifi
     )
 
 
+def _across_value(wrong: WrongFraction) -> Rational | None:
+    """The reduced VALUE of a raw across-error fraction, or ``None`` for an undefined (n/0) one.
+
+    The across-error generators return a RAW (unreduced, possibly sign-flipped or zero-denominator)
+    fraction, because that impossibility is the diagnostic signal (misconceptions.py keeps it raw).
+    We match on the reduced VALUE — a learner who writes 2/6 for the add-across of 1/2+1/4 exhibits
+    the misconception whether they leave it 2/6 or reduce to 1/3. A zero denominator is an undefined
+    magnitude no submitted value can equal, so it yields ``None`` (and we never ask SymPy for n/0).
+    """
+    if wrong.denominator == 0:
+        return None
+    return Rational(wrong.numerator, wrong.denominator)
+
+
+@dataclass(frozen=True)
+class _WrongAnswerModel:
+    """A value-producing misconception the verifier matches a wrong numeric answer against (HR.A2).
+
+    ``predict`` replays the Slice-1.2 misconception generator on the problem's operands and returns
+    the wrong VALUE it models (or ``None`` when it does not apply). A match classifies the answer
+    with this model's ``error_category`` + ``misconception``. New lessons add a ROW here, not a new
+    ``if kc is ...`` branch — the generalization HR.A2 buys (HYPERREACTIVE.md §3)."""
+
+    kc: KnowledgeComponentId
+    operand_count: int
+    error_category: ErrorCategory
+    misconception: MisconceptionId
+    predict: Callable[[tuple[Rational, ...]], Rational | None]
+
+
+# The value-producing misconception models, grounded in the PROJECT.md §3.6 table:
+#   - add-across on addition  -> wrong PROCEDURE (tops+tops/bottoms+bottoms): OPERATION (S3).
+#   - subtract-across on subtraction -> same operate-on-parts family; misconceptions.py labels it
+#     natural-number-bias (a citation-honesty relabel, RESEARCH.md §6.4): OPERATION (S3).
+#   - number-line bias position on placement -> misjudged MAGNITUDE (read denominator as position):
+#     MAGNITUDE (S2).
+# A wrong answer matching none (e.g. on equivalence/common-denominator) stays OTHER — we do NOT
+# invent a routing for an unrecognized error (CLAUDE.md §12).
+_WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.ADDITION_UNLIKE,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.ADD_ACROSS_ERROR,
+        predict=lambda ops: _across_value(add_across(ops[0].p, ops[0].q, ops[1].p, ops[1].q)),
+    ),
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.SUBTRACTION_UNLIKE,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.NATURAL_NUMBER_BIAS,
+        predict=lambda ops: _across_value(subtract_across(ops[0].p, ops[0].q, ops[1].p, ops[1].q)),
+    ),
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
+        operand_count=1,
+        error_category=ErrorCategory.MAGNITUDE,
+        misconception=MisconceptionId.NATURAL_NUMBER_BIAS,
+        predict=lambda ops: natural_number_bias_number_line(ops[0].p, ops[0].q).biased_position,
+    ),
+)
+
+
 def _classify_wrong_answer(
     problem: Problem, submitted_value: Rational
 ) -> tuple[ErrorCategory, MisconceptionId | None]:
-    """Classify a wrong numeric answer by matching it against the §3.6 misconceptions.
+    """Classify a wrong numeric answer by looping the value-producing misconception models (HR.A2).
 
-    We replay the Slice-1.2 misconception generators on ``problem.operands`` and
-    compare the submitted VALUE (SymPy equality) to each modeled wrong answer. The
-    category mapping is grounded in the PROJECT.md §3.6 transition table:
-
-      - add-across on an addition problem -> the learner ran the wrong PROCEDURE
-        (added tops and bottoms). §3.6: "operation/format error -> S3". So
-        category=OPERATION, misconception=add-across-error.
-      - subtract-across on a subtraction problem -> the same wrong-procedure family
-        (operate on the parts separately); misconceptions.py labels it
-        natural-number-bias (a citation-honesty relabel, RESEARCH.md §6.4). Still an
-        operation error -> S3. category=OPERATION, misconception=natural-number-bias.
-      - number-line bias position on a placement problem -> the learner misjudged the
-        MAGNITUDE (read the denominator as a position). §3.6: "magnitude error -> S2".
-        category=MAGNITUDE, misconception=natural-number-bias.
-
-    Anything else (a wrong answer matching no modeled misconception, or a wrong
-    answer on equivalence/common-denominator — KCs the task does not map to a §3.6
-    category) is OTHER with no matched misconception. We do NOT invent a routing for
-    an unrecognized error (CLAUDE.md §12): "other" is the honest label, and the
-    policy can fall back to a default move rather than a misattributed one.
+    Replaces the old per-KC ``if`` branches with a uniform loop over ``_WRONG_ANSWER_MODELS``: for
+    each model whose KC + operand count match this problem, replay its predictor and compare the
+    submitted VALUE (SymPy equality). The first match classifies; no match is the honest OTHER
+    (no misconception). Behavior is identical to the prior branches for the 5 KCs — a new KC is
+    added as a model row, not a code branch.
     """
     operands = problem.operands
     if operands is None:
         return ErrorCategory.OTHER, None
 
-    if problem.kc is KnowledgeComponentId.ADDITION_UNLIKE and len(operands) == 2:
-        first, second = operands
-        across = add_across(first.p, first.q, second.p, second.q)
-        if _matches(submitted_value, across.numerator, across.denominator):
-            return ErrorCategory.OPERATION, MisconceptionId.ADD_ACROSS_ERROR
-
-    elif problem.kc is KnowledgeComponentId.SUBTRACTION_UNLIKE and len(operands) == 2:
-        minuend, subtrahend = operands
-        across = subtract_across(minuend.p, minuend.q, subtrahend.p, subtrahend.q)
-        if _matches(submitted_value, across.numerator, across.denominator):
-            return ErrorCategory.OPERATION, MisconceptionId.NATURAL_NUMBER_BIAS
-
-    elif problem.kc is KnowledgeComponentId.NUMBER_LINE_PLACEMENT and len(operands) == 1:
-        (target,) = operands
-        misplacement = natural_number_bias_number_line(target.p, target.q)
-        if submitted_value == misplacement.biased_position:
-            return ErrorCategory.MAGNITUDE, MisconceptionId.NATURAL_NUMBER_BIAS
+    for model in _WRONG_ANSWER_MODELS:
+        if model.kc is problem.kc and len(operands) == model.operand_count:
+            predicted = model.predict(operands)
+            if predicted is not None and bool(submitted_value == predicted):
+                return model.error_category, model.misconception
 
     return ErrorCategory.OTHER, None
-
-
-def _matches(submitted_value: Rational, raw_numerator: int, raw_denominator: int) -> bool:
-    """Whether a submitted value equals a misconception's raw wrong fraction by VALUE.
-
-    The across-error generators return a RAW (unreduced, possibly sign-flipped or
-    zero-denominator) fraction, because that impossibility is the diagnostic signal
-    (misconceptions.py keeps it raw). We compare on the reduced VALUE — a learner
-    who writes 2/6 for the add-across of 1/2+1/4 is exhibiting the misconception
-    whether they leave it 2/6 or reduce it to 1/3. A zero denominator is an
-    undefined magnitude that no submitted value can equal, so it never matches
-    (and we avoid asking SymPy to build n/0).
-    """
-    if raw_denominator == 0:
-        return False
-    # SymPy equality returns a SymPy truth object; coerce to a plain bool so the
-    # signature's `-> bool` is honored (mypy --strict).
-    return bool(submitted_value == Rational(raw_numerator, raw_denominator))
 
 
 def verify(problem: Problem, submitted: Submitted) -> VerificationResult:

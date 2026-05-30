@@ -518,3 +518,47 @@ def test_equal_operands_are_not_greater() -> None:
     equal = _yes_no_comparison(Rational(1, 2), Rational(2, 4))  # equal value, unlike denoms
     assert verify(equal, "no").is_correct is True
     assert verify(equal, "yes").is_correct is False
+
+
+# ───────────────── HR.A2: classification is table-driven, not KC-branched ─────────────────
+
+
+def test_wrong_answer_classification_is_table_driven() -> None:
+    """A new misconception MODEL ROW classifies a wrong answer with no verifier code change.
+
+    Proves the HR.A2 generalization: ``_classify_wrong_answer`` loops ``_WRONG_ANSWER_MODELS``
+    rather than branching on the KC. Equivalence has no model today, so a wrong answer is OTHER;
+    adding a model ROW for it (here via monkeypatch — at 52 lessons it is a real registry entry)
+    makes the same wrong answer classify, with zero change to the classifier.
+    """
+    from app.domain import verifier as verifier_module
+    from app.domain.verifier import _WrongAnswerModel
+
+    problem = Problem(
+        problem_id="EQ-NUMERIC",
+        kc=KnowledgeComponentId.EQUIVALENCE,
+        surface_format=Representation.SYMBOLIC,
+        statement="?",
+        correct_value=Rational(1, 2),
+        representations_available=(Representation.SYMBOLIC,),
+        operands=(Rational(1, 2),),
+    )
+    wrong = Rational(9, 9)
+
+    # Default: equivalence has no value-producing model → an unrecognized wrong answer is OTHER.
+    assert verify(problem, wrong).error_category is ErrorCategory.OTHER
+    assert verify(problem, wrong).matched_misconception is None
+
+    # Add a model ROW for equivalence — no code change — and the SAME wrong answer now classifies.
+    mock = _WrongAnswerModel(
+        kc=KnowledgeComponentId.EQUIVALENCE,
+        operand_count=1,
+        error_category=ErrorCategory.MAGNITUDE,
+        misconception=MisconceptionId.REDUCE_MEANS_SMALLER,
+        predict=lambda ops: Rational(9, 9),
+    )
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(verifier_module, "_WRONG_ANSWER_MODELS", (mock,))
+        result = verify(problem, wrong)
+    assert result.error_category is ErrorCategory.MAGNITUDE
+    assert result.matched_misconception is MisconceptionId.REDUCE_MEANS_SMALLER
