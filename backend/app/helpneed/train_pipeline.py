@@ -24,6 +24,7 @@ from app.helpneed.parse_edmcup import (
     load_fraction_problems,
     parse_action_logs,
 )
+from app.helpneed.per_kc_validation import format_report, validate_per_kc
 from app.helpneed.predictor import HelpNeedPredictor, examples_to_matrix, top_shap_features
 
 
@@ -39,6 +40,29 @@ class TrainingReport:
     majority_baseline_accuracy: float
 
 
+def split_examples(
+    examples: Sequence[TrainingExample],
+    *,
+    random_state: int = 0,
+    test_size: float = 0.25,
+) -> tuple[list[TrainingExample], list[TrainingExample]]:
+    """Deterministic stratified train/test split (PROJECT.md §4.1).
+
+    Extracted so ``train_and_evaluate`` (overall holdout) and the per-KC validation in
+    ``main`` recover the *same* holdout from the same args — one fit, validated two ways.
+    """
+    from sklearn.model_selection import train_test_split
+
+    labels = [ex.label for ex in examples]
+    train_examples, test_examples = train_test_split(
+        list(examples),
+        test_size=test_size,
+        random_state=random_state,
+        stratify=labels,
+    )
+    return train_examples, test_examples
+
+
 def train_and_evaluate(
     examples: Sequence[TrainingExample],
     *,
@@ -52,14 +76,10 @@ def train_and_evaluate(
     reported as ``nan`` if the holdout happens to be single-class (degenerate split).
     """
     from sklearn.metrics import accuracy_score, roc_auc_score
-    from sklearn.model_selection import train_test_split
 
     labels = [ex.label for ex in examples]
-    train_examples, test_examples = train_test_split(
-        list(examples),
-        test_size=test_size,
-        random_state=random_state,
-        stratify=labels,
+    train_examples, test_examples = split_examples(
+        examples, random_state=random_state, test_size=test_size
     )
     predictor = HelpNeedPredictor.fit(train_examples, kind=kind, random_state=random_state)
 
@@ -138,6 +158,13 @@ def main() -> None:
     for name, value in top_shap_features(xgb_predictor, x_all):
         print(f"    {name:28} {value:.4f}")
 
+    # Per-KC validation on the SAME holdout the xgb report used (re-derived via the
+    # deterministic split). The honest-reporting deliverable for the cross-topic model:
+    # which KCs score well, which sit in the thin bucket (T1_T2_COORDINATION §1).
+    _, test_examples = split_examples(examples)
+    for line in format_report(validate_per_kc(xgb_predictor, test_examples)):
+        print(line)
+
     # Optionally persist the PRODUCTION artifact (Slice 4.4.1). The reported metrics
     # above come from the 75/25 holdout split; the deployed model is fit on ALL
     # examples (the holdout exists to measure quality, not to be thrown away in
@@ -161,5 +188,6 @@ if __name__ == "__main__":
 __all__ = [
     "TrainingReport",
     "load_examples_from_edmcup",
+    "split_examples",
     "train_and_evaluate",
 ]
