@@ -454,6 +454,29 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # Decimal operations (6.NS.3 / TEKS 6.3E). Practice-only today (scheduler lives only on
+    # SYMBOLIC), so the probe never fires. The modeled error is point-misplacement — the value off
+    # by a power of ten — a MAGNITUDE slip; it routes back to SYMBOLIC (the AREA_MODEL decimal-grid
+    # widget isn't live yet), so "re-try on the same surface with a labeled hint" is the honest
+    # adaptation until that widget lands (T3). AREA_MODEL is the masterable second rep then.
+    _spec(
+        _KC.DECIMAL_OPERATIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Count the places in BOTH factors and add them — that's where the point goes.",
+            ),
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Multiply the digits as whole numbers first, then place the decimal point.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

@@ -69,6 +69,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # place-value (magnitude) slip, so it forward-unlocks on number-line placement — judging a
     # number's magnitude on the line is the readiness that catches an off-by-ten quotient.
     _KC.MULTI_DIGIT_DIVISION: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit 2: a decimal is a fraction in per-ten/per-hundred clothing, so multiplying
+    # decimals rests on naming the same number in an equivalent form — it forward-unlocks on
+    # equivalence (its REMEDIATION_ROUTING drop is to multi-digit division, not yet live, so the
+    # forward edge uses the live foundation KC the skill conceptually rests on).
+    _KC.DECIMAL_OPERATIONS: frozenset({_KC.EQUIVALENCE}),
 }
 
 
@@ -92,6 +97,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.UNIT_CONVERSION,  # Grade-6 Unit 1: convert via proportions, built on the unit rate
     _KC.GCF_LCM,  # Grade-6 Unit 2: GCF/LCM, generalizes the common denominator (LCM = LCD)
     _KC.MULTI_DIGIT_DIVISION,  # Grade-6 Unit 2: whole-number division, on number-line placement
+    _KC.DECIMAL_OPERATIONS,  # Grade-6 Unit 2: multiply decimals, built on equivalence
 )
 
 

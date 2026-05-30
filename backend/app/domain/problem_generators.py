@@ -901,6 +901,68 @@ def _generate_multi_digit_division(
     )
 
 
+# Decimal factors for the product, as (numerator, denominator) with a power-of-ten denominator —
+# tenths and hundredths, the place values 6.NS.3 works in. Kept as integer pairs so the operand is
+# an EXACT Rational (5/10, 25/100), never a float. Difficulty climbs from tenths to hundredths and
+# from small to larger digit strings.
+_DECIMAL_FACTORS_BY_DIFFICULTY: dict[int, tuple[tuple[int, int], ...]] = {
+    1: ((2, 10), (3, 10), (5, 10), (4, 10)),  # 0.2 … 0.5, one place
+    2: ((6, 10), (8, 10), (15, 10), (12, 10)),  # 0.6 … 1.5, one place
+    3: ((25, 100), (15, 100), (35, 100), (8, 10)),  # mix tenths/hundredths
+    4: ((125, 100), (45, 100), (75, 100), (24, 10)),  # larger, two places
+}
+_DECIMAL_FACTOR_POOL: tuple[tuple[int, int], ...] = (
+    (2, 10),
+    (5, 10),
+    (3, 10),
+    (25, 100),
+    (15, 100),
+    (8, 10),
+)
+
+
+def _decimal_literal(numerator: int, power_of_ten_denominator: int) -> str:
+    """Render ``numerator / power_of_ten_denominator`` as a finite decimal string (e.g. 25/100 →
+    "0.25"). Pure integer arithmetic — no float — so the statement text introduces no fuzz."""
+    places = len(str(power_of_ten_denominator)) - 1  # 10 → 1, 100 → 2
+    if places == 0:
+        return str(numerator)
+    sign = "-" if numerator < 0 else ""
+    digits = str(abs(numerator)).zfill(places + 1)
+    return f"{sign}{digits[:-places]}.{digits[-places:]}"
+
+
+def _generate_decimal_operations(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_decimal_operations: multiply two decimals; the product (a decimal) is the answer.
+
+    Both factors are exact decimals with power-of-ten denominators (tenths/hundredths), so the
+    product is a finite decimal the symbolic editor accepts as a decimal string. The correct value
+    is the SymPy product ``first * second``; ``operands = (first, second)`` so the verifier can
+    replay the decimal-point-misplacement misconception (the product off by a power of ten).
+    Rendered symbolically; ``difficulty`` widens the factor pool from tenths to hundredths.
+    """
+    pool = (
+        _DECIMAL_FACTORS_BY_DIFFICULTY.get(difficulty, _DECIMAL_FACTOR_POOL)
+        if difficulty
+        else _DECIMAL_FACTOR_POOL
+    )
+    (n1, d1), (n2, d2) = rng.choice(pool), rng.choice(pool)
+    first, second = Rational(n1, d1), Rational(n2, d2)
+    # Render each factor as its decimal literal so the statement reads like a decimal problem.
+    a_text, b_text = _decimal_literal(n1, d1), _decimal_literal(n2, d2)
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.DECIMAL_OPERATIONS, seed, surface_format),
+        kc=KnowledgeComponentId.DECIMAL_OPERATIONS,
+        surface_format=surface_format,
+        statement=f"{a_text} x {b_text} = ?",
+        correct_value=first * second,
+        representations_available=get_kc(KnowledgeComponentId.DECIMAL_OPERATIONS).representations,
+        operands=(first, second),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -918,6 +980,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.UNIT_CONVERSION: _generate_unit_conversion,
     KnowledgeComponentId.GCF_LCM: _generate_gcf_lcm,
     KnowledgeComponentId.MULTI_DIGIT_DIVISION: _generate_multi_digit_division,
+    KnowledgeComponentId.DECIMAL_OPERATIONS: _generate_decimal_operations,
 }
 
 

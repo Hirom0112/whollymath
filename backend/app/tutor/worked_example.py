@@ -644,6 +644,72 @@ def _multi_digit_division_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _decimal_operations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'multiply the digits, then place the point by total places' steps for a decimal product.
+
+    ``operands = (first, second)`` (exact decimals with power-of-ten denominators); the product is
+    ``first * second == problem.correct_value``. Walks the canonical place-value procedure, landing
+    on the answer. Raises if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"decimal-operations problem {problem.problem_id} needs (first, second)")
+    first, second = operands
+    answer = problem.correct_value
+    places_first = _terminating_decimal_places(first)
+    places_second = _terminating_decimal_places(second)
+    total_places = places_first + places_second
+    return (
+        WorkedStep(
+            shown="Ignore the points for a moment and multiply the numbers as whole numbers.",
+            why_prompt="Why can you multiply the digits first and worry about the point after?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"Count the decimal places in both factors: {places_first} plus {places_second} "
+                f"makes {total_places}. The product needs {total_places} places after the point."
+            ),
+            why_prompt="Why do the decimal places of the two factors ADD in the product?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Place the point that many digits from the right: {_decimal_text(answer)}.",
+            why_prompt="Why is the product smaller than each factor when both are below one?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _terminating_decimal_places(value: Rational) -> int:
+    """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
+    reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
+    power-of-ten denominator): 1/5 → 1, 3/20 → 2, 3 → 0."""
+    den = value.q
+    twos = fives = 0
+    while den % 2 == 0:
+        den //= 2
+        twos += 1
+    while den % 5 == 0:
+        den //= 5
+        fives += 1
+    return max(twos, fives)
+
+
+def _decimal_text(value: Rational) -> str:
+    """Render an exact terminating rational as a finite decimal string.
+
+    Pure integer arithmetic, no float (CLAUDE.md §8.2 — no float touches a shown value). Scales
+    the value to an integer by the place count, then inserts the point; an integer renders bare."""
+    places = _terminating_decimal_places(value)
+    if places == 0:
+        return str(value.p)
+    scaled = int(value * (10**places))  # exact: value has exactly ``places`` decimal places
+    sign = "-" if scaled < 0 else ""
+    digits = str(abs(scaled)).zfill(places + 1)
+    return f"{sign}{digits[:-places]}.{digits[-places:]}"
+
+
 # ─── The public builder ───────────────────────────────────────────────────────
 
 
@@ -687,6 +753,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.UNIT_CONVERSION: _unit_conversion_steps,
     KnowledgeComponentId.GCF_LCM: _gcf_lcm_steps,
     KnowledgeComponentId.MULTI_DIGIT_DIVISION: _multi_digit_division_steps,
+    KnowledgeComponentId.DECIMAL_OPERATIONS: _decimal_operations_steps,
 }
 
 

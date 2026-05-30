@@ -308,9 +308,12 @@ _U2 = CatalogUnit(
         CatalogLesson(
             slug="u2_l6",
             unit_slug="u2",
+            # Aligned to the enum/model label-space id ``KC_decimal_operations`` (was the stray
+            # ``KC_decimal_ops``, which matched no KnowledgeComponentId member and so could never
+            # resolve or be built — Grade-6 build, 2026-05-30).
             order=7,
             title="Decimal operations",
-            kc_id="KC_decimal_ops",
+            kc_id="KC_decimal_operations",
             ccss_code="6.NS.3",
             teks_code="6.3E",
             description="Add/subtract/multiply/divide multi-digit decimals fluently.",

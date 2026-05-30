@@ -51,6 +51,7 @@ from app.domain.misconceptions import (
     WrongFraction,
     add_across,
     additive_ratio,
+    decimal_point_misplacement,
     gcf_lcm_confusion,
     invert_conversion,
     invert_rate,
@@ -417,6 +418,17 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.MAGNITUDE,
         misconception=MisconceptionId.PLACE_VALUE_SLIP,
         predict=lambda ops: place_value_slip(int(ops[0]), int(ops[1])),
+    ),
+    # decimal-point-misplacement: multiplied the digits right but placed the product's point by the
+    # longer factor's place count, not the SUM — so the value is off by a power of ten (operands are
+    # the two decimal factors). The DIGITS are right, the SIZE is wrong: a MAGNITUDE error (routes
+    # to the size-exposing surface, §3.6), distinct from the OPERATION errors above.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.DECIMAL_OPERATIONS,
+        operand_count=2,
+        error_category=ErrorCategory.MAGNITUDE,
+        misconception=MisconceptionId.DECIMAL_POINT_MISPLACEMENT,
+        predict=lambda ops: decimal_point_misplacement(ops[0], ops[1]),
     ),
 )
 

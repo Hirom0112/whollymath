@@ -347,6 +347,20 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # Multiply decimals and place the point by its place value (CCSS 6.NS.3 / TEKS 6.3E). A single
+    # decimal product entered in the symbolic editor (the decimal-string answer the verifier now
+    # parses exactly). Advertises SYMBOLIC + AREA_MODEL (an area model is the canonical picture of
+    # a decimal product), but LIVE only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) —
+    # PRACTICE-ONLY like MULTIPLY_FRACTIONS; masterability waits on the area-model widget (T3).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.DECIMAL_OPERATIONS,
+        skill_name="Operate on decimals",
+        description=(
+            "Multiply decimals and place the decimal point in the product by counting place "
+            "values (e.g. 0.5 x 0.4 = 0.20), rather than misplacing the point by a power of ten."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

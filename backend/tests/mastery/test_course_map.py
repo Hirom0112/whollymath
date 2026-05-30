@@ -43,7 +43,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.DIVIDE_FRACTIONS,  # Grade-6 Unit 2 (built 2026-05-30, T2), after multiplication
         KC.UNIT_CONVERSION,  # Grade-6 Unit 1 (built 2026-05-30)
         KC.GCF_LCM,  # Grade-6 Unit 2 (built 2026-05-30)
-        KC.MULTI_DIGIT_DIVISION,  # Grade-6 Unit 2 (built 2026-05-30), last on the spine
+        KC.MULTI_DIGIT_DIVISION,  # Grade-6 Unit 2 (built 2026-05-30)
+        KC.DECIMAL_OPERATIONS,  # Grade-6 Unit 2 (built 2026-05-30), last on the spine
     ]
 
 

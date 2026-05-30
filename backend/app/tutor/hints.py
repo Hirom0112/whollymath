@@ -321,6 +321,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Multiply your answer back by the divisor — does it land on the number you began with?",
         ),
     ),
+    # Grade-6 Unit 2: index 0 (operation) orients toward counting place values; index 1
+    # (magnitude) toward the size of the product when both factors are below one.
+    KnowledgeComponentId.DECIMAL_OPERATIONS: (
+        _nudge(
+            KnowledgeComponentId.DECIMAL_OPERATIONS,
+            "Count the decimal places in BOTH numbers — the product has that many altogether.",
+        ),
+        _nudge(
+            KnowledgeComponentId.DECIMAL_OPERATIONS,
+            "Two numbers below one multiply to something smaller — is the point in the right spot?",
+        ),
+        _nudge(
+            KnowledgeComponentId.DECIMAL_OPERATIONS,
+            "Multiply as whole numbers first, then place the point by the digits sitting after it.",
+        ),
+    ),
 }
 
 

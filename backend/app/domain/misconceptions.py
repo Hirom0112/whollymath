@@ -83,6 +83,9 @@ class MisconceptionId(StrEnum):
     # Unit 2: a long-division place-value slip — the quotient digits are right but misplaced
     # (a dropped/extra zero), so the answer is off by a factor of 10.
     PLACE_VALUE_SLIP = "place-value-slip"
+    # Unit 2 (6.NS.3): misplacing the decimal point in a product — the digits are right but the
+    # value is off by a power of ten.
+    DECIMAL_POINT_MISPLACEMENT = "decimal-point-misplacement"
 
 
 @dataclass(frozen=True)
@@ -289,6 +292,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "of place value, so the magnitude is wrong while the digits are right."
         ),
         applicable_kcs=(KnowledgeComponentId.MULTI_DIGIT_DIVISION,),
+    ),
+    Misconception(
+        id=MisconceptionId.DECIMAL_POINT_MISPLACEMENT,
+        name="Decimal point misplacement",
+        description=(
+            "Multiplies the digits correctly but places the decimal point in the product by the "
+            "wrong count — using only the longer factor's decimal places instead of the SUM of "
+            "both — so 0.5 x 0.4 (one place each, two in the product) becomes 2.0 instead of "
+            "0.20. The DIGITS are right; the value is off by a power of ten (a magnitude error)."
+        ),
+        applicable_kcs=(KnowledgeComponentId.DECIMAL_OPERATIONS,),
     ),
 )
 
@@ -516,6 +530,42 @@ def place_value_slip(dividend: int, divisor: int) -> Rational:
     always a genuinely wrong, magnitude-only error.
     """
     return Rational((dividend // divisor) * 10)
+
+
+def _decimal_places(value: Rational) -> int:
+    """How many decimal places ``value`` needs as a finite decimal (regardless of reduction).
+
+    A reduced rational p/q is a terminating decimal exactly when q's only prime factors are 2
+    and 5; the place count is then ``max(exponent of 2, exponent of 5)`` in q — e.g. 1/5 (=0.2)
+    → 1, 3/20 (=0.15) → 2, 1/4 (=0.25) → 2, 3 → 0. (SymPy reduces 2/10 to 1/5, so we must NOT
+    assume a power-of-ten denominator — we factor q instead.) Raises if q has any other prime
+    factor (a non-terminating decimal), which the decimal-operations generator never produces, so
+    that would be a bug not learner input — fail loudly per CLAUDE.md §8.5."""
+    den = value.q
+    twos = fives = 0
+    while den % 2 == 0:
+        den //= 2
+        twos += 1
+    while den % 5 == 0:
+        den //= 5
+        fives += 1
+    if den != 1:
+        raise ValueError(f"{value} is not a terminating decimal (denominator has other primes)")
+    return max(twos, fives)
+
+
+def decimal_point_misplacement(first: Rational, second: Rational) -> Rational:
+    """decimal-point-misplacement: place the product's point by the LONGER factor's place count.
+
+    The correct product ``first * second`` has ``places(first) + places(second)`` decimal places.
+    The learner counts only ``max`` of the two instead of the SUM, so the point lands too far
+    right — the value is the correct product scaled UP by ``10 ** min(places)`` (a power of ten).
+    e.g. 0.5 x 0.4 (one place each): correct 0.20, misplaced 2.0 (x10). The digits are right; the
+    magnitude is wrong — which is why the verifier classifies this as a MAGNITUDE error. Returned
+    as a SymPy ``Rational`` so the verifier compares values directly.
+    """
+    p1, p2 = _decimal_places(first), _decimal_places(second)
+    return Rational(first * second) * (10 ** min(p1, p2))
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

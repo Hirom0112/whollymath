@@ -44,6 +44,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             KnowledgeComponentId.UNIT_CONVERSION,
             KnowledgeComponentId.GCF_LCM,  # whole-number operands; ramps by pair pool, not denom
             KnowledgeComponentId.MULTI_DIGIT_DIVISION,  # whole-number operands; ramps by dividend
+            # decimal operands are powers of ten (tenths/hundredths); ramps by place value + digit
+            # size, not by a fraction-denominator pool.
+            KnowledgeComponentId.DECIMAL_OPERATIONS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)
