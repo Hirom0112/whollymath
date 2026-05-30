@@ -43,6 +43,7 @@ from app.homework.session import HomeworkStore
 from app.llm.tracing import traced
 from app.persona_surface.hint_renderer import default_hint_provider
 from app.persona_surface.tutor_voice import default_voice_provider
+from app.policy.intervention_gate import SustainedHelpNeedGate
 
 _log = logging.getLogger(__name__)
 
@@ -140,8 +141,16 @@ def create_app() -> FastAPI:
         version="0.1.0",
         summary="Turn-loop API for the adaptive fraction tutor (ARCHITECTURE.md §10).",
     )
+    # Load once at boot (§8.1) and read the Tier-2 trustworthy set off the artifact so the
+    # proactive gate only fires on AUC-validated KCs (T1_T2_COORDINATION §"Tier-2"). The set is
+    # frozen at train time on the holdout (the runtime has no holdout to recompute it). A
+    # pre-stamp artifact carries no set ⇒ ``trustworthy_kcs is None`` ⇒ the gate applies no KC
+    # filter, the default-unchanged behavior; a re-fit artifact activates the guard with no code
+    # change. ``proactive_enabled`` still defaults OFF per session, so this is observe-only anyway.
+    predictor = load_predictor()
     app.state.session_store = SessionStore(
-        predictor=load_predictor(),
+        predictor=predictor,
+        gate=SustainedHelpNeedGate(trustworthy_kcs=predictor.trustworthy_kcs),
         # Enable the mascot's voice on help moments (Slice 5.5.2); lazily creates the
         # Anthropic client on first help turn. Falls back to pre-written text if unavailable.
         # Wrapped in LangSmith tracing (Slice PL.0): a no-op passthrough unless

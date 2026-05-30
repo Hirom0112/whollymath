@@ -24,7 +24,7 @@ Deterministic: the same probability history yields the same verdict (PROJECT.md 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Validated defaults (PROJECT.md §3.7; signed off 2026-05-28): three sustained turns at
 # the 0.5 threshold. The Slice 5.4 sweep (RESEARCH.md §9.3) scored every (K, threshold) on
@@ -44,10 +44,34 @@ class SustainedHelpNeedGate:
     ``threshold`` is the per-turn P(unproductive) bar (inclusive, ``>=``). Frozen and
     validated at construction so an out-of-range parameter fails loudly rather than
     producing a silently-wrong gate (CLAUDE.md §8.5).
+
+    ``trustworthy_kcs`` is the Tier-2 weak-KC guard (T1_T2_COORDINATION §"Tier-2"): the
+    set of KC values whose validated per-KC AUC clears the trustworthiness bar, on which
+    the proactive arm is allowed to fire. It is computed by
+    ``helpneed.per_kc_validation.trustworthy_kcs`` and injected here — NOT a hardcoded KC
+    list, so the guarded set widens automatically as the model improves on a re-fit. Its
+    semantics:
+
+      - ``None`` (the default) — **no KC filter**. The KC-aware check reduces exactly to
+        the sustained-window check, so the default gate behaves identically to before this
+        guard existed. This is what keeps the observe-only default and the A/B sweep
+        unchanged: callers that don't supply a set are unaffected.
+      - a frozenset — fire proactively ONLY on a KC in the set; on every other (weak /
+        unvalidated) KC the gate stays silent so the deterministic reactive layer (SymPy
+        verdict → morph + misconception) handles the turn. An EMPTY frozenset is a real
+        Tier-2 verdict ("no KC cleared the bar"), distinct from ``None``: it suppresses
+        every KC rather than allowing all.
+
+    The trustworthiness guard only narrows *where* the arm may fire; it never changes the
+    §3.7 sustained rule that governs *when* (``should_intervene`` is unchanged).
     """
 
     k: int = DEFAULT_K
     threshold: float = DEFAULT_THRESHOLD
+    # ``None`` ⇒ no KC filter (default-unchanged); a frozenset ⇒ fire only on those KCs.
+    # ``field`` (not a bare default) because a frozenset is not a hashable-immutable literal
+    # the dataclass machinery will accept inline the way an int/float default is.
+    trustworthy_kcs: frozenset[str] | None = field(default=None)
 
     def __post_init__(self) -> None:
         if self.k < 1:
@@ -63,11 +87,29 @@ class SustainedHelpNeedGate:
         sub-threshold turn anywhere in the window (e.g. a correct answer mid-recovery)
         blocks the fire, and an older high run that has since dipped does not stand as an
         alarm. Returns ``False`` until at least ``k`` turns have been scored.
+
+        The pure window check, KC-agnostic — the A/B sweep (``eval/proactive_ab``) and the
+        Tier-2-aware ``should_intervene_for_kc`` both build on it.
         """
         if len(recent_probs) < self.k:
             return False
         window = recent_probs[-self.k :]
         return all(p >= self.threshold for p in window)
+
+    def should_intervene_for_kc(self, recent_probs: Sequence[float], *, kc: str) -> bool:
+        """The live-loop verdict: the sustained window AND the Tier-2 trustworthiness guard.
+
+        Fires iff ``should_intervene(recent_probs)`` trips AND ``kc`` is one the proactive
+        arm may fire on (see ``trustworthy_kcs``). With no configured set the guard is a
+        no-op and this is exactly ``should_intervene`` — so the default behavior is
+        unchanged. On a guarded (weak/unvalidated) KC it returns ``False`` even on a clear
+        sustained signal, leaving the turn to the deterministic reactive layer.
+        """
+        if not self.should_intervene(recent_probs):
+            return False
+        if self.trustworthy_kcs is None:
+            return True
+        return kc in self.trustworthy_kcs
 
 
 __all__ = ["DEFAULT_K", "DEFAULT_THRESHOLD", "SustainedHelpNeedGate"]

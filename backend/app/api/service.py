@@ -355,7 +355,12 @@ def _maybe_intervene(
     """
     if not live.proactive_enabled:
         return None
-    if not gate.should_intervene(live.help_need_history):
+    # Tier-2 weak-KC guard (T1_T2_COORDINATION §"Tier-2"): the arm may fire only when the
+    # sustained signal trips AND the upcoming problem's KC is one the predictor is validated
+    # trustworthy on. On a guarded (weak/unvalidated) KC this returns False and the turn is
+    # left to the deterministic reactive layer — we never give a low-confidence proactive
+    # nudge. With no trustworthy set configured this is exactly the old window check.
+    if not gate.should_intervene_for_kc(live.help_need_history, kc=next_problem.kc.value):
         return None
     # A help moment: voice the pre-written nudge in the mascot's voice (Slice 5.5.2), or
     # return it verbatim if voicing is disabled/fails (invariant 4). The LLM only rephrases

@@ -77,3 +77,71 @@ def test_construction_rejects_bad_parameters() -> None:
         SustainedHelpNeedGate(threshold=1.5)
     with pytest.raises(ValueError):
         SustainedHelpNeedGate(threshold=-0.1)
+
+
+# ── Tier-2 trustworthy-KC guard (T1_T2_COORDINATION §"Tier-2") ───────────────────────
+#
+# The proactive arm may only fire on a KC whose validated per-KC AUC clears the bar
+# (``helpneed.per_kc_validation.trustworthy_kcs``). On a weak/guarded KC the sustained
+# window can still be high, but the gate must STAY SILENT so the deterministic reactive
+# layer (SymPy verdict → morph + misconception) handles the turn — the model isn't
+# trustworthy enough there to drive a proactive nudge. The window check is unchanged; this
+# is an ADDITIVE filter, off by default (``trustworthy_kcs=None`` ⇒ no filter), so the
+# observe-only default and the existing window semantics above are untouched.
+
+
+def test_default_trustworthy_set_is_none_no_kc_filter() -> None:
+    """No trustworthy set configured ⇒ the KC-aware check is exactly the window check.
+
+    This is what keeps the default behavior unchanged: a gate with no set behaves on the
+    KC-aware path identically to ``should_intervene`` (the A/B sweep + existing tests).
+    """
+    gate = SustainedHelpNeedGate(k=3, threshold=0.5)
+    assert gate.trustworthy_kcs is None
+    assert gate.should_intervene_for_kc([0.91, 0.88, 0.93], kc="KC_anything") is True
+    assert gate.should_intervene_for_kc([0.99], kc="KC_anything") is False
+
+
+def test_trustworthy_kc_can_fire_when_window_trips() -> None:
+    """A KC in the trustworthy set fires exactly when the sustained window trips."""
+    gate = SustainedHelpNeedGate(
+        k=3, threshold=0.5, trustworthy_kcs=frozenset({"KC_multiply_fractions"})
+    )
+    assert gate.should_intervene_for_kc([0.91, 0.88, 0.93], kc="KC_multiply_fractions") is True
+
+
+def test_guarded_kc_never_fires_even_with_sustained_signal() -> None:
+    """A weak/guarded KC stays silent (reactive fallback) even on a clear sustained signal.
+
+    ``KC_rate_problems`` is one of the genuinely weak topics (AUC ~0.74) the Tier-2 guard
+    excludes; the window trips but the proactive arm must not fire on it.
+    """
+    gate = SustainedHelpNeedGate(
+        k=3, threshold=0.5, trustworthy_kcs=frozenset({"KC_multiply_fractions"})
+    )
+    # The window itself is satisfied — only the KC guard suppresses the fire.
+    assert gate.should_intervene([0.91, 0.88, 0.93]) is True
+    assert gate.should_intervene_for_kc([0.91, 0.88, 0.93], kc="KC_rate_problems") is False
+
+
+def test_kc_filter_does_not_override_the_window() -> None:
+    """A trustworthy KC still requires the sustained window — the filter only ANDs in.
+
+    A single high turn on a trustworthy KC must not fire: the trustworthiness gate widens
+    *where* the arm may fire, never *when* (the §3.7 sustained rule still governs).
+    """
+    gate = SustainedHelpNeedGate(
+        k=3, threshold=0.5, trustworthy_kcs=frozenset({"KC_multiply_fractions"})
+    )
+    assert gate.should_intervene_for_kc([0.99], kc="KC_multiply_fractions") is False
+
+
+def test_empty_trustworthy_set_suppresses_every_kc() -> None:
+    """An empty (but not None) set means 'nothing validated yet' — fire on nothing.
+
+    Distinct from ``None`` (no filter). An explicit empty frozenset is a real, if extreme,
+    Tier-2 verdict (no KC cleared the AUC bar), and the gate must honor it rather than
+    treating it as 'allow all'.
+    """
+    gate = SustainedHelpNeedGate(k=3, threshold=0.5, trustworthy_kcs=frozenset())
+    assert gate.should_intervene_for_kc([0.91, 0.88, 0.93], kc="KC_multiply_fractions") is False

@@ -93,6 +93,52 @@ def test_intervention_text_comes_from_the_nudge_bank() -> None:
 
 
 @stale_artifact
+def test_tier2_guard_suppresses_proactive_fire_on_untrusted_kc() -> None:
+    """Tier-2: the proactive arm stays silent on a KC NOT in the gate's trustworthy set.
+
+    Same sustained-signal setup that fires in
+    ``test_proactive_arm_fires_only_after_sustained_signal``, but the gate's
+    ``trustworthy_kcs`` excludes the upcoming KC — so the gate falls back to the
+    deterministic reactive layer and never offers a proactive nudge. This is the
+    end-to-end weak-KC guard (T1_T2_COORDINATION §"Tier-2").
+    """
+    # An allow-list that deliberately omits the combine route's KC (a dummy strong KC stands
+    # in for "some other validated KC"), so the upcoming problem's KC is guarded.
+    guarded = SustainedHelpNeedGate(
+        k=2, threshold=0.5, trustworthy_kcs=frozenset({"KC_some_other_trusted_kc"})
+    )
+    store = SessionStore(predictor=load_predictor(), gate=guarded)
+    started = store.start(_ADDITION_ROUTE_KEY, proactive_enabled=True)
+    responses = _walk_wrong(store, started.session_id, started.problem.problem_id, turns=6)
+    # The served KC is the guarded one, so despite a clear sustained high-P run, no fire.
+    assert all(r.intervention is None for r in responses)
+
+
+@stale_artifact
+def test_tier2_trusted_kc_still_fires() -> None:
+    """Tier-2: when the upcoming KC IS in the trustworthy set, the arm fires as before.
+
+    Confirms the guard is a precise filter, not a blanket off-switch: the SAME walk that the
+    previous test suppresses fires here once the served KC is whitelisted.
+    """
+    store = SessionStore(predictor=load_predictor(), gate=SustainedHelpNeedGate(k=2, threshold=0.5))
+    started = store.start(_ADDITION_ROUTE_KEY, proactive_enabled=True)
+    # First, learn the served KC from an unfiltered run so the whitelist names the real KC.
+    probe = _walk_wrong(store, started.session_id, started.problem.problem_id, turns=2)
+    fired_probe = next(r for r in probe if r.intervention is not None)
+    assert fired_probe.next_problem is not None
+    served_kc = fired_probe.next_problem.kc.value
+
+    trusted = SustainedHelpNeedGate(k=2, threshold=0.5, trustworthy_kcs=frozenset({served_kc}))
+    store2 = SessionStore(predictor=load_predictor(), gate=trusted)
+    started2 = store2.start(_ADDITION_ROUTE_KEY, proactive_enabled=True)
+    responses = _walk_wrong(store2, started2.session_id, started2.problem.problem_id, turns=6)
+    assert any(r.intervention is not None for r in responses), (
+        "a whitelisted KC must still fire on a sustained signal"
+    )
+
+
+@stale_artifact
 def test_arm_does_not_alter_deterministic_turn_outcome() -> None:
     """Arm ON vs OFF: identical turn outcomes; only `intervention` differs (§8.1 order).
 

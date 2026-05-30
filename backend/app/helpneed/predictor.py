@@ -108,6 +108,14 @@ class HelpNeedPredictor:
     # one-hot has drifted from the artifact (the KC enum widened ahead of a re-fit). ``None`` for a
     # legacy artifact saved before stamping — the guard then falls back to ``model.n_features_in_``.
     feature_names: tuple[str, ...] | None = None
+    # The KCs the proactive arm may fire on: the Tier-2 weak-KC guard (T1_T2_COORDINATION
+    # §"Tier-2"). Computed on the holdout by the training pipeline via
+    # ``per_kc_validation.trustworthy_kcs`` (NOT by ``fit``, which has no holdout) and stamped
+    # onto the production artifact, so the runtime reads the validated set off the loaded model
+    # instead of recomputing it at boot (no holdout data there). ``None`` for a directly-fit
+    # predictor or a legacy artifact that predates the stamp; the gate reads ``None`` as "no
+    # KC filter" (default-unchanged) and a frozenset as the allow-list.
+    trustworthy_kcs: frozenset[str] | None = None
     # Log the width-mismatch warning at most once per predictor (the turn loop calls predict_proba
     # every turn; we don't want a log line per turn). Not part of the saved state.
     _width_mismatch_logged: bool = field(default=False, init=False, repr=False)
@@ -197,7 +205,18 @@ class HelpNeedPredictor:
         import joblib
 
         names = list(self.feature_names) if self.feature_names is not None else None
-        joblib.dump({"model": self.model, "kind": self.kind, "feature_names": names}, path)
+        # Persist the Tier-2 trustworthy set as a sorted list (joblib-friendly, deterministic);
+        # ``None`` when unset so a pre-stamp reader still round-trips. Reloaded back to a frozenset.
+        trusted = sorted(self.trustworthy_kcs) if self.trustworthy_kcs is not None else None
+        joblib.dump(
+            {
+                "model": self.model,
+                "kind": self.kind,
+                "feature_names": names,
+                "trustworthy_kcs": trusted,
+            },
+            path,
+        )
 
     @classmethod
     def load(cls, path: Path) -> HelpNeedPredictor:
@@ -205,16 +224,22 @@ class HelpNeedPredictor:
 
         Tolerant of a legacy payload that predates the ``feature_names`` stamp (``.get`` → ``None``)
         so the committed width-13 artifact still loads; the width-guard then falls back to the
-        model's own ``n_features_in_``.
+        model's own ``n_features_in_``. Equally tolerant of a payload that predates the
+        ``trustworthy_kcs`` stamp (``.get`` → ``None``), which the gate reads as "no KC filter"
+        (the default-unchanged Tier-2 behavior).
         """
         import joblib
 
         payload = joblib.load(path)
         stamped = payload.get("feature_names")
+        # ``.get`` tolerates a pre-stamp payload (no trustworthy_kcs key) → None → gate applies
+        # no KC filter, so the committed artifact loads with the default-unchanged behavior.
+        trusted = payload.get("trustworthy_kcs")
         return cls(
             model=payload["model"],
             kind=payload["kind"],
             feature_names=tuple(stamped) if stamped is not None else None,
+            trustworthy_kcs=frozenset(trusted) if trusted is not None else None,
         )
 
 

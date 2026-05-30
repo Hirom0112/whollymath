@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from app.helpneed.features import TrainingExample, build_examples
@@ -24,7 +24,7 @@ from app.helpneed.parse_edmcup import (
     load_fraction_problems,
     parse_action_logs,
 )
-from app.helpneed.per_kc_validation import format_report, validate_per_kc
+from app.helpneed.per_kc_validation import format_report, trustworthy_kcs, validate_per_kc
 from app.helpneed.predictor import HelpNeedPredictor, examples_to_matrix, top_shap_features
 
 
@@ -162,22 +162,34 @@ def main() -> None:
     # deterministic split). The honest-reporting deliverable for the cross-topic model:
     # which KCs score well, which sit in the thin bucket (T1_T2_COORDINATION §1).
     _, test_examples = split_examples(examples)
-    for line in format_report(validate_per_kc(xgb_predictor, test_examples)):
+    per_kc_report = validate_per_kc(xgb_predictor, test_examples)
+    for line in format_report(per_kc_report):
         print(line)
+
+    # The Tier-2 trustworthy set the proactive arm may fire on (T1_T2_COORDINATION §"Tier-2"):
+    # the KCs whose validated per-KC AUC clears the bar. Derived from the SAME holdout report —
+    # never a hardcoded KC list — and stamped onto the production artifact below so the live gate
+    # reads the validated set off the loaded model (no holdout data at boot to recompute it).
+    trusted = trustworthy_kcs(per_kc_report)
+    print(f"  Tier-2 trustworthy KCs (proactive-eligible, AUC>=0.85): {sorted(trusted)}")
 
     # Optionally persist the PRODUCTION artifact (Slice 4.4.1). The reported metrics
     # above come from the 75/25 holdout split; the deployed model is fit on ALL
     # examples (the holdout exists to measure quality, not to be thrown away in
-    # production). Saved only when an output path is given, so the default run stays a
-    # pure reporting pass.
+    # production). The trustworthy set is measured on the holdout (above) and stamped onto
+    # the all-examples model, so the artifact carries the validated Tier-2 allow-list. Saved
+    # only when an output path is given, so the default run stays a pure reporting pass.
     out_path = os.environ.get("WHOLLYMATH_HELPNEED_OUT", "")
     if out_path:
         destination = Path(out_path)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        production = HelpNeedPredictor.fit(examples, kind="xgboost")
+        production = replace(
+            HelpNeedPredictor.fit(examples, kind="xgboost"), trustworthy_kcs=trusted
+        )
         production.save(destination)
         print(
-            f"  saved production artifact (fit on all {len(examples):,} examples) -> {destination}"
+            f"  saved production artifact (fit on all {len(examples):,} examples, "
+            f"{len(trusted)} trustworthy KCs stamped) -> {destination}"
         )
 
 

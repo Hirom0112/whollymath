@@ -10,6 +10,7 @@ fast and the expected behavior is unambiguous.
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 
 import numpy as np
 from app.domain.knowledge_components import KnowledgeComponentId
@@ -170,3 +171,44 @@ def test_load_tolerates_legacy_artifact_without_feature_names(tmp_path) -> None:
     assert reloaded.feature_names is None
     # Same width as today → compatible → still produces a real score (degrades only when widened).
     assert 0.0 <= reloaded.predict_proba(_STRUGGLING) <= 1.0
+
+
+# ─── Tier-2 trustworthy-KC stamp (T1_T2_COORDINATION §"Tier-2") ───────────────────────
+# The set of KCs the proactive arm may fire on is a property of the VALIDATED model, so it
+# is frozen at train time (computed on the holdout via per_kc_validation.trustworthy_kcs)
+# and persisted WITH the artifact. The runtime reads it off the loaded predictor and hands
+# it to the gate — never recomputed at boot (no holdout data there). A legacy artifact that
+# predates the stamp carries None, which the gate treats as "no filter" (default-unchanged).
+
+
+def test_fit_leaves_trustworthy_kcs_unset() -> None:
+    """``fit`` alone doesn't know the holdout, so it stamps no trustworthy set (None).
+
+    The set is computed by the training pipeline on the holdout AFTER the fit and attached
+    there — ``fit`` itself stays a pure model fit, so a directly-fit predictor is unfiltered.
+    """
+    predictor = HelpNeedPredictor.fit(_dataset(), kind="xgboost", random_state=0)
+    assert predictor.trustworthy_kcs is None
+
+
+def test_save_load_preserves_trustworthy_kcs(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A stamped trustworthy set survives a joblib round-trip."""
+    base = HelpNeedPredictor.fit(_dataset(), kind="xgboost", random_state=0)
+    stamped = replace(base, trustworthy_kcs=frozenset({"KC_multiply_fractions", "KC_unit_rate"}))
+    path = tmp_path / "stamped_trust.joblib"
+    stamped.save(path)
+    reloaded = HelpNeedPredictor.load(path)
+    assert reloaded.trustworthy_kcs == frozenset({"KC_multiply_fractions", "KC_unit_rate"})
+
+
+def test_load_tolerates_artifact_without_trustworthy_kcs(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """The committed pre-stamp artifact (no trustworthy_kcs key) loads with None — no filter."""
+    import joblib
+
+    predictor = HelpNeedPredictor.fit(_dataset(), kind="xgboost", random_state=0)
+    path = tmp_path / "pre_trust.joblib"
+    joblib.dump(
+        {"model": predictor.model, "kind": predictor.kind, "feature_names": list(FEATURE_NAMES)},
+        path,
+    )
+    assert HelpNeedPredictor.load(path).trustworthy_kcs is None
