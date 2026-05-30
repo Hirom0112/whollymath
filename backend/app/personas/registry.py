@@ -16,15 +16,19 @@ is editing a config" (PROJECT.md §4.1).
 from __future__ import annotations
 
 from app.personas.cleo import CLEO
+from app.personas.cora import CORA
 from app.personas.hugo import HUGO
 from app.personas.nate import NATE
 from app.personas.persona_config import PersonaConfig, PersonaRegistry
 from app.personas.priya import PRIYA
 from app.personas.sam import SAM
 
-# The five personas, in PROJECT.md §4.2 roster order: Nate (P1), Priya (P2),
-# Hugo (P3), Sam (P4), Cleo (P5).
-_PERSONAS: tuple[PersonaConfig, ...] = (NATE, PRIYA, HUGO, SAM, CLEO)
+# The five §4.2 NEGATIVE-control personas, in roster order — Nate (P1), Priya (P2),
+# Hugo (P3), Sam (P4), Cleo (P5) — plus Capable Cora, the POSITIVE control added on owner
+# direction (2026-05-30): the genuinely-competent learner who CONFIRMS mastery, so the
+# harness proves the mastery model accepts real mastery as well as rejecting fake mastery
+# (cora.py). "Adding a sixth persona is editing a config" (PROJECT.md §4.1).
+_PERSONAS: tuple[PersonaConfig, ...] = (NATE, PRIYA, HUGO, SAM, CLEO, CORA)
 
 # The module-level registry is the single source of truth for the persona configs.
 # Built once at import; immutable contents.

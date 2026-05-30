@@ -91,20 +91,26 @@ class StudentBotProfile:
 # real personas produce — we do not fabricate extra students to pad the buckets (CLAUDE.md §5:
 # report the real scope).
 #
-# VERIFIED SPREAD: on_track × 2 (Priya, Hugo) + struggling × 3 (Sam, Nate, Cleo), covering the
-# STUCK and REPEATED_MISCONCEPTION alert kinds. Two honest findings worth knowing (flagged to the
-# owner + the T1/T2/T3 channel, not worked around):
-#   1. NO bot CONFIRMS mastery (every learner ends at percent_complete = 0). All five personas are
-#      deficient-by-design negative controls — none has KnowledgeMode.BOTH — so each FAILS the S5
-#      transfer probe (Priya is procedurally fluent at BKT ≈ 1.0 but fails error-finding, so she
-#      enters the probe repeatedly and never confirms). A demo "top student who actually masters"
-#      needs a competent BOTH-mode persona added to the registry (persona lane) — recommended, not
-#      done here.
-#   2. Hugo lands on_track though he is pedagogically needs_attention: he only answers correctly
-#      WITH a hint (zero unscaffolded correct), but the teacher alert rules don't flag the
-#      hint-dependency signature, so no alert fires. That is a real gap in the alert layer
-#      (alerts.py, T2's lane), flagged for them — not gamed here.
+# VERIFIED SPREAD: on_track × 3 (Cora, Priya, Hugo) + struggling × 3 (Sam, Nate, Cleo), covering
+# the STUCK and REPEATED_MISCONCEPTION alert kinds. Capable Cora is the genuinely-competent learner
+# (the §4.1 positive control, cora.py) and the ONLY bot who confirms mastery → she gives the demo a
+# real top student with progress > 0 instead of an all-0% roster. One honest finding still worth
+# knowing (flagged to the owner + the T1/T2/T3 channel, not worked around):
+#   - Hugo lands on_track though he is pedagogically needs_attention: he only answers correctly WITH
+#     a hint (zero unscaffolded correct), but the teacher alert rules don't flag the hint-dependency
+#     signature, so no alert fires. That is a real gap in the alert layer (alerts.py, T2's lane),
+#     flagged for them — not gamed here. (The four other negative-control personas never confirm
+#     mastery, by design — they are the cases that defeat fake mastery; Cora is the case that earns
+#     it.)
 DEMO_BOT_PROFILES: tuple[StudentBotProfile, ...] = (
+    StudentBotProfile(
+        persona=get_persona("capable_cora"),
+        display_name="Capable Cora",
+        session_id="bot-capable-cora",
+        route_key="combine",
+        # The positive control: genuine understanding → confirms mastery → real progress.
+        intended_category="on_track",
+    ),
     StudentBotProfile(
         persona=get_persona("procedure_priya"),
         display_name="Procedure Priya",
@@ -146,15 +152,17 @@ DEMO_BOT_PROFILES: tuple[StudentBotProfile, ...] = (
 )
 
 
-def _answer_str(value: Rational | None) -> str:
-    """Render the simulator's ``Rational`` answer as the wire string the verifier parses.
+def _answer_str(value: Rational | bool | None) -> str:
+    """Render the simulator's answer as the wire string the verifier parses.
 
-    The Layer-3 simulator returns a SymPy ``Rational`` (or ``None`` on a no-answer turn,
-    which the ANSWER-only bot loop never hits); the turn loop's ``submitted_answer`` is the
-    raw string the domain verifier parses (``_parse_to_rational`` accepts ``"a/b"`` / bare
-    ints). ``str(Rational(7, 12)) == "7/12"`` round-trips exactly, so the bot's verdict is
-    identical to ``run_persona`` handing the verifier the ``Rational`` directly. ``None`` →
-    ``""``, which the verifier treats as wrong (never a crash).
+    The Layer-3 simulator returns a SymPy ``Rational`` for a numeric item or a ``bool`` for
+    a yes/no item (``None`` only on a no-answer EXPLAIN turn, which the ANSWER-only bot loop
+    never hits). The turn loop's ``submitted_answer`` is the raw string the domain verifier
+    parses: ``str(Rational(7, 12)) == "7/12"`` round-trips through ``_parse_to_rational``,
+    and ``str(True) == "True"`` / ``str(False) == "False"`` round-trip through
+    ``_parse_to_bool`` (case-insensitive 'true'/'false'). So the bot's verdict is identical
+    to ``run_persona`` handing the verifier the value directly. ``None`` → ``""`` (wrong,
+    never a crash).
     """
     return "" if value is None else str(value)
 
