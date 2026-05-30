@@ -39,7 +39,10 @@ SYSTEM_FLOW.md
 TEKS_CCSS_COMPARISON.md
 HYPERREACTIVE.md
 HELPNEED_SCOPING.md
+PILOT_PLAN.md
 whollymath-sample-homework.md
+# Internal planning docs collected under mdfile/ (all untracked)
+mdfile/
 
 # ─── Secrets / local env ───
 .env
