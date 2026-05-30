@@ -37,6 +37,7 @@ deferral. There is NO LLM and NO DB here (CLAUDE.md §8.1/§8.2).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -110,20 +111,31 @@ class VerificationResult:
 # (e.g. the persona simulator). We accept all three and normalize to one Rational.
 Submitted: TypeAlias = str | int | Rational
 
+# A decimal LITERAL: optional sign, then either ``digits[.digits]`` (incl. a trailing point,
+# "10.") or ``.digits`` (a leading point, ".5"). This is intentionally narrow — it matches a single
+# plain decimal number, NOT an expression — so the parse never evaluates arbitrary input. A
+# match is fed to ``Rational(<the original string>)``, which parses the decimal EXACTLY (e.g.
+# "0.1" → 1/10), unlike ``Rational(float("0.1"))`` which carries binary-fraction fuzz.
+_DECIMAL_LITERAL = re.compile(r"^[+-]?(?:\d+\.?\d*|\.\d+)$")
+
 
 def _parse_to_rational(submitted: Submitted) -> Rational | None:
     """Parse a submitted answer to a SymPy ``Rational``, or ``None`` if impossible.
 
     Why this exists: correctness must be decided by SymPy on a single normalized
-    magnitude (ARCHITECTURE.md §9). We accept the three shapes a numeric answer
-    arrives in and reduce them to one ``Rational`` so SymPy equality is the only
-    decision rule. We deliberately do NOT use ``sympify``/``eval`` on the string:
-    a fraction answer is an ``"a/b"`` (or bare integer) form, and evaluating
-    arbitrary expressions would both widen the input surface and risk treating a
-    learner's typo as an expression. Anything that is not a clean ``a/b`` or
-    integer returns ``None`` — the caller then reports the answer as wrong rather
-    than raising on learner input (the verifier must never crash on what a kid
-    types).
+    magnitude (ARCHITECTURE.md §9). We accept the shapes a numeric answer arrives in
+    — a ``Rational``/``int``, an ``"a/b"`` fraction string, a bare integer string, or
+    a DECIMAL literal ("3.5", "0.75") — and reduce them to one ``Rational`` so SymPy
+    equality is the only decision rule. We deliberately do NOT use ``sympify``/``eval``
+    on the string: evaluating arbitrary expressions would both widen the input surface
+    and risk treating a learner's typo as an expression, so each accepted shape is matched
+    explicitly. Anything that is not a clean ``a/b``, integer, or decimal literal returns
+    ``None`` — the caller then reports the answer as wrong rather than raising on learner
+    input (the verifier must never crash on what a kid types).
+
+    A decimal is parsed by ``Rational(<string>)`` (NOT ``Rational(float(...))``): the string
+    constructor reads the decimal literal exactly, so "0.1" is 1/10, keeping the oracle
+    SymPy-exact (CLAUDE.md §8.2) — a binary ``float`` never enters the correctness decision.
 
     A zero denominator (``n/0``) is an undefined magnitude, not a value the learner
     can be "correct" with, so it also returns ``None`` rather than letting SymPy
@@ -152,6 +164,11 @@ def _parse_to_rational(submitted: Submitted) -> Rational | None:
         if denominator == 0:
             return None  # undefined magnitude — not a value to be correct with
         return Rational(numerator, denominator)
+    if _DECIMAL_LITERAL.match(text) and any(ch.isdigit() for ch in text):
+        # A decimal literal ("3.5", ".5", "10."): parse the STRING exactly. (The digit check
+        # rejects a lone "." or sign that the literal pattern's optional parts would otherwise
+        # let through.) Rational(str) is exact — no float ever touches the correctness decision.
+        return Rational(text)
     try:
         return Rational(int(text))
     except ValueError:

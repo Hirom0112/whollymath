@@ -197,6 +197,69 @@ def test_rational_answer_accepts_rational_object() -> None:
     assert verify(problem, problem.correct_value).is_correct is True
 
 
+# ─── Decimal-literal parsing (6.NS.3 decimal operations need it) ─────────────
+#
+# A decimal answer ("3.5", "0.75") is the natural form for KC_decimal_operations. Before this,
+# _parse_to_rational handled only "a/b" and bare integers, so a correct decimal answer was graded
+# WRONG. The fix parses the decimal LITERAL via SymPy ``Rational(str)`` — which is EXACT — and the
+# pin below guards that exactness (the trap being ``Rational(float)``, which is fuzzy). The oracle
+# stays SymPy-exact (CLAUDE.md §8.2); no float ever enters the correctness decision.
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("3.5", Rational(7, 2)),
+        ("0.75", Rational(3, 4)),
+        (".5", Rational(1, 2)),
+        ("-2.25", Rational(-9, 4)),
+        ("2.50", Rational(5, 2)),  # trailing zero, still 5/2
+        ("10.", Rational(10)),  # trailing point is a valid decimal literal
+    ],
+)
+def test_parse_to_rational_accepts_decimal_strings_exactly(text: str, expected: Rational) -> None:
+    """A decimal string parses to the EXACT Rational (via SymPy ``Rational(str)``, not a float)."""
+    from app.domain.verifier import _parse_to_rational
+
+    assert _parse_to_rational(text) == expected
+
+
+def test_parse_to_rational_decimal_is_exact_not_float() -> None:
+    """The string path is EXACT where the float path would not be: "0.1" → 1/10, never the
+    fuzzy ``Rational(0.1)``. This is the whole reason we pass the string, never ``float(text)``."""
+    from app.domain.verifier import _parse_to_rational
+    from sympy import Float
+
+    parsed = _parse_to_rational("0.1")
+    assert parsed == Rational(1, 10)
+    # The float-built Rational is NOT 1/10 (binary-fraction fuzz); our string path avoids it.
+    assert Rational(float("0.1")) != Rational(1, 10)
+    assert parsed != Float("0.1")  # we hold an exact Rational, not a binary Float
+
+
+def test_decimal_string_still_rejects_garbage_and_keeps_other_paths() -> None:
+    """The decimal branch is ADDITIVE: garbage, multi-point, and the a/b path are unchanged."""
+    from app.domain.verifier import _parse_to_rational
+
+    assert _parse_to_rational("not a number") is None
+    assert _parse_to_rational("1.2.3") is None  # not a single decimal literal
+    assert _parse_to_rational("3/4") == Rational(3, 4)  # a/b path untouched
+    assert _parse_to_rational("12") == Rational(12)  # bare-integer path untouched
+    assert _parse_to_rational("") is None
+
+
+def test_correct_decimal_answer_verifies_through_verify() -> None:
+    """End-to-end: a correct answer typed as a DECIMAL string is graded correct by ``verify``.
+
+    Uses an existing KC whose answer is a whole number (common denominator); "12" and "12.0"
+    name the same magnitude, so SymPy equality accepts the decimal form. (KC_decimal_operations,
+    whose answers are genuinely fractional decimals, lands in the next commit.)
+    """
+    problem = generate_problem(KnowledgeComponentId.COMMON_DENOMINATOR, seed=4)
+    integer_value = int(problem.correct_value)
+    assert verify(problem, f"{integer_value}.0").is_correct is True
+
+
 def test_unparseable_submission_is_wrong_and_other() -> None:
     """A submission that is not a number at all is wrong, category=other.
 
