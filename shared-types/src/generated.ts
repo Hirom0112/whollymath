@@ -51,6 +51,10 @@ export type KnowledgeComponentId =
  */
 export type CourseNodeStatus = "locked" | "available" | "in_progress" | "mastered" | "due_review";
 /**
+ * Which intervention form was offered (§3.7).
+ */
+export type InterventionKind = "inline_assertion" | "conceptual_prompt";
+/**
  * Stable KC identifiers, matching `diagnostic_gems.json` `_meta.kc_catalog`.
  *
  * ``StrEnum`` makes a member compare equal to and serialize as its catalog
@@ -65,10 +69,6 @@ export type KnowledgeComponentId1 =
   | "KC_addition_unlike"
   | "KC_subtraction_unlike"
   | "KC_number_line_placement";
-/**
- * Which intervention form was offered (§3.7).
- */
-export type InterventionKind = "inline_assertion" | "conceptual_prompt";
 /**
  * The learner's status on this lesson's KC (the course-map node's status).
  */
@@ -643,6 +643,26 @@ export interface EventIngestResponse {
    * Number of events accepted for best-effort persist.
    */
   accepted: number;
+  /**
+   * A proactive, additive help nudge offered MID-PROBLEM (live loop Beat 1) when the behavioral stream shows sustained struggle on the in-progress problem — rendered inline, never reorganizing the workspace (refuse-rule 1). null in the default / observe-only arm. The mascot may voice it; it never decides correctness (§8.1).
+   */
+  nudge?: InterventionView | null;
+}
+/**
+ * A proactively-offered help nudge (Slice 4.5), or absent when none is offered.
+ *
+ * Distinct from the reactive ``hint`` (which answers an explicit REQUEST_HINT): this is
+ * help the system offers *unasked* after the §3.7 sustained-signal gate fires on the
+ * HelpNeed stream. Present only when the session's proactive arm is enabled AND the gate
+ * fired; ``null`` otherwise (the observe-only default). The surface renders ``text``
+ * inline in the workspace, never as a modal (§3.8 refuse-rule 6).
+ */
+export interface InterventionView {
+  kind: InterventionKind;
+  /**
+   * The pre-written nudge text (no LLM, §8.1).
+   */
+  text: string;
 }
 /**
  * Start a homework run for a skill (the desktop, at lesson end). Returns a token for the QR.
@@ -788,22 +808,6 @@ export interface HwSubmitResponse {
    * How many questions the draft now covers.
    */
   question_count: number;
-}
-/**
- * A proactively-offered help nudge (Slice 4.5), or absent when none is offered.
- *
- * Distinct from the reactive ``hint`` (which answers an explicit REQUEST_HINT): this is
- * help the system offers *unasked* after the §3.7 sustained-signal gate fires on the
- * HelpNeed stream. Present only when the session's proactive arm is enabled AND the gate
- * fired; ``null`` otherwise (the observe-only default). The surface renders ``text``
- * inline in the workspace, never as a modal (§3.8 refuse-rule 6).
- */
-export interface InterventionView {
-  kind: InterventionKind;
-  /**
-   * The pre-written nudge text (no LLM, §8.1).
-   */
-  text: string;
 }
 /**
  * One lesson within a unit, with the learner's status on its KC (Slice DAT.9).

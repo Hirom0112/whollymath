@@ -865,6 +865,15 @@ class EventIngestResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     accepted: int = Field(ge=0, description="Number of events accepted for best-effort persist.")
+    nudge: InterventionView | None = Field(
+        default=None,
+        description=(
+            "A proactive, additive help nudge offered MID-PROBLEM (live loop Beat 1) when the "
+            "behavioral stream shows sustained struggle on the in-progress problem — rendered "
+            "inline, never reorganizing the workspace (refuse-rule 1). null in the default / "
+            "observe-only arm. The mascot may voice it; it never decides correctness (§8.1)."
+        ),
+    )
 
 
 class StudyPlanView(BaseModel):

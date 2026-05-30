@@ -305,4 +305,6 @@ def ingest_events(
     malformed event or an over-long batch is rejected with a 422 before reaching the store.
     """
     accepted = store.ingest_events(request)
-    return EventIngestResponse(accepted=accepted)
+    # Off-the-turn-loop, additive-only: a proactive nudge if the live stream shows the learner is
+    # stuck on the IN-PROGRESS problem (live loop Beat 1). null in the default/observe-only arm.
+    return EventIngestResponse(accepted=accepted, nudge=store.mid_problem_nudge(request))

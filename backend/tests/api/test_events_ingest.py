@@ -74,7 +74,7 @@ def test_events_round_trip_persists_rows(session_factory: sessionmaker[OrmSessio
         },
     )
     assert resp.status_code == 202
-    assert resp.json() == {"accepted": 2}
+    assert resp.json() == {"accepted": 2, "nudge": None}
 
     with session_factory() as db:
         rows = db.query(InteractionEvent).order_by(InteractionEvent.id).all()
@@ -93,7 +93,7 @@ def test_empty_batch_is_accepted(session_factory: sessionmaker[OrmSession]) -> N
 
     resp = client.post("/events", json={"session_id": started.session_id, "events": []})
     assert resp.status_code == 202
-    assert resp.json() == {"accepted": 0}
+    assert resp.json() == {"accepted": 0, "nudge": None}
     with session_factory() as db:
         assert db.query(InteractionEvent).count() == 0
 
@@ -110,7 +110,7 @@ def test_unknown_session_id_still_202_not_404(
         json={"session_id": "never-started", "events": [{"event_type": "focus"}]},
     )
     assert resp.status_code == 202
-    assert resp.json() == {"accepted": 1}
+    assert resp.json() == {"accepted": 1, "nudge": None}
     # Persisted with NULL session/learner FKs (we record what we can).
     with session_factory() as db:
         rows = db.query(InteractionEvent).all()
@@ -130,7 +130,7 @@ def test_no_factory_returns_accepted_zero() -> None:
         json={"session_id": started.session_id, "events": [{"event_type": "submit"}]},
     )
     assert resp.status_code == 202
-    assert resp.json() == {"accepted": 0}
+    assert resp.json() == {"accepted": 0, "nudge": None}
 
 
 def test_commit_failure_still_returns_202(session_factory: sessionmaker[OrmSession]) -> None:
@@ -166,7 +166,7 @@ def test_commit_failure_still_returns_202(session_factory: sessionmaker[OrmSessi
     # The write failed and was swallowed, but the client is never told (invariant 7).
     assert resp.status_code == 202
     # accepted=0 because the swallowed failure means nothing was durably attempted.
-    assert resp.json() == {"accepted": 0}
+    assert resp.json() == {"accepted": 0, "nudge": None}
 
 
 def test_malformed_event_missing_type_is_422(

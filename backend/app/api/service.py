@@ -65,7 +65,9 @@ from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.problem_generators import Problem
 from app.domain.verifier import verify
 from app.events.ingest import ingest_events
+from app.helpneed.events_features import build_episodes
 from app.helpneed.live_features import LiveTurn, live_features
+from app.helpneed.live_signal_features import compute_live_features
 from app.helpneed.predictor import HelpNeedPredictor
 from app.llm.provider import LLMProvider
 from app.mastery.course_map import build_course_map
@@ -75,6 +77,7 @@ from app.mastery.retention import ReviewableSkill
 from app.mastery.unit_progress import UnitProgress, build_unit_progress
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.intervention_gate import SustainedHelpNeedGate
+from app.policy.mid_problem_help import should_offer_mid_problem_help
 from app.policy.scheduler import (
     difficulty_for,
     is_masterable_live,
@@ -641,6 +644,9 @@ class _LiveSession:
     # the reactive hint escalation nudge → partial_step → worked_step in ``_hint_response``;
     # reset to 0 in ``_answer_response`` when a submitted answer serves a fresh practice item.
     hints_this_problem: int = 0
+    # The problem_id we last offered a MID-PROBLEM proactive nudge for (live loop Beat 1), so the
+    # /events stream nudges a struggling learner at most ONCE per problem instead of on every batch.
+    mid_problem_nudged_problem_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -996,6 +1002,50 @@ class SessionStore:
             events=rows,
             session_row_id=session_row_id,
             learner_id=learner_id,
+        )
+
+    def mid_problem_nudge(self, request: EventBatchRequest) -> InterventionView | None:
+        """A proactive, additive nudge for a learner struggling MID-PROBLEM, or ``None`` (Beat 1).
+
+        Reads the live behavioral stream for the in-progress problem and, if the learner is stuck
+        RIGHT NOW (sustained idle / many edits going nowhere / a long freeze before first touch),
+        returns a gentle pre-written nudge the surface renders inline — never a workspace change
+        (refuse-rule 1: an additive hint is the one mid-problem move allowed). Once per problem.
+
+        Gated, like the between-problem intervention, on the session's proactive arm
+        (``proactive_enabled``, default OFF) so the live experience is unchanged until the arm is
+        turned on. Off the turn loop entirely; any DB hiccup is swallowed (invariant 7). The mascot
+        voices the nudge; the LLM never decides whether to offer it (§8.1).
+        """
+        live = self._sessions.get(request.session_id)
+        if (
+            live is None
+            or not live.proactive_enabled
+            or self.session_factory is None
+            or live.db_session_id is None
+        ):
+            return None
+        current = live.tutor.current_problem
+        if current is None or live.mid_problem_nudged_problem_id == current.problem_id:
+            return None
+
+        try:
+            with self.session_factory() as db:
+                events = repo.load_events_for_session(db, live.db_session_id)
+        except Exception:  # noqa: BLE001 — invariant 7: a telemetry read must not break /events.
+            _log.exception("could not read events for mid-problem nudge on %s", request.session_id)
+            return None
+
+        episodes = build_episodes(events)
+        if not episodes or not should_offer_mid_problem_help(compute_live_features(episodes)):
+            return None
+
+        # Offer once per problem: record it so subsequent batches on this problem stay quiet.
+        live.mid_problem_nudged_problem_id = current.problem_id
+        nudge_text = select_nudge(current.kc).text
+        return InterventionView(
+            kind=InterventionKind.INLINE_ASSERTION,
+            text=voice_help(nudge_text, provider=self.voice_provider),
         )
 
     def _resolve_event_linkage(self, session_id: str) -> tuple[int | None, int | None]:
