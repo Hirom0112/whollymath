@@ -61,6 +61,7 @@ from app.domain.misconceptions import (
     evaluate_left_to_right,
     flip_result_sign,
     flipped_inequality,
+    forget_triangle_half,
     gcf_lcm_confusion,
     inverse_operation_error,
     invert_conversion,
@@ -818,6 +819,19 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.TRIANGLE_FORMULA_ERROR,
         predict=triangle_formula_error,
+    ),
+    # forgot-triangle-half: applied the rectangle formula b·h to a TRIANGLE, dropping the 1/2 — so
+    # the area is twice too big (operands are (base, height, mode); mode 0 == triangle, 1 ==
+    # parallelogram). A wrong OPERATION (used the wrong formula, not a magnitude misjudgment); the
+    # predictor returns None for the parallelogram mode (b·h IS correct there, no error to model),
+    # so it never fires on a parallelogram. base, height > 0, so b·h always differs from b·h/2 —
+    # the match is always diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.AREA_POLYGONS,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.FORGOT_TRIANGLE_HALF,
+        predict=forget_triangle_half,
     ),
 )
 

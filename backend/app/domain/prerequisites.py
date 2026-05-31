@@ -140,6 +140,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # placement — the live foundation KC the geometry skill rests on (its own §11 geometry prereqs
     # are not yet live, matching how the other late-unit KCs are wired to the foundation).
     _KC.TRIANGLE_PROPERTIES: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit 6: finding a polygon's area is EVALUATING a formula (1/2·b·h or b·h) at the given
+    # side lengths, so it forward-unlocks on KC_evaluate_expressions — the live KC directly upstream
+    # (matching its REMEDIATION_ROUTING drop, also EVALUATE_EXPRESSIONS).
+    _KC.AREA_POLYGONS: frozenset({_KC.EVALUATE_EXPRESSIONS}),
 }
 
 
@@ -178,6 +182,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.EXPONENTS,  # Grade-6 Unit 4: evaluate whole-number powers, on number-line placement
     _KC.INTEGER_MULTIPLY_DIVIDE,  # Grade-6 Unit-INT: multiply/divide integers, on signed add/sub
     _KC.TRIANGLE_PROPERTIES,  # Grade-6 Unit 6 (TEKS 6.8A): triangle properties, on number-line
+    _KC.AREA_POLYGONS,  # Grade-6 Unit 6: area of polygons, evaluating a formula (on evaluate-expr)
 )
 
 

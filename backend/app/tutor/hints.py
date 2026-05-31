@@ -571,6 +571,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "times the height.",
         ),
     ),
+    # Grade-6 Unit 6: index 0 (operation) orients toward the right formula per shape; index 1
+    # toward halving the triangle; index 2 catches the doubled (forgot-the-half) answer.
+    KnowledgeComponentId.AREA_POLYGONS: (
+        _nudge(
+            KnowledgeComponentId.AREA_POLYGONS,
+            "A rectangle or parallelogram is base times height; a triangle is HALF of that.",
+        ),
+        _nudge(
+            KnowledgeComponentId.AREA_POLYGONS,
+            "A triangle fills half its bounding box, so after base times height, take half.",
+        ),
+        _nudge(
+            KnowledgeComponentId.AREA_POLYGONS,
+            "If your triangle answer looks twice too big, you likely forgot to take the half.",
+        ),
+    ),
 }
 
 

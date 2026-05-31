@@ -1990,6 +1990,82 @@ def _generate_expression_parts(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry ───
+
+# Side-length pools for "find the area" items by difficulty tier (the easy→hard ramp; CP.B):
+# higher tiers use larger sides. Whole-number sides throughout (a clean grade-6 area), so the
+# difficulty ramps the side magnitudes, not a fraction denominator. The TRIANGLE mode halves the
+# product, so to keep the area a whole number the generator forces the HEIGHT even on triangles.
+_AREA_SIDE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4, 5),
+    2: (5, 6, 7, 8),
+    3: (8, 9, 10, 11),
+    4: (11, 12, 13, 14, 15),
+}
+_AREA_SIDE_POOL: tuple[int, ...] = (3, 4, 5, 6, 7, 8, 9, 10, 12, 14)
+# Triangle mode = 0 (area 1/2·b·h); parallelogram/rectangle mode = 1 (area b·h).
+_AREA_TRIANGLE_MODE = 0
+_AREA_PARALLELOGRAM_MODE = 1
+
+
+def _generate_area_polygons(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_area_polygons: find a polygon's area; a single numeric area answer (6.G.1).
+
+    A shape-mode flag (the seeded RNG picks triangle vs parallelogram/rectangle) decides the item.
+    TRIANGLE (mode 0): area is ``1/2 · base · height`` — the HEIGHT is drawn even so the area is a
+    whole number. PARALLELOGRAM/RECTANGLE (mode 1): area is ``base · height``. ``operands =
+    (base, height, mode)`` so the verifier can replay the forgot-the-half misconception (answer
+    ``base · height`` on a triangle). ``difficulty`` widens the side pool.
+
+    Two REAL surfaces share this answer (so the KC is masterable across representations,
+    PROJECT.md §3.4 rule 2), mirroring KC_evaluate_expressions / KC_exponents:
+
+      - **SYMBOLIC** (default) — "Find the area of a triangle with base {b} and height {h}." (the
+        formula form);
+      - **AREA_MODEL** — the same figure read off a unit-square grid: "On a unit grid, a triangle
+        has base {b} and height {h}. What is its area in square units?" (the visual form).
+
+    The math is sampled before the format is applied, so the same seed yields identical operands in
+    either surface. Base and height are positive, so ``base · height > base · height / 2`` and the
+    forgot-the-half misconception is always diagnostic on a triangle.
+    """
+    pool = (
+        _AREA_SIDE_BY_DIFFICULTY.get(difficulty, _AREA_SIDE_POOL) if difficulty else _AREA_SIDE_POOL
+    )
+    triangle = rng.random() < 0.5
+    base = rng.choice(pool)
+    height = rng.choice(pool)
+    if triangle:
+        # Force an even height so 1/2·base·height is a whole-number area (a clean grade-6 answer).
+        if height % 2 == 1:
+            height += 1
+        mode = _AREA_TRIANGLE_MODE
+        correct = Rational(base * height, 2)
+        shape = "triangle"
+    else:
+        mode = _AREA_PARALLELOGRAM_MODE
+        correct = Rational(base * height)
+        shape = "parallelogram"
+    if surface_format is Representation.AREA_MODEL:
+        statement = (
+            f"On a unit grid, a {shape} has base {base} and height {height}. "
+            f"What is its area in square units?"
+        )
+    else:
+        statement = f"Find the area of a {shape} with base {base} and height {height}."
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.AREA_POLYGONS, seed, surface_format),
+        kc=KnowledgeComponentId.AREA_POLYGONS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=correct,
+        representations_available=get_kc(KnowledgeComponentId.AREA_POLYGONS).representations,
+        operands=(Rational(base), Rational(height), Rational(mode)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -2022,6 +2098,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.EXPRESSION_PARTS: _generate_expression_parts,
     KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: _generate_integer_multiply_divide,
     KnowledgeComponentId.TRIANGLE_PROPERTIES: _generate_triangle_properties,
+    KnowledgeComponentId.AREA_POLYGONS: _generate_area_polygons,
 }
 
 

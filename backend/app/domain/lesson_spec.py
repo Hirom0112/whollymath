@@ -802,6 +802,30 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry ───
+    # Area of polygons (6.G.1) — a MASTERABLE lesson: SYMBOLIC + AREA_MODEL are BOTH live, so
+    # errors route to the OTHER live surface (AREA_MODEL — a unit-square grid makes a triangle's
+    # half-the-box concrete and lets the learner count the area), and the probe draws from both
+    # reps. The OPERATION route names the forgot-the-half slip directly; the MAGNITUDE route covers
+    # a size slip. AREA_MODEL has a real surface state, so the route is honest.
+    _spec(
+        _KC.AREA_POLYGONS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.AREA_MODEL,
+                "Draw the box base x height; a triangle fills HALF of it, so remember to halve.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.AREA_MODEL,
+                "Count the unit squares the shape covers to see how big the area should be.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.AREA_MODEL)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

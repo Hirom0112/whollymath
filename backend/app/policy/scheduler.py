@@ -147,6 +147,13 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # its base×height region) is the natural masterable second surface, added here once a
     # triangle-figure input widget lands — deferred to avoid over-scoping this build.
     _KC.TRIANGLE_PROPERTIES: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 6: SYMBOLIC = the area computed from the base/height formula entered in the
+    # NUMERIC editor; AREA_MODEL = the SAME area read off a unit-square grid (count the squares the
+    # shape covers). Both surfaces are LIVE and answered with the SAME numeric area, so this KC is
+    # MASTERABLE (two real representations meet §3.4 rule 2) — like EVALUATE_EXPRESSIONS /
+    # EXPONENTS, not the practice-only Grade-6 KCs. Area is literally an area-model quantity, so
+    # AREA_MODEL is the natural second surface here.
+    _KC.AREA_POLYGONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

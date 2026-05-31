@@ -79,6 +79,9 @@ EXPECTED_CATALOG_IDS = {
     "KC_classify_number_sets",
     # Unit 6 (numeric; TEKS 6.8A — triangle angle sum / base-height area, item-mode flag).
     "KC_triangle_properties",
+    # Unit 6 (numeric; masterable — SYMBOLIC + AREA_MODEL both live), area of triangles &
+    # quadrilaterals by composing/decomposing (6.G.1).
+    "KC_area_polygons",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -109,6 +112,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_expression_parts",
     "KC_exponents",
     "KC_triangle_properties",
+    "KC_area_polygons",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -141,8 +145,8 @@ EXPECTED_GRADE6_KCS = {
     # EXPECTED_CATALOG_IDS (built 2026-05-30 — the first inequality-answer KC, 6.EE.8).
     "KC_equation_solutions",
     # U6 — Geometry (6.G / TEKS 6.8). KC_triangle_properties (TEKS 6.8A — angle sum / base-height
-    # area, numeric) moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
-    "KC_area_polygons",
+    # area, numeric) and KC_area_polygons (6.G.1 — masterable numeric, SYMBOLIC + AREA_MODEL) both
+    # moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_volume_fractional_edges",
     "KC_polygons_coordinate_plane",
     "KC_surface_area_nets",
@@ -177,7 +181,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 29 content-complete + 17 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 30 content-complete + 16 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

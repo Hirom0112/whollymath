@@ -625,6 +625,26 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry ───
+    # Area of polygons (6.G.1): find the area of a triangle (1/2 · b · h) or a parallelogram /
+    # rectangle (b · h) by composing/decomposing into rectangles and triangles. An item-mode flag
+    # varies the shape. The answer is a single numeric area entered in the existing NUMERIC editor
+    # (reuses the editor, NO new widget); the prompt can show the existing display-only
+    # FigureStimulus (a labeled figure). MASTERABLE-LIVE: SYMBOLIC + AREA_MODEL are BOTH live
+    # (scheduler._LIVE_REPRESENTATIONS) and answered with the SAME numeric area — area IS literally
+    # an area-model quantity (read the area off a unit-square grid vs. compute it from the formula),
+    # so the two reps meet the §3.4 rule-2 representation-diversity gate, like
+    # KC_evaluate_expressions and KC_exponents (not the practice-only Grade-6 KCs).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.AREA_POLYGONS,
+        skill_name="Find the area of polygons",
+        description=(
+            "Find the area of a triangle (one half base times height) or a parallelogram / "
+            "rectangle (base times height) by composing and decomposing into rectangles and "
+            "triangles — a triangle is half its bounding parallelogram."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

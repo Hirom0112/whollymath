@@ -152,6 +152,9 @@ class MisconceptionId(StrEnum):
     # for an area, dropping the ½ and answering base × height (the rectangle's area, not the
     # triangle's). The operands are read right; the formula relationship applied is wrong.
     TRIANGLE_FORMULA_ERROR = "triangle-formula-error"
+    # Unit 6 (6.G.1): forgot the 1/2 on a triangle — applied the rectangle formula b·h to a
+    # triangle instead of 1/2·b·h, so the area comes out twice too big.
+    FORGOT_TRIANGLE_HALF = "forgot-triangle-half"
 
 
 @dataclass(frozen=True)
@@ -534,6 +537,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.TRIANGLE_PROPERTIES,),
     ),
+    Misconception(
+        id=MisconceptionId.FORGOT_TRIANGLE_HALF,
+        name="Forgot the one-half on a triangle",
+        description=(
+            "Computes a triangle's area with the rectangle formula base x height instead of one "
+            "half base x height — a triangle of base 8 and height 3 answered as 24 instead of 12. "
+            "The base x height is the bounding parallelogram; a triangle is HALF of it, so the "
+            "answer comes out exactly twice too big (the 1/2 was dropped). Does not apply to a "
+            "parallelogram/rectangle item, where base x height IS the area."
+        ),
+        applicable_kcs=(KnowledgeComponentId.AREA_POLYGONS,),
+    ),
 )
 
 
@@ -848,6 +863,30 @@ def flip_result_sign(ops: tuple[Rational, ...]) -> Rational:
     a, b, mode = ops
     correct = a * b if mode == 1 else Rational(a, b)
     return -correct
+
+
+def forget_triangle_half(operands: tuple[Rational, ...]) -> Rational | None:
+    """forgot-triangle-half: compute a TRIANGLE's area as base x height, dropping the 1/2 (6.G.1).
+
+    The area generator encodes an item as ``(base, height, mode)`` where ``mode == 0`` is a
+    TRIANGLE (correct area ``1/2 · base · height``) and ``mode == 1`` is a parallelogram/rectangle
+    (correct area ``base · height``). The learner who makes this error reaches for the rectangle
+    formula on a triangle — answering ``base · height`` (the bounding parallelogram) instead of
+    half of it, so a triangle of base 8 and height 3 becomes 24 instead of 12.
+
+    Returned as a SymPy ``Rational`` so the verifier compares values directly; the un-halved area
+    ``base · height`` is always DISTINCT from the correct ``base · height / 2`` because the
+    generator keeps base and height positive (so the product is nonzero), making the match always
+    diagnostic. Returns ``None`` for the parallelogram mode — ``base · height`` IS the correct
+    answer there, so there is no error to model — and for an unexpected operand shape (defensive;
+    the verifier then reports OTHER rather than a false match).
+    """
+    if len(operands) != 3:
+        return None
+    base, height, mode = operands
+    if mode == 0:  # triangle: answered the bounding parallelogram b·h, dropping the 1/2
+        return base * height
+    return None  # parallelogram/rectangle: b·h is correct, no half to forget
 
 
 def evaluate_left_to_right(a: int, x: int, b: int) -> Rational:

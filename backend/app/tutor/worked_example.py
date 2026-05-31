@@ -1182,6 +1182,57 @@ def _expression_parts_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _area_polygons_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'base x height, then halve a triangle' steps for an area problem (Grade-6 Unit 6).
+
+    ``operands = (base, height, mode)`` with ``mode == 0`` a triangle / ``1`` a
+    parallelogram/rectangle; the answer is ``base*height/2`` or ``base*height ==
+    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5). The triangle
+    path shows the bounding parallelogram ``base*height`` first, then halves it — so the learner
+    sees WHY the 1/2 is there (a triangle is half its bounding parallelogram).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"area problem {problem.problem_id} needs (base, height, mode) operands")
+    base, height = int(operands[0]), int(operands[1])
+    triangle = int(operands[2]) == 0
+    box = Rational(base * height)
+    answer = problem.correct_value
+    if triangle:
+        return (
+            WorkedStep(
+                shown=(
+                    f"A triangle fits inside a box base x height: {base} x {height} = {box.p} "
+                    f"square units."
+                ),
+                why_prompt="Why does the box (base x height) hold the whole triangle?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown="The triangle is exactly HALF that box, so take half of the box's area.",
+                why_prompt="Why does a triangle cover exactly half of its bounding box?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"So the area is half of {box.p}: {box.p} / 2 = {answer.p}.",
+                why_prompt="Why would using base x height (without the half) double the answer?",
+                revealed_value=answer,
+            ),
+        )
+    return (
+        WorkedStep(
+            shown="A rectangle or parallelogram's area is base x height — no halving.",
+            why_prompt="Why does base x height give the full area of a parallelogram?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Multiply the sides: {base} x {height} = {answer.p} square units.",
+            why_prompt="Why does sliding a parallelogram into a rectangle keep its area the same?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -1269,6 +1320,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.EXPRESSION_PARTS: _expression_parts_steps,
     KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: _integer_multiply_divide_steps,
     KnowledgeComponentId.TRIANGLE_PROPERTIES: _triangle_properties_steps,
+    KnowledgeComponentId.AREA_POLYGONS: _area_polygons_steps,
 }
 
 

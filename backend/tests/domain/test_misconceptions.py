@@ -84,6 +84,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "multiply-base-by-exponent",  # KC_exponents (Unit 4)
     "sign-rule-error",  # KC_integer_multiply_divide (Unit-INT, TEKS 6.3C/D)
     "triangle-formula-error",  # KC_triangle_properties (Unit 6, TEKS 6.8A)
+    "forgot-triangle-half",  # KC_area_polygons (Unit 6, 6.G.1)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

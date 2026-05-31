@@ -87,6 +87,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # base/height (denominator 1); the difficulty widens the measure pools, not a
             # fraction-denominator pool.
             KnowledgeComponentId.TRIANGLE_PROPERTIES,
+            # area-polygons operands are (base, height, mode) — all whole numbers (denominator 1);
+            # the difficulty widens the side-length pool, not a fraction-denominator pool.
+            KnowledgeComponentId.AREA_POLYGONS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)
