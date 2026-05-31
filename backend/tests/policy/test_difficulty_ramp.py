@@ -110,6 +110,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # summary-statistics operands are (mode_code, *data) — all whole numbers (denom 1); the
             # difficulty widens the data-VALUE pool, not a fraction-denominator pool.
             KnowledgeComponentId.SUMMARY_STATISTICS,
+            # data-displays operands are (question_code, param, *data) — all whole numbers
+            # (denom 1); the difficulty widens the data-VALUE pool, not a denominator pool.
+            KnowledgeComponentId.DATA_DISPLAYS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

@@ -173,6 +173,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # directly builds on (the other statistics — median/mode/range — need only ordering/comparison,
     # already in hand).
     _KC.SUMMARY_STATISTICS: frozenset({_KC.MULTI_DIGIT_DIVISION}),
+    # Grade-6 Unit 7 (6.SP.4): reading a data display means reading counts/values off a picture
+    # built on the number line (a dot plot stacks dots above number-line positions; a histogram's
+    # bins partition it). So it forward-unlocks on KC_number_line_placement, the live foundation KC
+    # it conceptually rests on (matching how the other late-unit statistics KCs are wired).
+    _KC.DATA_DISPLAYS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -218,6 +223,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.MEAN_ABSOLUTE_DEVIATION,  # Grade-6 Unit 7 (6.SP.5c): MAD, on absolute value (distances)
     _KC.CENTER_SPREAD_SHAPE,  # Grade-6 Unit 7 (6.SP.2): center & spread, on number-line placement
     _KC.SUMMARY_STATISTICS,  # Grade-6 Unit 7 (6.SP.3): a data set's summary statistic, on division
+    _KC.DATA_DISPLAYS,  # Grade-6 Unit 7 (6.SP.4): read a data display, on number-line placement
 )
 
 

@@ -185,6 +185,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # off it) is the natural masterable second surface — its widget already exists — but adding it
     # here would promote it, deferred to avoid over-scoping this build.
     _KC.SUMMARY_STATISTICS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 7 (6.SP.4): SYMBOLIC = the count/value read off the display, entered in the
+    # editor. PRACTICE-ONLY for now; the NUMBER_LINE rep (a dot plot is dots stacked above a number
+    # line) is the natural masterable second surface — its widget already exists — but adding it
+    # here would promote it, deferred to avoid over-scoping this build.
+    _KC.DATA_DISPLAYS: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

@@ -52,13 +52,23 @@ from app.domain.center_spread import (
     range_spread,
 )
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
-from app.domain.misconceptions import SUMMARY_STAT_MODE_CODE, classify_sets_for_value
+from app.domain.misconceptions import (
+    DATA_DISPLAY_QUESTION_CODE,
+    SUMMARY_STAT_MODE_CODE,
+    classify_sets_for_value,
+)
 
 # KC_summary_statistics (6.SP.3) encodes its variable-length data set as ``operands =
 # (mode_code, *data)`` — a leading stat-mode sentinel followed by the data values. The mode codes
 # live in misconceptions (the median misconception decodes them); re-exported here as the module's
 # public name for the generator and its tests.
 _SUMMARY_STAT_MODE_CODE = SUMMARY_STAT_MODE_CODE
+
+# KC_data_displays (6.SP.4) encodes its variable-length item as ``operands = (question_code, param,
+# *data)`` — a leading question-type sentinel, a single parameter, then the data values the textual
+# display describes. The codes live in misconceptions (the distinct-value-count misconception
+# decodes them); re-exported here as the module's public name for the generator and its tests.
+_DATA_DISPLAY_QUESTION_CODE = DATA_DISPLAY_QUESTION_CODE
 
 # ─── The shared Problem type ─────────────────────────────────────────────────
 
@@ -1270,6 +1280,148 @@ def _sample_stat_data(rng: random.Random, mode: str, pool: tuple[int, ...]) -> l
     if mode == "mode":
         return [pool[0], pool[0], pool[1]]  # pool[0] is the unique mode
     return [pool[0], pool[1], pool[2]]
+
+
+# ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (CCSS 6.SP.4) ───
+
+# Value pool the displayed data set is drawn from, by difficulty tier (CP.B easy→hard): higher
+# tiers use a wider value range (the display spans more of the line / more bins). The question
+# type (count-above / most-frequent / bin-frequency) is chosen separately so all three appear.
+_DISPLAY_VALUE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3, 4, 5, 6),
+    2: (2, 4, 6, 8, 10, 12),
+    3: (3, 6, 9, 12, 15, 18, 21),
+    4: (5, 10, 15, 20, 25, 30, 35),
+}
+_DISPLAY_VALUE_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14)
+_DISPLAY_QUESTION_NAMES: tuple[str, ...] = ("count_above", "most_frequent", "bin_freq")
+_DISPLAY_BIN_WIDTH = 10  # histogram bins are width-10 (0-9, 10-19, 20-29, ...)
+
+
+def _display_answer(question: str, param: int, data: list[int]) -> Rational:
+    """The SymPy-exact answer for one data-display question over ``data``.
+
+    - count_above: how many DATA POINTS are strictly greater than the threshold ``param``.
+    - most_frequent: the value that appears most often (the generator guarantees a unique mode);
+      ``param`` is unused.
+    - bin_freq: how many data points fall in the width-10 bin whose lower bound is ``param``
+      (i.e. in ``[param, param + 9]``).
+
+    Domain-only — SymPy/the generator decides the value, never an LLM (CLAUDE.md §8.2).
+    """
+    if question == "count_above":
+        return Rational(sum(1 for v in data if v > param))
+    if question == "most_frequent":
+        return Rational(max(set(data), key=data.count))
+    hi = param + _DISPLAY_BIN_WIDTH - 1
+    return Rational(sum(1 for v in data if param <= v <= hi))
+
+
+def _display_statement(question: str, param: int, data: list[int]) -> str:
+    """The textual description of the display plus the question (NO new widget; text + numeric)."""
+    listing = ", ".join(str(v) for v in data)
+    if question == "count_above":
+        return (
+            f"A dot plot stacks one dot above each value in this data set: {listing}. "
+            f"How many data points are greater than {param}?"
+        )
+    if question == "most_frequent":
+        return (
+            f"A dot plot stacks one dot above each value in this data set: {listing}. "
+            "Which value appears most often (the tallest stack of dots)?"
+        )
+    hi = param + _DISPLAY_BIN_WIDTH - 1
+    return (
+        f"A histogram groups this data set into bins of width {_DISPLAY_BIN_WIDTH}: {listing}. "
+        f"How many data points fall in the {param}-{hi} bin?"
+    )
+
+
+def _sample_display_data(
+    rng: random.Random, question: str, pool: tuple[int, ...]
+) -> tuple[list[int], int]:
+    """Sample a data set + question parameter well-formed for ``question``.
+
+    Returns ``(data, param)``. The conditions below make each question type diagnostic and
+    well-defined; the loop is bounded re-sampling (the conditions are easy to satisfy in this pool).
+
+    - count_above: a threshold strictly inside the value range, with at least one DUPLICATED value
+      strictly above it — so the distinct-value count (the modeled misconception) differs from the
+      true data-point count.
+    - most_frequent: a UNIQUE most-frequent value, so "the most frequent value" is well-defined.
+    - bin_freq: a bin (lower bound a multiple of the width) containing at least one data point, so
+      the frequency is a positive, meaningful read.
+    """
+    for _ in range(300):
+        size = rng.randint(4, 9)
+        data = [rng.choice(pool) for _ in range(size)]
+        if question == "count_above":
+            low, high = min(data), max(data)
+            if high <= low:
+                continue
+            threshold = rng.randint(low, high - 1)
+            above = [v for v in data if v > threshold]
+            # Need a duplicate above the threshold so distinct-count != data-point-count.
+            if above and len(set(above)) < len(above):
+                return data, threshold
+            continue
+        if question == "most_frequent":
+            counts = sorted((data.count(v) for v in set(data)), reverse=True)
+            if len(counts) >= 2 and counts[0] > counts[1]:
+                return data, 0  # param unused for most_frequent
+            continue
+        # bin_freq: pick a width-10 bin (lower bound a multiple of the width) that holds a point.
+        bins = sorted({(v // _DISPLAY_BIN_WIDTH) * _DISPLAY_BIN_WIDTH for v in data})
+        bin_lo = rng.choice(bins)
+        return data, bin_lo
+    # Fallback (the loop above effectively always returns): a hand-built valid item per question.
+    if question == "count_above":
+        return [pool[2], pool[2], pool[0]], pool[1]  # two dots > threshold, one distinct value
+    if question == "most_frequent":
+        return [pool[0], pool[0], pool[1]], 0  # pool[0] is the unique mode
+    return [pool[0], pool[1]], (pool[0] // _DISPLAY_BIN_WIDTH) * _DISPLAY_BIN_WIDTH
+
+
+def _generate_data_displays(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_data_displays: read a textually-described data display; a single numeric answer.
+
+    Variable-length data set encoding (the 6.SP.4 wrinkle): the item carries a VARIABLE-LENGTH data
+    set described in the PROMPT TEXT (a future stats-display renderer will visualize it — NO new
+    widget today) PLUS which question to ask. Both are encoded in the existing
+    ``operands: tuple[Rational, ...]`` with a LEADING question-type sentinel —
+    ``operands = (question_code, param, *data)`` (codes in ``_DATA_DISPLAY_QUESTION_CODE``). The
+    verifier's distinct-value-count model decodes ``operands[0]`` / ``operands[1]`` to know when it
+    applies, and matches via the variable-length ``operand_count=None`` row, so no fixed arity is
+    assumed.
+
+    The question type (count-above / most-frequent / bin-frequency) is chosen via the seeded RNG so
+    all three appear. The answer is a whole-number count or value, entered in the existing symbolic
+    editor. COUNT-ABOVE items always carry a duplicated value above the threshold, so the
+    distinct-value-count misconception is always diagnostic. MOST-FREQUENT items have a unique mode;
+    BIN-FREQUENCY items have a non-empty bin. ``difficulty`` widens the value pool.
+    """
+    pool = (
+        _DISPLAY_VALUE_BY_DIFFICULTY.get(difficulty, _DISPLAY_VALUE_POOL)
+        if difficulty
+        else _DISPLAY_VALUE_POOL
+    )
+    question = rng.choice(_DISPLAY_QUESTION_NAMES)
+    data, param = _sample_display_data(rng, question, pool)
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.DATA_DISPLAYS, seed, surface_format),
+        kc=KnowledgeComponentId.DATA_DISPLAYS,
+        surface_format=surface_format,
+        statement=_display_statement(question, param, data),
+        correct_value=_display_answer(question, param, data),
+        representations_available=get_kc(KnowledgeComponentId.DATA_DISPLAYS).representations,
+        operands=(
+            Rational(_DATA_DISPLAY_QUESTION_CODE[question]),
+            Rational(param),
+            *(Rational(v) for v in data),
+        ),
+    )
 
 
 # ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer multiply & divide (TEKS 6.3C/D) ───
@@ -2612,6 +2764,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: _generate_mean_absolute_deviation,
     KnowledgeComponentId.CENTER_SPREAD_SHAPE: _generate_center_spread,
     KnowledgeComponentId.SUMMARY_STATISTICS: _generate_summary_statistics,
+    KnowledgeComponentId.DATA_DISPLAYS: _generate_data_displays,
 }
 
 

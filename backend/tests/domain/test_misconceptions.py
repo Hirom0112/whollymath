@@ -90,6 +90,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "forgot-absolute-value",  # KC_mean_absolute_deviation (Unit 7, 6.SP.5c)
     "range-as-sum",  # KC_center_spread_shape (Unit 7, 6.SP.2)
     "median-without-sorting",  # KC_summary_statistics (Unit 7, 6.SP.3)
+    "distinct-value-count",  # KC_data_displays (Unit 7, 6.SP.4)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

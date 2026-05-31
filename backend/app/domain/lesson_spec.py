@@ -982,6 +982,34 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (CCSS 6.SP.4) ───
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors route
+    # back to SYMBOLIC — the NUMBER_LINE rep is advertised (a dot plot sits on a number line) but
+    # isn't live yet, so "re-try on the same surface with a labeled hint" is the honest adaptation
+    # until NUMBER_LINE is promoted live (then it becomes the masterable second surface). The
+    # OPERATION route names the distinct-value-count / wrong-procedure error (count the dots, not
+    # the labels); the MAGNITUDE route covers a miscount. Probe over SYMBOLIC (the only live rep).
+    # NEVER routes to a rep with no surface.
+    _spec(
+        _KC.DATA_DISPLAYS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Count every data point that fits — a value with two dots above it counts twice, "
+                "not once.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Re-count carefully: a count can't be larger than the number of data points in "
+                "the display.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

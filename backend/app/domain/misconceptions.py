@@ -173,6 +173,11 @@ class MisconceptionId(StrEnum):
     # learner knows "median = middle" but skips the sort step, so an unordered list gives the
     # wrong center.
     MEDIAN_WITHOUT_SORTING = "median-without-sorting"
+    # Unit 7 (6.SP.4): reading a data display by counting how many DIFFERENT values lie above a
+    # threshold instead of how many DATA POINTS do — collapsing the duplicate dots stacked over a
+    # value into a single count. The learner reads the x-axis (distinct values) rather than the
+    # dots (the data points), so an undercount results whenever a value above the threshold repeats.
+    DISTINCT_VALUE_COUNT = "distinct-value-count"
 
 
 @dataclass(frozen=True)
@@ -631,6 +636,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.SUMMARY_STATISTICS,),
     ),
+    Misconception(
+        id=MisconceptionId.DISTINCT_VALUE_COUNT,
+        name="Counts distinct values, not data points",
+        description=(
+            "Reads a data display by counting how many DIFFERENT values lie above the threshold "
+            "instead of how many DATA POINTS do — for dots stacked over 6, 6, 8 above a cutoff of "
+            "5 answers 2 (the distinct values 6 and 8) instead of 3 (the three dots). The learner "
+            "reads the x-axis labels rather than the dots, so a repeated value above the threshold "
+            "is undercounted."
+        ),
+        applicable_kcs=(KnowledgeComponentId.DATA_DISPLAYS,),
+    ),
 )
 
 
@@ -948,6 +965,39 @@ def unsorted_middle(operands: tuple[Rational, ...]) -> Rational | None:
     if len(data) % 2 == 0 or not data:
         return None  # the generator emits only odd-length median items; defensive otherwise
     return data[len(data) // 2]
+
+
+# KC_data_displays (6.SP.4) encodes its variable-length item as ``operands = (question_code, param,
+# *data)`` — a leading question-type sentinel, then a single parameter (the threshold for a
+# count-above item; the bin's lower bound for a bin-frequency item; unused/0 for a most-frequent
+# item), then the data values that the textual display describes. This is the canonical code map
+# (problem_generators re-exports it as ``_DATA_DISPLAY_QUESTION_CODE``); the distinct-value-count
+# misconception below decodes the question type to know when it applies.
+DATA_DISPLAY_QUESTION_CODE: dict[str, int] = {"count_above": 0, "most_frequent": 1, "bin_freq": 2}
+
+
+def distinct_value_count(operands: tuple[Rational, ...]) -> Rational | None:
+    """distinct-value-count: count DIFFERENT values above the threshold, not DATA POINTS (6.SP.4).
+
+    The data-displays item is encoded as ``operands = (question_code, param, *data)`` (a leading
+    question-type sentinel; see ``DATA_DISPLAY_QUESTION_CODE``). This error is count-above-specific:
+    asked "how many data points are greater than T", the learner counts how many DIFFERENT values
+    exceed T (reading the x-axis labels) instead of how many dots do — for dots at 6, 6, 8 above
+    T = 5 they answer 2 (the values 6 and 8) instead of 3 (the three dots). Returns the count of
+    DISTINCT data values strictly greater than ``param`` for a count-above item; returns ``None``
+    for any other question type (no threshold to mis-count) and for an unexpected shape (defensive —
+    the verifier then reports OTHER rather than a false match). Returned as a SymPy ``Rational`` so
+    the verifier compares values directly; whether it differs from the true count depends on the
+    data, so the generator guarantees a repeated value above the threshold on every count-above
+    item it emits (the verifier match is only used when the values actually differ).
+    """
+    if len(operands) < 3:
+        return None
+    question_code, threshold, *data = operands
+    if question_code != DATA_DISPLAY_QUESTION_CODE["count_above"]:
+        return None
+    distinct_above = {v for v in data if v > threshold}
+    return Rational(len(distinct_above))
 
 
 def keep_original_sign(n: Rational) -> Rational:

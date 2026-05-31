@@ -687,6 +687,23 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "the center.",
         ),
     ),
+    # Grade-6 Unit 7: index 0 (operation) orients toward counting the DOTS (data points), not the
+    # axis labels (distinct values); index 1 (magnitude) toward a sanity check on the count's size.
+    KnowledgeComponentId.DATA_DISPLAYS: (
+        _nudge(
+            KnowledgeComponentId.DATA_DISPLAYS,
+            "Count the dots, not the labels: a value with more than one dot above it counts "
+            "once for each dot.",
+        ),
+        _nudge(
+            KnowledgeComponentId.DATA_DISPLAYS,
+            "Does the size make sense? A count can't be more than the total number of data points.",
+        ),
+        _nudge(
+            KnowledgeComponentId.DATA_DISPLAYS,
+            "If a value repeats, each repeat is its own data point — don't collapse them into one.",
+        ),
+    ),
 }
 
 

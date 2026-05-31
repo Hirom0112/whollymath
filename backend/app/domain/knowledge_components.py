@@ -445,6 +445,26 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics ───
+    # Data displays (CCSS 6.SP.4): read and interpret a data display — a dot plot / frequency
+    # table / histogram described textually in the prompt. The answer is one numeric value (a
+    # count or a value) entered in the symbolic editor (reuses the editor, NO new widget today; a
+    # future stats-display renderer will visualize what the prompt describes). Advertises SYMBOLIC
+    # + NUMBER_LINE (a dot plot sits on a number line — each dot a data point above its value, the
+    # canonical picture of this display), but LIVE only on SYMBOLIC for now
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the other Grade-6 KCs. The NUMBER_LINE
+    # widget already exists, so it is the natural candidate to promote to a masterable second rep
+    # later; kept SYMBOLIC-only here to not over-scope this build.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.DATA_DISPLAYS,
+        skill_name="Read a data display",
+        description=(
+            "Read and interpret a data display (a dot plot, frequency table, or histogram) — "
+            "e.g. how many data points are greater than 5, the most frequent value, or how many "
+            "fall in a given bin."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
     # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
     # Write an algebraic expression from a word phrase (6.EE.2a / 6.EE.B.6): the answer is a typed
     # expression STRING ("p + 7", "3*n"), graded by SymPy equivalence — the FIRST expression-answer

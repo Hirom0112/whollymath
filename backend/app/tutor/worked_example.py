@@ -52,7 +52,7 @@ from sympy import Rational
 
 from app.domain.center_spread import CENTER_MEDIAN, SPREAD_RANGE
 from app.domain.knowledge_components import KnowledgeComponentId
-from app.domain.misconceptions import SUMMARY_STAT_MODE_CODE
+from app.domain.misconceptions import DATA_DISPLAY_QUESTION_CODE, SUMMARY_STAT_MODE_CODE
 from app.domain.problem_generators import Problem
 
 # ─── The worked-example value types ──────────────────────────────────────────
@@ -840,6 +840,71 @@ def _summary_statistic_narration(mode: str, data: list[int]) -> tuple[str, str]:
     )
 
 
+_DISPLAY_QUESTION_BY_CODE: dict[int, str] = {
+    code: name for name, code in DATA_DISPLAY_QUESTION_CODE.items()
+}
+_DISPLAY_BIN_WIDTH = 10  # mirrors the generator's histogram bin width
+
+
+def _data_displays_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The steps for a data-display reading problem (Grade-6 Unit 7, 6.SP.4).
+
+    ``operands = (question_code, param, *data)`` (a leading question-type sentinel; see
+    ``DATA_DISPLAY_QUESTION_CODE``). The narration is question-specific (count-above /
+    most-frequent / bin-frequency), and the final step lands on ``problem.correct_value``. Raises
+    if the operands are missing or too short (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) < 3:
+        raise ValueError(
+            f"data-displays problem {problem.problem_id} needs (question_code, param, *data) ops"
+        )
+    question = _DISPLAY_QUESTION_BY_CODE[int(operands[0])]
+    param = int(operands[1])
+    data = [int(v) for v in operands[2:]]
+    answer = problem.correct_value
+    listing = ", ".join(str(v) for v in data)
+    setup, work = _data_display_narration(question, param, data)
+    return (
+        WorkedStep(
+            shown=f"Read the display one data point at a time: {listing}.",
+            why_prompt="Why does each dot (or tally) stand for one data point?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=setup,
+            why_prompt="Why is this the right way to read this question off the display?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"{work} So the answer is {answer}.",
+            why_prompt="Why does reading the display this way give the answer?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _data_display_narration(question: str, param: int, data: list[int]) -> tuple[str, str]:
+    """The (setup, work) narration lines for one display question — text-only, no claim to cite."""
+    if question == "count_above":
+        above = [v for v in data if v > param]
+        return (
+            f"Count every data point greater than {param} — count a repeated value once per dot.",
+            f"The data points above {param} are {', '.join(str(v) for v in above)}.",
+        )
+    if question == "most_frequent":
+        return (
+            "Find the value with the tallest stack of dots — the one that appears most often.",
+            "The most frequent value is the one that shows up the most times.",
+        )
+    hi = param + _DISPLAY_BIN_WIDTH - 1
+    in_bin = [v for v in data if param <= v <= hi]
+    return (
+        f"Count every data point that falls in the {param}-{hi} bin.",
+        f"The data points in that bin are {', '.join(str(v) for v in in_bin)}.",
+    )
+
+
 def _integer_multiply_divide_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'magnitude first, then the sign rule' steps for an integer ×/÷ problem (Unit-INT).
 
@@ -1593,6 +1658,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: _mean_absolute_deviation_steps,
     KnowledgeComponentId.CENTER_SPREAD_SHAPE: _center_spread_steps,
     KnowledgeComponentId.SUMMARY_STATISTICS: _summary_statistics_steps,
+    KnowledgeComponentId.DATA_DISPLAYS: _data_displays_steps,
 }
 
 

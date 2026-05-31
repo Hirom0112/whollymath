@@ -60,6 +60,7 @@ from app.domain.misconceptions import (
     confuse_coefficient_with_constant,
     count_three_faces_only,
     decimal_point_misplacement,
+    distinct_value_count,
     distributive_error,
     evaluate_left_to_right,
     flip_result_sign,
@@ -902,6 +903,20 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.MEDIAN_WITHOUT_SORTING,
         predict=unsorted_middle,
+    ),
+    # distinct-value-count: counted how many DIFFERENT values lie above the threshold instead of
+    # how many DATA POINTS do (reading the x-axis labels, not the dots). The data-displays item is
+    # VARIABLE-LENGTH — operands are (question_code, param, *data) — so this row uses
+    # ``operand_count=None`` to match any arity; the predictor decodes operands[0] and returns
+    # ``None`` for any non-count-above question (so it only ever fires on a count-above item). A
+    # wrong OPERATION (collapsed duplicate dots). The generator emits only count-above items with a
+    # duplicated value above the threshold, so the distinct count differs and a match is diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.DATA_DISPLAYS,
+        operand_count=None,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.DISTINCT_VALUE_COUNT,
+        predict=distinct_value_count,
     ),
 )
 
