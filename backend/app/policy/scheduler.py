@@ -175,6 +175,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # widget already exists) is the natural masterable second surface — adding NUMBER_LINE here
     # promotes it, deferred to avoid over-scoping this build.
     _KC.MEAN_ABSOLUTE_DEVIATION: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 7 (6.SP.2): SYMBOLIC = the median/range/IQR value entered in the editor.
+    # PRACTICE-ONLY for now; the NUMBER_LINE rep (center & spread are read along a number line — a
+    # box plot lays Q1/median/Q3 and the extremes on one) is the natural masterable second surface,
+    # and its widget exists, so adding it here would promote it — deferred to avoid over-scoping.
+    _KC.CENTER_SPREAD_SHAPE: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

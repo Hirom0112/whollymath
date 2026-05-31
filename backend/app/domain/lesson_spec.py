@@ -929,6 +929,31 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (6.SP) ───
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors route
+    # back to SYMBOLIC — the NUMBER_LINE rep is advertised (center & spread are read on a number
+    # line / box plot, and its widget exists) but isn't live yet, so "re-try on the same surface
+    # with a labeled hint" is the honest adaptation until NUMBER_LINE is promoted live (then it
+    # becomes the masterable second surface). The OPERATION route names the range-as-sum error (add
+    # vs subtract); the MAGNITUDE route covers a size slip. NEVER routes to a rep with no surface.
+    _spec(
+        _KC.CENTER_SPREAD_SHAPE,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Range and IQR are differences — subtract the values, don't add them up.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "A spread can't be larger than the biggest value — re-check which values you used.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

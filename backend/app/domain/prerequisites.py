@@ -162,6 +162,12 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # the idea KC_absolute_value teaches — so MAD forward-unlocks on KC_absolute_value, the live
     # Unit-3 KC it conceptually rests on (its own §11 statistics prereqs are not yet live).
     _KC.MEAN_ABSOLUTE_DEVIATION: frozenset({_KC.ABSOLUTE_VALUE}),
+    # Grade-6 Unit 7 (6.SP.2): describing a distribution by center/spread rests on ordering the data
+    # by size and reading positions and distances along a number line — the median is the middle
+    # position, the range and IQR are distances between positions — so it forward-unlocks on
+    # number-line placement, the live foundation KC the statistics skill conceptually rests on (its
+    # own §11 statistics prereqs are not yet live, matching how the other late-unit KCs are wired).
+    _KC.CENTER_SPREAD_SHAPE: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -205,6 +211,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.POLYGONS_COORDINATE_PLANE,  # Grade-6 Unit 6 (6.G.3): polygons in the plane, on coord-plane
     _KC.SURFACE_AREA_NETS,  # Grade-6 Unit 6 (6.G.4): surface area from a net, on polygon area
     _KC.MEAN_ABSOLUTE_DEVIATION,  # Grade-6 Unit 7 (6.SP.5c): MAD, on absolute value (distances)
+    _KC.CENTER_SPREAD_SHAPE,  # Grade-6 Unit 7 (6.SP.2): center & spread, on number-line placement
 )
 
 

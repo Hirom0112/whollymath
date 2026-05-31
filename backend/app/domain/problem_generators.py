@@ -43,6 +43,14 @@ from typing import Any, Literal
 
 from sympy import Add, Expr, Mul, Rational, Symbol, igcd, ilcm, sstr
 
+from app.domain.center_spread import (
+    CENTER_MEDIAN,
+    SPREAD_IQR,
+    SPREAD_RANGE,
+    iqr,
+    median,
+    range_spread,
+)
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 from app.domain.misconceptions import classify_sets_for_value
 
@@ -2382,6 +2390,78 @@ def _generate_mean_absolute_deviation(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (6.SP) ───
+
+# The data-set size by difficulty tier for center/spread items. Larger sets at higher tiers make
+# the median/IQR split less obvious; always >= 4 so the lower/upper halves are each non-empty for
+# the IQR. The data VALUES are drawn from a small whole-number pool that widens with difficulty.
+_CENTER_SPREAD_SIZE_BY_DIFFICULTY: dict[int, int] = {1: 4, 2: 5, 3: 6, 4: 7}
+_CENTER_SPREAD_VALUE_BY_DIFFICULTY: dict[int, int] = {1: 9, 2: 12, 3: 15, 4: 20}
+_CENTER_SPREAD_DEFAULT_SIZE = 5
+_CENTER_SPREAD_DEFAULT_MAX_VALUE = 12
+# The three measure modes, cycled by the seed so a lesson covers center AND both spread measures.
+_CENTER_SPREAD_MODES: tuple[int, ...] = (CENTER_MEDIAN, SPREAD_RANGE, SPREAD_IQR)
+
+
+def _generate_center_spread(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_center_spread_shape: a measure of center or spread for a small data set; numeric answer.
+
+    Picks a measure MODE (median-center, range, or IQR) and a sorted whole-number data set via the
+    seeded RNG, then computes the exact measure with SymPy (see ``app.domain.center_spread``). The
+    data is sampled WITHOUT a zero so the range's max + min misconception (max + min vs max − min)
+    always differs from the correct value, and the extremes are kept distinct (max > min) for the
+    same reason.
+
+    Variable-length operand encoding (the data-set wrinkle): ``operands`` is
+    ``(mode_flag, *sorted_data)`` — a leading ``Rational`` sentinel (0=median, 1=range, 2=IQR)
+    followed by the sorted data values. This keeps both the mode AND the data inside the single
+    ``operands`` field the verifier's wrong-answer predictor receives, so the range-as-sum model can
+    recompute from it without any new Problem field. The verifier matches this KC's model with
+    ``operand_count=None`` (any length).
+
+    ``difficulty`` widens the data-set size and value pool. SYMBOLIC-only is live (PRACTICE-ONLY);
+    the math is sampled before the surface is applied, so the same seed is identical across formats.
+    """
+    size = (
+        _CENTER_SPREAD_SIZE_BY_DIFFICULTY.get(difficulty, _CENTER_SPREAD_DEFAULT_SIZE)
+        if difficulty
+        else _CENTER_SPREAD_DEFAULT_SIZE
+    )
+    max_value = (
+        _CENTER_SPREAD_VALUE_BY_DIFFICULTY.get(difficulty, _CENTER_SPREAD_DEFAULT_MAX_VALUE)
+        if difficulty
+        else _CENTER_SPREAD_DEFAULT_MAX_VALUE
+    )
+    mode = _CENTER_SPREAD_MODES[seed % len(_CENTER_SPREAD_MODES)]
+    # Sample distinct nonzero values (1..max_value) so the extremes differ and no zero hides the
+    # max + min vs max − min distinction; then sort (the median/IQR rules assume sorted data).
+    raw = rng.sample(range(1, max_value + 1), size)
+    data = tuple(Rational(v) for v in sorted(raw))
+    if mode == CENTER_MEDIAN:
+        correct = median(data)
+        statement = f"What is the median of the data set {', '.join(str(v) for v in raw)}?"
+    elif mode == SPREAD_RANGE:
+        correct = range_spread(data)
+        statement = f"What is the range of the data set {', '.join(str(v) for v in raw)}?"
+    else:
+        correct = iqr(data)
+        statement = (
+            f"What is the interquartile range (IQR) of the data set "
+            f"{', '.join(str(v) for v in raw)}?"
+        )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.CENTER_SPREAD_SHAPE, seed, surface_format),
+        kc=KnowledgeComponentId.CENTER_SPREAD_SHAPE,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=correct,
+        representations_available=get_kc(KnowledgeComponentId.CENTER_SPREAD_SHAPE).representations,
+        operands=(Rational(mode), *data),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -2419,6 +2499,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: _generate_polygons_coordinate_plane,
     KnowledgeComponentId.SURFACE_AREA_NETS: _generate_surface_area_nets,
     KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: _generate_mean_absolute_deviation,
+    KnowledgeComponentId.CENTER_SPREAD_SHAPE: _generate_center_spread,
 }
 
 

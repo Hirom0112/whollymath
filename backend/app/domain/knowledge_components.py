@@ -728,6 +728,26 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (6.SP) ───
+    # Center & spread (6.SP.2): describe a distribution by a measure of CENTER (the median) or
+    # SPREAD (the range, or the interquartile range Q3 − Q1), computed exactly from a small data
+    # set given in the prompt. The answer is a single numeric value entered in the symbolic editor
+    # (reuses the editor, NO new widget). Advertises SYMBOLIC + NUMBER_LINE — center and spread are
+    # canonically read on a number line (a box plot lays Q1/median/Q3 and the min/max along one) —
+    # but LIVE only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the
+    # other numeric Grade-6 KCs; the NUMBER_LINE widget exists, so it is the natural masterable
+    # second surface to promote later. Error routes never target NUMBER_LINE while it has no surface
+    # state for this KC — they stay on SYMBOLIC.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.CENTER_SPREAD_SHAPE,
+        skill_name="Describe a distribution by center and spread",
+        description=(
+            "Describe a data distribution with a measure of center (the median) or spread (the "
+            "range = max - min, or the interquartile range IQR = Q3 - Q1), computed from a small "
+            "data set — e.g. the IQR of 2, 4, 6, 8, 10, 12 is 10 - 4 = 6."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
 )
 
 

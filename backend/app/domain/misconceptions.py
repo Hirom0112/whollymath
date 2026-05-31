@@ -165,6 +165,9 @@ class MisconceptionId(StrEnum):
     # averaging the SIGNED deviations from the mean instead of their distances. The signed
     # deviations always sum to zero, so this wrong "MAD" is always 0.
     FORGOT_ABSOLUTE_VALUE = "forgot-absolute-value"
+    # Unit 7 (6.SP.2): computing a distribution's RANGE by ADDING the extremes (max + min) instead
+    # of subtracting them (max - min) — the wrong operation, so the spread comes out far too large.
+    RANGE_AS_SUM = "range-as-sum"
 
 
 @dataclass(frozen=True)
@@ -600,6 +603,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "operation (skipping the absolute value) collapses the spread to nothing."
         ),
         applicable_kcs=(KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,),
+    ),
+    Misconception(
+        id=MisconceptionId.RANGE_AS_SUM,
+        name="Computes the range as max + min",
+        description=(
+            "Finds a distribution's range by ADDING the largest and smallest values (max + min) "
+            "instead of subtracting them (max - min) — e.g. answering 14 for the range of 3, 5, 9, "
+            "11 instead of 11 - 3 = 8. The extremes are identified correctly; the wrong operation "
+            "(addition for subtraction) makes the reported spread far too large."
+        ),
+        applicable_kcs=(KnowledgeComponentId.CENTER_SPREAD_SHAPE,),
     ),
 )
 

@@ -50,6 +50,7 @@ from dataclasses import dataclass
 
 from sympy import Rational
 
+from app.domain.center_spread import CENTER_MEDIAN, SPREAD_RANGE
 from app.domain.knowledge_components import KnowledgeComponentId
 from app.domain.problem_generators import Problem
 
@@ -1061,6 +1062,72 @@ def _mean_absolute_deviation_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _center_spread_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The center/spread steps for a KC_center_spread_shape problem (Grade-6 Unit 7, 6.SP.2).
+
+    ``operands = (mode_flag, *sorted_data)``; the final step lands ``problem.correct_value`` (the
+    median, the range, or the IQR for that item's mode). Raises if the operands are missing or too
+    short (CLAUDE.md §8.5). Each mode gets its own concrete steps that name the rule being applied.
+    """
+    operands = problem.operands
+    if operands is None or len(operands) < 2:
+        raise ValueError(f"center-spread problem {problem.problem_id} needs (mode, *data) operands")
+    mode = int(operands[0])
+    data = operands[1:]
+    listed = ", ".join(_fmt_rational(v) for v in data)
+    answer = problem.correct_value
+    if mode == CENTER_MEDIAN:
+        return (
+            WorkedStep(
+                shown=f"Order the values from least to greatest: {listed}.",
+                why_prompt="Why does the median require the data to be in order first?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown="The median is the middle value (or the average of the two middle values).",
+                why_prompt="Why does the middle value summarize the center of the data?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"So the median is {_fmt_rational(answer)}.",
+                why_prompt="Why can the center be a value that is not in the data set?",
+                revealed_value=answer,
+            ),
+        )
+    if mode == SPREAD_RANGE:
+        low, high = _fmt_rational(min(data)), _fmt_rational(max(data))
+        return (
+            WorkedStep(
+                shown=f"Find the largest and smallest values: max = {high}, min = {low}.",
+                why_prompt="Why do only the extremes matter for the range?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"The range is the DIFFERENCE: {high} - {low} = {_fmt_rational(answer)}.",
+                why_prompt="Why subtract instead of add to measure how spread out the data is?",
+                revealed_value=answer,
+            ),
+        )
+    # SPREAD_IQR
+    return (
+        WorkedStep(
+            shown=f"Order the values and split them into a lower and an upper half: {listed}.",
+            why_prompt="Why split the data in half to find the quartiles?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Q1 is the median of the lower half; Q3 is the median of the upper half.",
+            why_prompt="Why are the quartiles the medians of each half?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"The IQR is Q3 - Q1 = {_fmt_rational(answer)}.",
+            why_prompt="Why does the IQR ignore the extreme values that the range uses?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _one_step_equations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'apply the inverse, isolate x' steps for a one-step equation (Grade-6 Unit 5).
 
@@ -1458,6 +1525,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: _coordinate_plane_steps,
     KnowledgeComponentId.SURFACE_AREA_NETS: _surface_area_nets_steps,
     KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: _mean_absolute_deviation_steps,
+    KnowledgeComponentId.CENTER_SPREAD_SHAPE: _center_spread_steps,
 }
 
 

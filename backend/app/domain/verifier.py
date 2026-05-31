@@ -47,6 +47,7 @@ from sympy import Rational, simplify, sympify
 from sympy.core.relational import Relational
 from sympy.core.sympify import SympifyError
 
+from app.domain.center_spread import SPREAD_RANGE, range_as_sum
 from app.domain.knowledge_components import KnowledgeComponentId
 from app.domain.misconceptions import (
     NUMBER_SET_LABELS,
@@ -593,9 +594,10 @@ class _WrongAnswerModel:
 
     kc: KnowledgeComponentId
     # The exact operand arity this model matches, or ``None`` to match ANY arity. ``None`` is for
-    # VARIABLE-LENGTH operand KCs (e.g. KC_mean_absolute_deviation, whose operands are a 4–6 value
-    # data set): the predictor reads the whole tuple and the KC alone disambiguates the model. A
-    # fixed int (the common case) keeps a model from firing on a wrong-shaped problem of that KC.
+    # VARIABLE-LENGTH operand KCs (e.g. KC_mean_absolute_deviation and KC_center_spread_shape, whose
+    # operands carry a data set, optionally behind a leading mode flag): the predictor reads the
+    # whole tuple and the KC alone disambiguates the model. A fixed int (the common case) keeps a
+    # model from firing on a wrong-shaped problem of that KC.
     operand_count: int | None
     error_category: ErrorCategory
     misconception: MisconceptionId
@@ -873,6 +875,19 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.FORGOT_ABSOLUTE_VALUE,
         predict=lambda ops: mean_signed_deviation(ops),
+    ),
+    # range-as-sum: computed the RANGE by ADDING the extremes (max + min) instead of subtracting
+    # them (max − min). Operands are VARIABLE-LENGTH: (mode_flag, *sorted_data) — so operand_count
+    # is None (matches any data-set size) and the predictor recovers the mode + data from operands.
+    # Only fires on a RANGE item (mode flag == SPREAD_RANGE); on a median/IQR item it returns None
+    # so the model does not match (the misconception is range-specific). A wrong OPERATION (added
+    # where subtraction was needed). With nonnegative distinct extremes, max + min != max − min.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.CENTER_SPREAD_SHAPE,
+        operand_count=None,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.RANGE_AS_SUM,
+        predict=lambda ops: range_as_sum(ops[1:]) if int(ops[0]) == SPREAD_RANGE else None,
     ),
 )
 

@@ -652,6 +652,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If your deviations cancelled to zero, you skipped the absolute value — distances add.",
         ),
     ),
+    # Grade-6 Unit 7: index 0 (operation) orients toward subtracting for the range / locating the
+    # middle for the median; index 1 (magnitude) toward "spread is a distance, not a total".
+    KnowledgeComponentId.CENTER_SPREAD_SHAPE: (
+        _nudge(
+            KnowledgeComponentId.CENTER_SPREAD_SHAPE,
+            "Order the values first. The center sits in the middle; spread measures how far apart.",
+        ),
+        _nudge(
+            KnowledgeComponentId.CENTER_SPREAD_SHAPE,
+            "Range and IQR are DIFFERENCES — subtract to find a spread, don't add the values up.",
+        ),
+        _nudge(
+            KnowledgeComponentId.CENTER_SPREAD_SHAPE,
+            "If a spread came out larger than the biggest value, you added instead of subtracting.",
+        ),
+    ),
 }
 
 
