@@ -34,6 +34,11 @@ _STATE_FOR_REPRESENTATION: dict[Representation, SurfaceState] = {
     # SYMBOLIC_FOCUS rather than adding a sixth state — the "exactly five surface states" set stays
     # closed (PROJECT.md §3.5 / ARCHITECTURE.md §2 "adapt with restraint").
     Representation.EXPRESSION: SurfaceState.SYMBOLIC_FOCUS,
+    # The typed INEQUALITY answer surface (the inequality input) likewise lives in the
+    # symbolic-focus state: a typed symbolic relational input with no manipulative, so it reuses
+    # SYMBOLIC_FOCUS rather than adding a sixth state — the "exactly five surface states" set stays
+    # closed (PROJECT.md §3.5 / ARCHITECTURE.md §2 "adapt with restraint").
+    Representation.INEQUALITY: SurfaceState.SYMBOLIC_FOCUS,
 }
 
 

@@ -905,6 +905,35 @@ def _equivalent_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _inequality_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'name the direction, decide inclusion' steps for a write-inequality problem (Unit 5).
+
+    The answer is an INEQUALITY, not a magnitude, so the steps land on the canonical
+    ``problem.correct_inequality`` string rather than a Rational — the last step's
+    ``revealed_value`` stays ``None`` (a narrative/relational step, the documented non-magnitude
+    case) and its ``shown`` carries the inequality. Raises if missing (§8.5)."""
+    canonical = problem.correct_inequality
+    if canonical is None:
+        raise ValueError(f"write-inequality problem {problem.problem_id} needs an inequality")
+    return (
+        WorkedStep(
+            shown="Let x stand for the number, then read which way the allowed values go.",
+            why_prompt="Why does a variable let you describe a whole RANGE of numbers at once?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Decide if the boundary is INCLUDED — 'at least/at most' use >= or <=.",
+            why_prompt="Why does 'at least 5' include 5 but 'more than 5' does not?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"The inequality is {canonical}.",
+            why_prompt="Why does this inequality describe exactly the numbers the words allow?",
+            revealed_value=None,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -985,6 +1014,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.EVALUATE_EXPRESSIONS: _evaluate_expression_steps,
     KnowledgeComponentId.ONE_STEP_EQUATIONS: _one_step_equations_steps,
     KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _equivalent_expression_steps,
+    KnowledgeComponentId.INEQUALITIES: _inequality_steps,
 }
 
 

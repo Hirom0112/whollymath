@@ -450,6 +450,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Like terms (same letter) combine; a letter term and a plain number do not.",
         ),
     ),
+    # Grade-6 Unit 5: index 0 (operation) orients toward the DIRECTION of the inequality; the others
+    # reinforce boundary inclusion and naming the unknown.
+    KnowledgeComponentId.INEQUALITIES: (
+        _nudge(
+            KnowledgeComponentId.INEQUALITIES,
+            "Which way should it point — are the allowed values above or below the number?",
+        ),
+        _nudge(
+            KnowledgeComponentId.INEQUALITIES,
+            "Does the boundary count? 'At least' and 'at most' include it; 'more than' does not.",
+        ),
+        _nudge(
+            KnowledgeComponentId.INEQUALITIES,
+            "Let a letter stand for the number, then ask which values the words allow.",
+        ),
+    ),
 }
 
 

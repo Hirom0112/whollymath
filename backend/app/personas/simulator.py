@@ -45,6 +45,7 @@ from app.domain.knowledge_components import KnowledgeComponentId, Representation
 from app.domain.misconceptions import (
     add_across,
     distributive_error,
+    flipped_inequality,
     natural_number_bias_number_line,
     reversed_operands,
     subtract_across,
@@ -216,6 +217,10 @@ def _correct_answer(problem: Problem) -> Rational | str:
         if problem.correct_expression is None:  # construction bug, not learner input
             raise ValueError(f"expression problem {problem.problem_id} has no correct_expression")
         return problem.correct_expression
+    if problem.answer_kind is AnswerKind.INEQUALITY:
+        if problem.correct_inequality is None:  # construction bug, not learner input
+            raise ValueError(f"inequality problem {problem.problem_id} has no correct_inequality")
+        return problem.correct_inequality
     return problem.correct_value
 
 
@@ -241,6 +246,11 @@ def _misconception_wrong_answer(problem: Problem) -> Rational | str | None:
         if problem.kc is KnowledgeComponentId.EQUIVALENT_EXPRESSIONS:
             return distributive_error(problem.source_expression)
         return reversed_operands(problem.correct_expression)
+
+    if problem.answer_kind is AnswerKind.INEQUALITY:
+        # The flipped-direction form (same bound, reversed comparison) — always defined for a real
+        # inequality, so a persona holding the error answers wrong on every item.
+        return flipped_inequality(problem.correct_inequality)
 
     operands = problem.operands
     if operands is None:

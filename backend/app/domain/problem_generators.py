@@ -72,6 +72,11 @@ class AnswerKind(StrEnum):
     # the surface picks the free-text ExpressionInput widget. Wire contract (frozen, frontend
     # ExpressionInput): answer_kind="expression" + widget_id="expression".
     EXPRESSION = "expression"
+    # A one-variable INEQUALITY string ("x>=5", "x<13") — not a magnitude. Its truth is SymPy
+    # RELATIONAL EQUIVALENCE against ``correct_inequality`` (same variable, direction, and bound =
+    # same solution set, so "x>=5" == "5<=x"), not a Rational match; the surface picks the free-text
+    # inequality widget. Wire contract (frozen): answer_kind="inequality" + widget_id="inequality".
+    INEQUALITY = "inequality"
 
 
 @dataclass(frozen=True)
@@ -137,6 +142,12 @@ class Problem:
     # (it cannot be derived from the answer alone, unlike reversed-operands). ``None`` for every
     # other item; symmetric to ``correct_expression`` (a domain-only carrier, never on the wire).
     source_expression: str | None = None
+    # For an INEQUALITY item (answer_kind=INEQUALITY): the canonical correct answer as a
+    # SymPy-parseable relational string ("x>=5", "x<13"). The verifier grades a submitted inequality
+    # by RELATIONAL EQUIVALENCE against this (same variable, direction, bound = same solution set),
+    # so "x>=5" == "5<=x" but "x>3" != "x>=3". ``None`` for every other item; ``correct_value``
+    # carries a ``Rational(0)`` placeholder for an inequality item (never read on this path).
+    correct_inequality: str | None = None
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), the chosen surface
@@ -1428,6 +1439,65 @@ def _generate_equivalent_expressions(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 5: Inequalities (6.EE.8) ───
+
+# Inequality-phrase templates: (constraint phrase with a {c} slot, the ASCII relational operator
+# the phrase names). The learner writes ``x OP c``. Each phrase maps to EXACTLY one direction +
+# strictness so the canonical answer is unambiguous (the flipped-direction misconception is the
+# wrong direction, not a different reading): "at least"/"no less than" = >= ; "more than"/"over" =
+# strict > ; "at most"/"no more than" = <= ; "less than"/"under"/"below" = strict <. Single-variable
+# ``x``, matching the frozen widget contract answer string ("x>=5").
+_INEQUALITY_TEMPLATES: tuple[tuple[str, str], ...] = (
+    ("A number x is at least {c}", ">="),
+    ("A number x is no less than {c}", ">="),
+    ("A number x is more than {c}", ">"),
+    ("A number x is greater than {c}", ">"),
+    ("A number x is at most {c}", "<="),
+    ("A number x is no more than {c}", "<="),
+    ("A number x is less than {c}", "<"),
+    ("A number x is under {c}", "<"),
+)
+# Bounds by difficulty tier (the easy->hard ramp; CP.B): higher tiers use larger numbers.
+_INEQUALITY_BOUND_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4, 5),
+    2: (6, 7, 8, 10),
+    3: (12, 13, 15, 18),
+    4: (20, 25, 30, 50),
+}
+_INEQUALITY_BOUND_POOL: tuple[int, ...] = (3, 5, 7, 10, 12, 13, 18, 21)
+
+
+def _generate_inequalities(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_inequalities: write a one-variable inequality from a constraint phrase (6.EE.8).
+
+    Picks a constraint phrase + its single unambiguous operator and a bound (seeded), and renders
+    the canonical answer string ``x OP c`` (e.g. "x >= 5") into ``correct_inequality``. The answer
+    is an INEQUALITY graded by SymPy RELATIONAL equivalence; ``correct_value`` is a ``Rational(0)``
+    placeholder (never read on the INEQUALITY path). ``operands`` is empty; the flipped-direction
+    misconception is replayed from ``correct_inequality`` by the verifier, not from operands.
+    """
+    bound_pool = (
+        _INEQUALITY_BOUND_BY_DIFFICULTY.get(difficulty, _INEQUALITY_BOUND_POOL)
+        if difficulty
+        else _INEQUALITY_BOUND_POOL
+    )
+    phrase_template, operator = rng.choice(_INEQUALITY_TEMPLATES)
+    bound = rng.choice(bound_pool)
+    phrase = phrase_template.format(c=bound)
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.INEQUALITIES, seed, surface_format),
+        kc=KnowledgeComponentId.INEQUALITIES,
+        surface_format=surface_format,
+        statement=f"Write an inequality for: {phrase}.",
+        correct_value=Rational(0),  # placeholder; the INEQUALITY path grades correct_inequality
+        representations_available=get_kc(KnowledgeComponentId.INEQUALITIES).representations,
+        answer_kind=AnswerKind.INEQUALITY,
+        correct_inequality=f"x {operator} {bound}",
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1453,6 +1523,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.EVALUATE_EXPRESSIONS: _generate_evaluate_expressions,
     KnowledgeComponentId.ONE_STEP_EQUATIONS: _generate_one_step_equations,
     KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _generate_equivalent_expressions,
+    KnowledgeComponentId.INEQUALITIES: _generate_inequalities,
 }
 
 

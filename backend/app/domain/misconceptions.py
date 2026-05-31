@@ -39,6 +39,14 @@ from enum import StrEnum
 from typing import Literal
 
 from sympy import Add, Mul, Pow, Rational, gcd, lcm, sstr, sympify
+from sympy.core.relational import (
+    GreaterThan,
+    LessThan,
+    Relational,
+    StrictGreaterThan,
+    StrictLessThan,
+)
+from sympy.core.sympify import SympifyError
 
 from app.domain.knowledge_components import KnowledgeComponentId
 
@@ -107,6 +115,10 @@ class MisconceptionId(StrEnum):
     # Unit 4 (6.EE.3): a distributive error — distributing a multiplier onto only the FIRST term of
     # a sum, "3(x + 2)" written as 3x + 2 instead of 3x + 6 (the +2 is left un-multiplied).
     DISTRIBUTIVE_ERROR = "distributive-error"
+    # Unit 5 (6.EE.8): a flipped inequality direction — writing the wrong relational direction for a
+    # constraint, e.g. "x < 5" for "at least 5" (which is x >= 5), keeping the bound but reversing
+    # the comparison.
+    FLIPPED_INEQUALITY = "flipped-inequality"
 
 
 @dataclass(frozen=True)
@@ -404,6 +416,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "single-term product (3 * x has nothing else to reach), where there is no wrong form."
         ),
         applicable_kcs=(KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.FLIPPED_INEQUALITY,
+        name="Flipped inequality",
+        description=(
+            "Writes the inequality pointing the WRONG way — 'x < 5' for 'a number is at least 5' "
+            "(which is x >= 5), or 'x > 13' for 'under 13' (x < 13). The learner keeps the "
+            "boundary value but reverses the comparison direction, often by translating the words "
+            "left-to-right rather than reasoning about which side of the bound the values fall on, "
+            "so the OPERATION (the relation) points the wrong way."
+        ),
+        applicable_kcs=(KnowledgeComponentId.INEQUALITIES,),
     ),
 )
 
@@ -783,6 +807,48 @@ def reversed_operands(correct_expression: str | None) -> str | None:
         return None  # plain product a*b is commutative
 
     return None
+
+
+# The flipped-direction operator map, on the variable-on-left canonical relational classes: keep
+# the bound, reverse the comparison. Strictness is preserved (> <-> <, >= <-> <=) — the error is the
+# DIRECTION, not the boundary inclusion (that distinct slip is out of scope for this misconception).
+_FLIPPED_RELATION: dict[type[Relational], type[Relational]] = {
+    StrictGreaterThan: StrictLessThan,
+    StrictLessThan: StrictGreaterThan,
+    GreaterThan: LessThan,
+    LessThan: GreaterThan,
+}
+
+
+def flipped_inequality(correct_inequality: str | None) -> str | None:
+    """flipped-inequality: write the relational pointing the WRONG way, keeping the bound.
+
+    Given the CANONICAL answer string (e.g. ``"x >= 5"`` or ``"x < 13"``), return the
+    wrong-direction inequality a learner who reverses the comparison would write (``"x <= 5"``,
+    ``"x > 13"``) — same variable, same bound, mirrored operator. Returns ``None`` only when the
+    input is not a parseable one-variable relational (so the verifier never matches a fabricated
+    error and never crashes on garbage). Always defined for a real inequality, so — unlike the
+    commutative-safe ``reversed_operands`` — every generated item has a genuinely wrong flipped
+    form.
+
+    Uses SymPy (domain/ owns math, CLAUDE.md §7): ``.canonical`` puts the variable on the left and
+    normalizes the operator class, then we swap that class for its mirror and re-render.
+    """
+    if correct_inequality is None:
+        return None
+    try:
+        parsed = sympify(correct_inequality, evaluate=False)
+    except (SympifyError, SyntaxError, TypeError, ValueError, AttributeError, IndexError):
+        # IndexError: SymPy's evaluate=False parser raises it on empty / non-expression input.
+        return None
+    if not isinstance(parsed, Relational) or len(parsed.free_symbols) != 1:
+        return None
+    canonical = parsed.canonical
+    flipped_cls = _FLIPPED_RELATION.get(type(canonical))
+    if flipped_cls is None:  # e.g. an equality (Eq) — not a directional inequality
+        return None
+    flipped = flipped_cls(canonical.lhs, canonical.rhs)
+    return str(sstr(flipped))
 
 
 def distributive_error(source_expression: str | None) -> str | None:

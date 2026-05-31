@@ -62,6 +62,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # equivalent-expressions likewise: an expression answer, no operand fractions; the
             # integer coefficients ramp the source expression, not a denominator pool.
             KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,
+            # inequalities has NO operands (an inequality answer; the integer bound ramps the
+            # constraint phrase, not a denominator) — nothing to read on the denominator path.
+            KnowledgeComponentId.INEQUALITIES,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

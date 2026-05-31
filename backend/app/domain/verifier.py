@@ -44,6 +44,7 @@ from enum import StrEnum
 from typing import TypeAlias
 
 from sympy import Rational, simplify, sympify
+from sympy.core.relational import Relational
 from sympy.core.sympify import SympifyError
 
 from app.domain.knowledge_components import KnowledgeComponentId
@@ -56,6 +57,7 @@ from app.domain.misconceptions import (
     decimal_point_misplacement,
     distributive_error,
     evaluate_left_to_right,
+    flipped_inequality,
     gcf_lcm_confusion,
     inverse_operation_error,
     invert_conversion,
@@ -321,6 +323,88 @@ def _verify_expression(problem: Problem, submitted: Submitted) -> VerificationRe
             error_category=ErrorCategory.OPERATION,
             matched_misconception=MisconceptionId.DISTRIBUTIVE_ERROR,
         )
+
+    return VerificationResult(
+        is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+    )
+
+
+def _safe_sympify_relational(text: str) -> Relational | None:
+    """Parse a submitted string to a SymPy RELATIONAL, or ``None`` if it isn't one.
+
+    Like ``_safe_sympify`` but additionally requires the result to be a ``Relational`` (an
+    inequality) — a plain expression ("x + 3"), a bare number, or garbled input all yield ``None``
+    so the inequality path scores them wrong rather than crashing (CLAUDE.md §8.2). Parsed with
+    ``evaluate=False`` so "5 < 3" stays a relational rather than collapsing to ``False``.
+    """
+    try:
+        parsed: object = sympify(text, evaluate=False)
+    except (SympifyError, SyntaxError, TypeError, ValueError, AttributeError, IndexError):
+        # IndexError: SymPy's evaluate=False parser raises it on empty / non-expression input.
+        return None
+    return parsed if isinstance(parsed, Relational) else None
+
+
+def _inequalities_equivalent(a: Relational, b: Relational) -> bool:
+    """True iff two inequalities have the SAME solution set — same variable, direction, and bound.
+
+    The equivalence rule the INEQUALITY answer kind grades by (so "x>=5" == "5<=x", but "x>3" !=
+    "x>=3"). ``.canonical`` puts the variable on the left and normalizes the operator class, so an
+    order-flipped-but-equivalent form matches; then the operator CLASS must be identical (strict vs.
+    non-strict differ) and the bounds must be equal. Wrapped so a non-numeric comparison is treated
+    as not-equal rather than raising.
+    """
+    try:
+        ca, cb = a.canonical, b.canonical
+        if type(ca) is not type(cb):
+            return False
+        return ca.lhs == cb.lhs and bool(simplify(ca.rhs - cb.rhs) == 0)
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
+def _verify_inequality(problem: Problem, submitted: Submitted) -> VerificationResult:
+    """Verify an INEQUALITY answer by relational EQUIVALENCE against ``correct_inequality``.
+
+    Grading rule (the frozen inequality contract): parse the submission and the canonical answer as
+    relationals, correct iff they have the SAME solution set (same variable, direction, and bound) —
+    so "x>=5" == "5<=x" (both ``>=``/``<=`` ASCII forms accepted), but "x>3" != "x>=3". Unparseable
+    OR non-relational input (a plain expression, a bare number, an equality) is wrong (OTHER), never
+    a crash (CLAUDE.md §8.2). A wrong-but-relational answer that equals the flipped-direction form
+    (e.g. "x<5" for the canonical "x>=5") is the flipped-inequality misconception → OPERATION; any
+    other wrong answer is OTHER (we do not over-claim a match).
+    """
+    canonical_text = problem.correct_inequality
+    if canonical_text is None:
+        # Construction bug, not learner input: an INEQUALITY problem must carry its answer.
+        raise ValueError(f"inequality problem {problem.problem_id!r} needs a correct_inequality")
+
+    submitted_rel = _safe_sympify_relational(str(submitted))
+    if submitted_rel is None:
+        return VerificationResult(
+            is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+        )
+
+    canonical_rel = sympify(canonical_text, evaluate=False)  # generator-built, always relational
+    assert isinstance(canonical_rel, Relational)
+    if _inequalities_equivalent(submitted_rel, canonical_rel):
+        return VerificationResult(
+            is_correct=True, error_category=ErrorCategory.NONE, matched_misconception=None
+        )
+
+    # Flipped-direction misconception: the submission equals the wrong-direction form (same bound,
+    # reversed comparison) — "x<5" for the canonical "x>=5".
+    flipped_text = flipped_inequality(canonical_text)
+    if flipped_text is not None:
+        flipped_rel = sympify(flipped_text, evaluate=False)
+        if isinstance(flipped_rel, Relational) and _inequalities_equivalent(
+            submitted_rel, flipped_rel
+        ):
+            return VerificationResult(
+                is_correct=False,
+                error_category=ErrorCategory.OPERATION,
+                matched_misconception=MisconceptionId.FLIPPED_INEQUALITY,
+            )
 
     return VerificationResult(
         is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
@@ -640,6 +724,9 @@ def verify(problem: Problem, submitted: Submitted) -> VerificationResult:
 
     if problem.answer_kind is AnswerKind.EXPRESSION:
         return _verify_expression(problem, submitted)
+
+    if problem.answer_kind is AnswerKind.INEQUALITY:
+        return _verify_inequality(problem, submitted)
 
     if problem.kc is KnowledgeComponentId.COMMON_DENOMINATOR:
         return _verify_common_denominator(problem, submitted)

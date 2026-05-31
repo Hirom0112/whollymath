@@ -129,6 +129,11 @@ class Representation(StrEnum):
     # answer is a SymPy-parseable string graded by equivalence, rendered by the ExpressionInput
     # widget (widget_id "expression").
     EXPRESSION = "expression"
+    # A one-variable inequality the learner types (Unit 5: write inequalities, 6.EE.8). The answer
+    # is a SymPy-parseable relational STRING ("x>=5", "x<13") graded by relational equivalence
+    # (same variable, direction, and bound — i.e. same solution set), rendered by the inequality
+    # input widget (widget_id "inequality").
+    INEQUALITY = "inequality"
 
 
 @dataclass(frozen=True)
@@ -477,6 +482,25 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
             "3x + 6, or combine like terms like 2x + 5x into 7x — keeping the same value."
         ),
         representations=(Representation.EXPRESSION, Representation.WORD_PROBLEM),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 5: Inequalities ───
+    # Write a one-variable inequality from a real-world constraint (6.EE.8): "a number is at least
+    # 5" -> x>=5; "you must be under 13" -> x<13. The answer is a typed RELATIONAL string graded by
+    # SymPy relational equivalence (same variable, direction, bound = same solution set) — a NEW
+    # answer kind + a NEW Representation (INEQUALITY), modeled on the EXPRESSION precedent
+    # KC_write_expressions established. Advertises INEQUALITY (the typed answer surface) +
+    # WORD_PROBLEM (the constraint IS a word problem; the ≥2-rep contract), LIVE only on INEQUALITY
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY; INEQUALITY is the default surface, so
+    # widget_id resolves to "inequality".
+    KnowledgeComponent(
+        id=KnowledgeComponentId.INEQUALITIES,
+        skill_name="Write an inequality",
+        description=(
+            "Write a one-variable inequality (>, >=, <, <=) for a real-world constraint, choosing "
+            "the right direction and whether the boundary is included (e.g. 'at least 5' is "
+            "x >= 5; 'under 13' is x < 13)."
+        ),
+        representations=(Representation.INEQUALITY, Representation.WORD_PROBLEM),
     ),
 )
 

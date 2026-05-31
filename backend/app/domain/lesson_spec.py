@@ -44,6 +44,7 @@ class WidgetId(StrEnum):
     FRACTION_BARS = "fraction_bars"  # area model
     WORD_PROBLEM = "word_problem"
     EXPRESSION = "expression"  # the free-text ExpressionInput (a typed algebra string)
+    INEQUALITY = "inequality"  # the free-text inequality input (a typed relational string)
 
 
 _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
@@ -52,6 +53,7 @@ _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
     Representation.AREA_MODEL: WidgetId.FRACTION_BARS,
     Representation.WORD_PROBLEM: WidgetId.WORD_PROBLEM,
     Representation.EXPRESSION: WidgetId.EXPRESSION,
+    Representation.INEQUALITY: WidgetId.INEQUALITY,
 }
 
 
@@ -635,6 +637,26 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
         ),
         transfer_probe=TransferProbeSpec(
             has_error_finding=False, probe_representations=(_R.EXPRESSION,)
+        ),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 5: Inequalities ───
+    # Write inequalities (6.EE.8) — the first inequality-answer lesson. Practice-only (scheduler
+    # lives only on INEQUALITY; the only widget that accepts a typed relational is the inequality
+    # input — WORD_PROBLEM is the constraint framing, no surface state), so the probe never fires.
+    # Errors route back to INEQUALITY — the live answer surface — so "re-try on the same surface
+    # with a labeled hint" is the honest adaptation. The OPERATION route names the flipped-direction
+    # confusion directly. Probe over INEQUALITY (the only live rep).
+    _spec(
+        _KC.INEQUALITIES,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.INEQUALITY,
+                "Check which way the inequality points — 'at least' allows that number and bigger.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.INEQUALITY,)
         ),
     ),
 )

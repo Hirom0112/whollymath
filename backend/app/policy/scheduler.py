@@ -111,6 +111,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # algebra answer. PRACTICE-ONLY (one live rep); a second masterable surface (e.g. an
     # expression-tile builder) would be added here when its widget lands.
     _KC.EQUIVALENT_EXPRESSIONS: (_REP.EXPRESSION,),
+    # Grade-6 Unit 5: INEQUALITY = the typed relational string (the inequality input widget). Live
+    # on INEQUALITY (its only answer surface; WORD_PROBLEM is the constraint framing with no surface
+    # state). PRACTICE-ONLY (one live rep, like KC_write_expressions); a second masterable surface
+    # (e.g. a number-line range picker) would be added here when its widget lands.
+    _KC.INEQUALITIES: (_REP.INEQUALITY,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

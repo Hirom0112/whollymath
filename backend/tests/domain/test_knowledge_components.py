@@ -66,6 +66,8 @@ EXPECTED_CATALOG_IDS = {
     "KC_one_step_equations",
     # Unit 4 (expression-answer; reuses the contract, distributive-error misconception).
     "KC_equivalent_expressions",
+    # Unit 5 (inequality-answer; the first relational answer kind, 6.EE.8).
+    "KC_inequalities",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -89,6 +91,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_evaluate_expressions",
     "KC_one_step_equations",
     "KC_equivalent_expressions",
+    "KC_inequalities",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -119,10 +122,10 @@ EXPECTED_GRADE6_KCS = {
     "KC_exponents",
     "KC_expression_parts",
     "KC_dependent_vars",
-    # U5 — Equations & Inequalities (6.EE.5–9). KC_one_step_equations moved to
-    # EXPECTED_CATALOG_IDS (built 2026-05-30 — the first masterable-live Grade-6 KC).
+    # U5 — Equations & Inequalities (6.EE.5–9). KC_one_step_equations moved to EXPECTED_CATALOG_IDS
+    # (built 2026-05-30 — the first masterable-live Grade-6 KC); KC_inequalities moved to
+    # EXPECTED_CATALOG_IDS (built 2026-05-30 — the first inequality-answer KC, 6.EE.8).
     "KC_equation_solutions",
-    "KC_inequalities",
     # U6 — Geometry (6.G)
     "KC_triangle_properties",
     "KC_area_polygons",
@@ -160,7 +163,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 22 content-complete + 24 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 23 content-complete + 23 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

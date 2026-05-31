@@ -104,6 +104,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # rests on being able to read/write an algebraic expression in the first place, so it unlocks
     # on KC_write_expressions — the live prerequisite directly upstream of it.
     _KC.EQUIVALENT_EXPRESSIONS: frozenset({_KC.WRITE_EXPRESSIONS}),
+    # Grade-6 Unit 5: writing an inequality from a constraint rests on first being able to write an
+    # algebraic relation with a variable, so it unlocks on KC_write_expressions — the live
+    # prerequisite directly upstream (its own §11 prereqs, e.g. KC_ordering_inequalities, are not
+    # yet live).
+    _KC.INEQUALITIES: frozenset({_KC.WRITE_EXPRESSIONS}),
 }
 
 
@@ -135,6 +140,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.EVALUATE_EXPRESSIONS,  # Grade-6 Unit 4: evaluate at a value, builds on writing expressions
     _KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5: solve one-step equations, on number-line placement
     _KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4: rewrite as equivalent, on write expressions
+    _KC.INEQUALITIES,  # Grade-6 Unit 5: write inequalities, on write expressions
 )
 
 
