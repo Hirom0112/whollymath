@@ -153,6 +153,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # forward-unlocks on KC_coordinate_plane (6.NS.8), the live coordinate KC it builds on (matching
     # its REMEDIATION_ROUTING drop, also COORDINATE_PLANE).
     _KC.POLYGONS_COORDINATE_PLANE: frozenset({_KC.COORDINATE_PLANE}),
+    # Grade-6 Unit 6 (6.G.4): a prism's surface area is the SUM of its six faces' areas, and each
+    # face is a polygon (a rectangle) whose area is found exactly as in KC_area_polygons, so surface
+    # area from a net forward-unlocks on polygon area — the live geometry skill directly upstream.
+    _KC.SURFACE_AREA_NETS: frozenset({_KC.AREA_POLYGONS}),
 }
 
 
@@ -194,6 +198,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.AREA_POLYGONS,  # Grade-6 Unit 6: area of polygons, evaluating a formula (on evaluate-expr)
     _KC.VOLUME_FRACTIONAL_EDGES,  # Grade-6 Unit 6 (6.G.2): prism volume V=l*w*h, on multiply frac
     _KC.POLYGONS_COORDINATE_PLANE,  # Grade-6 Unit 6 (6.G.3): polygons in the plane, on coord-plane
+    _KC.SURFACE_AREA_NETS,  # Grade-6 Unit 6 (6.G.4): surface area from a net, on polygon area
 )
 
 

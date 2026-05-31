@@ -158,6 +158,9 @@ class MisconceptionId(StrEnum):
     # Unit 6 (6.G.2): finding a prism's volume by ADDING the edge lengths (l + w + h) instead of
     # MULTIPLYING them (V = l*w*h) — the wrong operation, so the answer comes out far too small.
     ADD_EDGES_ERROR = "add-edges-error"
+    # Unit 6 (6.G.4): counting only three of a prism's six faces — summing l*w + l*h + w*h and
+    # forgetting that each face has a matching opposite, so the surface area comes out half-size.
+    COUNT_THREE_FACES = "count-three-faces"
 
 
 @dataclass(frozen=True)
@@ -569,6 +572,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,),
     ),
+    Misconception(
+        id=MisconceptionId.COUNT_THREE_FACES,
+        name="Counts only three of the six faces",
+        description=(
+            "Finds a prism's surface area by adding only ONE face from each pair — l*w + l*h + "
+            "w*h — and forgets that every face has a matching opposite, so the doubling is "
+            "dropped (a 2x3x4 prism answered 26 instead of 2*(6 + 8 + 12) = 52). The face areas "
+            "are read correctly; the wrong operation (not multiplying the three-face total by 2) "
+            "makes the answer come out exactly half the true surface area."
+        ),
+        applicable_kcs=(KnowledgeComponentId.SURFACE_AREA_NETS,),
+    ),
 )
 
 
@@ -935,6 +950,19 @@ def add_edges_instead_of_multiplying(
     and the match is always diagnostic.
     """
     return length + width + height
+
+
+def count_three_faces_only(length: Rational, width: Rational, height: Rational) -> Rational:
+    """count-three-faces: find surface area summing only ONE face per pair, dropping the doubling.
+
+    The surface area of a right rectangular prism is ``SA = 2*(l*w + l*h + w*h)`` — six faces in
+    three matching pairs. The learner who makes this error adds only one face from each pair
+    (``l*w + l*h + w*h``) and forgets the matching opposites, so the answer is exactly HALF the true
+    surface area (2x3x4 -> 26 rather than 52). Returned as a SymPy ``Rational`` so the verifier
+    compares values directly; since ``l*w + l*h + w*h > 0`` for positive edges, the three-face value
+    is always distinct from the correct ``2*(...)`` and the match is always diagnostic.
+    """
+    return length * width + length * height + width * height
 
 
 def multiply_base_by_exponent(base: int, exponent: int) -> Rational:

@@ -165,6 +165,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # PRACTICE-ONLY (one live rep, like KC_coordinate_plane) — a second masterable surface awaits
     # its own widget.
     _KC.POLYGONS_COORDINATE_PLANE: (_REP.COORDINATE_PLANE,),
+    # Grade-6 Unit 6 (6.G.4): SYMBOLIC = the total surface area entered in the editor. PRACTICE-ONLY
+    # for now; the AREA_MODEL rep (a net IS an area-model — the six unfolded rectangular faces) is
+    # the natural masterable second surface, but it has no widget yet, so adding it here would
+    # promote it — deferred to avoid over-scoping this build.
+    _KC.SURFACE_AREA_NETS: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

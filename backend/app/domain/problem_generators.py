@@ -2232,6 +2232,71 @@ def _generate_polygons_coordinate_plane(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 6: Surface area of a prism from its net (6.G.4) ───
+
+# Edge-length pool for "surface area of a prism from its net" items (CCSS 6.G.4). Whole-number
+# edges keep every face area a whole number (the 6.G.4 net scope); the pool stays 6th-grade-sized.
+# Difficulty tiers widen toward larger edges (the easy->hard ramp; CP.B). A cube (all edges equal)
+# occurs naturally when the three independent draws coincide.
+_SURFACE_AREA_EDGE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3, 4),
+    2: (2, 3, 4, 5),
+    3: (3, 4, 5, 6, 7),
+    4: (5, 6, 7, 8, 9, 10),
+}
+_SURFACE_AREA_EDGE_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8)
+
+
+def _generate_surface_area_nets(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_surface_area_nets: surface area of a right rectangular prism (or cube); numeric answer.
+
+    Picks three whole-number edge lengths (length, width, height) via the seeded RNG; the answer is
+    the sum of the six face areas, ``SA = 2*(l*w + l*h + w*h)`` (a 2x3x4 prism -> 52). Whole-number
+    edges keep every face area a whole number (the 6.G.4 net scope). ``operands = (l, w, h)`` so the
+    verifier can replay the count-three-faces misconception (``l*w + l*h + w*h`` — half the answer).
+    A cube (all edges equal) arises naturally when the draws coincide. Two surfaces share the same
+    numeric answer (the LessonSpec >=2-rep contract):
+
+      - **SYMBOLIC** (default) — "What is the surface area of a right rectangular prism with edge
+        lengths …?";
+      - **AREA_MODEL** — the same prism described as a net of six rectangular faces (the concrete
+        unfolded picture). PRACTICE-ONLY today: only SYMBOLIC is live.
+
+    ``difficulty`` widens the edge pool. The math is sampled before the surface is applied, so the
+    same seed yields identical operands in either surface.
+    """
+    pool = (
+        _SURFACE_AREA_EDGE_BY_DIFFICULTY.get(difficulty, _SURFACE_AREA_EDGE_POOL)
+        if difficulty
+        else _SURFACE_AREA_EDGE_POOL
+    )
+    length = rng.choice(pool)
+    width = rng.choice(pool)
+    height = rng.choice(pool)
+    surface_area = 2 * (length * width + length * height + width * height)
+    if surface_format is Representation.AREA_MODEL:
+        statement = (
+            f"A right rectangular prism unfolds into a net of six rectangles; it is {length} long, "
+            f"{width} wide, and {height} tall. What is its total surface area?"
+        )
+    else:
+        statement = (
+            f"What is the surface area of a right rectangular prism with edge lengths {length}, "
+            f"{width}, and {height}?"
+        )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.SURFACE_AREA_NETS, seed, surface_format),
+        kc=KnowledgeComponentId.SURFACE_AREA_NETS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(surface_area),
+        representations_available=get_kc(KnowledgeComponentId.SURFACE_AREA_NETS).representations,
+        operands=(Rational(length), Rational(width), Rational(height)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -2267,6 +2332,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.AREA_POLYGONS: _generate_area_polygons,
     KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES: _generate_volume_fractional_edges,
     KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: _generate_polygons_coordinate_plane,
+    KnowledgeComponentId.SURFACE_AREA_NETS: _generate_surface_area_nets,
 }
 
 

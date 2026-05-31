@@ -97,6 +97,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # polygons-coordinate-plane has NO operands (a point-set answer; the coordinate
             # magnitude ramps the rectangle range, not a denominator) — nothing on the denom path.
             KnowledgeComponentId.POLYGONS_COORDINATE_PLANE,
+            # surface-area-nets operands are three whole-number edge lengths (denominator 1); the
+            # ramp widens the edge POOL (larger edges), not a fraction-denominator pool.
+            KnowledgeComponentId.SURFACE_AREA_NETS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

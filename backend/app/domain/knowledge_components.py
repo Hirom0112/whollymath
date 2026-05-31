@@ -686,6 +686,27 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.COORDINATE_PLANE, Representation.WORD_PROBLEM),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry ───
+    # Surface area of a right rectangular prism (or cube) from its net (6.G.4): unfold the solid
+    # into its six rectangular faces and SUM their areas — SA = 2(l*w + l*h + w*h) (a 2x3x4 prism
+    # has SA = 2(6 + 8 + 12) = 52). The answer is a single NUMERIC value entered in the existing
+    # editor (reuses the editor, NO new widget); the prompt can show the existing display-only
+    # FigureStimulus (a labeled net/figure). Advertises SYMBOLIC + AREA_MODEL — a net IS literally
+    # an area model of the faces (each face is a rectangle whose area you read/compute and add) —
+    # but LIVE only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the
+    # other numeric Grade-6 KCs. The AREA_MODEL net widget would be the natural masterable second
+    # surface later; kept SYMBOLIC-only here to not over-scope this build (error routes never target
+    # AREA_MODEL while it has no surface state — they stay on SYMBOLIC).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.SURFACE_AREA_NETS,
+        skill_name="Find the surface area of a prism from its net",
+        description=(
+            "Find the surface area of a right rectangular prism (or cube) by unfolding it into a "
+            "net of six rectangular faces and adding the face areas — SA = 2(l x w + l x h + "
+            "w x h) (a 2 by 3 by 4 prism has surface area 52), not by counting only three faces."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

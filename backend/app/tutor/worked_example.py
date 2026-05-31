@@ -972,6 +972,50 @@ def _volume_fractional_edges_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _surface_area_nets_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'add all six faces' steps for a prism surface-area problem (Grade-6 Unit 6, 6.G.4).
+
+    ``operands = (l, w, h)``; the answer is ``2*(l*w + l*h + w*h) == problem.correct_value``. Raises
+    if the operand triple is missing (CLAUDE.md §8.5). The middle step lands the three-face subtotal
+    so the learner sees that the surface area is that subtotal DOUBLED — every face has a twin.
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"surface-area problem {problem.problem_id} needs (l, w, h) operands")
+    length, width, height = operands
+    three_faces = length * width + length * height + width * height
+    answer = problem.correct_value
+    edge_l, edge_w, edge_h = _fmt_rational(length), _fmt_rational(width), _fmt_rational(height)
+    return (
+        WorkedStep(
+            shown=(
+                f"Unfold the prism into its net: SIX rectangular faces in three matching pairs. "
+                f"Find one face of each pair: {edge_l} x {edge_w}, {edge_l} x {edge_h}, and "
+                f"{edge_w} x {edge_h}."
+            ),
+            why_prompt="Why does every face of a box have an identical face on the opposite side?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"Add those three face areas: {_fmt_rational(length * width)} + "
+                f"{_fmt_rational(length * height)} + {_fmt_rational(width * height)} = "
+                f"{_fmt_rational(three_faces)}."
+            ),
+            why_prompt="Why is this only HALF of the surface area so far?",
+            revealed_value=three_faces,
+        ),
+        WorkedStep(
+            shown=(
+                f"Double it for the matching opposite faces: 2 x {_fmt_rational(three_faces)} = "
+                f"{_fmt_rational(answer)}."
+            ),
+            why_prompt="Why multiply by 2 instead of counting only the three faces we listed?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _one_step_equations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'apply the inverse, isolate x' steps for a one-step equation (Grade-6 Unit 5).
 
@@ -1367,6 +1411,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     # 6.G.3 reuses KC_coordinate_plane's "read the order, then plot" steps — the answer is the same
     # point-set form, and the steps land on the canonical points whether one corner or four.
     KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: _coordinate_plane_steps,
+    KnowledgeComponentId.SURFACE_AREA_NETS: _surface_area_nets_steps,
 }
 
 

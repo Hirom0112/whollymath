@@ -620,6 +620,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "The missing corner reuses the x of one given corner and the y of another — pair them.",
         ),
     ),
+    # Grade-6 Unit 6 (6.G.4): index 0 (operation) orients toward all SIX faces; index 1 (magnitude)
+    # toward the matching pairs; index 2 catches counting only three faces.
+    KnowledgeComponentId.SURFACE_AREA_NETS: (
+        _nudge(
+            KnowledgeComponentId.SURFACE_AREA_NETS,
+            "A net has SIX faces — add the area of every face, not just the ones you can see.",
+        ),
+        _nudge(
+            KnowledgeComponentId.SURFACE_AREA_NETS,
+            "The faces come in matching pairs: each face has an identical one on the other side.",
+        ),
+        _nudge(
+            KnowledgeComponentId.SURFACE_AREA_NETS,
+            "If you added only three faces, double it — every face has a twin on the other side.",
+        ),
+    ),
 }
 
 

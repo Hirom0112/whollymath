@@ -874,6 +874,34 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.COORDINATE_PLANE,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry (6.G.4) ───
+    # Surface area of a right rectangular prism from its net. Practice-only today (scheduler lives
+    # only on SYMBOLIC), so the probe never fires. Errors route back to SYMBOLIC — AREA_MODEL is
+    # advertised (a net IS an area-model: six rectangular faces whose areas you read/sum) but isn't
+    # live yet (no net widget), so "re-try on the same surface with a labeled hint" is the honest
+    # adaptation until AREA_MODEL is promoted live (then it becomes the masterable second surface).
+    # The OPERATION route names the count-three-faces error directly; the MAGNITUDE route covers a
+    # size slip. Probe over SYMBOLIC (the only live rep). NEVER routes to a rep with no surface.
+    _spec(
+        _KC.SURFACE_AREA_NETS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "A net has SIX faces in three matching pairs — add all of them, then you have not "
+                "missed half.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Each face has an identical face opposite it, so the total should be twice the "
+                "three faces you listed.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

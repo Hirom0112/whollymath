@@ -57,6 +57,7 @@ from app.domain.misconceptions import (
     add_magnitudes_ignoring_sign,
     additive_ratio,
     confuse_coefficient_with_constant,
+    count_three_faces_only,
     decimal_point_misplacement,
     distributive_error,
     evaluate_left_to_right,
@@ -844,6 +845,17 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.ADD_EDGES_ERROR,
         predict=lambda ops: add_edges_instead_of_multiplying(ops[0], ops[1], ops[2]),
+    ),
+    # count-three-faces: summed only ONE face per pair (l*w + l*h + w*h) and forgot to double for
+    # the matching opposite faces, so the surface area came out half. Operands are (l, w, h). A
+    # wrong OPERATION (dropped the *2, not a face misread). Since l*w + l*h + w*h > 0 for positive,
+    # the three-face value always differs from the correct 2*(...) — the match is always diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.SURFACE_AREA_NETS,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.COUNT_THREE_FACES,
+        predict=lambda ops: count_three_faces_only(ops[0], ops[1], ops[2]),
     ),
 )
 
