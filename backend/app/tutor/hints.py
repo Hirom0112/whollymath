@@ -587,6 +587,23 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If your triangle answer looks twice too big, you likely forgot to take the half.",
         ),
     ),
+    # Grade-6 Unit 6: index 0 (operation) orients toward MULTIPLYING the edges; index 1 (magnitude)
+    # toward how a product of fractions behaves; index 2 catches the add-the-edges slip.
+    KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES: (
+        _nudge(
+            KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+            "Volume fills the box — multiply the three edges together, length times width times "
+            "height.",
+        ),
+        _nudge(
+            KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+            "Multiply the fractions straight across: tops times tops, bottoms times bottoms.",
+        ),
+        _nudge(
+            KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+            "If you added the edges, that is the wrong move — volume comes from multiplying them.",
+        ),
+    ),
 }
 
 

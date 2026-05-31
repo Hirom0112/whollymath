@@ -930,6 +930,48 @@ def _exponents_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _fmt_rational(value: Rational) -> str:
+    """Render a Rational kid-facing — a whole number, else 'p/q' (no decimals, like the surface)."""
+    return str(value.p) if value.q == 1 else f"{value.p}/{value.q}"
+
+
+def _volume_fractional_edges_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'multiply all three edges' steps for a prism-volume problem (Grade-6 Unit 6, 6.G.2).
+
+    ``operands = (l, w, h)``; the answer is ``l*w*h == problem.correct_value`` (an exact Rational).
+    Raises if the operand triple is missing (CLAUDE.md §8.5). The middle step lands the partial
+    product ``l*w`` so the learner sees the volume built up by multiplying, never by adding.
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"volume problem {problem.problem_id} needs (l, w, h) operands")
+    length, width, height = operands
+    partial = length * width
+    answer = problem.correct_value
+    edge_l, edge_w, edge_h = _fmt_rational(length), _fmt_rational(width), _fmt_rational(height)
+    return (
+        WorkedStep(
+            shown=(
+                f"Volume fills the box, so MULTIPLY the three edges: {edge_l} x {edge_w} x "
+                f"{edge_h} — don't add them."
+            ),
+            why_prompt="Why does multiplying the edges give the space inside, but adding does not?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Multiply two edges first: {edge_l} x {edge_w} = {_fmt_rational(partial)}.",
+            why_prompt="Why can we multiply the fractions straight across, tops and bottoms?",
+            revealed_value=partial,
+        ),
+        WorkedStep(
+            shown=f"Multiply by the last edge: {_fmt_rational(partial)} x {edge_h} = "
+            f"{_fmt_rational(answer)}.",
+            why_prompt="Why is the volume bigger than any one edge but built only by multiplying?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _one_step_equations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'apply the inverse, isolate x' steps for a one-step equation (Grade-6 Unit 5).
 
@@ -1321,6 +1363,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: _integer_multiply_divide_steps,
     KnowledgeComponentId.TRIANGLE_PROPERTIES: _triangle_properties_steps,
     KnowledgeComponentId.AREA_POLYGONS: _area_polygons_steps,
+    KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES: _volume_fractional_edges_steps,
 }
 
 

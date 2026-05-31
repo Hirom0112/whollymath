@@ -2066,6 +2066,105 @@ def _generate_area_polygons(
     )
 
 
+# Edge-length pool for "volume of a prism with fractional edges" items (CCSS 6.G.2). Every entry
+# is an exact SymPy Rational (no float); the pool mixes proper/improper fractions with small whole
+# numbers so a generated prism has FRACTIONAL edges while staying 6th-grade-sized. Difficulty
+# tiers widen toward larger numerators/denominators (the easy->hard ramp; CP.B).
+_VOLUME_EDGE_BY_DIFFICULTY: dict[int, tuple[Rational, ...]] = {
+    1: (Rational(1, 2), Rational(3, 2), Rational(2), Rational(5, 2), Rational(3)),
+    2: (Rational(1, 2), Rational(2, 3), Rational(3, 2), Rational(5, 2), Rational(3), Rational(4)),
+    3: (Rational(2, 3), Rational(3, 4), Rational(5, 2), Rational(7, 2), Rational(4), Rational(5)),
+    4: (
+        Rational(3, 4),
+        Rational(5, 4),
+        Rational(7, 3),
+        Rational(7, 2),
+        Rational(9, 2),
+        Rational(5),
+    ),
+}
+_VOLUME_EDGE_POOL: tuple[Rational, ...] = (
+    Rational(1, 2),
+    Rational(2, 3),
+    Rational(3, 4),
+    Rational(3, 2),
+    Rational(5, 2),
+    Rational(2),
+    Rational(3),
+    Rational(4),
+)
+
+
+def _format_edge(edge: Rational) -> str:
+    """Render an edge length as a kid-facing string — a whole number, else 'p/q' (no decimals)."""
+    return str(edge.p) if edge.q == 1 else f"{edge.p}/{edge.q}"
+
+
+def _generate_volume_fractional_edges(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_volume_fractional_edges: volume of a right rectangular prism; a single numeric answer.
+
+    Picks three edge lengths (length, width, height) from a fraction-bearing pool via the seeded
+    RNG; the answer is the exact product ``l * w * h`` as a SymPy ``Rational`` (V = l*w*h, no
+    float). ``operands = (l, w, h)`` so the verifier can replay the add-edges misconception
+    (``l + w + h``). At least one edge is resampled until it is genuinely fractional (q != 1), so
+    every item exercises the 6.G.2 fractional-edge skill. The sum-equals-product case is resampled,
+    the add-edges value is always DISTINCT from the correct volume (the match stays diagnostic).
+    Two surfaces share the same numeric answer (the LessonSpec >=2-rep contract):
+
+      - **SYMBOLIC** (default) — "What is the volume of a right rectangular prism with edges …?";
+      - **AREA_MODEL** — the same prism described as a stack of unit-cube layers (the concrete
+        3D picture of V = l*w*h). PRACTICE-ONLY today: only SYMBOLIC is live.
+
+    ``difficulty`` widens the edge pool. The math is sampled before the surface is applied, so the
+    same seed yields identical operands in either surface.
+    """
+    pool = (
+        _VOLUME_EDGE_BY_DIFFICULTY.get(difficulty, _VOLUME_EDGE_POOL)
+        if difficulty
+        else _VOLUME_EDGE_POOL
+    )
+    length = rng.choice(pool)
+    width = rng.choice(pool)
+    height = rng.choice(pool)
+    # Require at least one genuinely fractional edge (the 6.G.2 point), and exclude the degenerate
+    # case where l + w + h == l * w * h (there the add-edges misconception would be
+    # indistinguishable from the correct volume).
+    while all(edge.q == 1 for edge in (length, width, height)) or (
+        length + width + height == length * width * height
+    ):
+        length = rng.choice(pool)
+        width = rng.choice(pool)
+        height = rng.choice(pool)
+
+    volume = length * width * height
+    edge_l, edge_w, edge_h = _format_edge(length), _format_edge(width), _format_edge(height)
+    if surface_format is Representation.AREA_MODEL:
+        statement = (
+            f"A right rectangular prism is built from unit-cube layers: it is {edge_l} long, "
+            f"{edge_w} wide, and {edge_h} tall. What is its volume?"
+        )
+    else:
+        statement = (
+            f"What is the volume of a right rectangular prism with edge lengths {edge_l}, "
+            f"{edge_w}, and {edge_h}?"
+        )
+    return Problem(
+        problem_id=_generated_id(
+            KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES, seed, surface_format
+        ),
+        kc=KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=volume,
+        representations_available=get_kc(
+            KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES
+        ).representations,
+        operands=(length, width, height),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -2099,6 +2198,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: _generate_integer_multiply_divide,
     KnowledgeComponentId.TRIANGLE_PROPERTIES: _generate_triangle_properties,
     KnowledgeComponentId.AREA_POLYGONS: _generate_area_polygons,
+    KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES: _generate_volume_fractional_edges,
 }
 
 

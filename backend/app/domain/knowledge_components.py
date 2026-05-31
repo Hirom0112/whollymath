@@ -645,6 +645,26 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry ───
+    # Volume of a right rectangular prism with FRACTIONAL edge lengths (6.G.2): V = l*w*h with
+    # fraction edges (l=3/2, w=2, h=5/2 -> 15/2). The answer is a single NUMERIC value (a Rational
+    # fraction) entered in the existing editor (reuses the editor, NO new widget); all arithmetic
+    # is exact SymPy Rational (no float). Advertises SYMBOLIC + AREA_MODEL — a prism's volume IS an
+    # area-model in 3D (a stack of unit-cube layers), the canonical concrete picture of V = l*w*h —
+    # but LIVE only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the
+    # other numeric Grade-6 KCs. The AREA_MODEL prism widget would be the natural masterable second
+    # surface later; kept SYMBOLIC-only here to not over-scope this build (error routes never target
+    # AREA_MODEL while it has no surface state — they stay on SYMBOLIC).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+        skill_name="Find the volume of a prism with fractional edges",
+        description=(
+            "Find the volume of a right rectangular prism with fractional edge lengths by "
+            "MULTIPLYING the three edges — V = l x w x h (a prism 3/2 by 2 by 5/2 has volume "
+            "15/2), not by adding them."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

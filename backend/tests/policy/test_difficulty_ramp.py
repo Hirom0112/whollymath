@@ -90,6 +90,10 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # area-polygons operands are (base, height, mode) — all whole numbers (denominator 1);
             # the difficulty widens the side-length pool, not a fraction-denominator pool.
             KnowledgeComponentId.AREA_POLYGONS,
+            # volume operands are three small edge lengths (a mix of unit-fractions and small whole
+            # numbers); the ramp widens the edge POOL (larger numbers, modest denominators ≤ 4), not
+            # by reaching large fraction denominators — so it is not a denominator-narrowing ramp.
+            KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

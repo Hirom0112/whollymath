@@ -155,6 +155,9 @@ class MisconceptionId(StrEnum):
     # Unit 6 (6.G.1): forgot the 1/2 on a triangle — applied the rectangle formula b·h to a
     # triangle instead of 1/2·b·h, so the area comes out twice too big.
     FORGOT_TRIANGLE_HALF = "forgot-triangle-half"
+    # Unit 6 (6.G.2): finding a prism's volume by ADDING the edge lengths (l + w + h) instead of
+    # MULTIPLYING them (V = l*w*h) — the wrong operation, so the answer comes out far too small.
+    ADD_EDGES_ERROR = "add-edges-error"
 
 
 @dataclass(frozen=True)
@@ -549,6 +552,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.AREA_POLYGONS,),
     ),
+    Misconception(
+        id=MisconceptionId.ADD_EDGES_ERROR,
+        name="Adds the edges instead of multiplying",
+        description=(
+            "Finds a right rectangular prism's volume by ADDING the edge lengths (l + w + h) "
+            "instead of MULTIPLYING them (V = l*w*h) — confuses volume with a perimeter-style sum, "
+            "so the answer comes out far too small (3/2 + 2 + 5/2 = 6 rather than 3/2 * 2 * 5/2 = "
+            "15/2). The wrong operation, not a magnitude slip; the edges are read correctly."
+        ),
+        applicable_kcs=(KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,),
+    ),
 )
 
 
@@ -900,6 +914,21 @@ def evaluate_left_to_right(a: int, x: int, b: int) -> Rational:
     ``a*(x + b) - (a*x + b) = (a - 1)*b > 0``.
     """
     return Rational(a * (x + b))
+
+
+def add_edges_instead_of_multiplying(
+    length: Rational, width: Rational, height: Rational
+) -> Rational:
+    """add-edges-error: find a prism's volume by ADDING the edges instead of multiplying them.
+
+    The volume of a right rectangular prism is ``V = l*w*h``; the learner who makes this error sums
+    the three edge lengths (``l + w + h``) — confusing volume with a perimeter-style total — so the
+    answer is wrong (3/2 + 2 + 5/2 = 6 rather than 3/2 * 2 * 5/2 = 15/2). Returned as a SymPy
+    ``Rational`` so the verifier compares values directly; the generator resamples the one case
+    where the sum equals the product, so the summed value always differs from the correct volume
+    and the match is always diagnostic.
+    """
+    return length + width + height
 
 
 def multiply_base_by_exponent(base: int, exponent: int) -> Rational:

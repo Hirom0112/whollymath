@@ -53,6 +53,7 @@ from app.domain.misconceptions import (
     MisconceptionId,
     WrongFraction,
     add_across,
+    add_edges_instead_of_multiplying,
     add_magnitudes_ignoring_sign,
     additive_ratio,
     confuse_coefficient_with_constant,
@@ -832,6 +833,17 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.FORGOT_TRIANGLE_HALF,
         predict=forget_triangle_half,
+    ),
+    # add-edges-error: found a prism's volume by ADDING the edges (l + w + h) instead of MULTIPLYING
+    # them (V = l*w*h). Operands are (l, w, h). A wrong OPERATION (summed a perimeter-style total
+    # rather than the product). The generator resamples the one l+w+h == l*w*h case, so the summed
+    # value always differs from the correct volume — the match is always diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.ADD_EDGES_ERROR,
+        predict=lambda ops: add_edges_instead_of_multiplying(ops[0], ops[1], ops[2]),
     ),
 )
 

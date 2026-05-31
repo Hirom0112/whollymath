@@ -802,6 +802,33 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry (6.G.2) ───
+    # Volume of a right rectangular prism with fractional edges. Practice-only today (scheduler
+    # lives only on SYMBOLIC), so the probe never fires. Errors route back to SYMBOLIC — AREA_MODEL
+    # is advertised (a prism volume IS a 3D area-model — the stack-of-unit-cubes picture) but isn't
+    # live yet (no prism widget), so "re-try on the same surface with a labeled hint" is the honest
+    # adaptation until AREA_MODEL is promoted live (then it becomes the masterable second surface).
+    # The OPERATION route names the add-the-edges error directly; the MAGNITUDE route covers a size
+    # slip. Probe over SYMBOLIC (the only live rep). NEVER routes to a rep with no surface state.
+    _spec(
+        _KC.VOLUME_FRACTIONAL_EDGES,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Volume MULTIPLIES the three edges (length x width x height) — adding them is too "
+                "small.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Multiply the fractions straight across — tops times tops, bottoms times bottoms.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
     # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry ───
     # Area of polygons (6.G.1) — a MASTERABLE lesson: SYMBOLIC + AREA_MODEL are BOTH live, so
     # errors route to the OTHER live surface (AREA_MODEL — a unit-square grid makes a triangle's

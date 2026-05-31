@@ -154,6 +154,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # EXPONENTS, not the practice-only Grade-6 KCs. Area is literally an area-model quantity, so
     # AREA_MODEL is the natural second surface here.
     _KC.AREA_POLYGONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
+    # Grade-6 Unit 6 (6.G.2): SYMBOLIC = the numeric volume (a Rational fraction) entered in the
+    # editor. PRACTICE-ONLY for now; the AREA_MODEL rep (a prism's volume IS a 3D area-model — the
+    # stack-of-unit-cubes picture) is the natural masterable second surface, but it has no widget
+    # yet, so adding it here would promote it — deferred to avoid over-scoping this build.
+    _KC.VOLUME_FRACTIONAL_EDGES: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

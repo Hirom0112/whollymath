@@ -704,7 +704,7 @@ _U6 = CatalogUnit(
             unit_slug="u6",
             order=4,
             title="Volume with fractional edges",
-            kc_id="KC_volume",
+            kc_id="KC_volume_fractional_edges",
             ccss_code="6.G.2",
             teks_code="6.8C",
             description="V = lwh and V = Bh with fractional edge lengths.",
