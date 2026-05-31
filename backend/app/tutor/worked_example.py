@@ -963,6 +963,36 @@ def _coordinate_plane_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _classify_number_sets_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'walk the nested sets from largest in' steps for a classify problem (Unit 3, TEKS 6.2A).
+
+    The answer is a SET of labels, not a magnitude, so the steps land on the canonical
+    ``problem.correct_sets`` string rather than a Rational — the last step's ``revealed_value``
+    stays ``None`` (the documented non-magnitude case) and its ``shown`` names the set. Raises if
+    missing (§8.5)."""
+    canonical = problem.correct_sets
+    if canonical is None:
+        raise ValueError(f"classify problem {problem.problem_id} needs a correct_sets")
+    sets_text = ", ".join(canonical.split(","))
+    return (
+        WorkedStep(
+            shown="Every number here is rational, so start with the biggest set: rational.",
+            why_prompt="Why is every fraction and integer a rational number?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Work inward: is it an integer? a whole number (≥ 0)? a counting number?",
+            why_prompt="Why does a number in a smaller set also belong to every larger one?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So it belongs to: {sets_text}.",
+            why_prompt="Why can a negative or a fraction be rational but not a whole number?",
+            revealed_value=None,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -1045,6 +1075,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _equivalent_expression_steps,
     KnowledgeComponentId.INEQUALITIES: _inequality_steps,
     KnowledgeComponentId.COORDINATE_PLANE: _coordinate_plane_steps,
+    KnowledgeComponentId.CLASSIFY_NUMBER_SETS: _classify_number_sets_steps,
 }
 
 

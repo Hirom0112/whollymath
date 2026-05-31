@@ -70,6 +70,8 @@ EXPECTED_CATALOG_IDS = {
     "KC_inequalities",
     # Unit 3 (coordinate-answer; the first point-set answer kind, 6.NS.8).
     "KC_coordinate_plane",
+    # Unit 3 (set-answer; TEKS 6.2A — the first number-set classification KC).
+    "KC_classify_number_sets",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -95,6 +97,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_equivalent_expressions",
     "KC_inequalities",
     "KC_coordinate_plane",
+    "KC_classify_number_sets",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -110,10 +113,10 @@ EXPECTED_GRADE6_KCS = {
     # + KC_multi_digit_division + KC_decimal_operations all moved to EXPECTED_CATALOG_IDS
     # (built 2026-05-30, T2 / kc-gcf / kc-conv); KC_unit_conversion likewise moved (Unit 1).
     # U3 — Rational Numbers (6.NS.5–8). KC_absolute_value + KC_signed_numbers + KC_coordinate_plane
-    # (6.NS.8, the first point-set answer kind) moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
+    # (6.NS.8, the first point-set answer kind) + KC_classify_number_sets (TEKS 6.2A, the first
+    # set-answer KC) moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_rationals_on_line",
     "KC_ordering_inequalities",
-    "KC_classify_number_sets",
     # U-INT — Integer Arithmetic (TEKS 6.3C/D). KC_integer_add_subtract moved to
     # EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_integer_multiply_divide",
@@ -165,7 +168,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 24 content-complete + 22 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 25 content-complete + 21 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

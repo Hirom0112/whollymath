@@ -114,6 +114,12 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # number-line placement (judging where a signed number sits on a line is the readiness for
     # locating it along each axis). The live foundation KC the skill conceptually rests on.
     _KC.COORDINATE_PLANE: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit 3 (TEKS 6.2A): classifying a value into the number sets (whole/integer/rational)
+    # rests on understanding signed numbers — knowing 5 vs -3 is what distinguishes whole from
+    # integer — so it forward-unlocks on KC_signed_numbers, the live Unit-3 KC directly upstream.
+    # (Matches its REMEDIATION_ROUTING drop, which is also SIGNED_NUMBERS — both point at the same
+    # live prerequisite.)
+    _KC.CLASSIFY_NUMBER_SETS: frozenset({_KC.SIGNED_NUMBERS}),
 }
 
 
@@ -147,6 +153,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4: rewrite as equivalent, on write expressions
     _KC.INEQUALITIES,  # Grade-6 Unit 5: write inequalities, on write expressions
     _KC.COORDINATE_PLANE,  # Grade-6 Unit 3: plot points in the plane, on number-line placement
+    _KC.CLASSIFY_NUMBER_SETS,  # Grade-6 Unit 3 (TEKS 6.2A): classify number sets, on signed numbers
 )
 
 

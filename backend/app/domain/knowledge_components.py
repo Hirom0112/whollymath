@@ -139,6 +139,11 @@ class Representation(StrEnum):
     # graded ORDER-INSENSITIVELY by the domain verifier, rendered by the coordinate-plane widget
     # (widget_id "coordinate_plane").
     COORDINATE_PLANE = "coordinate_plane"
+    # A classification of a number into the number SETS it belongs to (Unit 3, TEKS 6.2A:
+    # natural ⊂ whole ⊂ integer ⊂ rational). The answer is a comma-separated set of labels graded
+    # by order-insensitive set membership, rendered by the ClassifySets widget (widget_id
+    # "classify_sets").
+    NUMBER_SETS = "number_sets"
 
 
 @dataclass(frozen=True)
@@ -525,6 +530,24 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
             "a point across an axis and reading distance along a shared row or column."
         ),
         representations=(Representation.COORDINATE_PLANE, Representation.WORD_PROBLEM),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 3: Rational Numbers (TEKS 6.2A) ───
+    # Classify a number into the number SETS it belongs to: natural ⊂ whole ⊂ integer ⊂ rational
+    # (the nested-subset structure). The answer is a SET of labels (comma-separated), graded by
+    # order-insensitive set membership — the FIRST set-answer KC, establishing the wire contract
+    # the ClassifySets widget consumes (answer_kind "number_sets", widget_id "classify_sets").
+    # Advertises NUMBER_SETS + WORD_PROBLEM (the ≥2-rep contract; the phrase IS a word problem),
+    # LIVE only on NUMBER_SETS (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY (one live answer
+    # surface, like write_expressions; WORD_PROBLEM is framing with no surface state). NUMBER_SETS
+    # is the default surface, so widget_id resolves to "classify_sets".
+    KnowledgeComponent(
+        id=KnowledgeComponentId.CLASSIFY_NUMBER_SETS,
+        skill_name="Classify number sets",
+        description=(
+            "Decide which number sets a value belongs to — natural, whole, integer, rational — "
+            "knowing they nest (every whole number is an integer; every integer is rational)."
+        ),
+        representations=(Representation.NUMBER_SETS, Representation.WORD_PROBLEM),
     ),
 )
 

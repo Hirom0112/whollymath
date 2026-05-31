@@ -44,6 +44,7 @@ from typing import Any, Literal
 from sympy import Add, Expr, Mul, Rational, Symbol, igcd, ilcm, sstr
 
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
+from app.domain.misconceptions import classify_sets_for_value
 
 # ─── The shared Problem type ─────────────────────────────────────────────────
 
@@ -82,6 +83,12 @@ class AnswerKind(StrEnum):
     # (a polygon's vertices match in any order), graded by the domain verifier — never a Rational
     # match. Wire contract (frozen): answer_kind="coordinate" + widget_id="coordinate_plane".
     COORDINATE = "coordinate"
+    # A classification: the SET of number-system labels a value belongs to ("integer,rational"),
+    # ordered small→large. Its truth is ORDER-INSENSITIVE SET membership against ``correct_sets``
+    # (computed from the value, NUMBER_SET_LABELS vocabulary), not a Rational match; the surface
+    # picks the ClassifySets widget. Wire contract (frozen, frontend ClassifySets):
+    # answer_kind="number_sets" + widget_id="classify_sets".
+    NUMBER_SETS = "number_sets"
 
 
 @dataclass(frozen=True)
@@ -160,6 +167,13 @@ class Problem:
     # ``correct_value`` carries a ``Rational(0)`` placeholder for a coordinate item (never read on
     # the COORDINATE path).
     correct_points: str | None = None
+    # For a NUMBER_SETS item (answer_kind=NUMBER_SETS): the canonical correct answer as a
+    # comma-separated label list ordered small→large ("integer,rational"). The verifier grades a
+    # submitted list by ORDER-INSENSITIVE SET membership against this. ``None`` for every other
+    # item; ``correct_value`` carries a ``Rational(0)`` placeholder for a number-sets item (never
+    # read on the NUMBER_SETS path). The classified VALUE itself rides in ``operands`` so the
+    # misconception (drop ``rational``) is replayable.
+    correct_sets: str | None = None
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), the chosen surface
@@ -1590,6 +1604,67 @@ def _generate_coordinate_plane(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 3: classify number sets (TEKS 6.2A) ───
+
+# The values to classify, as (numerator, denominator) pairs spanning every membership case so the
+# lesson exercises the full nested-subset structure: positive integers (natural ⊂ whole ⊂ integer
+# ⊂ rational), zero (whole ⊂ integer ⊂ rational), negative integers (integer ⊂ rational), and
+# non-integer fractions positive and negative (rational only). Difficulty widens the range and
+# leans toward the trickier non-positive / non-integer cases at higher tiers (CP.B easy→hard).
+_CLASSIFY_VALUES_BY_DIFFICULTY: dict[int, tuple[tuple[int, int], ...]] = {
+    1: ((1, 1), (2, 1), (5, 1), (8, 1)),  # friendly positive integers (all four sets)
+    2: ((0, 1), (3, 1), (10, 1), (1, 2)),  # zero + a first non-integer fraction
+    3: ((-2, 1), (-7, 1), (3, 4), (7, 2)),  # negatives + proper/improper fractions
+    4: ((-12, 1), (-1, 5), (9, 4), (-11, 3)),  # larger negatives + negative fractions
+}
+_CLASSIFY_VALUE_POOL: tuple[tuple[int, int], ...] = (
+    (1, 1),
+    (4, 1),
+    (12, 1),
+    (0, 1),
+    (-3, 1),
+    (-9, 1),
+    (1, 2),
+    (3, 4),
+    (7, 2),
+    (-2, 3),
+    (-5, 4),
+)
+
+
+def _generate_classify_number_sets(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_classify_number_sets: classify which number sets a value belongs to (TEKS 6.2A).
+
+    Picks a value (seeded) spanning the membership cases, computes its canonical set membership via
+    the domain ``classify_sets_for_value`` (the single source of truth, no LLM), and renders the
+    canonical comma-separated answer (small→large) into ``correct_sets``. The answer is a SET of
+    labels graded by order-insensitive membership; ``correct_value`` is a ``Rational(0)``
+    placeholder (never read on the NUMBER_SETS path). The classified value rides in ``operands`` so
+    the integer-not-rational misconception (drop ``rational``) is replayable by the verifier.
+    """
+    pool = (
+        _CLASSIFY_VALUES_BY_DIFFICULTY.get(difficulty, _CLASSIFY_VALUE_POOL)
+        if difficulty
+        else _CLASSIFY_VALUE_POOL
+    )
+    numerator, denominator = rng.choice(pool)
+    value = Rational(numerator, denominator)
+    membership = classify_sets_for_value(value)
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.CLASSIFY_NUMBER_SETS, seed, surface_format),
+        kc=KnowledgeComponentId.CLASSIFY_NUMBER_SETS,
+        surface_format=surface_format,
+        statement=f"Which number sets does {value} belong to?",
+        correct_value=Rational(0),  # placeholder; the NUMBER_SETS path grades correct_sets
+        representations_available=get_kc(KnowledgeComponentId.CLASSIFY_NUMBER_SETS).representations,
+        answer_kind=AnswerKind.NUMBER_SETS,
+        correct_sets=",".join(membership),
+        operands=(value,),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1617,6 +1692,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _generate_equivalent_expressions,
     KnowledgeComponentId.INEQUALITIES: _generate_inequalities,
     KnowledgeComponentId.COORDINATE_PLANE: _generate_coordinate_plane,
+    KnowledgeComponentId.CLASSIFY_NUMBER_SETS: _generate_classify_number_sets,
 }
 
 

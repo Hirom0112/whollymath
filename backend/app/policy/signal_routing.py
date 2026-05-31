@@ -45,6 +45,11 @@ _STATE_FOR_REPRESENTATION: dict[Representation, SurfaceState] = {
     # stays closed (PROJECT.md §3.5). The frontend picks the concrete widget by widget_id
     # ("coordinate_plane"), so the shared axis-placement state does not conflate the two widgets.
     Representation.COORDINATE_PLANE: SurfaceState.NUMBER_LINE_PRIMARY,
+    # The NUMBER_SETS answer surface (the ClassifySets widget) reuses the symbolic-focus state:
+    # like the typed editor it is a symbolic selection input with no manipulative, so it maps to
+    # SYMBOLIC_FOCUS rather than adding a sixth state — the "exactly five surface states" set stays
+    # closed (PROJECT.md §3.5 / ARCHITECTURE.md §2 "adapt with restraint").
+    Representation.NUMBER_SETS: SurfaceState.SYMBOLIC_FOCUS,
 }
 
 

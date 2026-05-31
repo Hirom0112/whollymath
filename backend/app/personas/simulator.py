@@ -47,6 +47,7 @@ from app.domain.misconceptions import (
     distributive_error,
     flipped_inequality,
     natural_number_bias_number_line,
+    omit_rational_for_integer,
     reversed_operands,
     subtract_across,
     swap_coordinates,
@@ -227,6 +228,10 @@ def _correct_answer(problem: Problem) -> Rational | str:
         if problem.correct_points is None:  # construction bug, not learner input
             raise ValueError(f"coordinate problem {problem.problem_id} has no correct_points")
         return problem.correct_points
+    if problem.answer_kind is AnswerKind.NUMBER_SETS:
+        if problem.correct_sets is None:  # construction bug, not learner input
+            raise ValueError(f"number-sets problem {problem.problem_id} has no correct_sets")
+        return problem.correct_sets
     return problem.correct_value
 
 
@@ -260,6 +265,11 @@ def _misconception_wrong_answer(problem: Problem) -> Rational | str | None:
         return flipped_inequality(problem.correct_inequality)
     if problem.answer_kind is AnswerKind.COORDINATE:
         return swap_coordinates(problem.correct_points)
+    # A NUMBER_SETS item: the integer-not-rational error drops ``rational`` from an integer's set
+    # (None when the value is not an integer, so a persona holding the error still answers a
+    # non-integer correctly there).
+    if problem.answer_kind is AnswerKind.NUMBER_SETS:
+        return omit_rational_for_integer(problem.correct_sets)
 
     operands = problem.operands
     if operands is None:

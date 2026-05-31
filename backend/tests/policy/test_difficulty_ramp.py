@@ -68,6 +68,11 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # coordinate-plane has NO operands (a point-set answer; the coordinate magnitude ramps
             # the plane range, not a denominator) — nothing to read on the denominator path.
             KnowledgeComponentId.COORDINATE_PLANE,
+            # classify-number-sets: the operand is the VALUE being classified (an integer or a small
+            # fraction), so its denominator spans membership cases (1 for integers, 2–5 for
+            # fractions), not a fraction-size ramp — the difficulty widens the value RANGE, not a
+            # denominator pool.
+            KnowledgeComponentId.CLASSIFY_NUMBER_SETS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

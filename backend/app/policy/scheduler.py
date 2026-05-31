@@ -122,6 +122,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # surface (e.g. a symbolic "name the coordinates" entry) would be added here when its widget
     # lands and the answer can be graded the same way.
     _KC.COORDINATE_PLANE: (_REP.COORDINATE_PLANE,),
+    # Grade-6 Unit 3 (TEKS 6.2A): NUMBER_SETS = the set-of-labels answer (the ClassifySets widget).
+    # Live on NUMBER_SETS — its only answer surface; WORD_PROBLEM is the ontology framing with no
+    # surface state. PRACTICE-ONLY (one live rep); a second masterable surface (e.g. a Venn-diagram
+    # placement widget) would be added here when its widget lands.
+    _KC.CLASSIFY_NUMBER_SETS: (_REP.NUMBER_SETS,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

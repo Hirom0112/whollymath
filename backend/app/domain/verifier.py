@@ -49,6 +49,7 @@ from sympy.core.sympify import SympifyError
 
 from app.domain.knowledge_components import KnowledgeComponentId
 from app.domain.misconceptions import (
+    NUMBER_SET_LABELS,
     MisconceptionId,
     WrongFraction,
     add_across,
@@ -65,6 +66,7 @@ from app.domain.misconceptions import (
     keep_original_sign,
     multiply_without_inverting,
     natural_number_bias_number_line,
+    omit_rational_for_integer,
     parse_points,
     part_part_ratio,
     place_value_slip,
@@ -456,6 +458,67 @@ def _verify_coordinate(problem: Problem, submitted: Submitted) -> VerificationRe
     )
 
 
+def _parse_label_set(text: str) -> frozenset[str] | None:
+    """Parse a submitted comma-separated label list into a SET of known labels, or ``None``.
+
+    Returns ``None`` when the input is blank, contains no known label, or contains ANY label not in
+    ``NUMBER_SET_LABELS`` (an unknown label means the learner answered outside the vocabulary, so
+    the answer is not gradeable as a valid set — scored wrong/OTHER by the caller, never a crash,
+    CLAUDE.md §8.2). Whitespace around labels is stripped and duplicates collapse (set semantics).
+    Case-insensitive on the fixed vocabulary so "Integer" and "integer" parse the same.
+    """
+    raw = [token.strip().lower() for token in text.split(",")]
+    labels = [token for token in raw if token]
+    if not labels:
+        return None
+    vocabulary = {label.lower(): label for label in NUMBER_SET_LABELS}
+    if any(label not in vocabulary for label in labels):
+        return None
+    return frozenset(vocabulary[label] for label in labels)
+
+
+def _verify_number_sets(problem: Problem, submitted: Submitted) -> VerificationResult:
+    """Verify a NUMBER_SETS answer by ORDER-INSENSITIVE SET membership against ``correct_sets``.
+
+    Grading rule (the frozen classify-sets contract): parse the submitted comma-separated labels
+    into a SET, correct iff that set EQUALS the canonical membership set (order-insensitive, so
+    "rational,integer" == "integer,rational"). An unparseable / unknown-label / empty submission is
+    wrong (OTHER), never a crash (CLAUDE.md §8.2). A wrong set that equals the integer-not-rational
+    form (the integer's set with ``rational`` dropped) is that misconception → CONCEPTUAL, routed
+    OPERATION (the §3.6 routing key for a wrong procedure/concept); any other wrong set is OTHER.
+    """
+    canonical_text = problem.correct_sets
+    if canonical_text is None:
+        # Construction bug, not learner input: a NUMBER_SETS problem must carry its answer.
+        raise ValueError(f"number-sets problem {problem.problem_id!r} needs a correct_sets")
+
+    submitted_set = _parse_label_set(str(submitted))
+    if submitted_set is None:
+        return VerificationResult(
+            is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+        )
+
+    canonical_set = frozenset(canonical_text.split(","))
+    if submitted_set == canonical_set:
+        return VerificationResult(
+            is_correct=True, error_category=ErrorCategory.NONE, matched_misconception=None
+        )
+
+    # integer-not-rational misconception: the submission equals the integer's set with ``rational``
+    # dropped (None when the value is not an integer, so the error does not apply).
+    omitted_text = omit_rational_for_integer(canonical_text)
+    if omitted_text is not None and submitted_set == frozenset(omitted_text.split(",")):
+        return VerificationResult(
+            is_correct=False,
+            error_category=ErrorCategory.OPERATION,
+            matched_misconception=MisconceptionId.INTEGER_NOT_RATIONAL,
+        )
+
+    return VerificationResult(
+        is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+    )
+
+
 def _verify_common_denominator(problem: Problem, submitted: Submitted) -> VerificationResult:
     """Verify a common-denominator answer: ANY positive common multiple is correct (§3.4.1).
 
@@ -775,6 +838,9 @@ def verify(problem: Problem, submitted: Submitted) -> VerificationResult:
 
     if problem.answer_kind is AnswerKind.COORDINATE:
         return _verify_coordinate(problem, submitted)
+
+    if problem.answer_kind is AnswerKind.NUMBER_SETS:
+        return _verify_number_sets(problem, submitted)
 
     if problem.kc is KnowledgeComponentId.COMMON_DENOMINATOR:
         return _verify_common_denominator(problem, submitted)

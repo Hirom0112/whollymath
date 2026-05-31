@@ -55,6 +55,14 @@ from app.domain.knowledge_components import KnowledgeComponentId
 # amount?" items (the gem bank's `type: yes_no`). Aliased for readability.
 YesNo = Literal["yes", "no"]
 
+# The FIXED number-set label vocabulary for KC_classify_number_sets (TEKS 6.2A), ordered SMALL set
+# → LARGE set: natural ⊂ whole ⊂ integer ⊂ rational. The single source of truth for which labels
+# exist and their canonical order; the generator, verifier, and worked example all read it so a
+# typed/parsed answer is compared against the same vocabulary. No LLM ever decides membership — it
+# is computed from the value with SymPy (``classify_sets_for_value``). Grade-6 scope: every value
+# in this lesson is rational, so "rational" is the outermost set every number belongs to.
+NUMBER_SET_LABELS: tuple[str, ...] = ("natural", "whole", "integer", "rational")
+
 
 class MisconceptionId(StrEnum):
     """Stable misconception identifiers, matching the gem bank verbatim.
@@ -124,6 +132,10 @@ class MisconceptionId(StrEnum):
     # transposed, putting (x, y) at (y, x) (moving up first, then across, or reflecting across
     # y = x by accident).
     COORDINATE_SWAP = "coordinate-swap"
+    # Unit 3 (TEKS 6.2A): classifying an integer WITHOUT marking it rational — not realizing every
+    # integer is also a rational number (it can be written as a fraction over 1), so the learner
+    # drops "rational" from an integer's set (-3 marked {integer} instead of {integer, rational}).
+    INTEGER_NOT_RATIONAL = "integer-not-rational"
 
 
 @dataclass(frozen=True)
@@ -444,6 +456,19 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "for a point already on y = x (e.g. (3, 3)), where swapping changes nothing."
         ),
         applicable_kcs=(KnowledgeComponentId.COORDINATE_PLANE,),
+    ),
+    Misconception(
+        id=MisconceptionId.INTEGER_NOT_RATIONAL,
+        name="Integer is not rational",
+        description=(
+            "Classifies an integer without marking it rational — not realizing every integer is a "
+            "rational number (it can be written as a fraction over 1), so 'rational' is dropped "
+            "from the set: -3 marked {integer} instead of {integer, rational}, or 5 marked "
+            "{natural, whole, integer} without rational. The CONCEPT of the nested subsets "
+            "(integer ⊂ rational) is incomplete. Harmless on a value that is not an integer (a "
+            "non-integer rational is already rational-only — there is no integer label to keep)."
+        ),
+        applicable_kcs=(KnowledgeComponentId.CLASSIFY_NUMBER_SETS,),
     ),
 )
 
@@ -963,6 +988,56 @@ def swap_coordinates(correct_points: str | None) -> str | None:
     # Render in a stable order so the output is deterministic (the verifier re-parses to a set, so
     # order does not affect correctness; we sort only for reproducibility, PROJECT.md §4.1).
     return ",".join(f"({x},{y})" for x, y in sorted(swapped))
+
+
+def classify_sets_for_value(value: Rational) -> tuple[str, ...]:
+    """The number SETS a rational ``value`` belongs to, ordered small → large (TEKS 6.2A).
+
+    The single source of truth for membership — the generator and verifier both read it, so the
+    "correct answer" is one computed fact, never a stored guess (ARCHITECTURE.md §4). Computed from
+    the value with SymPy, NO LLM (CLAUDE.md §8.2). The nested-subset rule:
+
+      - ``rational``: every value in this Grade-6 lesson is rational (the outermost set).
+      - ``integer``: the value is a whole number (denominator 1 in reduced form).
+      - ``whole``: a non-negative integer (0, 1, 2, …).
+      - ``natural``: a positive integer (the counting numbers 1, 2, 3, …).
+
+    Returns the matching labels in ``NUMBER_SET_LABELS`` order (small → large), e.g. ``5`` →
+    ``("natural", "whole", "integer", "rational")``; ``0`` → ``("whole", "integer", "rational")``;
+    ``-3`` → ``("integer", "rational")``; ``1/2`` → ``("rational",)``.
+    """
+    is_integer = value.q == 1  # SymPy Rational is always reduced, so q == 1 iff an integer
+    is_whole = is_integer and value >= 0
+    is_natural = is_integer and value > 0
+    membership = {
+        "natural": is_natural,
+        "whole": is_whole,
+        "integer": is_integer,
+        "rational": True,  # in-scope values are all rational
+    }
+    return tuple(label for label in NUMBER_SET_LABELS if membership[label])
+
+
+def omit_rational_for_integer(correct_sets: str | None) -> str | None:
+    """integer-not-rational: drop ``rational`` from an INTEGER's set, as a learner who doesn't
+    realize every integer is rational would.
+
+    Given the CANONICAL answer string (a comma-separated, small→large label list, e.g.
+    ``"integer,rational"`` or ``"natural,whole,integer,rational"``), return the same list with
+    ``rational`` removed — BUT only when the value is an integer (its set contains ``integer``), so
+    the result is a genuinely-wrong, still-non-empty set. Returns ``None`` when the misconception
+    changes nothing or makes no sense: a non-integer value (``rational``-only, where dropping it
+    leaves an empty set and the error doesn't apply), a ``None`` input, or a set without
+    ``rational``. Returning ``None`` means the verifier never flags an "error" the learner could not
+    have made here. Pure/deterministic; reasons over labels, not the LLM.
+    """
+    if correct_sets is None:
+        return None
+    labels = [label.strip() for label in correct_sets.split(",") if label.strip()]
+    if "integer" not in labels or "rational" not in labels:
+        return None  # not an integer (or already missing rational) — the error doesn't apply
+    remaining = [label for label in labels if label != "rational"]
+    return ",".join(remaining)
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

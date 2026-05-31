@@ -482,6 +482,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Reflecting across an axis flips the sign of just one coordinate — keep the other.",
         ),
     ),
+    # Grade-6 Unit 3 (TEKS 6.2A): index 0 (operation) orients toward the nested-subset rule; index
+    # 1 reinforces that every integer (and whole number) is also rational.
+    KnowledgeComponentId.CLASSIFY_NUMBER_SETS: (
+        _nudge(
+            KnowledgeComponentId.CLASSIFY_NUMBER_SETS,
+            "The sets nest — a number in a smaller set is in every set that contains it.",
+        ),
+        _nudge(
+            KnowledgeComponentId.CLASSIFY_NUMBER_SETS,
+            "Every integer can be written as a fraction over one, so every integer is rational.",
+        ),
+        _nudge(
+            KnowledgeComponentId.CLASSIFY_NUMBER_SETS,
+            "Counting numbers are whole; whole numbers add zero; integers add the negatives.",
+        ),
+    ),
 }
 
 

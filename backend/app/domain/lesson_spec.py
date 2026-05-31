@@ -46,6 +46,7 @@ class WidgetId(StrEnum):
     EXPRESSION = "expression"  # the free-text ExpressionInput (a typed algebra string)
     INEQUALITY = "inequality"  # the free-text inequality input (a typed relational string)
     COORDINATE_PLANE = "coordinate_plane"  # the four-quadrant point-plotting grid widget
+    CLASSIFY_SETS = "classify_sets"  # the ClassifySets widget (pick the number sets a value is in)
 
 
 _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
@@ -56,6 +57,7 @@ _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
     Representation.EXPRESSION: WidgetId.EXPRESSION,
     Representation.INEQUALITY: WidgetId.INEQUALITY,
     Representation.COORDINATE_PLANE: WidgetId.COORDINATE_PLANE,
+    Representation.NUMBER_SETS: WidgetId.CLASSIFY_SETS,
 }
 
 
@@ -680,6 +682,26 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
         ),
         transfer_probe=TransferProbeSpec(
             has_error_finding=False, probe_representations=(_R.COORDINATE_PLANE,)
+        ),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 3: classify number sets (TEKS 6.2A) ───
+    # Classify a value into its number sets — the FIRST set-answer lesson. Practice-only (scheduler
+    # lives only on NUMBER_SETS; the only widget that accepts a set answer is the ClassifySets
+    # widget — WORD_PROBLEM is the ontology framing with no surface state), so the probe never
+    # fires. Errors route back to NUMBER_SETS — the live answer surface — so "re-try on the same
+    # surface with a labeled hint" is the honest adaptation. The OPERATION route names the
+    # integer-not-rational concept gap directly. Probe over NUMBER_SETS (the only live rep).
+    _spec(
+        _KC.CLASSIFY_NUMBER_SETS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.NUMBER_SETS,
+                "Remember the sets nest — every integer (and every whole number) is also rational.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.NUMBER_SETS,)
         ),
     ),
 )
