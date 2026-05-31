@@ -143,6 +143,10 @@ class MisconceptionId(StrEnum):
     # Unit 4 (6.EE.1): treating a power as one multiplication — multiplying the base BY the
     # exponent (3^4 -> 3*4 = 12) instead of by itself exponent-many times (3*3*3*3 = 81).
     MULTIPLY_BASE_BY_EXPONENT = "multiply-base-by-exponent"
+    # Unit-INT (TEKS 6.3C/D): a sign-rule error on integer multiplication/division — computing the
+    # right MAGNITUDE but applying the wrong sign rule (e.g. -3 × 4 -> 12 instead of -12, treating
+    # the product of an unlike-sign pair as positive). The arithmetic is right; only the sign is.
+    SIGN_RULE_ERROR = "sign-rule-error"
 
 
 @dataclass(frozen=True)
@@ -501,6 +505,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.EXPONENTS,),
     ),
+    Misconception(
+        id=MisconceptionId.SIGN_RULE_ERROR,
+        name="Sign-rule error on multiply/divide",
+        description=(
+            "Multiplies or divides the magnitudes correctly but applies the wrong sign rule — "
+            "treats an unlike-sign pair as positive (or a like-sign pair as negative), so -3 × 4 "
+            "becomes 12 instead of -12, or -12 ÷ -4 becomes -3 instead of 3. The arithmetic is "
+            "right; only the sign of the result is wrong (like signs give a positive result, "
+            "unlike signs a negative one)."
+        ),
+        applicable_kcs=(KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,),
+    ),
 )
 
 
@@ -797,6 +813,24 @@ def keep_original_sign(n: Rational) -> Rational:
     from the correct ``-n`` whenever ``n != 0`` (the generator never produces zero).
     """
     return n
+
+
+def flip_result_sign(ops: tuple[Rational, ...]) -> Rational:
+    """sign-rule-error: compute the right MAGNITUDE but apply the wrong sign on multiply/divide.
+
+    Operands are ``(a, b, mode)`` where ``mode == 1`` is multiplication and ``mode == 0`` is
+    division. The correct result is ``a * b`` or ``a / b``; the learner who makes the sign-rule
+    error gets the magnitude right but flips the sign — treating an unlike-sign pair as positive
+    (or a like-sign pair as negative), so -3 × 4 becomes 12 instead of -12, and -12 ÷ -4 becomes
+    -3 instead of 3. Modeled as ``-(correct)`` because flipping the one sign rule negates the
+    result regardless of the operands' signs. Returned as a SymPy ``Rational`` so the verifier
+    compares values directly; it differs from the correct result whenever that result is nonzero
+    (the generator never produces a zero operand, and division always divides evenly, so the
+    quotient is a nonzero integer). The generator passes integer-valued operands.
+    """
+    a, b, mode = ops
+    correct = a * b if mode == 1 else Rational(a, b)
+    return -correct
 
 
 def evaluate_left_to_right(a: int, x: int, b: int) -> Rational:

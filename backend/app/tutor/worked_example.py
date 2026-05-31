@@ -773,6 +773,47 @@ def _signed_numbers_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _integer_multiply_divide_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'magnitude first, then the sign rule' steps for an integer ×/÷ problem (Unit-INT).
+
+    ``operands = (a, b, mode)`` with ``mode == 1`` multiply / ``0`` divide; the answer is ``a*b``
+    or ``a/b == problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"integer ×/÷ problem {problem.problem_id} needs (a, b, mode) operands")
+    a, b = int(operands[0]), int(operands[1])
+    multiply = int(operands[2]) == 1
+    answer = problem.correct_value
+    verb = "Multiply" if multiply else "Divide"
+    op_word = "product" if multiply else "quotient"
+    magnitude = abs(answer.p)
+    same_sign = (a > 0) == (b > 0)
+    sign_word = "positive" if same_sign else "negative"
+    rule = (
+        "the signs are the SAME, so the result is positive"
+        if same_sign
+        else "the signs are DIFFERENT, so the result is negative"
+    )
+    return (
+        WorkedStep(
+            shown=f"{verb} the sizes first, ignoring signs: the {op_word} has size {magnitude}.",
+            why_prompt="Why can you find the size before you worry about the sign?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Now the sign rule: {rule}.",
+            why_prompt="Why do like signs give a positive result and unlike signs a negative one?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So the answer is {sign_word}: {answer.p}.",
+            why_prompt="Why does the sign rule decide the answer once you know its size?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _evaluate_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'substitute, then multiply before add' steps for an evaluate-expression problem (Unit 4).
 
@@ -1176,6 +1217,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.COORDINATE_PLANE: _coordinate_plane_steps,
     KnowledgeComponentId.CLASSIFY_NUMBER_SETS: _classify_number_sets_steps,
     KnowledgeComponentId.EXPRESSION_PARTS: _expression_parts_steps,
+    KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: _integer_multiply_divide_steps,
 }
 
 

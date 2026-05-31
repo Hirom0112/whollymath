@@ -533,6 +533,23 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Terms are the parts joined by plus or minus signs — count those to find how many.",
         ),
     ),
+    # Grade-6 Unit-INT: index 0 (operation) orients toward the sign rule; index 1 reinforces "like
+    # signs positive, unlike signs negative"; index 2 catches the magnitude-right-sign-wrong slip.
+    KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: (
+        _nudge(
+            KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,
+            "First find the size of the answer, then decide its sign from the two signs you started"
+            " with.",
+        ),
+        _nudge(
+            KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,
+            "Like signs make a positive result; unlike signs make a negative one. Which is it?",
+        ),
+        _nudge(
+            KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,
+            "If the size is right but it was marked wrong, check the sign — the rule decides it.",
+        ),
+    ),
 }
 
 

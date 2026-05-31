@@ -587,6 +587,24 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer Arithmetic (TEKS 6.3C/D) ───
+    # Multiply & divide integers (TEKS-primary; adjacent-grade CCSS 7.NS.A.2): the answer is a
+    # single signed integer entered in the symbolic editor (reuses the editor, NO new widget). A
+    # divide item always divides evenly, so the quotient is an integer. Advertises SYMBOLIC +
+    # NUMBER_LINE (a product is repeated directed jumps from zero — the number-line picture of
+    # integer multiplication; division undoes it), but LIVE only on SYMBOLIC for now
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the other Grade-6 KCs; the NUMBER_LINE
+    # widget exists, so this is a natural candidate to promote to a masterable second rep later.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,
+        skill_name="Multiply and divide integers",
+        description=(
+            "Multiply and divide positive and negative integers using the sign rules "
+            "(e.g. -3 × 4 = -12; -12 ÷ -4 = 3; 6 × -5 = -30): like signs give a positive "
+            "result, unlike signs a negative one."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
 )
 
 

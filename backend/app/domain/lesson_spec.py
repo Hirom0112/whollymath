@@ -750,6 +750,30 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer multiply & divide (TEKS 6.3C/D) ──
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors route
+    # back to SYMBOLIC — NUMBER_LINE is advertised (its widget exists) but isn't live yet, so
+    # "re-try on the same surface with a labeled hint" is the honest adaptation until NUMBER_LINE is
+    # promoted live. The OPERATION route names the sign-rule error directly; the MAGNITUDE route
+    # covers a size slip. Probe over SYMBOLIC (the only live rep).
+    _spec(
+        _KC.INTEGER_MULTIPLY_DIVIDE,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Like signs give a positive result, unlike signs a negative one — check the sign.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Find the size by multiplying or dividing the numbers without their signs first.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

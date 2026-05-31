@@ -1153,6 +1153,76 @@ def _generate_signed_numbers(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer multiply & divide (TEKS 6.3C/D) ───
+
+# Operand-magnitude pool for "a × b" / "a ÷ b" items by difficulty tier (the easy→hard ramp; CP.B):
+# higher tiers use larger magnitudes. Both operands are nonzero (so the result is nonzero and the
+# sign-rule flip is always diagnostic); the sign of each is chosen separately so like- AND
+# unlike-sign pairs both appear. Divide items reuse the same pool for the QUOTIENT and the divisor,
+# then form the dividend as their product, guaranteeing an even (integer) division.
+_INT_MUL_DIV_MAGNITUDE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3, 4, 5),
+    2: (3, 4, 5, 6, 7),
+    3: (6, 7, 8, 9, 10),
+    4: (8, 9, 10, 11, 12),
+}
+_INT_MUL_DIV_MAGNITUDE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8, 9, 10, 12)
+
+
+def _generate_integer_multiply_divide(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_integer_multiply_divide: multiply OR divide two signed integers; the signed result.
+
+    An operation-mode flag (the seeded RNG picks multiply vs divide) decides the item. MULTIPLY:
+    pick two signed nonzero magnitudes ``a, b``; the answer is ``a * b``. DIVIDE: pick a signed
+    nonzero quotient ``q`` and divisor ``b``, form the dividend ``a = q * b``; the answer is
+    ``a / b == q`` — so the division ALWAYS divides evenly (an integer quotient). Each operand's
+    sign is chosen independently, so like-sign and unlike-sign pairs both occur (the sign rule is
+    exercised in every case). ``operands = (a, b, mode)`` with ``mode = 1`` (multiply) / ``0``
+    (divide) so the verifier can replay the sign-rule error (``-(a*b)`` / ``-(a/b)``);
+    ``difficulty`` widens the magnitude pool. The result is never zero (both operands nonzero), so
+    ``-result != result`` and the misconception is always diagnostic.
+    """
+    pool = (
+        _INT_MUL_DIV_MAGNITUDE_BY_DIFFICULTY.get(difficulty, _INT_MUL_DIV_MAGNITUDE_POOL)
+        if difficulty
+        else _INT_MUL_DIV_MAGNITUDE_POOL
+    )
+    multiply = rng.random() < 0.5
+    sign_first = 1 if rng.random() < 0.5 else -1
+    sign_second = 1 if rng.random() < 0.5 else -1
+    if multiply:
+        a = sign_first * rng.choice(pool)
+        b = sign_second * rng.choice(pool)
+        correct = a * b
+        b_text = f"({b})" if b < 0 else str(b)
+        statement = f"{a} × {b_text} = ?"
+        mode = 1
+    else:
+        # Build an even division: dividend = quotient × divisor, so a ÷ b is an exact integer.
+        quotient = sign_first * rng.choice(pool)
+        b = sign_second * rng.choice(pool)
+        a = quotient * b
+        correct = quotient
+        b_text = f"({b})" if b < 0 else str(b)
+        statement = f"{a} ÷ {b_text} = ?"
+        mode = 0
+    return Problem(
+        problem_id=_generated_id(
+            KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE, seed, surface_format
+        ),
+        kc=KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(correct),
+        representations_available=get_kc(
+            KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE
+        ).representations,
+        operands=(Rational(a), Rational(b), Rational(mode)),
+    )
+
+
 # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
 
 # Write-expression phrase templates: (phrase with {v}/{c} slots, builder of the canonical SymPy
@@ -1855,6 +1925,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.COORDINATE_PLANE: _generate_coordinate_plane,
     KnowledgeComponentId.CLASSIFY_NUMBER_SETS: _generate_classify_number_sets,
     KnowledgeComponentId.EXPRESSION_PARTS: _generate_expression_parts,
+    KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: _generate_integer_multiply_divide,
 }
 
 

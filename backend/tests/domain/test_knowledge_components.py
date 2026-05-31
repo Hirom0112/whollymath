@@ -57,6 +57,7 @@ EXPECTED_CATALOG_IDS = {
     "KC_signed_numbers",
     # Unit-INT (TEKS 6.3C/D, numeric).
     "KC_integer_add_subtract",
+    "KC_integer_multiply_divide",
     # Unit 4 (expression-answer; the first non-numeric answer kind).
     "KC_write_expressions",
     # Unit 4 (numeric; parts of an expression — coefficient / constant / term-count, 6.EE.2b).
@@ -94,6 +95,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_decimal_operations",
     "KC_absolute_value",
     "KC_integer_add_subtract",
+    "KC_integer_multiply_divide",
     "KC_signed_numbers",
     "KC_write_expressions",
     "KC_evaluate_expressions",
@@ -123,9 +125,8 @@ EXPECTED_GRADE6_KCS = {
     # set-answer KC) moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_rationals_on_line",
     "KC_ordering_inequalities",
-    # U-INT — Integer Arithmetic (TEKS 6.3C/D). KC_integer_add_subtract moved to
-    # EXPECTED_CATALOG_IDS (built 2026-05-30).
-    "KC_integer_multiply_divide",
+    # U-INT — Integer Arithmetic (TEKS 6.3C/D). KC_integer_add_subtract + KC_integer_multiply_divide
+    # both moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     # U4 — Expressions (6.EE.1–4, 6). KC_write_expressions (first expression-answer KC),
     # KC_evaluate_expressions (6.EE.2c, masterable numeric), KC_equivalent_expressions (6.EE.3/4,
     # reuses the expression-answer contract), KC_expression_parts (6.EE.2b, numeric —
@@ -173,7 +174,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 27 content-complete + 19 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 28 content-complete + 18 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

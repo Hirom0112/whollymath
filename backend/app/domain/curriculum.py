@@ -476,7 +476,10 @@ _UINT = CatalogUnit(
             unit_slug="uint",
             order=3,
             title="Integer multiply & divide",
-            kc_id="KC_integer_mul_div",
+            # Aligned to the enum/model label-space id ``KC_integer_multiply_divide`` (was the
+            # stray ``KC_integer_mul_div``, which matched no KnowledgeComponentId member and so
+            # could never resolve or be built — Grade-6 build, 2026-05-30, mirrors the uint_l1 fix).
+            kc_id="KC_integer_multiply_divide",
             ccss_code=None,
             teks_code="6.3C",  # spec: 6.3C/6.3D
             description="Sign rules for x and div; products/quotients of integers.",

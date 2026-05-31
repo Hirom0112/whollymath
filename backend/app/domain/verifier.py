@@ -59,6 +59,7 @@ from app.domain.misconceptions import (
     decimal_point_misplacement,
     distributive_error,
     evaluate_left_to_right,
+    flip_result_sign,
     flipped_inequality,
     gcf_lcm_confusion,
     inverse_operation_error,
@@ -791,6 +792,18 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.PART_CONFUSION,
         predict=confuse_coefficient_with_constant,
+    ),
+    # sign-rule-error: multiplied/divided the magnitudes right but applied the WRONG sign rule —
+    # e.g. -3 × 4 -> 12 instead of -12 (operands are (a, b, mode); mode 1 == multiply, 0 == divide).
+    # A wrong OPERATION (the arithmetic is right; only the sign rule was misapplied), so the answer
+    # is the sign-flipped result -(a*b) / -(a/b). The result is nonzero (both operands nonzero), so
+    # the flipped value always differs from the correct one — the match is always diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.SIGN_RULE_ERROR,
+        predict=flip_result_sign,
     ),
 )
 

@@ -50,6 +50,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             KnowledgeComponentId.ABSOLUTE_VALUE,  # whole-number operand; ramps by magnitude
             KnowledgeComponentId.INTEGER_ADD_SUBTRACT,  # signed-integer operands; magnitude ramp
             KnowledgeComponentId.SIGNED_NUMBERS,  # signed-integer operand; ramps by magnitude pool
+            # integer multiply/divide: signed-integer operands (a, b) + a mode flag (all denominator
+            # 1); ramps by the magnitude pool, not a fraction denominator.
+            KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,
             # write-expressions has NO operands (an expression answer; the constant ramps the
             # phrase, not a denominator) — nothing to read on the denominator path.
             KnowledgeComponentId.WRITE_EXPRESSIONS,

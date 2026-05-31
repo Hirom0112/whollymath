@@ -130,6 +130,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # the skill conceptually rests on (matching how the other Unit-4 KCs are wired; its own §11
     # reactive-drop is the EVALUATE_EXPRESSIONS pairing, kept separate from this forward edge).
     _KC.EXPONENTS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit-INT (TEKS 6.3C/D): multiplying/dividing integers extends signed addition (a
+    # product is repeated signed addition; division undoes it), so it forward-unlocks on
+    # KC_integer_add_subtract — the live Unit-INT KC directly upstream (matching its
+    # REMEDIATION_ROUTING drop, also INTEGER_ADD_SUBTRACT).
+    _KC.INTEGER_MULTIPLY_DIVIDE: frozenset({_KC.INTEGER_ADD_SUBTRACT}),
 }
 
 
@@ -166,6 +171,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.CLASSIFY_NUMBER_SETS,  # Grade-6 Unit 3 (TEKS 6.2A): classify number sets, on signed numbers
     _KC.EXPRESSION_PARTS,  # Grade-6 Unit 4: name parts of an expression, on write expressions
     _KC.EXPONENTS,  # Grade-6 Unit 4: evaluate whole-number powers, on number-line placement
+    _KC.INTEGER_MULTIPLY_DIVIDE,  # Grade-6 Unit-INT: multiply/divide integers, on signed add/sub
 )
 
 

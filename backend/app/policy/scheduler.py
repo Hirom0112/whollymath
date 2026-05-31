@@ -137,6 +137,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # WORD_PROBLEM is the phrase framing with no surface state. PRACTICE-ONLY (one live rep); there
     # is no second concrete widget for naming a part, so SYMBOLIC stays the only live surface.
     _KC.EXPRESSION_PARTS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit-INT (TEKS 6.3C/D): SYMBOLIC = the signed integer product/quotient entered in the
+    # editor. PRACTICE-ONLY for now; the NUMBER_LINE rep (its widget exists) is the natural
+    # masterable second surface — a product is repeated directed jumps from zero — but adding it
+    # here promotes it, deferred to avoid over-scoping this build.
+    _KC.INTEGER_MULTIPLY_DIVIDE: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a
