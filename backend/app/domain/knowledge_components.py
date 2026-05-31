@@ -786,6 +786,28 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (TEKS 6.12D) ───
+    # Categorical data (TEKS 6.12D): read counts/frequencies from a category breakdown given in the
+    # prompt ("12 like red, 8 blue, 5 green") and compute a summary — how many MORE chose one
+    # category than another (a count difference), the TOTAL surveyed, or the RELATIVE FREQUENCY of a
+    # category (a fraction of the total). The answer is one numeric value — an integer for the
+    # difference/total, an exact Rational for relative frequency — entered in the symbolic editor
+    # (reuses the editor, NO new widget). Advertises SYMBOLIC + AREA_MODEL: a category breakdown is
+    # canonically pictured as a bar/area graph (one bar per category, length = count), which is the
+    # ≥2-rep second surface. LIVE only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) —
+    # PRACTICE-ONLY like the other numeric Grade-6 KCs; the AREA_MODEL bar-graph surface is the
+    # natural masterable second rep to promote later. Error routes never target AREA_MODEL while it
+    # has no surface state for this KC — they stay on SYMBOLIC.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.CATEGORICAL_DATA,
+        skill_name="Summarize categorical data",
+        description=(
+            "Read counts from a category breakdown and summarize them — how many more chose one "
+            "category than another, the total surveyed, or the relative frequency (fraction) of a "
+            "category (e.g. 12 like red and 8 blue: 4 more like red; 25 surveyed if green is 5)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

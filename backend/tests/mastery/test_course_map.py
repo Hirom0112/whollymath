@@ -66,7 +66,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.MEAN_ABSOLUTE_DEVIATION,  # Grade-6 Unit 7 (6.SP.5c, built 2026-05-30)
         KC.CENTER_SPREAD_SHAPE,  # Grade-6 Unit 7 (6.SP.2, built 2026-05-30)
         KC.SUMMARY_STATISTICS,  # Grade-6 Unit 7 (6.SP.3, built 2026-05-30)
-        KC.DATA_DISPLAYS,  # Grade-6 Unit 7 (6.SP.4, built 2026-05-30), last on the spine
+        KC.DATA_DISPLAYS,  # Grade-6 Unit 7 (6.SP.4, built 2026-05-30)
+        KC.CATEGORICAL_DATA,  # Grade-6 Unit 7 (TEKS 6.12D, built 2026-05-30), last on the spine
     ]
 
 

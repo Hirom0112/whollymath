@@ -102,6 +102,9 @@ EXPECTED_CATALOG_IDS = {
     # count above a threshold / most-frequent value / bin frequency, behind a question-type flag
     # over a variable-length data set).
     "KC_data_displays",
+    # Unit 7 (numeric; TEKS 6.12D — summarize categorical data: count-difference / total /
+    # relative-frequency, behind a mode flag over a variable-length category breakdown).
+    "KC_categorical_data",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -140,6 +143,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_center_spread_shape",
     "KC_summary_statistics",
     "KC_data_displays",
+    "KC_categorical_data",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -177,12 +181,13 @@ EXPECTED_GRADE6_KCS = {
     # KC_polygons_coordinate_plane (6.G.3 — draw polygons / use coordinates, reuses the point-set
     # answer contract), and KC_surface_area_nets (6.G.4 — surface area of a prism from its net) all
     # moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
-    # U7 — Statistics (6.SP). KC_mean_absolute_deviation (6.SP.5c), KC_center_spread_shape
-    # (6.SP.2 — center/spread of a data set), KC_summary_statistics (6.SP.3 —
-    # mean/median/mode/range over a variable-length data set), and KC_data_displays (6.SP.4 — read
-    # a dot plot / histogram described textually) moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
+    # U7 — Statistics (6.SP / TEKS 6.12D). KC_mean_absolute_deviation (6.SP.5c),
+    # KC_center_spread_shape (6.SP.2 — center/spread of a data set), KC_summary_statistics (6.SP.3 —
+    # mean/median/mode/range over a variable-length data set), KC_data_displays (6.SP.4 — read a dot
+    # plot / histogram described textually), and KC_categorical_data (TEKS 6.12D — summarize a
+    # category breakdown over a variable-length count list) all moved to EXPECTED_CATALOG_IDS
+    # (built 2026-05-30).
     "KC_statistical_questions",
-    "KC_categorical_data",
     # U8 — Personal Financial Literacy (TEKS 6.14)
     "KC_check_register",
     "KC_lifetime_income",
@@ -207,7 +212,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 37 content-complete + 9 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 38 content-complete + 8 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

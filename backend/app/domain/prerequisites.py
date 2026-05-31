@@ -178,6 +178,12 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # bins partition it). So it forward-unlocks on KC_number_line_placement, the live foundation KC
     # it conceptually rests on (matching how the other late-unit statistics KCs are wired).
     _KC.DATA_DISPLAYS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit 7 (TEKS 6.12D): summarizing categorical data centers on relative frequency — a
+    # category's count OVER the whole survey total, a part-to-whole ratio — and the modeled
+    # misconception (wrong denominator: part-to-PART instead of part-to-whole) is exactly the
+    # part-part-vs-part-whole confusion KC_ratio_language teaches. So it forward-unlocks on
+    # KC_ratio_language, the live KC whose reasoning it directly rests on.
+    _KC.CATEGORICAL_DATA: frozenset({_KC.RATIO_LANGUAGE}),
 }
 
 
@@ -224,6 +230,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.CENTER_SPREAD_SHAPE,  # Grade-6 Unit 7 (6.SP.2): center & spread, on number-line placement
     _KC.SUMMARY_STATISTICS,  # Grade-6 Unit 7 (6.SP.3): a data set's summary statistic, on division
     _KC.DATA_DISPLAYS,  # Grade-6 Unit 7 (6.SP.4): read a data display, on number-line placement
+    _KC.CATEGORICAL_DATA,  # Grade-6 Unit 7 (TEKS 6.12D): summarize categorical data, on ratios
 )
 
 

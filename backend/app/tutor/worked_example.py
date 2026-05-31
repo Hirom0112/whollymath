@@ -52,7 +52,11 @@ from sympy import Rational
 
 from app.domain.center_spread import CENTER_MEDIAN, SPREAD_RANGE
 from app.domain.knowledge_components import KnowledgeComponentId
-from app.domain.misconceptions import DATA_DISPLAY_QUESTION_CODE, SUMMARY_STAT_MODE_CODE
+from app.domain.misconceptions import (
+    CATEGORICAL_MODE_CODE,
+    DATA_DISPLAY_QUESTION_CODE,
+    SUMMARY_STAT_MODE_CODE,
+)
 from app.domain.problem_generators import Problem
 
 # ─── The worked-example value types ──────────────────────────────────────────
@@ -845,6 +849,10 @@ _DISPLAY_QUESTION_BY_CODE: dict[int, str] = {
 }
 _DISPLAY_BIN_WIDTH = 10  # mirrors the generator's histogram bin width
 
+_CATEGORICAL_NAME_BY_CODE: dict[int, str] = {
+    code: name for name, code in CATEGORICAL_MODE_CODE.items()
+}
+
 
 def _data_displays_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The steps for a data-display reading problem (Grade-6 Unit 7, 6.SP.4).
@@ -879,6 +887,51 @@ def _data_displays_steps(problem: Problem) -> tuple[WorkedStep, ...]:
         WorkedStep(
             shown=f"{work} So the answer is {answer}.",
             why_prompt="Why does reading the display this way give the answer?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _categorical_data_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The steps for a categorical-data summary (Grade-6 Unit 7, TEKS 6.12D).
+
+    ``operands = (mode_code, *category_counts)`` (a leading mode sentinel; see
+    ``CATEGORICAL_MODE_CODE``). The narration is mode-specific (count difference / total /
+    relative frequency), and the final step lands on ``problem.correct_value``. Raises if the
+    operands are missing or too short (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) < 3:
+        raise ValueError(
+            f"categorical-data problem {problem.problem_id} needs (mode_code, *counts) operands"
+        )
+    mode = _CATEGORICAL_NAME_BY_CODE[int(operands[0])]
+    counts = [int(c) for c in operands[1:]]
+    answer = problem.correct_value
+    listing = ", ".join(str(c) for c in counts)
+    if mode == "count_difference":
+        setup = "For 'how many more', subtract the second category's count from the first."
+        work = f"That is {counts[0]} - {counts[1]}, so the difference is {answer}."
+    elif mode == "total":
+        setup = "For the total surveyed, add the count from every category."
+        work = f"Adding {listing} gives {answer} in all."
+    else:  # relative_frequency
+        setup = "A relative frequency is one category's count OVER the total surveyed."
+        work = f"That is {counts[0]} out of {sum(counts)}, so the fraction is {answer}."
+    return (
+        WorkedStep(
+            shown=f"First read the count for each category: {listing}.",
+            why_prompt="Why do we read every category's count from the breakdown first?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=setup,
+            why_prompt=f"Why is this the right step for the {mode.replace('_', ' ')}?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=work,
+            why_prompt="Why does this summarize the categorical data with one number?",
             revealed_value=answer,
         ),
     )
@@ -1659,6 +1712,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.CENTER_SPREAD_SHAPE: _center_spread_steps,
     KnowledgeComponentId.SUMMARY_STATISTICS: _summary_statistics_steps,
     KnowledgeComponentId.DATA_DISPLAYS: _data_displays_steps,
+    KnowledgeComponentId.CATEGORICAL_DATA: _categorical_data_steps,
 }
 
 

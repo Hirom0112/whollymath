@@ -85,6 +85,7 @@ from app.domain.misconceptions import (
     swap_coordinates,
     triangle_formula_error,
     unsorted_middle,
+    wrong_denominator_relative_frequency,
 )
 from app.domain.problem_generators import AnswerKind, Problem
 
@@ -917,6 +918,21 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.DISTINCT_VALUE_COUNT,
         predict=distinct_value_count,
+    ),
+    # wrong-denominator: computed a category's RELATIVE FREQUENCY over another category's count
+    # (count0 / count1) instead of over the total surveyed (count0 / total). The categorical item
+    # is VARIABLE-LENGTH — operands are (mode_code, *category_counts) — so this row uses
+    # ``operand_count=None`` to match any arity; the predictor decodes operands[0] and returns
+    # ``None`` for any non-relative-frequency mode (so it only ever fires on a relative-frequency
+    # item). A wrong OPERATION (a part-to-part ratio where a part-to-whole fraction was asked). The
+    # generator emits three categories, so the total always differs from any single count and the
+    # match is diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.CATEGORICAL_DATA,
+        operand_count=None,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.WRONG_DENOMINATOR,
+        predict=wrong_denominator_relative_frequency,
     ),
 )
 

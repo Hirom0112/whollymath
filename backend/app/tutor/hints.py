@@ -704,6 +704,24 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If a value repeats, each repeat is its own data point — don't collapse them into one.",
         ),
     ),
+    # Grade-6 Unit 7 (TEKS 6.12D): index 0 (operation) orients toward the right denominator for a
+    # relative frequency; the others toward reading the breakdown and "out of the whole survey".
+    KnowledgeComponentId.CATEGORICAL_DATA: (
+        _nudge(
+            KnowledgeComponentId.CATEGORICAL_DATA,
+            "A fraction of those surveyed goes OVER the total surveyed — not over another "
+            "category's count.",
+        ),
+        _nudge(
+            KnowledgeComponentId.CATEGORICAL_DATA,
+            "Read the count for each category from the breakdown before you combine them.",
+        ),
+        _nudge(
+            KnowledgeComponentId.CATEGORICAL_DATA,
+            "For 'how many more', subtract one category's count from the other; for the total, "
+            "add them all.",
+        ),
+    ),
 }
 
 

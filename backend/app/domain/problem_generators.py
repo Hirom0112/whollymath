@@ -53,6 +53,7 @@ from app.domain.center_spread import (
 )
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 from app.domain.misconceptions import (
+    CATEGORICAL_MODE_CODE,
     DATA_DISPLAY_QUESTION_CODE,
     SUMMARY_STAT_MODE_CODE,
     classify_sets_for_value,
@@ -69,6 +70,12 @@ _SUMMARY_STAT_MODE_CODE = SUMMARY_STAT_MODE_CODE
 # display describes. The codes live in misconceptions (the distinct-value-count misconception
 # decodes them); re-exported here as the module's public name for the generator and its tests.
 _DATA_DISPLAY_QUESTION_CODE = DATA_DISPLAY_QUESTION_CODE
+
+# KC_categorical_data (TEKS 6.12D) encodes its variable-length item as ``operands = (mode_code,
+# *category_counts)`` — a leading mode sentinel followed by the per-category counts. The mode codes
+# live in misconceptions (the wrong-denominator misconception decodes them); re-exported here as
+# the module's public name for the generator.
+_CATEGORICAL_MODE_CODE = CATEGORICAL_MODE_CODE
 
 # ─── The shared Problem type ─────────────────────────────────────────────────
 
@@ -1424,6 +1431,89 @@ def _generate_data_displays(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 7: Categorical data (TEKS 6.12D) ───
+
+# Per-category count pool by difficulty tier (CP.B easy->hard): higher tiers use larger counts
+# (slightly harder arithmetic). The summary computed (difference / total / relative frequency) is
+# chosen separately so all three appear across seeds.
+_CATEGORICAL_COUNT_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4, 5, 6),
+    2: (4, 6, 8, 10, 12),
+    3: (8, 10, 12, 15, 18),
+    4: (12, 15, 18, 20, 25),
+}
+_CATEGORICAL_COUNT_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8, 9, 10, 12)
+# Category labels for the prompt (the "what was surveyed" framing). Three categories keep the
+# breakdown rich and the relative-frequency denominator (the total) distinct from any single
+# category's count, so the wrong-denominator misconception is always diagnostic.
+_CATEGORICAL_LABELS: tuple[str, ...] = ("red", "blue", "green")
+_CATEGORICAL_MODE_NAMES: tuple[str, ...] = ("count_difference", "total", "relative_frequency")
+
+
+def _categorical_summary(mode: str, counts: list[int]) -> Rational:
+    """The SymPy-exact summary of a category breakdown for ``mode`` (TEKS 6.12D).
+
+    - count_difference: how many more chose category 0 than category 1 — ``counts[0] - counts[1]``
+      (the generator orders counts so this is positive).
+    - total: how many were surveyed in all — ``sum(counts)``.
+    - relative_frequency: the fraction of the total that chose category 0 — ``counts[0] / total``,
+      kept EXACT as a ``Rational`` (never a float). Domain-only (SymPy decides; CLAUDE.md §8.2).
+    """
+    if mode == "count_difference":
+        return Rational(counts[0] - counts[1])
+    if mode == "total":
+        return Rational(sum(counts))
+    return Rational(counts[0], sum(counts))  # relative_frequency
+
+
+def _generate_categorical_data(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_categorical_data: summarize a category breakdown; a single numeric answer (TEKS 6.12D).
+
+    Variable-length encoding: a category breakdown has several categories, so the item carries a
+    VARIABLE-LENGTH list of per-category counts PLUS which summary to compute. Both ride in the
+    existing ``operands: tuple[Rational, ...]`` behind a LEADING mode sentinel —
+    ``operands = (mode_code, *counts)`` (codes in ``_CATEGORICAL_MODE_CODE``). The verifier's
+    wrong-denominator model decodes ``operands[0]`` to know when it applies and matches via the
+    variable-length ``operand_count=None`` row, so no fixed arity is assumed.
+
+    The summary (difference / total / relative frequency) is chosen via the seeded RNG so all three
+    appear. Counts are ordered DESCENDING, so the count-difference (category 0 - category 1) is
+    positive and the relative frequency of category 0 is the largest share; the relative frequency
+    is exact (``Rational`` — SymPy decides, §8.2). With three categories the total always differs
+    from any single count, so the wrong-denominator misconception (``count0 / count1``) is always
+    diagnostic. The answer is entered in the existing symbolic editor (NO new widget).
+    ``difficulty`` widens the count pool.
+    """
+    pool = (
+        _CATEGORICAL_COUNT_BY_DIFFICULTY.get(difficulty, _CATEGORICAL_COUNT_POOL)
+        if difficulty
+        else _CATEGORICAL_COUNT_POOL
+    )
+    counts = sorted((rng.choice(pool) for _ in _CATEGORICAL_LABELS), reverse=True)
+    mode = rng.choice(_CATEGORICAL_MODE_NAMES)
+    breakdown = ", ".join(
+        f"{c} chose {label}" for c, label in zip(counts, _CATEGORICAL_LABELS, strict=True)
+    )
+    if mode == "count_difference":
+        question = f"how many more chose {_CATEGORICAL_LABELS[0]} than {_CATEGORICAL_LABELS[1]}?"
+    elif mode == "total":
+        question = "how many were surveyed in all?"
+    else:  # relative_frequency
+        question = f"what fraction of those surveyed chose {_CATEGORICAL_LABELS[0]}?"
+    statement = f"In a survey, {breakdown}. So {question}"
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.CATEGORICAL_DATA, seed, surface_format),
+        kc=KnowledgeComponentId.CATEGORICAL_DATA,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=_categorical_summary(mode, counts),
+        representations_available=get_kc(KnowledgeComponentId.CATEGORICAL_DATA).representations,
+        operands=(Rational(_CATEGORICAL_MODE_CODE[mode]), *(Rational(c) for c in counts)),
+    )
+
+
 # ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer multiply & divide (TEKS 6.3C/D) ───
 
 # Operand-magnitude pool for "a × b" / "a ÷ b" items by difficulty tier (the easy→hard ramp; CP.B):
@@ -2765,6 +2855,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.CENTER_SPREAD_SHAPE: _generate_center_spread,
     KnowledgeComponentId.SUMMARY_STATISTICS: _generate_summary_statistics,
     KnowledgeComponentId.DATA_DISPLAYS: _generate_data_displays,
+    KnowledgeComponentId.CATEGORICAL_DATA: _generate_categorical_data,
 }
 
 

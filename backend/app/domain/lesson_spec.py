@@ -1010,6 +1010,33 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Categorical data (TEKS 6.12D) ───
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors route
+    # back to SYMBOLIC — the AREA_MODEL rep is advertised (a category breakdown is a bar/area graph)
+    # but isn't live yet, so "re-try on the same surface with a labeled hint" is the honest
+    # adaptation until AREA_MODEL is promoted live (then it becomes the masterable second surface).
+    # The OPERATION route names the wrong-denominator / wrong-procedure error; the MAGNITUDE route
+    # covers a size slip. Probe over SYMBOLIC (the only live rep). NEVER routes to a rep with no
+    # surface state for this KC (and never to WORD_PROBLEM).
+    _spec(
+        _KC.CATEGORICAL_DATA,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "A fraction of those surveyed goes over the TOTAL surveyed — not over another "
+                "category's count.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Re-read each category's count from the breakdown before you combine them.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

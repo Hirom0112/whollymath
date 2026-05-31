@@ -190,6 +190,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # line) is the natural masterable second surface — its widget already exists — but adding it
     # here would promote it, deferred to avoid over-scoping this build.
     _KC.DATA_DISPLAYS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 7 (TEKS 6.12D): SYMBOLIC = the single summary value entered in the editor.
+    # PRACTICE-ONLY for now; the AREA_MODEL rep (a bar/area graph of the category breakdown) is the
+    # natural masterable second surface — but adding it here would promote it, deferred to avoid
+    # over-scoping this build.
+    _KC.CATEGORICAL_DATA: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

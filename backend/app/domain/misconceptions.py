@@ -178,6 +178,11 @@ class MisconceptionId(StrEnum):
     # value into a single count. The learner reads the x-axis (distinct values) rather than the
     # dots (the data points), so an undercount results whenever a value above the threshold repeats.
     DISTINCT_VALUE_COUNT = "distinct-value-count"
+    # Unit 7 (TEKS 6.12D): computing a category's RELATIVE FREQUENCY over the WRONG DENOMINATOR —
+    # dividing its count by another category's count instead of by the total surveyed (e.g. 8 blue
+    # of 25 surveyed reported as 8/12 against the next category, not 8/25). The learner forms a
+    # part-to-part ratio where a part-to-whole fraction was asked.
+    WRONG_DENOMINATOR = "wrong-denominator"
 
 
 @dataclass(frozen=True)
@@ -648,6 +653,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.DATA_DISPLAYS,),
     ),
+    Misconception(
+        id=MisconceptionId.WRONG_DENOMINATOR,
+        name="Relative frequency over the wrong denominator",
+        description=(
+            "Computes a category's relative frequency by dividing its count by ANOTHER category's "
+            "count rather than by the total surveyed (8 blue out of 25 reported as 8/12 against "
+            "the next category, not 8/25). The learner forms a part-to-part ratio where a "
+            "part-to-whole fraction — count over the whole survey total — was asked."
+        ),
+        applicable_kcs=(KnowledgeComponentId.CATEGORICAL_DATA,),
+    ),
 )
 
 
@@ -998,6 +1014,43 @@ def distinct_value_count(operands: tuple[Rational, ...]) -> Rational | None:
         return None
     distinct_above = {v for v in data if v > threshold}
     return Rational(len(distinct_above))
+
+
+# KC_categorical_data (TEKS 6.12D) encodes its variable-length item as ``operands = (mode_code,
+# *category_counts)`` — a leading sentinel mode code followed by the per-category counts. This is
+# the canonical code map (problem_generators re-exports it as ``_CATEGORICAL_MODE_CODE``); the
+# wrong-denominator misconception below decodes the mode to know when it applies.
+CATEGORICAL_MODE_CODE: dict[str, int] = {
+    "count_difference": 0,
+    "total": 1,
+    "relative_frequency": 2,
+}
+
+
+def wrong_denominator_relative_frequency(
+    operands: tuple[Rational, ...],
+) -> Rational | None:
+    """wrong-denominator: relative frequency over another category's count, not the total (6.12D).
+
+    The categorical item is encoded as ``operands = (mode_code, *category_counts)`` (a leading
+    sentinel; see ``CATEGORICAL_MODE_CODE``). This error is relative-frequency-specific: the
+    learner divides the first category's count by the SECOND category's count (a part-to-part
+    ratio) instead of by the total surveyed (the part-to-whole fraction) — 8 blue out of 25
+    reported as 8/12 against the next category, not 8/25. Returns ``count0 / count1`` for a
+    RELATIVE_FREQUENCY item; returns ``None`` for any other mode (no relative frequency asked)
+    and for an unexpected shape (defensive — the verifier then reports OTHER rather than a false
+    match). Returned as a SymPy ``Rational`` so the verifier compares values directly; the
+    generator guarantees ``count1 != total`` (there is always a third category) so the wrong
+    denominator differs from the correct one and the match is diagnostic.
+    """
+    if not operands:
+        return None
+    mode_code, *counts = operands
+    if mode_code != CATEGORICAL_MODE_CODE["relative_frequency"]:
+        return None
+    if len(counts) < 2 or counts[1] == 0:
+        return None  # defensive: need a second category as the (wrong) denominator
+    return Rational(counts[0], counts[1])
 
 
 def keep_original_sign(n: Rational) -> Rational:

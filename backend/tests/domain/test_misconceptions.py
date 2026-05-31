@@ -91,6 +91,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "range-as-sum",  # KC_center_spread_shape (Unit 7, 6.SP.2)
     "median-without-sorting",  # KC_summary_statistics (Unit 7, 6.SP.3)
     "distinct-value-count",  # KC_data_displays (Unit 7, 6.SP.4)
+    "wrong-denominator",  # KC_categorical_data (Unit 7, TEKS 6.12D)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 
