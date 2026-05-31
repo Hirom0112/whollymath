@@ -92,6 +92,8 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "median-without-sorting",  # KC_summary_statistics (Unit 7, 6.SP.3)
     "distinct-value-count",  # KC_data_displays (Unit 7, 6.SP.4)
     "wrong-denominator",  # KC_categorical_data (Unit 7, TEKS 6.12D)
+    "treats-any-as-statistical",  # KC_statistical_questions (Unit 7, 6.SP.1) — registry/hint
+    # framing only; the YES_NO verifier never classifies it (a wrong yes/no is MAGNITUDE / none).
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

@@ -1037,6 +1037,28 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (CCSS 6.SP.1) ───
+    # Recognize statistical questions — a YES/NO judgment (reuses the YES_NO answer kind, NO new
+    # widget). The YES_NO verifier scores a wrong judgment MAGNITUDE (it never operand-classifies a
+    # misconception), so MAGNITUDE is the ONLY error category this lesson sees; it routes back to
+    # SYMBOLIC, the only live answer surface. WORD_PROBLEM is advertised (the question text IS a
+    # word problem — the ≥2-rep contract) but has NO surface state, so it is NEVER an error target.
+    # Practice-only (scheduler lives only on SYMBOLIC), so the probe draws from SYMBOLIC only and
+    # never fires WORD_PROBLEM.
+    _spec(
+        _KC.STATISTICAL_QUESTIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Ask whether the answers would VARY across the group — that, not the topic, makes "
+                "a question statistical.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

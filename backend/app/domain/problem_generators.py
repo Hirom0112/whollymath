@@ -2815,6 +2815,72 @@ def _generate_center_spread(
     )
 
 
+# Curated question banks for KC_statistical_questions (CCSS 6.SP.1). A STATISTICAL question
+# anticipates VARIABILITY — its answer varies across the population/repeated measures (→ YES). A
+# NON-statistical question has a single fixed answer (→ NO). Hand-authored so the truth is curated,
+# not computed (there is no math to derive "is this statistical?" from — the variability lives in
+# the question's MEANING). Kept kid-friendly per the bank language rule (CLAUDE.md §8.5).
+_STATISTICAL_QUESTION_TEMPLATES: tuple[str, ...] = (
+    "How tall are the students in my class?",
+    "How many pets do the families on my street have?",
+    "What are the ages of the people at the park today?",
+    "How long do sixth graders spend on homework each night?",
+    "How many books did each student in the class read this month?",
+    "What are the shoe sizes of the players on the team?",
+    "How far do students travel to get to school?",
+    "How many minutes do people wait in the lunch line?",
+)
+_NON_STATISTICAL_QUESTION_TEMPLATES: tuple[str, ...] = (
+    "How tall is our teacher?",
+    "How many days are in this month?",
+    "What is my age today?",
+    "How many wheels does my bike have?",
+    "What is the height of the flagpole at school?",
+    "How many students are in the class right now?",
+    "What time does school start today?",
+    "How many legs does a spider have?",
+)
+
+
+def _generate_statistical_questions(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_statistical_questions (CCSS 6.SP.1): is this a STATISTICAL question? — a YES/NO judgment.
+
+    REUSES the existing YES_NO answer kind (NO new widget). The generator alternates by seed
+    parity between the curated statistical bank (anticipates variability → answer YES) and the
+    non-statistical bank (a single fixed value → answer NO), so both verdicts are produced across
+    seeds. The truth is encoded in ``operands`` as the SAME equality the EQUIVALENCE YES_NO items
+    use: ``(1, 1)`` (equal → YES) for a statistical question, ``(1, 0)`` (not equal → NO) for a
+    non-statistical one — so ``_verify_yes_no`` grades it by SymPy equality with NO new verifier
+    path (SymPy decides the math; CLAUDE.md §8.2). ``correct_value`` is the operand anchor (1),
+    matching how the EQUIVALENCE YES_NO generator anchors its yes/no items.
+
+    The question text IS a word problem, so the SYMBOLIC and WORD_PROBLEM surfaces render the same
+    judgment; ``difficulty`` does not vary the item (there is no magnitude to ramp). Deterministic
+    per seed (PROJECT.md §4.1): the bank choice is seeded by ``rng``.
+    """
+    statistical = seed % 2 == 0
+    if statistical:
+        statement = rng.choice(_STATISTICAL_QUESTION_TEMPLATES)
+        operands = (Rational(1), Rational(1))  # equal ⇒ YES (a statistical question)
+    else:
+        statement = rng.choice(_NON_STATISTICAL_QUESTION_TEMPLATES)
+        operands = (Rational(1), Rational(0))  # not equal ⇒ NO (not a statistical question)
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.STATISTICAL_QUESTIONS, seed, surface_format),
+        kc=KnowledgeComponentId.STATISTICAL_QUESTIONS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=operands[0],  # anchor; the yes/no truth is operands[0] == operands[1]
+        representations_available=get_kc(
+            KnowledgeComponentId.STATISTICAL_QUESTIONS
+        ).representations,
+        operands=operands,
+        answer_kind=AnswerKind.YES_NO,
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -2856,6 +2922,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.SUMMARY_STATISTICS: _generate_summary_statistics,
     KnowledgeComponentId.DATA_DISPLAYS: _generate_data_displays,
     KnowledgeComponentId.CATEGORICAL_DATA: _generate_categorical_data,
+    KnowledgeComponentId.STATISTICAL_QUESTIONS: _generate_statistical_questions,
 }
 
 

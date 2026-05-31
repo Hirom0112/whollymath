@@ -116,6 +116,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # categorical-data operands are (mode_code, *counts) — all whole numbers (denom 1); the
             # difficulty widens the count pool, not a fraction-denominator pool.
             KnowledgeComponentId.CATEGORICAL_DATA,
+            # statistical-questions is a YES/NO item: its operands are the equality truth carrier
+            # (0/1, denom 1), NOT magnitudes — there is no item to ramp by difficulty at all.
+            KnowledgeComponentId.STATISTICAL_QUESTIONS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

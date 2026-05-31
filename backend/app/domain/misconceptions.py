@@ -183,6 +183,13 @@ class MisconceptionId(StrEnum):
     # of 25 surveyed reported as 8/12 against the next category, not 8/25). The learner forms a
     # part-to-part ratio where a part-to-whole fraction was asked.
     WRONG_DENOMINATOR = "wrong-denominator"
+    # Unit 7 (6.SP.1): treating ANY question that mentions people or numbers as a statistical
+    # question — answering "yes" to a single-value question ("How tall is the teacher?") because it
+    # is about a person/quantity, missing that a statistical question must anticipate VARIABILITY.
+    # NOTE: the YES_NO answer kind does not use the operand-based ``_WRONG_ANSWER_MODELS`` path, so
+    # the verifier does NOT classify this id (a wrong yes/no is scored MAGNITUDE / no misconception,
+    # like every YES_NO item). It lives here for catalog completeness and hint framing only.
+    TREATS_ANY_AS_STATISTICAL = "treats-any-as-statistical"
 
 
 @dataclass(frozen=True)
@@ -663,6 +670,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "part-to-whole fraction — count over the whole survey total — was asked."
         ),
         applicable_kcs=(KnowledgeComponentId.CATEGORICAL_DATA,),
+    ),
+    Misconception(
+        id=MisconceptionId.TREATS_ANY_AS_STATISTICAL,
+        name="Treats any question about people or numbers as statistical",
+        description=(
+            "Answers 'yes, it is a statistical question' for ANY question that mentions people or "
+            "quantities, even one with a single fixed answer ('How tall is the teacher?'). The "
+            "learner anchors on the topic (people/numbers) instead of the defining feature — a "
+            "statistical question anticipates VARIABILITY, so its answers vary across the data."
+        ),
+        applicable_kcs=(KnowledgeComponentId.STATISTICAL_QUESTIONS,),
     ),
 )
 

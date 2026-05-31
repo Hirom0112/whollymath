@@ -1498,6 +1498,42 @@ def _classify_number_sets_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _statistical_questions_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'does the answer vary?' steps for a statistical-question item (Unit 7, 6.SP.1).
+
+    The answer is a YES/NO verdict, not a magnitude, so (like ``_classify_number_sets_steps``)
+    the steps land on the verdict in the final step's ``shown`` text and keep ``revealed_value``
+    ``None`` (the documented non-magnitude case). The truth rides in ``operands`` exactly as the
+    verifier reads it (equal ⇒ statistical/YES). Raises if the operands are missing (§8.5)."""
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"statistical-question problem {problem.problem_id} needs two operands")
+    statistical = bool(operands[0] == operands[1])
+    verdict = "IS a statistical question" if statistical else "is NOT a statistical question"
+    why_vary = (
+        "Why do its answers vary across the group?"
+        if statistical
+        else "Why does its single fixed answer make it non-statistical?"
+    )
+    return (
+        WorkedStep(
+            shown="A statistical question anticipates variability: its answers VARY across cases.",
+            why_prompt="Why does variability, not the topic, decide if a question is statistical?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f'Ask: "{problem.statement}" — would different people answer it differently?',
+            why_prompt="Why isn't a question statistical just because it names people or numbers?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So this {verdict}.",
+            why_prompt=why_vary,
+            revealed_value=None,
+        ),
+    )
+
+
 def _expression_parts_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'name the part of the expression' steps for an expression-parts item (Unit 4, 6.EE.2b).
 
@@ -1713,6 +1749,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.SUMMARY_STATISTICS: _summary_statistics_steps,
     KnowledgeComponentId.DATA_DISPLAYS: _data_displays_steps,
     KnowledgeComponentId.CATEGORICAL_DATA: _categorical_data_steps,
+    KnowledgeComponentId.STATISTICAL_QUESTIONS: _statistical_questions_steps,
 }
 
 

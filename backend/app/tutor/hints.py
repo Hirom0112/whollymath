@@ -722,6 +722,25 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "add them all.",
         ),
     ),
+    # Grade-6 Unit 7 (6.SP.1): index 0 orients toward the test — would the answers VARY?; index 1
+    # (the MAGNITUDE slot a wrong yes/no pulls) toward "one fixed answer is NOT a statistical
+    # question".
+    KnowledgeComponentId.STATISTICAL_QUESTIONS: (
+        _nudge(
+            KnowledgeComponentId.STATISTICAL_QUESTIONS,
+            "Ask yourself: would the answers VARY from one person or case to the next?",
+        ),
+        _nudge(
+            KnowledgeComponentId.STATISTICAL_QUESTIONS,
+            "A question with one fixed answer is NOT statistical — a statistical one expects "
+            "the data to vary.",
+        ),
+        _nudge(
+            KnowledgeComponentId.STATISTICAL_QUESTIONS,
+            "It being about people or numbers is not enough — the answers have to differ across "
+            "the group.",
+        ),
+    ),
 }
 
 

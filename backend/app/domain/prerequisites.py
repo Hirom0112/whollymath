@@ -184,6 +184,13 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # part-part-vs-part-whole confusion KC_ratio_language teaches. So it forward-unlocks on
     # KC_ratio_language, the live KC whose reasoning it directly rests on.
     _KC.CATEGORICAL_DATA: frozenset({_KC.RATIO_LANGUAGE}),
+    # Grade-6 Unit 7 (6.SP.1): a statistical question anticipates VARIABILITY — that the answers
+    # SPREAD across a range of values rather than landing on one point. Recognizing that spread
+    # rests on seeing values as positions along the number line (a single value is one point; varied
+    # answers fan out along it), so it forward-unlocks on number-line placement, the live foundation
+    # KC the idea conceptually rests on (its own §11 statistics prereqs are not yet live, matching
+    # how the other Unit-7 KCs are wired).
+    _KC.STATISTICAL_QUESTIONS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -231,6 +238,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.SUMMARY_STATISTICS,  # Grade-6 Unit 7 (6.SP.3): a data set's summary statistic, on division
     _KC.DATA_DISPLAYS,  # Grade-6 Unit 7 (6.SP.4): read a data display, on number-line placement
     _KC.CATEGORICAL_DATA,  # Grade-6 Unit 7 (TEKS 6.12D): summarize categorical data, on ratios
+    _KC.STATISTICAL_QUESTIONS,  # Grade-6 Unit 7 (6.SP.1): recognize statistical questions, on line
 )
 
 

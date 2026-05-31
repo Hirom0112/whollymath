@@ -195,6 +195,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # natural masterable second surface — but adding it here would promote it, deferred to avoid
     # over-scoping this build.
     _KC.CATEGORICAL_DATA: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 7 (6.SP.1): SYMBOLIC = the YES/NO verdict on whether a question is statistical
+    # (reuses the yes/no answer surface, NO new widget). PRACTICE-ONLY (one live answer surface);
+    # WORD_PROBLEM is the SAME judgment with no separate surface state, so it is advertised for the
+    # ≥2-rep contract but is not a live answer surface (and never an error target).
+    _KC.STATISTICAL_QUESTIONS: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

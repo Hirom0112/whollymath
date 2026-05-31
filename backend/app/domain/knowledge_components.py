@@ -808,6 +808,28 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (CCSS 6.SP.1) ───
+    # Statistical questions: decide whether a question is a STATISTICAL question — one that
+    # anticipates VARIABILITY in the data (its answers vary across a population), e.g. "How tall
+    # are the students in my class?" (YES — heights vary) vs. "How tall is the teacher?" (NO — a
+    # single value). The answer is YES_NO, REUSING the existing yes/no answer kind (NO new widget):
+    # the generator draws from curated statistical (→ YES) and non-statistical (→ NO) question
+    # templates, and the truth rides in ``operands`` so the SAME ``_verify_yes_no`` SymPy-equality
+    # path grades it (SymPy decides, never an LLM — CLAUDE.md §8.2). Advertises SYMBOLIC +
+    # WORD_PROBLEM (the question text IS a word problem; the ≥2-rep contract), LIVE only on SYMBOLIC
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY (one live answer surface; WORD_PROBLEM is
+    # the same judgment with no separate surface state). Error routes never target WORD_PROBLEM —
+    # they stay on SYMBOLIC, the only live surface.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.STATISTICAL_QUESTIONS,
+        skill_name="Recognize statistical questions",
+        description=(
+            "Decide whether a question is a statistical question — one that anticipates "
+            "variability in the data, so its answers vary (How tall are the students in my "
+            "class?), versus one with a single fixed answer (How tall is the teacher?)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
 )
 
 
