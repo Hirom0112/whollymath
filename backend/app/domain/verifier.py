@@ -65,6 +65,7 @@ from app.domain.misconceptions import (
     invert_conversion,
     invert_rate,
     keep_original_sign,
+    multiply_base_by_exponent,
     multiply_without_inverting,
     natural_number_bias_number_line,
     omit_rational_for_integer,
@@ -755,6 +756,17 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
         predict=lambda ops: evaluate_left_to_right(int(ops[0]), int(ops[1]), int(ops[2])),
+    ),
+    # multiply-base-by-exponent: read a power as one multiplication — base * exponent (3^4 -> 12)
+    # instead of base multiplied by itself exponent-many times (3*3*3*3 = 81). Operands are
+    # (base, exp). A wrong OPERATION (the exponent was treated as a factor, not a repeat count); the
+    # generator excludes 2^2, so the predicted value always differs from the correct power.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.EXPONENTS,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.MULTIPLY_BASE_BY_EXPONENT,
+        predict=lambda ops: multiply_base_by_exponent(int(ops[0]), int(ops[1])),
     ),
     # inverse-operation-error: solved a one-step equation with the WRONG inverse — added b for
     # x + b = c, or subtracted a for a*x = c (operands are (mode, p, q)). A wrong OPERATION (reached

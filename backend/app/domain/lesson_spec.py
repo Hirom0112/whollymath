@@ -598,6 +598,32 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.AREA_MODEL)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+    # Exponents (6.EE.1) — a MASTERABLE lesson: SYMBOLIC + AREA_MODEL are BOTH live, so errors
+    # route to the OTHER live surface (AREA_MODEL — the square's area / cube's volume picture makes
+    # a power concrete: a side-base square is base x base, not base x exponent), and the probe
+    # draws from both reps. The OPERATION route names the multiply-base-by-exponent slip directly.
+    # AREA_MODEL has a real surface state, so the route is honest.
+    _spec(
+        _KC.EXPONENTS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.AREA_MODEL,
+                "Build the square (or cube) — its side repeats, so multiply the base by itself, "
+                "not by the little number.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.AREA_MODEL,
+                "Picture how many unit squares fill the shape — a power grows faster than you "
+                "might expect.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.AREA_MODEL)
+        ),
+    ),
     # ─── Grade-6 content build (2026-05-30) — Unit 5: Equations & Inequalities ───
     # Solve one-step equations (6.EE.7) — MASTERABLE-LIVE: BOTH reps (SYMBOLIC + WORD_PROBLEM) are
     # live, so the probe DOES fire here (unlike the practice-only Grade-6 KCs). Errors route to

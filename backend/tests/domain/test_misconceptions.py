@@ -81,6 +81,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "coordinate-swap",  # KC_coordinate_plane (Unit 3)
     "integer-not-rational",  # KC_classify_number_sets (Unit 3, TEKS 6.2A)
     "part-confusion",  # KC_expression_parts (Unit 4, 6.EE.2b)
+    "multiply-base-by-exponent",  # KC_exponents (Unit 4)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

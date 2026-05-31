@@ -1297,6 +1297,91 @@ def _generate_evaluate_expressions(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+
+# The base/exponent pools for "evaluate base^exp" items by difficulty tier (the easy→hard ramp;
+# CP.B): higher tiers use larger bases and exponents. base >= 2 and exp >= 2 throughout, with the
+# single (base == 2, exp == 2) case excluded at generation, so the correct power base**exp is
+# always DISTINCT from the multiply slip base*exp (the misconception stays diagnostic). The
+# exponent stays modest (<= 5) so the answer is a friendly 6th-grade whole number, not astronomical.
+_EXPONENT_BASE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3),
+    2: (3, 4, 5),
+    3: (4, 5, 6),
+    4: (5, 6, 7, 8),
+}
+_EXPONENT_POWER_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3),
+    2: (2, 3),
+    3: (3, 4),
+    4: (3, 4, 5),
+}
+_EXPONENT_BASE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8)
+_EXPONENT_POWER_POOL: tuple[int, ...] = (2, 3, 4, 5)
+
+
+def _generate_exponents(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_exponents: evaluate a whole-number power base^exp; a single numeric answer.
+
+    Picks a base (>= 2) and an exponent (>= 2) via the seeded RNG; the answer is ``base ** exp``
+    (repeated multiplication). ``operands = (base, exp)`` so the verifier can replay the
+    multiply-base-by-exponent slip (``base * exp``). Two REAL surfaces share this answer (so the KC
+    is masterable across representations, PROJECT.md §3.4 rule 2):
+
+      - **SYMBOLIC** (default) — "What is 3^4?" (the symbolic power);
+      - **AREA_MODEL** — the geometric picture: base^2 as the area of a square of side base,
+        base^3 as the volume of a cube of edge base (the visual, magnitude-grounded form).
+
+    The single ``(base, exp) == (2, 2)`` case is excluded because there ``base ** exp == base *
+    exp`` (4 == 4), which would make the misconception indistinguishable from the correct; every
+    other in-scope pair has ``base ** exp != base * exp``, so the slip is always diagnostic. The
+    math is sampled before the format is applied, so the same seed yields identical operands in
+    either surface. ``difficulty`` widens the base/exponent pools.
+    """
+    base_pool = (
+        _EXPONENT_BASE_BY_DIFFICULTY.get(difficulty, _EXPONENT_BASE_POOL)
+        if difficulty
+        else _EXPONENT_BASE_POOL
+    )
+    power_pool = (
+        _EXPONENT_POWER_BY_DIFFICULTY.get(difficulty, _EXPONENT_POWER_POOL)
+        if difficulty
+        else _EXPONENT_POWER_POOL
+    )
+    base = rng.choice(base_pool)
+    exponent = rng.choice(power_pool)
+    # Resample the one collision case (2^2 == 2*2) so the multiply slip stays distinct (AREA_MODEL
+    # for exp 2 is a square's area; exp 3 a cube's volume; higher exponents stay symbolic).
+    while base == 2 and exponent == 2:
+        base = rng.choice(base_pool)
+        exponent = rng.choice(power_pool)
+    if surface_format is Representation.AREA_MODEL:
+        if exponent == 2:
+            statement = (
+                f"A square has sides of length {base}. How many unit squares cover its area?"
+            )
+        elif exponent == 3:
+            statement = f"A cube has edges of length {base}. How many unit cubes fill its volume?"
+        else:
+            statement = (
+                f"Start with 1 and multiply by {base} a total of {exponent} times "
+                f"(growing {exponent} steps). What number do you reach?"
+            )
+    else:
+        statement = f"What is {base}^{exponent}?"
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.EXPONENTS, seed, surface_format),
+        kc=KnowledgeComponentId.EXPONENTS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(base**exponent),
+        representations_available=get_kc(KnowledgeComponentId.EXPONENTS).representations,
+        operands=(Rational(base), Rational(exponent)),
+    )
+
+
 # ─── Grade-6 content build (2026-05-30) — Unit 5: Equations & Inequalities ───
 
 # The (b/a) coefficient pool by difficulty tier (the easy→hard ramp; CP.B): higher tiers use
@@ -1763,6 +1848,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.SIGNED_NUMBERS: _generate_signed_numbers,
     KnowledgeComponentId.WRITE_EXPRESSIONS: _generate_write_expressions,
     KnowledgeComponentId.EVALUATE_EXPRESSIONS: _generate_evaluate_expressions,
+    KnowledgeComponentId.EXPONENTS: _generate_exponents,
     KnowledgeComponentId.ONE_STEP_EQUATIONS: _generate_one_step_equations,
     KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _generate_equivalent_expressions,
     KnowledgeComponentId.INEQUALITIES: _generate_inequalities,

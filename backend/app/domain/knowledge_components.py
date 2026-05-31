@@ -460,6 +460,24 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+    # Evaluate a whole-number exponent (6.EE.1): read a power as repeated multiplication and
+    # compute its value ("3^4 = ?" -> 81; "evaluate 2^5" -> 32). The answer is a single NUMERIC
+    # value entered in the editor (reuses the editor, NO new widget). Offers TWO REAL surfaces —
+    # SYMBOLIC (the symbolic power "base^exp") and AREA_MODEL (the geometric picture: base^2 is the
+    # area of a square of side base, base^3 the volume of a cube) — answered with the SAME numeric
+    # value, and BOTH are live (scheduler._LIVE_REPRESENTATIONS), so this KC is MASTERABLE: the
+    # §3.4 rule-2 representation-diversity gate is reachable live, unlike the practice-only KCs.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.EXPONENTS,
+        skill_name="Evaluate an exponent",
+        description=(
+            "Evaluate a whole-number exponent as repeated multiplication — the base multiplied by "
+            "itself exponent-many times (3^4 = 3x3x3x3 = 81; 2^5 = 32), not the base times the "
+            "exponent."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
     # ─── Grade-6 content build (2026-05-30) — Unit 5: Equations & Inequalities ───
     # Solve a one-step equation (6.EE.7): ONE KC covering BOTH additive equations (x + b = c) and
     # multiplicative equations (a*x = c) behind an operand-mode flag in the generator. The answer is

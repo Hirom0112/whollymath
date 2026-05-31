@@ -417,6 +417,24 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If you added before multiplying, the order slipped — the times part comes first.",
         ),
     ),
+    # Grade-6 Unit 4: index 0 (operation) orients toward repeated multiplication of the base;
+    # index 1 reinforces that the exponent COUNTS the multiplications, not a factor to multiply by.
+    KnowledgeComponentId.EXPONENTS: (
+        _nudge(
+            KnowledgeComponentId.EXPONENTS,
+            "A power means multiplying the base by ITSELF — not multiplying the base by the "
+            "little number.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EXPONENTS,
+            "The small raised number tells you HOW MANY times to multiply the base together.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EXPONENTS,
+            "If you multiplied the two numbers once, you skipped the repeats — write the base out "
+            "that many times and multiply.",
+        ),
+    ),
     # Grade-6 Unit 5: index 0 (operation) orients toward the INVERSE that undoes the equation;
     # index 1 (magnitude) toward checking x by putting it back in.
     KnowledgeComponentId.ONE_STEP_EQUATIONS: (

@@ -807,6 +807,38 @@ def _evaluate_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _exponents_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'repeated multiplication' steps for an evaluate-a-power problem (Grade-6 Unit 4).
+
+    ``operands = (base, exp)``; the answer is ``base ** exp == problem.correct_value``. Raises if
+    the operands are missing (CLAUDE.md §8.5). The middle step WRITES OUT the base ``exp`` times so
+    the learner sees the exponent as a repeat COUNT, not a factor to multiply the base by.
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"exponents problem {problem.problem_id} needs (base, exp) operands")
+    base, exp = (int(operand) for operand in operands)
+    answer = problem.correct_value
+    expanded = " x ".join([str(base)] * exp)
+    return (
+        WorkedStep(
+            shown=f"{base}^{exp} means multiply {base} by itself {exp} times — not {base} x {exp}.",
+            why_prompt="Why does the small raised number count the multiplications?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Write it out: {base}^{exp} = {expanded}.",
+            why_prompt="Why is multiplying the base by itself different from multiplying it once?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Multiply across: {expanded} = {answer.p}.",
+            why_prompt="Why does a bigger exponent make the value grow so fast?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _one_step_equations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'apply the inverse, isolate x' steps for a one-step equation (Grade-6 Unit 5).
 
@@ -1137,6 +1169,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.SIGNED_NUMBERS: _signed_numbers_steps,
     KnowledgeComponentId.WRITE_EXPRESSIONS: _write_expression_steps,
     KnowledgeComponentId.EVALUATE_EXPRESSIONS: _evaluate_expression_steps,
+    KnowledgeComponentId.EXPONENTS: _exponents_steps,
     KnowledgeComponentId.ONE_STEP_EQUATIONS: _one_step_equations_steps,
     KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _equivalent_expression_steps,
     KnowledgeComponentId.INEQUALITIES: _inequality_steps,

@@ -99,6 +99,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # b extra). Both surfaces are LIVE and answered with the SAME numeric value, so this KC is
     # MASTERABLE (two real representations meet §3.4 rule 2) — unlike the practice-only Grade-6 KCs.
     _KC.EVALUATE_EXPRESSIONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
+    # Grade-6 Unit 4: SYMBOLIC = the power "base^exp" evaluated in the editor; AREA_MODEL = the same
+    # value read off a geometric picture (a side-base square's area for ^2, a cube's volume for ^3).
+    # Both surfaces are LIVE and answered with the SAME numeric value, so this KC is MASTERABLE (two
+    # real representations meet §3.4 rule 2) — like EVALUATE_EXPRESSIONS, not the practice-only KCs.
+    _KC.EXPONENTS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
     # Grade-6 Unit 5: the FIRST Grade-6 KC built MASTERABLE-LIVE. SYMBOLIC = the equation
     # (x + 5 = 12 / 3x = 12) with x entered in the editor; WORD_PROBLEM = the same equation as a
     # story, still answered with the value of x (its surface state is SYMBOLIC_FOCUS, like the

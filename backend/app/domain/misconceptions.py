@@ -140,6 +140,9 @@ class MisconceptionId(StrEnum):
     # COEFFICIENT was asked (4 instead of 7 for "coefficient of x in 7x + 4"), or the coefficient
     # when the constant was asked. The two prominent numbers are swapped.
     PART_CONFUSION = "part-confusion"
+    # Unit 4 (6.EE.1): treating a power as one multiplication — multiplying the base BY the
+    # exponent (3^4 -> 3*4 = 12) instead of by itself exponent-many times (3*3*3*3 = 81).
+    MULTIPLY_BASE_BY_EXPONENT = "multiply-base-by-exponent"
 
 
 @dataclass(frozen=True)
@@ -487,6 +490,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.EXPRESSION_PARTS,),
     ),
+    Misconception(
+        id=MisconceptionId.MULTIPLY_BASE_BY_EXPONENT,
+        name="Multiply the base by the exponent",
+        description=(
+            "Reads a power as a single multiplication of the base BY the exponent — 3^4 computed "
+            "as 3 x 4 = 12 instead of 3 x 3 x 3 x 3 = 81. The exponent is treated as a factor to "
+            "multiply once, not as the COUNT of how many times the base is multiplied by itself, "
+            "so the answer is base x exponent rather than the repeated product."
+        ),
+        applicable_kcs=(KnowledgeComponentId.EXPONENTS,),
+    ),
 )
 
 
@@ -796,6 +810,18 @@ def evaluate_left_to_right(a: int, x: int, b: int) -> Rational:
     ``a*(x + b) - (a*x + b) = (a - 1)*b > 0``.
     """
     return Rational(a * (x + b))
+
+
+def multiply_base_by_exponent(base: int, exponent: int) -> Rational:
+    """multiply-base-by-exponent: compute a power as ``base * exponent``, not ``base ** exponent``.
+
+    The learner reads ``base^exponent`` as one multiplication of the base by the exponent (3^4 ->
+    3*4 = 12) rather than repeated multiplication of the base by itself (3*3*3*3 = 81). Returned
+    as a SymPy ``Rational`` so the verifier compares values directly; it differs from the correct
+    ``base ** exponent`` for every item in the generator's scope (base >= 2, exponent >= 2, with
+    the single ``2^2 == 2*2`` collision excluded), so a match is always diagnostic.
+    """
+    return Rational(base * exponent)
 
 
 def inverse_operation_error(operands: tuple[Rational, ...]) -> Rational | None:

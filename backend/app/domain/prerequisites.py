@@ -125,6 +125,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # KC_write_expressions — the live Unit-4 prerequisite directly upstream (matching how the other
     # Unit-4 KCs, EVALUATE_EXPRESSIONS and EQUIVALENT_EXPRESSIONS, are wired).
     _KC.EXPRESSION_PARTS: frozenset({_KC.WRITE_EXPRESSIONS}),
+    # Grade-6 Unit 4: evaluating a whole-number power produces a NUMBER whose magnitude you read
+    # (powers grow fast), so it forward-unlocks on number-line placement — the live foundation KC
+    # the skill conceptually rests on (matching how the other Unit-4 KCs are wired; its own §11
+    # reactive-drop is the EVALUATE_EXPRESSIONS pairing, kept separate from this forward edge).
+    _KC.EXPONENTS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -160,6 +165,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.COORDINATE_PLANE,  # Grade-6 Unit 3: plot points in the plane, on number-line placement
     _KC.CLASSIFY_NUMBER_SETS,  # Grade-6 Unit 3 (TEKS 6.2A): classify number sets, on signed numbers
     _KC.EXPRESSION_PARTS,  # Grade-6 Unit 4: name parts of an expression, on write expressions
+    _KC.EXPONENTS,  # Grade-6 Unit 4: evaluate whole-number powers, on number-line placement
 )
 
 

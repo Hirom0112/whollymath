@@ -56,6 +56,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # evaluate-expressions has whole-number operands (a, x, b; denominator 1); it ramps by
             # coefficient/value/constant pool, not by a fraction denominator.
             KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+            # exponents has whole-number operands (base, exp; denominator 1); it ramps by the
+            # base/exponent magnitude pools, not by a fraction denominator.
+            KnowledgeComponentId.EXPONENTS,
             # one-step equations use whole-number operands (mode/coefficient/result, all
             # denominator 1); the ramp widens the coefficient pool, not a fraction denominator.
             KnowledgeComponentId.ONE_STEP_EQUATIONS,
