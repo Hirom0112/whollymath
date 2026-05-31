@@ -814,6 +814,56 @@ def _integer_multiply_divide_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _triangle_properties_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The triangle-property steps — angle sum to 180° OR ½·base·height (Grade-6 Unit 6, 6.8A).
+
+    ``operands = (a, b, mode)`` with ``mode == 0`` the missing-angle item (answer ``180 - a - b``)
+    and ``mode == 1`` the area item (answer ``a*b/2 == problem.correct_value``). Raises if the
+    operands are missing (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"triangle problem {problem.problem_id} needs (a, b, mode) operands")
+    a, b = int(operands[0]), int(operands[1])
+    answer = problem.correct_value
+    if int(operands[2]) == 0:  # missing angle
+        return (
+            WorkedStep(
+                shown="The three angles of a triangle always add to 180°.",
+                why_prompt="Why do a triangle's three angles always total a straight angle?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"The two you know total {a} + {b} = {a + b}°.",
+                why_prompt="Why does adding the two known angles tell you what is left for the"
+                " third?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"So the third angle is 180 - {a + b} = {answer.p}°.",
+                why_prompt="Why subtract from 180 and not from 90?",
+                revealed_value=answer,
+            ),
+        )
+    return (  # area
+        WorkedStep(
+            shown=f"A triangle's area is HALF the base times the height: ½ · {a} · {b}.",
+            why_prompt="Why is a triangle's area half the base times the height?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"First multiply the base and height: {a} · {b} = {a * b}.",
+            why_prompt="Why does base × height give the rectangle that the triangle fills half of?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Now take half: {a * b} ÷ 2 = {answer}.",
+            why_prompt="Why would forgetting the ½ give twice the real area?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _evaluate_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'substitute, then multiply before add' steps for an evaluate-expression problem (Unit 4).
 
@@ -1218,6 +1268,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.CLASSIFY_NUMBER_SETS: _classify_number_sets_steps,
     KnowledgeComponentId.EXPRESSION_PARTS: _expression_parts_steps,
     KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: _integer_multiply_divide_steps,
+    KnowledgeComponentId.TRIANGLE_PROPERTIES: _triangle_properties_steps,
 }
 
 

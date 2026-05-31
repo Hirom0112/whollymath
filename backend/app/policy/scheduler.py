@@ -142,6 +142,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # masterable second surface — a product is repeated directed jumps from zero — but adding it
     # here promotes it, deferred to avoid over-scoping this build.
     _KC.INTEGER_MULTIPLY_DIVIDE: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 6 (TEKS 6.8A): SYMBOLIC = the missing angle / area as a single number entered in
+    # the editor. PRACTICE-ONLY for now; the AREA_MODEL rep (the triangle FIGURE — its angles and
+    # its base×height region) is the natural masterable second surface, added here once a
+    # triangle-figure input widget lands — deferred to avoid over-scoping this build.
+    _KC.TRIANGLE_PROPERTIES: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

@@ -1223,6 +1223,101 @@ def _generate_integer_multiply_divide(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry (TEKS 6.8A) ───
+
+# The two known angles a, b for a missing-angle item (their sum stays < 180 so the third angle is
+# positive) and the base/height for an area item, by difficulty tier (the easy→hard ramp; CP.B):
+# higher tiers use larger measures. Angle pairs are listed explicitly so a + b < 180 always holds.
+_TRIANGLE_ANGLE_PAIRS_BY_DIFFICULTY: dict[int, tuple[tuple[int, int], ...]] = {
+    1: ((30, 60), (45, 45), (60, 60), (40, 50)),
+    2: ((35, 70), (55, 65), (50, 80), (25, 75)),
+    3: ((48, 73), (62, 84), (37, 96), (53, 88)),
+    4: ((71, 94), (66, 107), (83, 89), (58, 119)),
+}
+_TRIANGLE_ANGLE_PAIRS_POOL: tuple[tuple[int, int], ...] = (
+    (30, 60),
+    (45, 45),
+    (40, 50),
+    (35, 70),
+    (55, 65),
+    (50, 80),
+    (48, 73),
+    (62, 84),
+    (37, 96),
+)
+# Base/height pairs whose PRODUCT is even, so the area ½·b·h is always a whole number.
+_TRIANGLE_BASE_HEIGHT_BY_DIFFICULTY: dict[int, tuple[tuple[int, int], ...]] = {
+    1: ((4, 3), (2, 5), (6, 2), (4, 4)),
+    2: ((6, 5), (8, 3), (4, 7), (10, 2)),
+    3: ((9, 8), (12, 5), (7, 6), (14, 4)),
+    4: ((16, 9), (15, 8), (18, 7), (20, 6)),
+}
+_TRIANGLE_BASE_HEIGHT_POOL: tuple[tuple[int, int], ...] = (
+    (4, 3),
+    (2, 5),
+    (6, 2),
+    (6, 5),
+    (8, 3),
+    (4, 7),
+    (9, 8),
+    (12, 5),
+    (7, 6),
+)
+
+
+def _generate_triangle_properties(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_triangle_properties: find a missing angle OR a triangle's area; a single numeric answer.
+
+    An item-mode flag (the seeded RNG picks angle vs area) decides the item. MISSING ANGLE (mode 0):
+    pick two angles ``a, b`` whose sum is < 180; the answer is the third angle ``180 - a - b``. AREA
+    (mode 1): pick a base ``a`` and height ``b`` whose product is even; the answer is the area
+    ``a*b/2`` (a whole number). ``operands = (a, b, mode)`` so the verifier can replay the
+    triangle-formula error (subtract from 90 / drop the ½); ``difficulty`` widens the measure pools.
+    The figure is described in the statement (the display-only stimulus convention) but the answer
+    stays NUMERIC, entered in the existing editor. The wrong value the misconception predicts is
+    always distinct from the correct one (an angle off by 90; an area off by a factor of 2), so the
+    diagnosis is reliable.
+    """
+    angle_mode = rng.random() < 0.5
+    if angle_mode:
+        pairs = (
+            _TRIANGLE_ANGLE_PAIRS_BY_DIFFICULTY.get(difficulty, _TRIANGLE_ANGLE_PAIRS_POOL)
+            if difficulty
+            else _TRIANGLE_ANGLE_PAIRS_POOL
+        )
+        a, b = rng.choice(pairs)
+        correct = Rational(180 - a - b)
+        statement = (
+            f"A triangle has two angles measuring {a}° and {b}°. "
+            "What is the measure of the third angle, in degrees?"
+        )
+        mode = 0
+    else:
+        pairs = (
+            _TRIANGLE_BASE_HEIGHT_BY_DIFFICULTY.get(difficulty, _TRIANGLE_BASE_HEIGHT_POOL)
+            if difficulty
+            else _TRIANGLE_BASE_HEIGHT_POOL
+        )
+        a, b = rng.choice(pairs)
+        correct = Rational(a * b, 2)
+        statement = (
+            f"A triangle has a base of {a} units and a height of {b} units. "
+            "What is its area, in square units?"
+        )
+        mode = 1
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.TRIANGLE_PROPERTIES, seed, surface_format),
+        kc=KnowledgeComponentId.TRIANGLE_PROPERTIES,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=correct,
+        representations_available=get_kc(KnowledgeComponentId.TRIANGLE_PROPERTIES).representations,
+        operands=(Rational(a), Rational(b), Rational(mode)),
+    )
+
+
 # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
 
 # Write-expression phrase templates: (phrase with {v}/{c} slots, builder of the canonical SymPy
@@ -1926,6 +2021,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.CLASSIFY_NUMBER_SETS: _generate_classify_number_sets,
     KnowledgeComponentId.EXPRESSION_PARTS: _generate_expression_parts,
     KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE: _generate_integer_multiply_divide,
+    KnowledgeComponentId.TRIANGLE_PROPERTIES: _generate_triangle_properties,
 }
 
 

@@ -77,6 +77,7 @@ from app.domain.misconceptions import (
     signed_not_magnitude,
     subtract_across,
     swap_coordinates,
+    triangle_formula_error,
 )
 from app.domain.problem_generators import AnswerKind, Problem
 
@@ -804,6 +805,19 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.SIGN_RULE_ERROR,
         predict=flip_result_sign,
+    ),
+    # triangle-formula-error: applied the WRONG fixed relationship — subtracted from 90 (not 180)
+    # for a missing angle, or dropped the ½ and gave base × height for an area (operands are
+    # (a, b, mode); mode 0 == missing angle, 1 == area). A wrong OPERATION (the numbers are read
+    # right; the formula is wrong), so the answer is 90 - a - b or a*b. The wrong value always
+    # differs from the correct one — an angle off by 90, an area off by a factor of 2 — so the
+    # match is always diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.TRIANGLE_PROPERTIES,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.TRIANGLE_FORMULA_ERROR,
+        predict=triangle_formula_error,
     ),
 )
 

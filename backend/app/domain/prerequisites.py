@@ -135,6 +135,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # KC_integer_add_subtract — the live Unit-INT KC directly upstream (matching its
     # REMEDIATION_ROUTING drop, also INTEGER_ADD_SUBTRACT).
     _KC.INTEGER_MULTIPLY_DIVIDE: frozenset({_KC.INTEGER_ADD_SUBTRACT}),
+    # Grade-6 Unit 6 (TEKS 6.8A): a missing angle or a triangle's area is a NUMBER (a measure) you
+    # compute and read the size of, so triangle properties forward-unlocks on number-line
+    # placement — the live foundation KC the geometry skill rests on (its own §11 geometry prereqs
+    # are not yet live, matching how the other late-unit KCs are wired to the foundation).
+    _KC.TRIANGLE_PROPERTIES: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -172,6 +177,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.EXPRESSION_PARTS,  # Grade-6 Unit 4: name parts of an expression, on write expressions
     _KC.EXPONENTS,  # Grade-6 Unit 4: evaluate whole-number powers, on number-line placement
     _KC.INTEGER_MULTIPLY_DIVIDE,  # Grade-6 Unit-INT: multiply/divide integers, on signed add/sub
+    _KC.TRIANGLE_PROPERTIES,  # Grade-6 Unit 6 (TEKS 6.8A): triangle properties, on number-line
 )
 
 

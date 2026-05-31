@@ -605,6 +605,26 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry (TEKS 6.8A) ───
+    # Triangle properties (TEKS-primary, not in CCSS Grade 6): apply the angle sum (a triangle's
+    # three angles total 180°, so a missing angle is 180 − the other two) and the base/height–area
+    # relationship (A = ½ · base · height). An item-mode flag picks one or the other; either way the
+    # answer is a single NUMERIC value entered in the existing editor (NO new widget). Advertises
+    # SYMBOLIC + AREA_MODEL — the triangle figure is a geometric/area picture (its angles and its
+    # base×height region are the natural second surface), but LIVE only on SYMBOLIC for now
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the other Grade-6 KCs. Promoting
+    # AREA_MODEL to live (when a triangle-figure input widget lands) makes it masterable with no
+    # other change.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.TRIANGLE_PROPERTIES,
+        skill_name="Apply triangle properties",
+        description=(
+            "Use the properties of a triangle: the three angles add to 180° (so a missing angle "
+            "is 180 minus the other two), and the area is half the base times the height "
+            "(A = ½ · b · h)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
+    ),
 )
 
 

@@ -147,6 +147,11 @@ class MisconceptionId(StrEnum):
     # right MAGNITUDE but applying the wrong sign rule (e.g. -3 × 4 -> 12 instead of -12, treating
     # the product of an unlike-sign pair as positive). The arithmetic is right; only the sign is.
     SIGN_RULE_ERROR = "sign-rule-error"
+    # Unit 6 (TEKS 6.8A): a triangle-formula error — using the WRONG fixed relationship. For a
+    # missing angle, subtracting from 90 instead of 180 (treating it like a right-angle complement);
+    # for an area, dropping the ½ and answering base × height (the rectangle's area, not the
+    # triangle's). The operands are read right; the formula relationship applied is wrong.
+    TRIANGLE_FORMULA_ERROR = "triangle-formula-error"
 
 
 @dataclass(frozen=True)
@@ -516,6 +521,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "unlike signs a negative one)."
         ),
         applicable_kcs=(KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,),
+    ),
+    Misconception(
+        id=MisconceptionId.TRIANGLE_FORMULA_ERROR,
+        name="Triangle-formula error",
+        description=(
+            "Applies the wrong fixed relationship for a triangle. For a missing angle, subtracts "
+            "the two known angles from 90 instead of 180 — as if the angles totaled a right angle "
+            "rather than a straight one. For an area, drops the ½ and answers base × height (the "
+            "area of a rectangle, twice the triangle's). The numbers are read correctly; the "
+            "formula relationship is wrong."
+        ),
+        applicable_kcs=(KnowledgeComponentId.TRIANGLE_PROPERTIES,),
     ),
 )
 
@@ -910,6 +927,34 @@ def confuse_coefficient_with_constant(operands: tuple[Rational, ...]) -> Rationa
     if mode == 1:  # constant asked -> answered the coefficient
         return coefficient
     return None  # term-count: no coefficient/constant to swap
+
+
+def triangle_formula_error(operands: tuple[Rational, ...]) -> Rational | None:
+    """triangle-formula-error: apply the WRONG fixed relationship for a triangle (TEKS 6.8A).
+
+    The triangle generator encodes an item as ``(a, b, mode)``: mode 0 finds a MISSING ANGLE from
+    two known angles ``a, b`` (correct = ``180 - a - b``); mode 1 finds the AREA from a base ``a``
+    and height ``b`` (correct = ``a*b/2``). The learner who makes this error uses the wrong fixed
+    relationship:
+
+    - missing angle (mode 0): subtracts from 90 instead of 180 (a right angle, not a straight one),
+      getting ``90 - a - b``;
+    - area (mode 1): drops the ½ and answers ``a*b`` (the rectangle's area, twice the triangle's).
+
+    Returned as a SymPy ``Rational`` so the verifier compares values directly. Each wrong value
+    differs from the correct one by a fixed amount — the angle is off by exactly 90, and the area
+    by a factor of 2 (``a, b > 0`` ⇒ ``a*b != a*b/2``) — so the misconception is always diagnostic.
+    Returns ``None`` for an unexpected operand shape or mode (defensive; the verifier then reports
+    OTHER rather than over-claiming a match).
+    """
+    if len(operands) != 3:
+        return None
+    a, b, mode = operands
+    if mode == 0:  # missing angle: subtracted from 90 instead of 180
+        return 90 - a - b
+    if mode == 1:  # area: dropped the ½, answered base × height
+        return a * b
+    return None
 
 
 def reversed_operands(correct_expression: str | None) -> str | None:

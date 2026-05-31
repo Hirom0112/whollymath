@@ -57,7 +57,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.CLASSIFY_NUMBER_SETS,  # Grade-6 Unit 3 (TEKS 6.2A, built 2026-05-30)
         KC.EXPRESSION_PARTS,  # Grade-6 Unit 4 (6.EE.2b, built 2026-05-30)
         KC.EXPONENTS,  # Grade-6 Unit 4 (6.EE.1, built 2026-05-30)
-        KC.INTEGER_MULTIPLY_DIVIDE,  # Grade-6 Unit-INT (TEKS 6.3C/D, built 2026-05-30), last
+        KC.INTEGER_MULTIPLY_DIVIDE,  # Grade-6 Unit-INT (TEKS 6.3C/D, built 2026-05-30)
+        KC.TRIANGLE_PROPERTIES,  # Grade-6 Unit 6 (TEKS 6.8A, built 2026-05-30), last on the spine
     ]
 
 

@@ -550,6 +550,27 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If the size is right but it was marked wrong, check the sign — the rule decides it.",
         ),
     ),
+    # Grade-6 Unit 6 (TEKS 6.8A): index 0 (operation) orients toward the right relationship — the
+    # angle sum and the HALF in the area; index 1 reinforces "the three angles make a straight
+    # line"; index 2 catches the dropped-half slip (a triangle is half its rectangle). Nudges stay
+    # digit-free and glyph-free (the test bank forbids numerals and math operators in a nudge).
+    KnowledgeComponentId.TRIANGLE_PROPERTIES: (
+        _nudge(
+            KnowledgeComponentId.TRIANGLE_PROPERTIES,
+            "A triangle's three angles add to a straight angle, and its area is HALF the base "
+            "times the height.",
+        ),
+        _nudge(
+            KnowledgeComponentId.TRIANGLE_PROPERTIES,
+            "The three angles make a straight line, not a right angle. Take the two you know "
+            "away from that straight angle total.",
+        ),
+        _nudge(
+            KnowledgeComponentId.TRIANGLE_PROPERTIES,
+            "A triangle fills HALF its surrounding rectangle, so remember to take half the base "
+            "times the height.",
+        ),
+    ),
 }
 
 

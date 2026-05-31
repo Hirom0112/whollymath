@@ -83,6 +83,10 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # (denominator 1); the difficulty widens the coefficient/constant pool, not a
             # fraction-denominator pool.
             KnowledgeComponentId.EXPRESSION_PARTS,
+            # triangle-properties operands are (a, b, mode) — whole-number angle measures or
+            # base/height (denominator 1); the difficulty widens the measure pools, not a
+            # fraction-denominator pool.
+            KnowledgeComponentId.TRIANGLE_PROPERTIES,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

@@ -774,6 +774,34 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry (TEKS 6.8A) ───
+    # Triangle properties — find a missing angle (angle sum = 180°) or an area (½·b·h), a single
+    # number in the NUMERIC editor. Practice-only today (scheduler lives only on SYMBOLIC):
+    # AREA_MODEL is advertised (the triangle FIGURE is the geometric/area picture) but isn't a live
+    # answer surface yet, so the probe never fires and errors route back to SYMBOLIC — "re-try on
+    # the same surface with a labeled hint" is the honest adaptation until a triangle-figure input
+    # widget lands and AREA_MODEL is promoted (then it becomes the masterable second surface). The
+    # OPERATION route names the formula error (180 not 90 / the missing ½) directly. Probe over
+    # SYMBOLIC (the only live rep), NOT WORD_PROBLEM.
+    _spec(
+        _KC.TRIANGLE_PROPERTIES,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Angles in a triangle add to 180°, and a triangle's area is HALF base × height.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Check the size: a third angle can't exceed 180°, and the area is half the "
+                "rectangle.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)
