@@ -707,6 +707,27 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics ───
+    # Mean absolute deviation (CCSS 6.SP.5c): the mean of the absolute deviations of a small data
+    # set from the data's mean ({2,4,6,8} -> mean 5, |deviations| {3,1,1,3}, MAD 2). The answer is
+    # a single Rational entered in the symbolic editor (reuses the editor, NO new widget); the data
+    # set is given in the prompt text. Advertises SYMBOLIC + NUMBER_LINE — each deviation is a
+    # DISTANCE from the mean on the number line, and the MAD is the average of those distances, so
+    # the number line is the canonical picture of the spread — but LIVE only on SYMBOLIC for now
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the other numeric Grade-6 KCs. The
+    # NUMBER_LINE widget already exists, so it is the natural masterable second surface later; kept
+    # SYMBOLIC-only here to match the template and not over-scope (errors never route to NUMBER_LINE
+    # while it has no surface state — they stay on SYMBOLIC).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,
+        skill_name="Find the mean absolute deviation of a data set",
+        description=(
+            "Find the mean absolute deviation (MAD) of a small data set — the mean of the "
+            "distances of the values from the data's mean. For {2, 4, 6, 8} the mean is 5, the "
+            "absolute deviations are {3, 1, 1, 3}, and the MAD is 2."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
 )
 
 

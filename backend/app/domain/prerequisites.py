@@ -157,6 +157,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # face is a polygon (a rectangle) whose area is found exactly as in KC_area_polygons, so surface
     # area from a net forward-unlocks on polygon area — the live geometry skill directly upstream.
     _KC.SURFACE_AREA_NETS: frozenset({_KC.AREA_POLYGONS}),
+    # Grade-6 Unit 7 (6.SP.5c): the mean absolute deviation averages the DISTANCES of the data
+    # values from the mean — each deviation is an absolute value (a distance from a point), exactly
+    # the idea KC_absolute_value teaches — so MAD forward-unlocks on KC_absolute_value, the live
+    # Unit-3 KC it conceptually rests on (its own §11 statistics prereqs are not yet live).
+    _KC.MEAN_ABSOLUTE_DEVIATION: frozenset({_KC.ABSOLUTE_VALUE}),
 }
 
 
@@ -199,6 +204,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.VOLUME_FRACTIONAL_EDGES,  # Grade-6 Unit 6 (6.G.2): prism volume V=l*w*h, on multiply frac
     _KC.POLYGONS_COORDINATE_PLANE,  # Grade-6 Unit 6 (6.G.3): polygons in the plane, on coord-plane
     _KC.SURFACE_AREA_NETS,  # Grade-6 Unit 6 (6.G.4): surface area from a net, on polygon area
+    _KC.MEAN_ABSOLUTE_DEVIATION,  # Grade-6 Unit 7 (6.SP.5c): MAD, on absolute value (distances)
 )
 
 

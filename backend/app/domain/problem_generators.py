@@ -2297,6 +2297,91 @@ def _generate_surface_area_nets(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (MAD, 6.SP.5c) ───
+
+# Curated DEVIATION patterns for a MAD item, keyed by data-set length (4–6). Each tuple is the set
+# of (integer) deviations from the data's mean: it SUMS TO ZERO — so the mean of (mean + d_i) is
+# exactly the chosen base mean, an integer — and its ABSOLUTE values sum to a multiple of the
+# length, so MAD = (sum of |d_i|) / n is a clean whole number. Spread is always positive (no all-
+# zero pattern), so the true MAD > 0 and the forgot-absolute-value error (signed mean = 0) is
+# always distinct from it. The data values themselves are (mean + d_i), kept positive by the mean
+# base below. Difficulty widens the pattern pool (larger spreads ⇒ larger MAD) within each length.
+_MAD_DEVIATION_PATTERNS: dict[int, tuple[tuple[int, ...], ...]] = {
+    4: (
+        (-1, -1, 1, 1),  # |.|sum 4, MAD 1
+        (-3, -1, 1, 3),  # |.|sum 8, MAD 2
+        (-2, -2, 2, 2),  # |.|sum 8, MAD 2
+        (-4, 0, 0, 4),  # |.|sum 8, MAD 2
+        (-5, -3, 3, 5),  # |.|sum 16, MAD 4
+    ),
+    5: (
+        (-2, -2, -1, 2, 3),  # |.|sum 10, MAD 2
+        (-4, -1, 0, 2, 3),  # |.|sum 10, MAD 2
+        (-3, -1, -1, 2, 3),  # |.|sum 10, MAD 2
+        (-5, -5, 0, 5, 5),  # |.|sum 20, MAD 4
+    ),
+    6: (
+        (-1, -1, -1, 1, 1, 1),  # |.|sum 6, MAD 1
+        (-3, -2, -1, 1, 2, 3),  # |.|sum 12, MAD 2
+        (-2, -2, -2, 2, 2, 2),  # |.|sum 12, MAD 2
+        (-5, -4, -3, 3, 4, 5),  # |.|sum 24, MAD 4
+    ),
+}
+# The mean (an integer) the deviations are centered on, by difficulty tier. Chosen large enough
+# that mean + min(deviation) stays positive for every pattern above (min deviation is -5), so the
+# data set reads as plausible whole-number measurements.
+_MAD_MEAN_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (8, 10, 12),
+    2: (10, 12, 15),
+    3: (12, 15, 18, 20),
+    4: (15, 18, 20, 25),
+}
+_MAD_MEAN_POOL: tuple[int, ...] = (8, 10, 12, 15, 18, 20)
+
+
+def _generate_mean_absolute_deviation(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_mean_absolute_deviation: the MAD of a small data set; a single Rational answer (6.SP.5c).
+
+    Builds a VARIABLE-LENGTH data set (4–6 whole numbers) by centering a curated, zero-sum deviation
+    pattern on an integer mean (so the mean is exactly that integer and the MAD is a clean whole
+    number). The answer is the MAD — the mean of the absolute deviations from the data's mean
+    (``{2,4,6,8}`` -> mean 5, ``|deviations|`` 3,1,1,3, MAD 2). ``operands`` is the data set itself
+    (the full variable-length tuple), so the verifier can replay the forgot-absolute-value
+    misconception (averaging the SIGNED deviations -> always 0). The data values are listed in the
+    prompt text and entered as a single number in the existing editor (NO new widget).
+    ``difficulty`` widens the mean and the spread of the chosen pattern; spread is always positive,
+    so MAD > 0.
+    """
+    length = rng.choice((4, 5, 6))
+    patterns = _MAD_DEVIATION_PATTERNS[length]
+    pattern = rng.choice(patterns)
+    mean_pool = (
+        _MAD_MEAN_BY_DIFFICULTY.get(difficulty, _MAD_MEAN_POOL) if difficulty else _MAD_MEAN_POOL
+    )
+    mean = rng.choice(mean_pool)
+    values = [mean + d for d in pattern]
+    rng.shuffle(values)
+    data = tuple(Rational(v) for v in values)
+    mad = sum((abs(Rational(d)) for d in pattern), Rational(0)) / length
+    listed = ", ".join(str(v) for v in values)
+    statement = f"What is the mean absolute deviation (MAD) of the data set {listed}?"
+    return Problem(
+        problem_id=_generated_id(
+            KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION, seed, surface_format
+        ),
+        kc=KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=mad,
+        representations_available=get_kc(
+            KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION
+        ).representations,
+        operands=data,
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -2333,6 +2418,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES: _generate_volume_fractional_edges,
     KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: _generate_polygons_coordinate_plane,
     KnowledgeComponentId.SURFACE_AREA_NETS: _generate_surface_area_nets,
+    KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: _generate_mean_absolute_deviation,
 }
 
 

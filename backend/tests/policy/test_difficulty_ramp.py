@@ -100,6 +100,10 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # surface-area-nets operands are three whole-number edge lengths (denominator 1); the
             # ramp widens the edge POOL (larger edges), not a fraction-denominator pool.
             KnowledgeComponentId.SURFACE_AREA_NETS,
+            # mean-absolute-deviation operands are a variable-length data set of whole numbers
+            # (denominator 1); the ramp widens the mean and the spread pattern, not a fraction
+            # denominator.
+            KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

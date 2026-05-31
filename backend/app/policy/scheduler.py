@@ -170,6 +170,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # the natural masterable second surface, but it has no widget yet, so adding it here would
     # promote it — deferred to avoid over-scoping this build.
     _KC.SURFACE_AREA_NETS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 7 (6.SP.5c): SYMBOLIC = the MAD value entered in the editor. PRACTICE-ONLY for
+    # now; the NUMBER_LINE rep (each deviation is a distance from the mean on the line, and its
+    # widget already exists) is the natural masterable second surface — adding NUMBER_LINE here
+    # promotes it, deferred to avoid over-scoping this build.
+    _KC.MEAN_ABSOLUTE_DEVIATION: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

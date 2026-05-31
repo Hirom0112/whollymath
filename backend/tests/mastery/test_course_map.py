@@ -62,7 +62,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.AREA_POLYGONS,  # Grade-6 Unit 6 (6.G.1, built 2026-05-30)
         KC.VOLUME_FRACTIONAL_EDGES,  # Grade-6 Unit 6 (6.G.2, built 2026-05-30)
         KC.POLYGONS_COORDINATE_PLANE,  # Grade-6 Unit 6 (6.G.3, built 2026-05-30)
-        KC.SURFACE_AREA_NETS,  # Grade-6 Unit 6 (6.G.4, built 2026-05-30), last on the spine
+        KC.SURFACE_AREA_NETS,  # Grade-6 Unit 6 (6.G.4, built 2026-05-30)
+        KC.MEAN_ABSOLUTE_DEVIATION,  # Grade-6 Unit 7 (6.SP.5c, built 2026-05-30), last on the spine
     ]
 
 

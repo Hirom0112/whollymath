@@ -161,6 +161,10 @@ class MisconceptionId(StrEnum):
     # Unit 6 (6.G.4): counting only three of a prism's six faces — summing l*w + l*h + w*h and
     # forgetting that each face has a matching opposite, so the surface area comes out half-size.
     COUNT_THREE_FACES = "count-three-faces"
+    # Unit 7 (6.SP.5c): computing the mean absolute deviation WITHOUT taking absolute values —
+    # averaging the SIGNED deviations from the mean instead of their distances. The signed
+    # deviations always sum to zero, so this wrong "MAD" is always 0.
+    FORGOT_ABSOLUTE_VALUE = "forgot-absolute-value"
 
 
 @dataclass(frozen=True)
@@ -584,6 +588,19 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.SURFACE_AREA_NETS,),
     ),
+    Misconception(
+        id=MisconceptionId.FORGOT_ABSOLUTE_VALUE,
+        name="Forgets the absolute value in the MAD",
+        description=(
+            "Computes the mean absolute deviation WITHOUT taking the absolute value of each "
+            "deviation — averaging the SIGNED differences from the mean instead of their "
+            "distances. Because the deviations from the mean always sum to zero, this wrong "
+            "'MAD' is always 0 (for {2, 4, 6, 8}: the signed deviations -3, -1, 1, 3 average to "
+            "0 instead of the true MAD of 2). The deviations are computed correctly; the wrong "
+            "operation (skipping the absolute value) collapses the spread to nothing."
+        ),
+        applicable_kcs=(KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,),
+    ),
 )
 
 
@@ -963,6 +980,23 @@ def count_three_faces_only(length: Rational, width: Rational, height: Rational) 
     is always distinct from the correct ``2*(...)`` and the match is always diagnostic.
     """
     return length * width + length * height + width * height
+
+
+def mean_signed_deviation(data: tuple[Rational, ...]) -> Rational | None:
+    """forgot-absolute-value: average the SIGNED deviations from the mean, skipping absolute value.
+
+    The mean absolute deviation is the mean of the |deviations| from the data's mean. The learner
+    who makes this error averages the deviations WITHOUT taking absolute values: ``mean(x_i - x̄)``.
+    Because the deviations from the mean always sum to zero, this is identically 0 — a clean,
+    always-diagnostic wrong value, since the generator only emits data sets with a positive spread
+    (the true MAD is > 0). Returned as a SymPy ``Rational`` so the verifier compares values
+    directly. ``data`` is the variable-length data set (the problem's operands); returns ``None``
+    on an empty set (defensive — the verifier then reports OTHER rather than divide by zero).
+    """
+    if not data:
+        return None
+    mean = sum(data, Rational(0)) / len(data)
+    return sum((x - mean for x in data), Rational(0)) / len(data)
 
 
 def multiply_base_by_exponent(base: int, exponent: int) -> Rational:

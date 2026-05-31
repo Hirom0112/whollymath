@@ -69,6 +69,7 @@ from app.domain.misconceptions import (
     invert_conversion,
     invert_rate,
     keep_original_sign,
+    mean_signed_deviation,
     multiply_base_by_exponent,
     multiply_without_inverting,
     natural_number_bias_number_line,
@@ -591,7 +592,11 @@ class _WrongAnswerModel:
     ``if kc is ...`` branch — the generalization HR.A2 buys (HYPERREACTIVE.md §3)."""
 
     kc: KnowledgeComponentId
-    operand_count: int
+    # The exact operand arity this model matches, or ``None`` to match ANY arity. ``None`` is for
+    # VARIABLE-LENGTH operand KCs (e.g. KC_mean_absolute_deviation, whose operands are a 4–6 value
+    # data set): the predictor reads the whole tuple and the KC alone disambiguates the model. A
+    # fixed int (the common case) keeps a model from firing on a wrong-shaped problem of that KC.
+    operand_count: int | None
     error_category: ErrorCategory
     misconception: MisconceptionId
     predict: Callable[[tuple[Rational, ...]], Rational | None]
@@ -857,6 +862,18 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         misconception=MisconceptionId.COUNT_THREE_FACES,
         predict=lambda ops: count_three_faces_only(ops[0], ops[1], ops[2]),
     ),
+    # forgot-absolute-value: averaged the SIGNED deviations from the mean (skipping the absolute
+    # value) instead of their distances, so the answer is always 0 (the deviations cancel). A wrong
+    # OPERATION — the deviations are right; the absolute value was never applied. ``operand_count``
+    # is None: the MAD's operands are a VARIABLE-LENGTH data set (4–6 values), so the model matches
+    # on KC alone and the predictor reads the whole tuple.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,
+        operand_count=None,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.FORGOT_ABSOLUTE_VALUE,
+        predict=lambda ops: mean_signed_deviation(ops),
+    ),
 )
 
 
@@ -876,7 +893,11 @@ def _classify_wrong_answer(
         return ErrorCategory.OTHER, None
 
     for model in _WRONG_ANSWER_MODELS:
-        if model.kc is problem.kc and len(operands) == model.operand_count:
+        # ``operand_count is None`` matches any arity (variable-length data sets, e.g. the MAD);
+        # otherwise the operand count must match exactly so a model never fires on the wrong shape.
+        if model.kc is problem.kc and (
+            model.operand_count is None or len(operands) == model.operand_count
+        ):
             predicted = model.predict(operands)
             if predicted is not None and bool(submitted_value == predicted):
                 return model.error_category, model.misconception

@@ -1016,6 +1016,51 @@ def _surface_area_nets_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _mean_absolute_deviation_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'mean, then average the distances' steps for a MAD problem (Grade-6 Unit 7, 6.SP.5c).
+
+    ``operands`` is the data set (a variable-length tuple); the answer is the mean of the absolute
+    deviations from the data's mean == ``problem.correct_value``. Raises if the data set is missing
+    (CLAUDE.md §8.5). The middle steps land the mean and the list of |deviations| so the learner
+    sees that the absolute value is what keeps the spread from cancelling to zero.
+    """
+    data = problem.operands
+    if not data:
+        raise ValueError(f"MAD problem {problem.problem_id} needs a data set operand")
+    n = len(data)
+    mean = sum(data, Rational(0)) / n
+    abs_devs = tuple(abs(x - mean) for x in data)
+    values_text = ", ".join(_fmt_rational(x) for x in data)
+    devs_text = ", ".join(_fmt_rational(d) for d in abs_devs)
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=(
+                f"First find the mean of {values_text}: add them and divide by {n}, "
+                f"giving {_fmt_rational(mean)}."
+            ),
+            why_prompt="Why do we measure each value's distance from the MEAN, not from zero?",
+            revealed_value=mean,
+        ),
+        WorkedStep(
+            shown=(
+                f"Find how far each value is from {_fmt_rational(mean)} — the ABSOLUTE deviations: "
+                f"{devs_text}. A distance is never negative."
+            ),
+            why_prompt="Why take the absolute value instead of the signed difference?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"Average those distances: their sum divided by {n} is {_fmt_rational(answer)} — "
+                f"the mean absolute deviation."
+            ),
+            why_prompt="Why does a larger MAD mean the data is more spread out?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _one_step_equations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'apply the inverse, isolate x' steps for a one-step equation (Grade-6 Unit 5).
 
@@ -1412,6 +1457,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     # point-set form, and the steps land on the canonical points whether one corner or four.
     KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: _coordinate_plane_steps,
     KnowledgeComponentId.SURFACE_AREA_NETS: _surface_area_nets_steps,
+    KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: _mean_absolute_deviation_steps,
 }
 
 

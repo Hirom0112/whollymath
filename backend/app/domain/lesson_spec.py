@@ -902,6 +902,33 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # Mean absolute deviation of a small data set (6.SP.5c). Practice-only today (scheduler lives
+    # only on SYMBOLIC), so the probe never fires. Errors route back to SYMBOLIC — NUMBER_LINE is
+    # advertised (each deviation is a DISTANCE from the mean on the number line, and the widget
+    # exists) but isn't live yet, so "re-try on the same surface with a labeled hint" is the honest
+    # adaptation until NUMBER_LINE is promoted live (then it becomes the masterable second surface).
+    # The OPERATION route names the forgot-absolute-value error directly; the MAGNITUDE route covers
+    # a size slip. Probe over SYMBOLIC (the only live rep). NEVER routes to a rep with no surface.
+    _spec(
+        _KC.MEAN_ABSOLUTE_DEVIATION,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Take the DISTANCE of each value from the mean — never a negative — then average "
+                "them, so the spread does not cancel to zero.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "The MAD is the typical distance from the mean, so it sits between the smallest "
+                "and largest of those distances — re-check the size.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

@@ -89,6 +89,9 @@ EXPECTED_CATALOG_IDS = {
     "KC_polygons_coordinate_plane",
     # Unit 6 (numeric; 6.G.4 — surface area of a right rectangular prism from its net).
     "KC_surface_area_nets",
+    # Unit 7 (numeric; 6.SP.5c — mean absolute deviation of a small data set, a single Rational
+    # answer over a VARIABLE-LENGTH data-set operand tuple).
+    "KC_mean_absolute_deviation",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -123,6 +126,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_volume_fractional_edges",
     "KC_polygons_coordinate_plane",
     "KC_surface_area_nets",
+    "KC_mean_absolute_deviation",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -160,12 +164,12 @@ EXPECTED_GRADE6_KCS = {
     # KC_polygons_coordinate_plane (6.G.3 — draw polygons / use coordinates, reuses the point-set
     # answer contract), and KC_surface_area_nets (6.G.4 — surface area of a prism from its net) all
     # moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
-    # U7 — Statistics (6.SP)
+    # U7 — Statistics (6.SP). KC_mean_absolute_deviation (6.SP.5c) moved to EXPECTED_CATALOG_IDS
+    # (built 2026-05-30).
     "KC_statistical_questions",
     "KC_data_displays",
     "KC_center_spread_shape",
     "KC_summary_statistics",
-    "KC_mean_absolute_deviation",
     "KC_categorical_data",
     # U8 — Personal Financial Literacy (TEKS 6.14)
     "KC_check_register",
@@ -191,7 +195,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 33 content-complete + 13 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 34 content-complete + 12 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

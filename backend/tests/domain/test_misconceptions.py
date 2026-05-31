@@ -87,6 +87,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "forgot-triangle-half",  # KC_area_polygons (Unit 6, 6.G.1)
     "add-edges-error",  # KC_volume_fractional_edges (Unit 6, 6.G.2)
     "count-three-faces",  # KC_surface_area_nets (Unit 6, 6.G.4)
+    "forgot-absolute-value",  # KC_mean_absolute_deviation (Unit 7, 6.SP.5c)
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

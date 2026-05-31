@@ -636,6 +636,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If you added only three faces, double it — every face has a twin on the other side.",
         ),
     ),
+    # Grade-6 Unit 7: index 0 (operation) orients toward taking the absolute value of each
+    # deviation; index 1 (magnitude) toward "the typical distance from the mean".
+    KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: (
+        _nudge(
+            KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,
+            "Take the DISTANCE of each value from the mean — distances are never negative.",
+        ),
+        _nudge(
+            KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,
+            "The MAD is the typical distance from the mean — find the mean, then average the gaps.",
+        ),
+        _nudge(
+            KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,
+            "If your deviations cancelled to zero, you skipped the absolute value — distances add.",
+        ),
+    ),
 }
 
 
