@@ -704,6 +704,26 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.NUMBER_SETS,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 4: parts of an expression (6.EE.2b) ───
+    # Name the coefficient, the constant, or the term count — a single number in the NUMERIC editor.
+    # Practice-only today (scheduler lives only on SYMBOLIC, the only answer surface; there is no
+    # second concrete widget for naming a part), so the probe never fires. The one error route is
+    # SYMBOLIC — the live answer surface — so "re-try on the same surface with a labeled hint" is
+    # the honest adaptation. The OPERATION route names the coefficient↔constant confusion directly.
+    _spec(
+        _KC.EXPRESSION_PARTS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "The coefficient multiplies the variable; the constant stands alone — name the "
+                "part that was asked.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

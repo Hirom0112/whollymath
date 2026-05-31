@@ -1665,6 +1665,81 @@ def _generate_classify_number_sets(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+
+# Expression-parts item modes (the operand flag the verifier reads; it never sees the statement):
+# 0 = name the COEFFICIENT, 1 = name the CONSTANT, 2 = count the TERMS. Single source of truth.
+_MODE_COEFFICIENT = 0
+_MODE_CONSTANT = 1
+_MODE_TERM_COUNT = 2
+
+# Coefficient / constant pools for "parts of an expression" items by difficulty tier (the easy→hard
+# ramp; CP.B). Higher tiers use larger numbers. The two are drawn so coefficient != constant (the
+# generator resamples), keeping the coefficient↔constant swap always diagnostic.
+_PARTS_NUMBER_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4, 5),
+    2: (4, 5, 6, 7, 8),
+    3: (6, 7, 8, 9, 10, 12),
+    4: (9, 11, 12, 15, 18, 20),
+}
+_PARTS_NUMBER_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8, 9, 10, 12)
+
+
+def _generate_expression_parts(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_expression_parts: name a part of an algebraic expression; a single number is the answer.
+
+    An item-mode flag (sampled by the seeded RNG) varies which part is asked: the COEFFICIENT of
+    the variable, the CONSTANT term, or the number of TERMS. The expression is built as
+    ``{coefficient}x + {constant}`` (two terms); a term-count item may add a second variable term
+    ``+ {k}y`` so the count is 2 or 3. The coefficient and constant are drawn distinct (resampled),
+    so the coefficient↔constant swap is always diagnostic. ``operands = (mode, coefficient,
+    constant)`` so the verifier can replay the part-confusion misconception without seeing the
+    statement. The answer is a single whole number (the part's value), entered in the NUMERIC
+    editor; ``difficulty`` widens the coefficient/constant pool.
+    """
+    pool = (
+        _PARTS_NUMBER_BY_DIFFICULTY.get(difficulty, _PARTS_NUMBER_POOL)
+        if difficulty
+        else _PARTS_NUMBER_POOL
+    )
+    coefficient = rng.choice(pool)
+    constant = rng.choice(pool)
+    while constant == coefficient:  # keep the two parts distinct so the swap is diagnostic
+        constant = rng.choice(pool)
+    mode = rng.choice((_MODE_COEFFICIENT, _MODE_CONSTANT, _MODE_TERM_COUNT))
+
+    if mode == _MODE_TERM_COUNT:
+        # Two or three terms: optionally a second variable term so the count varies.
+        add_second_variable = rng.random() < 0.5
+        second_coefficient = rng.choice(pool)
+        if add_second_variable:
+            expression = f"{coefficient}x + {constant} + {second_coefficient}y"
+            term_count = 3
+        else:
+            expression = f"{coefficient}x + {constant}"
+            term_count = 2
+        statement = f"How many terms are in the expression {expression}?"
+        answer = term_count
+    elif mode == _MODE_COEFFICIENT:
+        statement = f"What is the coefficient of x in {coefficient}x + {constant}?"
+        answer = coefficient
+    else:  # _MODE_CONSTANT
+        statement = f"What is the constant term in {coefficient}x + {constant}?"
+        answer = constant
+
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.EXPRESSION_PARTS, seed, surface_format),
+        kc=KnowledgeComponentId.EXPRESSION_PARTS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(answer),
+        representations_available=get_kc(KnowledgeComponentId.EXPRESSION_PARTS).representations,
+        operands=(Rational(mode), Rational(coefficient), Rational(constant)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1693,6 +1768,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.INEQUALITIES: _generate_inequalities,
     KnowledgeComponentId.COORDINATE_PLANE: _generate_coordinate_plane,
     KnowledgeComponentId.CLASSIFY_NUMBER_SETS: _generate_classify_number_sets,
+    KnowledgeComponentId.EXPRESSION_PARTS: _generate_expression_parts,
 }
 
 

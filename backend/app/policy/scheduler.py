@@ -127,6 +127,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # surface state. PRACTICE-ONLY (one live rep); a second masterable surface (e.g. a Venn-diagram
     # placement widget) would be added here when its widget lands.
     _KC.CLASSIFY_NUMBER_SETS: (_REP.NUMBER_SETS,),
+    # Grade-6 Unit 4: SYMBOLIC = the single whole number (coefficient / constant / term-count)
+    # entered in the existing NUMERIC editor. Live on SYMBOLIC — its only answer surface;
+    # WORD_PROBLEM is the phrase framing with no surface state. PRACTICE-ONLY (one live rep); there
+    # is no second concrete widget for naming a part, so SYMBOLIC stays the only live surface.
+    _KC.EXPRESSION_PARTS: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

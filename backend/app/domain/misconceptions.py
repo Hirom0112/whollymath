@@ -136,6 +136,10 @@ class MisconceptionId(StrEnum):
     # integer is also a rational number (it can be written as a fraction over 1), so the learner
     # drops "rational" from an integer's set (-3 marked {integer} instead of {integer, rational}).
     INTEGER_NOT_RATIONAL = "integer-not-rational"
+    # Unit 4 (6.EE.2b): confusing the parts of an expression — naming the CONSTANT when the
+    # COEFFICIENT was asked (4 instead of 7 for "coefficient of x in 7x + 4"), or the coefficient
+    # when the constant was asked. The two prominent numbers are swapped.
+    PART_CONFUSION = "part-confusion"
 
 
 @dataclass(frozen=True)
@@ -469,6 +473,19 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "non-integer rational is already rational-only — there is no integer label to keep)."
         ),
         applicable_kcs=(KnowledgeComponentId.CLASSIFY_NUMBER_SETS,),
+    ),
+    Misconception(
+        id=MisconceptionId.PART_CONFUSION,
+        name="Confuses coefficient and constant",
+        description=(
+            "Confuses the parts of an expression — names the CONSTANT when the COEFFICIENT was "
+            "asked, or the coefficient when the constant was asked. 'The coefficient of x in "
+            "7x + 4' answered as 4 (the constant) instead of 7, or the constant of 6x + 9 "
+            "answered as 6 (the coefficient) instead of 9. The two prominent numbers are swapped: "
+            "the learner reads the wrong part of the expression. Does not apply to a term-count "
+            "question, which has no coefficient/constant to swap."
+        ),
+        applicable_kcs=(KnowledgeComponentId.EXPRESSION_PARTS,),
     ),
 )
 
@@ -806,6 +823,33 @@ def inverse_operation_error(operands: tuple[Rational, ...]) -> Rational | None:
     if mode == 1:  # p*x = q  ->  subtracted p instead of dividing by it
         return q - p
     return None
+
+
+def confuse_coefficient_with_constant(operands: tuple[Rational, ...]) -> Rational | None:
+    """part-confusion: name the wrong number when asked for a part of an expression (6.EE.2b).
+
+    The expression-parts generator encodes an item as ``(mode, coefficient, constant)``: mode 0
+    asks for the COEFFICIENT (correct = ``coefficient``), mode 1 asks for the CONSTANT (correct =
+    ``constant``), mode 2 asks the TERM COUNT (no coefficient/constant to confuse). The learner who
+    makes this error swaps the two prominent numbers:
+
+    - coefficient asked (mode 0): answers the CONSTANT — 4 instead of 7 for "coefficient of x in
+      7x + 4";
+    - constant asked (mode 1): answers the COEFFICIENT — 6 instead of 9 for "constant of 6x + 9".
+
+    Returned as a SymPy ``Rational`` so the verifier compares values directly. The generator keeps
+    ``coefficient != constant``, so the swapped value always differs from the correct answer (the
+    match is diagnostic). Returns ``None`` for the term-count mode — the swap does not apply — and
+    for an unexpected operand shape (defensive; the verifier then reports OTHER, not a false match).
+    """
+    if len(operands) != 3:
+        return None
+    mode, coefficient, constant = operands
+    if mode == 0:  # coefficient asked -> answered the constant
+        return constant
+    if mode == 1:  # constant asked -> answered the coefficient
+        return coefficient
+    return None  # term-count: no coefficient/constant to swap
 
 
 def reversed_operands(correct_expression: str | None) -> str | None:

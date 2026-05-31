@@ -498,6 +498,23 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Counting numbers are whole; whole numbers add zero; integers add the negatives.",
         ),
     ),
+    # Grade-6 Unit 4 (6.EE.2b): index 0 (operation) orients toward which part is being named; the
+    # rest separate the coefficient (the number multiplying the variable) from the constant (the
+    # number on its own) and the terms (the parts joined by + or -).
+    KnowledgeComponentId.EXPRESSION_PARTS: (
+        _nudge(
+            KnowledgeComponentId.EXPRESSION_PARTS,
+            "Read which part is asked — the coefficient, the constant, or how many terms.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EXPRESSION_PARTS,
+            "The coefficient is the number multiplying a variable; the constant stands on its own.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EXPRESSION_PARTS,
+            "Terms are the parts joined by plus or minus signs — count those to find how many.",
+        ),
+    ),
 }
 
 

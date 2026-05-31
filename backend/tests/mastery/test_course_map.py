@@ -54,7 +54,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4 (built 2026-05-30)
         KC.INEQUALITIES,  # Grade-6 Unit 5 (built 2026-05-30)
         KC.COORDINATE_PLANE,  # Grade-6 Unit 3 (built 2026-05-30)
-        KC.CLASSIFY_NUMBER_SETS,  # Grade-6 Unit 3 (TEKS 6.2A, built 2026-05-30), last on the spine
+        KC.CLASSIFY_NUMBER_SETS,  # Grade-6 Unit 3 (TEKS 6.2A, built 2026-05-30)
+        KC.EXPRESSION_PARTS,  # Grade-6 Unit 4 (6.EE.2b, built 2026-05-30), last on the spine
     ]
 
 

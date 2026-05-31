@@ -120,6 +120,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # (Matches its REMEDIATION_ROUTING drop, which is also SIGNED_NUMBERS — both point at the same
     # live prerequisite.)
     _KC.CLASSIFY_NUMBER_SETS: frozenset({_KC.SIGNED_NUMBERS}),
+    # Grade-6 Unit 4: naming the parts of an expression (coefficient/constant/terms) rests on being
+    # able to read/write an algebraic expression in the first place, so it forward-unlocks on
+    # KC_write_expressions — the live Unit-4 prerequisite directly upstream (matching how the other
+    # Unit-4 KCs, EVALUATE_EXPRESSIONS and EQUIVALENT_EXPRESSIONS, are wired).
+    _KC.EXPRESSION_PARTS: frozenset({_KC.WRITE_EXPRESSIONS}),
 }
 
 
@@ -154,6 +159,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.INEQUALITIES,  # Grade-6 Unit 5: write inequalities, on write expressions
     _KC.COORDINATE_PLANE,  # Grade-6 Unit 3: plot points in the plane, on number-line placement
     _KC.CLASSIFY_NUMBER_SETS,  # Grade-6 Unit 3 (TEKS 6.2A): classify number sets, on signed numbers
+    _KC.EXPRESSION_PARTS,  # Grade-6 Unit 4: name parts of an expression, on write expressions
 )
 
 

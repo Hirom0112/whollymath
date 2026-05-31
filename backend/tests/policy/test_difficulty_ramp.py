@@ -73,6 +73,10 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # fractions), not a fraction-size ramp — the difficulty widens the value RANGE, not a
             # denominator pool.
             KnowledgeComponentId.CLASSIFY_NUMBER_SETS,
+            # expression-parts operands are (mode, coefficient, constant) — all whole numbers
+            # (denominator 1); the difficulty widens the coefficient/constant pool, not a
+            # fraction-denominator pool.
+            KnowledgeComponentId.EXPRESSION_PARTS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

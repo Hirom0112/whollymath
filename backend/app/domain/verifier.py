@@ -55,6 +55,7 @@ from app.domain.misconceptions import (
     add_across,
     add_magnitudes_ignoring_sign,
     additive_ratio,
+    confuse_coefficient_with_constant,
     decimal_point_misplacement,
     distributive_error,
     evaluate_left_to_right,
@@ -765,6 +766,19 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.INVERSE_OPERATION_ERROR,
         predict=inverse_operation_error,
+    ),
+    # part-confusion: named the wrong part of an expression — the CONSTANT when the COEFFICIENT was
+    # asked (4 instead of 7 for "coefficient of x in 7x + 4"), or the coefficient when the constant
+    # was asked. Operands are (mode, coefficient, constant); the predictor returns None for the
+    # term-count mode (no swap), so it never fires there. A wrong OPERATION — the learner read the
+    # wrong part, not a magnitude misjudgment. The generator keeps coefficient != constant, so the
+    # swapped value always differs from the correct answer (the match is diagnostic).
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.EXPRESSION_PARTS,
+        operand_count=3,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.PART_CONFUSION,
+        predict=confuse_coefficient_with_constant,
     ),
 )
 

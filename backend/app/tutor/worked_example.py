@@ -993,6 +993,72 @@ def _classify_number_sets_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _expression_parts_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'name the part of the expression' steps for an expression-parts item (Unit 4, 6.EE.2b).
+
+    ``operands = (mode, coefficient, constant)``; mode 0 names the coefficient, 1 the constant, 2
+    the term count. The final step lands on ``problem.correct_value`` (the part's value). Raises if
+    the operands are missing/malformed (CLAUDE.md §8.5)."""
+    operands = problem.operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"expression-parts problem {problem.problem_id} needs (mode, c, k)")
+    mode = int(operands[0])
+    answer = problem.correct_value
+    if mode == 0:  # coefficient
+        return (
+            WorkedStep(
+                shown="A coefficient is the number multiplying a variable — find the x term.",
+                why_prompt="Why is the coefficient the number attached to the variable?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown="Read the number written in front of x (not the number standing alone).",
+                why_prompt="Why is the constant — the number on its own — NOT the coefficient?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"So the coefficient is {answer.p}.",
+                why_prompt="Why does the coefficient tell you how many of the variable you have?",
+                revealed_value=answer,
+            ),
+        )
+    if mode == 1:  # constant
+        return (
+            WorkedStep(
+                shown="A constant term is a number on its own — no variable attached to it.",
+                why_prompt="Why is the constant the term with no variable?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown="Find the number standing alone (not the one multiplying x).",
+                why_prompt="Why is the number in front of x NOT the constant?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"So the constant term is {answer.p}.",
+                why_prompt="Why does the constant stay the same no matter what the variable is?",
+                revealed_value=answer,
+            ),
+        )
+    return (  # mode 2: term count
+        WorkedStep(
+            shown="Terms are the parts of the expression joined by + or - signs.",
+            why_prompt="Why do the plus and minus signs separate one term from the next?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Count each part: every variable piece and every standalone number is one term.",
+            why_prompt="Why does each piece between the signs count as a single term?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So the expression has {answer.p} terms.",
+            why_prompt="Why does counting the terms not depend on the values of the variables?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -1076,6 +1142,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.INEQUALITIES: _inequality_steps,
     KnowledgeComponentId.COORDINATE_PLANE: _coordinate_plane_steps,
     KnowledgeComponentId.CLASSIFY_NUMBER_SETS: _classify_number_sets_steps,
+    KnowledgeComponentId.EXPRESSION_PARTS: _expression_parts_steps,
 }
 
 

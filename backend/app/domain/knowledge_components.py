@@ -549,6 +549,26 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.NUMBER_SETS, Representation.WORD_PROBLEM),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
+    # Parts of an expression (6.EE.2b): name the COEFFICIENT, the CONSTANT, or the number of TERMS
+    # of an algebraic expression (e.g. "the coefficient of x in 7x + 4" is 7). An item-mode flag
+    # varies which part is asked. The answer is a single whole number entered in the existing
+    # NUMERIC editor (reuses the editor, NO new widget), so the live answer surface is SYMBOLIC.
+    # Advertises SYMBOLIC + WORD_PROBLEM (the ≥2-rep contract; WORD_PROBLEM is just the phrase
+    # framing with no surface state), LIVE only on SYMBOLIC (scheduler._LIVE_REPRESENTATIONS) —
+    # PRACTICE-ONLY, like the other numeric Grade-6 KCs (unit_rate, unit_conversion). There is no
+    # second CONCRETE answer widget for naming a part, so SYMBOLIC stays the only live surface
+    # (kept honest per the build brief — error routes never target WORD_PROBLEM).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.EXPRESSION_PARTS,
+        skill_name="Identify parts of an expression",
+        description=(
+            "Name a part of an algebraic expression — the coefficient of a variable, the constant "
+            "term, or how many terms it has (in 7x + 4, the coefficient of x is 7, the constant "
+            "is 4, and there are 2 terms)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
 )
 
 
