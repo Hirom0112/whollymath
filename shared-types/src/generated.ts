@@ -171,13 +171,21 @@ export type KnowledgeComponentId1 =
  */
 export type CourseNodeStatus1 = "locked" | "available" | "in_progress" | "mastered" | "due_review";
 /**
- * Representation to render (§3.5).
+ * Representation to render (§3.5): symbolic, area_model, number_line, word_problem, expression, inequality, coordinate_plane, or number_sets.
  */
-export type Representation = "symbolic" | "area_model" | "number_line" | "word_problem" | "expression";
+export type Representation =
+  | "symbolic"
+  | "area_model"
+  | "number_line"
+  | "word_problem"
+  | "expression"
+  | "inequality"
+  | "coordinate_plane"
+  | "number_sets";
 /**
- * How to answer: a numeric fraction (default), yes/no buttons, or a typed expression.
+ * How to answer: a numeric fraction (default), yes/no buttons, a typed expression, a typed inequality, plotted coordinate points, or selected number sets.
  */
-export type AnswerKind = "numeric" | "yes_no" | "expression";
+export type AnswerKind = "numeric" | "yes_no" | "expression" | "inequality" | "coordinate" | "number_sets";
 /**
  * The starting surface state (S1, §7).
  */

@@ -15,8 +15,12 @@ import {
 import { Mascot, PiMenu, SparkCount, WoodBanner, type PiMenuItem } from '../components';
 import { useTelemetry } from '../telemetry';
 import {
+  ClassifySets,
+  CoordinatePlane,
   ExpressionInput,
   fractionToAnswer,
+  InequalityInput,
+  isCompleteInequality,
   NumberEntry,
   NumberLine,
   selectWidget,
@@ -141,7 +145,15 @@ type Phase = 'answering' | 'submitting' | 'feedback';
 
 // Which input the learner edited — distinguishes a number-line drag from a typed answer in
 // the behavioral stream (Slice PL.2).
-type TelemetryEditKind = 'fraction' | 'numberline' | 'yesno' | 'number' | 'expression';
+type TelemetryEditKind =
+  | 'fraction'
+  | 'numberline'
+  | 'yesno'
+  | 'number'
+  | 'expression'
+  | 'inequality'
+  | 'coordinate'
+  | 'number_sets';
 
 // The one-line reason shown when the surface changes between problems (refuse-rule 4: never
 // present a new state without saying why). The labeled morph is the centerpiece of the
@@ -242,6 +254,12 @@ export function Tutor({
   // The typed algebra string for an expression-answer item (write/equivalent expressions). Graded
   // by SymPy equivalence on the backend (§8.2); the surface only keeps it SymPy-parseable.
   const [expression, setExpression] = useState('');
+  // The composed inequality string ("x>=5"), the plotted-points string ("(2,-1)" / a polygon vertex
+  // list), and the comma-joined number-set labels ("integer,rational") for the three widget-id-routed
+  // answers. Each is a plain answer string the backend grades (§8.2); the surface only composes it.
+  const [inequality, setInequality] = useState('');
+  const [coordinate, setCoordinate] = useState('');
+  const [numberSets, setNumberSets] = useState('');
   const [phase, setPhase] = useState<Phase>('answering');
   const [result, setResult] = useState<TurnResponse | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -366,6 +384,9 @@ export function Tutor({
   const isYesNo = widgetKind === 'yes_no';
   const isNumberEntry = widgetKind === 'number_entry';
   const isExpression = widgetKind === 'expression';
+  const isInequality = widgetKind === 'inequality';
+  const isCoordinate = widgetKind === 'coordinate_plane';
+  const isClassifySets = widgetKind === 'classify_sets';
 
   // Number-line axis (CP.B / 6.NS.6): proper targets sit on 0–1, improper stretch the right
   // end (5/4 → 0–2), negatives the left (−3/4 → −1…1). `unitSegments` is ticks-per-whole (the
@@ -395,6 +416,22 @@ export function Tutor({
     // The typed algebra string; SymPy grades it by equivalence, so we only require non-empty here.
     submittedAnswer = expression;
     canSubmit = expression.trim() !== '';
+  } else if (isInequality) {
+    // The composed inequality string ("x>=5"). The widget persists a relation-only partial ("x>")
+    // so the picked button sticks, so we gate submit on COMPLETENESS (a relation AND a real
+    // boundary), not mere non-emptiness. SymPy grades the complete inequality (§8.2).
+    submittedAnswer = inequality;
+    canSubmit = isCompleteInequality(inequality, 'x');
+  } else if (isCoordinate) {
+    // The plotted-points string; "" until at least one point is placed. The backend grades it by
+    // point-set equality (order-insensitive — §8.2).
+    submittedAnswer = coordinate;
+    canSubmit = coordinate !== '';
+  } else if (isClassifySets) {
+    // The comma-joined number-set labels; "" until at least one set is selected. The backend grades
+    // it by set membership (§8.2).
+    submittedAnswer = numberSets;
+    canSubmit = numberSets !== '';
   } else {
     submittedAnswer = fractionToAnswer(fraction);
     canSubmit = submittedAnswer !== '';
@@ -539,6 +576,9 @@ export function Tutor({
     setYesNo(null);
     setNumberAnswer('');
     setExpression('');
+    setInequality('');
+    setCoordinate('');
+    setNumberSets('');
     setHint(null);
     setHintUsed(false);
     setRevealCount(1);
@@ -748,6 +788,35 @@ export function Tutor({
                   }}
                   disabled={phase === 'submitting'}
                   prompt="Write the expression"
+                />
+              ) : isInequality ? (
+                <InequalityInput
+                  value={inequality}
+                  onChange={(v) => {
+                    setInequality(v);
+                    noteInteraction('inequality', { value: v });
+                  }}
+                  disabled={phase === 'submitting'}
+                  prompt="Build the inequality"
+                />
+              ) : isCoordinate ? (
+                <CoordinatePlane
+                  value={coordinate}
+                  onChange={(v) => {
+                    setCoordinate(v);
+                    noteInteraction('coordinate', { value: v });
+                  }}
+                  disabled={phase === 'submitting'}
+                />
+              ) : isClassifySets ? (
+                <ClassifySets
+                  value={numberSets}
+                  onChange={(v) => {
+                    setNumberSets(v);
+                    noteInteraction('number_sets', { value: v });
+                  }}
+                  disabled={phase === 'submitting'}
+                  prompt="Which sets does it belong to?"
                 />
               ) : (
                 <SymbolicEditor

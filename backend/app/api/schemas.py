@@ -183,7 +183,12 @@ class ProblemView(BaseModel):
 
     problem_id: str = Field(min_length=1, description="Stable id; echoed on the next turn.")
     kc: KnowledgeComponentId
-    surface_format: Representation = Field(description="Representation to render (§3.5).")
+    surface_format: Representation = Field(
+        description=(
+            "Representation to render (§3.5): symbolic, area_model, number_line, word_problem, "
+            "expression, inequality, coordinate_plane, or number_sets."
+        )
+    )
     widget_id: str = Field(
         description=(
             "The live workspace widget for this problem's representation, e.g. 'number_line' "
@@ -195,7 +200,8 @@ class ProblemView(BaseModel):
     answer_kind: AnswerKind = Field(
         default=AnswerKind.NUMERIC,
         description=(
-            "How to answer: a numeric fraction (default), yes/no buttons, or a typed expression."
+            "How to answer: a numeric fraction (default), yes/no buttons, a typed expression, a "
+            "typed inequality, plotted coordinate points, or selected number sets."
         ),
     )
     yes_no_relation: str = Field(

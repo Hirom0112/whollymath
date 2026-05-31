@@ -22,6 +22,9 @@ export type WidgetKind =
   | 'yes_no' // YesNo — a relational judgment ("same amount?", "is a > b?")
   | 'number_entry' // NumberEntry — a single whole number (a shared piece-size; §3.4.1)
   | 'expression' // ExpressionInput — a typed algebra string (write/equivalent expressions)
+  | 'inequality' // InequalityInput — a one-variable inequality (relation + boundary; 6.EE.8)
+  | 'coordinate_plane' // CoordinatePlane — plotted integer point(s) (6.NS.8 / 6.EE.9 / 6.G.3)
+  | 'classify_sets' // ClassifySets — the number-set classification (TEKS 6.2A)
   | 'fraction_editor'; // SymbolicEditor — the two-box fraction input (the default)
 
 /** The controlled-input contract every answer widget satisfies (HR.A5). */
@@ -58,6 +61,14 @@ export function selectWidget(problem: ProblemView): WidgetKind {
   // directly — no kc branch. This is the first widget chosen by widget_id, the contract the rest
   // collapse onto once every KC carries an authoritative widget_id.
   if (problem.widget_id === 'expression') return 'expression';
+
+  // The other widget-id-routed answers, on the same authoritative-widget_id contract as expression
+  // above (HR.A5): a one-variable inequality (relation + boundary), plotted coordinate point(s) on
+  // the four-quadrant plane, and the nested number-set classification. Each is a plain answer string
+  // the backend grades (SymPy relational equivalence / point-set equality / set membership — §8.2).
+  if (problem.widget_id === 'inequality') return 'inequality';
+  if (problem.widget_id === 'coordinate_plane') return 'coordinate_plane';
+  if (problem.widget_id === 'classify_sets') return 'classify_sets';
 
   // A number-line surface with snap intervals → the draggable marker (placement, or an arithmetic
   // result that lands on the line).

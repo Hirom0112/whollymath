@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { inequalityToAnswer, InequalityInput } from './InequalityInput';
+import { inequalityToAnswer, InequalityInput, isCompleteInequality } from './InequalityInput';
 
 // InequalityInput is the one-variable inequality widget (Unit 4-5). It is a controlled
 // WorkspaceWidgetProps<string> built AHEAD of the backend inequality contract, so these tests drive
@@ -16,10 +16,24 @@ describe('inequalityToAnswer', () => {
     expect(inequalityToAnswer('x', '<=', '-2')).toBe('x<=-2');
   });
 
-  it('returns "" when the inequality is incomplete (no relation, or no/again "-" number)', () => {
+  it('collapses to "" only with no relation (the number has no anchor without one)', () => {
     expect(inequalityToAnswer('x', null, '3')).toBe('');
-    expect(inequalityToAnswer('x', '>', '')).toBe('');
-    expect(inequalityToAnswer('x', '>', '-')).toBe('');
+  });
+
+  it('persists a relation-only partial so the picked button sticks in a controlled flow', () => {
+    // A relation with no (or a lone "-") boundary round-trips as "x>" — incomplete but selectable.
+    expect(inequalityToAnswer('x', '>', '')).toBe('x>');
+    expect(inequalityToAnswer('x', '>', '-')).toBe('x>');
+  });
+});
+
+describe('isCompleteInequality', () => {
+  it('is true only with both a relation and a real numeric boundary', () => {
+    expect(isCompleteInequality('x>3', 'x')).toBe(true);
+    expect(isCompleteInequality('x<=-2', 'x')).toBe(true);
+    // A relation-only partial or a lone "-" boundary is NOT submittable.
+    expect(isCompleteInequality('x>', 'x')).toBe(false);
+    expect(isCompleteInequality('', 'x')).toBe(false);
   });
 });
 
@@ -37,9 +51,10 @@ describe('InequalityInput', () => {
     const onChange = vi.fn();
     const { rerender } = render(<InequalityInput value="" onChange={onChange} />);
 
-    // Picking ">" alone has no number yet, so the answer is still incomplete ("").
+    // Picking ">" persists the relation-only partial "x>" so the button sticks across the
+    // controlled rerender (incomplete until a boundary is typed).
     fireEvent.click(screen.getByRole('radio', { name: /^greater than$/i }));
-    expect(onChange).toHaveBeenLastCalledWith('');
+    expect(onChange).toHaveBeenLastCalledWith('x>');
 
     // With the relation now in the value, typing 3 completes "x>3".
     rerender(<InequalityInput value="x>" onChange={onChange} />);
@@ -80,8 +95,8 @@ describe('InequalityInput', () => {
     render(<InequalityInput value="" onChange={onChange} variable="n" />);
     expect(screen.getByLabelText(/variable n/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('radio', { name: /^greater than$/i }));
-    // No number yet -> incomplete.
-    expect(onChange).toHaveBeenLastCalledWith('');
+    // No number yet -> the relation-only partial "n>" persists (incomplete, but the button sticks).
+    expect(onChange).toHaveBeenLastCalledWith('n>');
   });
 
   it('does not change when disabled', () => {

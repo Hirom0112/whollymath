@@ -40,6 +40,57 @@ const EXPR_SESSION: StartSessionResponse = {
   },
 };
 
+// An inequality-answer session (KC_inequalities, 6.EE.8): the backend derives widget_id
+// "inequality" from the INEQUALITY representation, so selectWidget routes it to the structured
+// InequalityInput (relation buttons + a boundary field), not the fraction editor. Pins the
+// inequality widget is wired live end-to-end (the composed "x>=5" string reaches /turn).
+const INEQ_SESSION: StartSessionResponse = {
+  session_id: 'sess-ineq',
+  surface_state: 'S1_symbolic_focus',
+  problem: {
+    problem_id: 'gen-ineq-1',
+    kc: 'KC_inequalities',
+    surface_format: 'inequality',
+    statement: 'Write an inequality for "x is at least 5".',
+    answer_kind: 'inequality',
+    widget_id: 'inequality',
+  },
+};
+
+// A coordinate-answer session (KC_coordinate_plane, 6.NS.8): the backend derives widget_id
+// "coordinate_plane" from the COORDINATE_PLANE representation, so selectWidget routes it to the
+// CoordinatePlane plotter, not the fraction editor. Pins the coordinate widget is wired live
+// end-to-end (the plotted-point string reaches /turn for point-set grading).
+const COORD_SESSION: StartSessionResponse = {
+  session_id: 'sess-coord',
+  surface_state: 'S1_symbolic_focus',
+  problem: {
+    problem_id: 'gen-coord-1',
+    kc: 'KC_coordinate_plane',
+    surface_format: 'coordinate_plane',
+    statement: 'Plot the point (0, 0).',
+    answer_kind: 'coordinate',
+    widget_id: 'coordinate_plane',
+  },
+};
+
+// A number-set-classification session (KC_classify_number_sets, TEKS 6.2A): the backend derives
+// widget_id "classify_sets" from the NUMBER_SETS representation, so selectWidget routes it to the
+// ClassifySets widget, not the fraction editor. Pins the classify widget is wired live end-to-end
+// (the comma-joined set-label string reaches /turn for set-membership grading).
+const SETS_SESSION: StartSessionResponse = {
+  session_id: 'sess-sets',
+  surface_state: 'S1_symbolic_focus',
+  problem: {
+    problem_id: 'gen-sets-1',
+    kc: 'KC_classify_number_sets',
+    surface_format: 'number_sets',
+    statement: 'Which sets does 5 belong to?',
+    answer_kind: 'number_sets',
+    widget_id: 'classify_sets',
+  },
+};
+
 const CORRECT_TURN: TurnResponse = {
   correct: true,
   error_type: 'none',
@@ -181,6 +232,76 @@ describe('Tutor', () => {
     expect(turnCall).toBeDefined();
     const turnBody = JSON.parse(String(turnCall?.[1]?.body)) as Record<string, unknown>;
     expect(turnBody).toMatchObject({ submitted_answer: 'p + 7', action: 'submit_answer' });
+  });
+
+  it('renders the inequality widget and submits the composed string through /turn', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(CORRECT_TURN)));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<Tutor session={INEQ_SESSION} />);
+
+    // An inequality problem routes to InequalityInput (relation buttons + a boundary field), NOT
+    // the numerator/denominator fraction editor.
+    expect(screen.queryByLabelText(/numerator/i)).not.toBeInTheDocument();
+    // Pick "≥" then type the boundary 5 → the widget composes "x>=5".
+    fireEvent.click(screen.getByRole('radio', { name: /greater than or equal to/i }));
+    fireEvent.change(screen.getByLabelText(/boundary number/i), { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+
+    expect(await screen.findByText(/correct/i)).toBeInTheDocument();
+    // The composed string reaches /turn unchanged — SymPy grades relational equivalence (§8.2).
+    const calls = fetchMock.mock.calls as unknown as [string, RequestInit?][];
+    const turnCall = calls.find((c) => c[0] === '/turn');
+    expect(turnCall).toBeDefined();
+    const turnBody = JSON.parse(String(turnCall?.[1]?.body)) as Record<string, unknown>;
+    expect(turnBody).toMatchObject({ submitted_answer: 'x>=5', action: 'submit_answer' });
+  });
+
+  it('renders the coordinate-plane widget and submits the plotted point through /turn', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(CORRECT_TURN)));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<Tutor session={COORD_SESSION} />);
+
+    // A coordinate problem routes to CoordinatePlane (the grid plotter), NOT the fraction editor.
+    expect(screen.queryByLabelText(/numerator/i)).not.toBeInTheDocument();
+    // Place the origin via the keyboard cursor (which starts at (0,0)): focus the grid, press Enter.
+    const grid = screen.getByRole('application', { name: /coordinate plane/i });
+    fireEvent.focus(grid);
+    fireEvent.keyDown(grid, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+
+    expect(await screen.findByText(/correct/i)).toBeInTheDocument();
+    // The plotted-point string reaches /turn unchanged — the backend grades by point-set (§8.2).
+    const calls = fetchMock.mock.calls as unknown as [string, RequestInit?][];
+    const turnCall = calls.find((c) => c[0] === '/turn');
+    expect(turnCall).toBeDefined();
+    const turnBody = JSON.parse(String(turnCall?.[1]?.body)) as Record<string, unknown>;
+    expect(turnBody).toMatchObject({ submitted_answer: '(0,0)', action: 'submit_answer' });
+  });
+
+  it('renders the classify-sets widget and submits the selected sets through /turn', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(CORRECT_TURN)));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<Tutor session={SETS_SESSION} />);
+
+    // A classification problem routes to ClassifySets (the nested set regions), NOT the fraction
+    // editor.
+    expect(screen.queryByLabelText(/numerator/i)).not.toBeInTheDocument();
+    // 5 is a whole number → it belongs to all three nested sets. Toggle each region on.
+    fireEvent.click(screen.getByRole('checkbox', { name: /^whole$/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /^integers$/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /^rational$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /check it/i }));
+
+    expect(await screen.findByText(/correct/i)).toBeInTheDocument();
+    // The canonical (small→large) comma-joined string reaches /turn — graded by set membership (§8.2).
+    const calls = fetchMock.mock.calls as unknown as [string, RequestInit?][];
+    const turnCall = calls.find((c) => c[0] === '/turn');
+    expect(turnCall).toBeDefined();
+    const turnBody = JSON.parse(String(turnCall?.[1]?.body)) as Record<string, unknown>;
+    expect(turnBody).toMatchObject({
+      submitted_answer: 'whole,integer,rational',
+      action: 'submit_answer',
+    });
   });
 
   it('requesting a hint surfaces the nudge (mascot speech) without advancing', async () => {

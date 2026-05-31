@@ -70,11 +70,25 @@ function numberOf(value: string, variable: string): string {
   return value.slice(variable.length + op.length);
 }
 
-/** Compose the answer string from its parts, or "" when incomplete (no relation, or no number). The
- * "n/d"-style empty contract the other widgets use, so the parent's canSubmit reads the same way. */
+/** Compose the controlled value from its parts. Persists a PARTIAL once a RELATION is picked so the
+ * widget can be built up incrementally in a controlled flow: a relation alone round-trips as "x>"
+ * (so the picked button stays selected after onChange→rerender), and the boundary fills it to "x>3"
+ * — `relationOf`/`numberOf` read either back. Without a relation there is no anchor for the number
+ * (the value must start with the variable), so a number-only state collapses to "". Completeness
+ * (a relation AND a real number) is the parent's submit gate via {@link isCompleteInequality}; the
+ * SymPy verifier still judges correctness (§8.2). */
 export function inequalityToAnswer(variable: string, op: string | null, num: string): string {
-  if (op === null || num === '' || num === '-') return '';
-  return `${variable}${op}${num}`;
+  if (op === null) return '';
+  const boundary = num === '-' ? '' : num;
+  return `${variable}${op}${boundary}`;
+}
+
+/** Whether a composed value is a COMPLETE inequality (a relation AND a real numeric boundary) — the
+ * parent's submit gate, so a relation-only "x>" partial cannot be submitted. */
+export function isCompleteInequality(value: string, variable: string): boolean {
+  const op = relationOf(value, variable);
+  const num = numberOf(value, variable);
+  return op !== null && num !== '' && num !== '-';
 }
 
 export function InequalityInput({
