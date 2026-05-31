@@ -83,6 +83,7 @@ from app.domain.misconceptions import (
     subtract_across,
     swap_coordinates,
     triangle_formula_error,
+    unsorted_middle,
 )
 from app.domain.problem_generators import AnswerKind, Problem
 
@@ -594,10 +595,10 @@ class _WrongAnswerModel:
 
     kc: KnowledgeComponentId
     # The exact operand arity this model matches, or ``None`` to match ANY arity. ``None`` is for
-    # VARIABLE-LENGTH operand KCs (e.g. KC_mean_absolute_deviation and KC_center_spread_shape, whose
-    # operands carry a data set, optionally behind a leading mode flag): the predictor reads the
-    # whole tuple and the KC alone disambiguates the model. A fixed int (the common case) keeps a
-    # model from firing on a wrong-shaped problem of that KC.
+    # VARIABLE-LENGTH operand KCs (e.g. KC_mean_absolute_deviation, KC_center_spread_shape, and
+    # KC_summary_statistics, whose operands carry a data set, optionally behind a leading mode
+    # flag): the predictor reads the whole tuple and the KC alone disambiguates the model. A fixed
+    # int (the common case) keeps a model from firing on a wrong-shaped problem of that KC.
     operand_count: int | None
     error_category: ErrorCategory
     misconception: MisconceptionId
@@ -888,6 +889,19 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.RANGE_AS_SUM,
         predict=lambda ops: range_as_sum(ops[1:]) if int(ops[0]) == SPREAD_RANGE else None,
+    ),
+    # median-without-sorting: read the middle of the UNSORTED data instead of sorting first. The
+    # summary-statistics item is VARIABLE-LENGTH — operands are (mode_code, *data) — so this row
+    # uses ``operand_count=None`` to match any arity; the predictor decodes operands[0] and returns
+    # ``None`` for any non-median mode (so it only ever fires on a median item). A wrong OPERATION
+    # (skipped the sort step). The generator emits only median items whose unsorted middle differs
+    # from the sorted median, so a match is diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.SUMMARY_STATISTICS,
+        operand_count=None,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.MEDIAN_WITHOUT_SORTING,
+        predict=unsorted_middle,
     ),
 )
 

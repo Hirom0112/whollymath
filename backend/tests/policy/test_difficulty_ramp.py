@@ -107,6 +107,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # center-spread-shape operands are a mode flag + a whole-number data set (denom 1); the
             # ramp widens the data-set SIZE and value pool, not a fraction-denominator pool.
             KnowledgeComponentId.CENTER_SPREAD_SHAPE,
+            # summary-statistics operands are (mode_code, *data) — all whole numbers (denom 1); the
+            # difficulty widens the data-VALUE pool, not a fraction-denominator pool.
+            KnowledgeComponentId.SUMMARY_STATISTICS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

@@ -168,6 +168,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # number-line placement, the live foundation KC the statistics skill conceptually rests on (its
     # own §11 statistics prereqs are not yet live, matching how the other late-unit KCs are wired).
     _KC.CENTER_SPREAD_SHAPE: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit 7 (6.SP.3): a data set's mean is total ÷ count — whole-number division — so
+    # summary statistics forward-unlocks on KC_multi_digit_division, the live arithmetic skill it
+    # directly builds on (the other statistics — median/mode/range — need only ordering/comparison,
+    # already in hand).
+    _KC.SUMMARY_STATISTICS: frozenset({_KC.MULTI_DIGIT_DIVISION}),
 }
 
 
@@ -212,6 +217,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.SURFACE_AREA_NETS,  # Grade-6 Unit 6 (6.G.4): surface area from a net, on polygon area
     _KC.MEAN_ABSOLUTE_DEVIATION,  # Grade-6 Unit 7 (6.SP.5c): MAD, on absolute value (distances)
     _KC.CENTER_SPREAD_SHAPE,  # Grade-6 Unit 7 (6.SP.2): center & spread, on number-line placement
+    _KC.SUMMARY_STATISTICS,  # Grade-6 Unit 7 (6.SP.3): a data set's summary statistic, on division
 )
 
 

@@ -52,6 +52,7 @@ from sympy import Rational
 
 from app.domain.center_spread import CENTER_MEDIAN, SPREAD_RANGE
 from app.domain.knowledge_components import KnowledgeComponentId
+from app.domain.misconceptions import SUMMARY_STAT_MODE_CODE
 from app.domain.problem_generators import Problem
 
 # ─── The worked-example value types ──────────────────────────────────────────
@@ -771,6 +772,71 @@ def _signed_numbers_steps(problem: Problem) -> tuple[WorkedStep, ...]:
             why_prompt="Why is the opposite of an opposite the number you started with?",
             revealed_value=answer,
         ),
+    )
+
+
+_STAT_NAME_BY_CODE: dict[int, str] = {code: name for name, code in SUMMARY_STAT_MODE_CODE.items()}
+
+
+def _summary_statistics_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The steps for a summary-statistic problem (Grade-6 Unit 7, 6.SP.3).
+
+    ``operands = (mode_code, *data)`` (a leading stat-mode sentinel; see
+    ``SUMMARY_STAT_MODE_CODE``). The narration is statistic-specific (mean / median / mode /
+    range), and the final step lands on ``problem.correct_value``. Raises if the operands are
+    missing or empty (CLAUDE.md §8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) < 2:
+        raise ValueError(
+            f"summary-statistics problem {problem.problem_id} needs (mode_code, *data) operands"
+        )
+    mode = _STAT_NAME_BY_CODE[int(operands[0])]
+    data = [int(v) for v in operands[1:]]
+    answer = problem.correct_value
+    listing = ", ".join(str(v) for v in data)
+    setup, work = _summary_statistic_narration(mode, data)
+    return (
+        WorkedStep(
+            shown=f"To find the {mode}, look at all the values: {listing}.",
+            why_prompt=f"Why does the {mode} summarize the whole data set with one number?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=setup,
+            why_prompt=f"Why is this the right step for the {mode}?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"{work} So the {mode} is {answer}.",
+            why_prompt=f"Why does this give the {mode}?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _summary_statistic_narration(mode: str, data: list[int]) -> tuple[str, str]:
+    """The (setup, work) narration lines for one statistic — kept text-only, no claim to cite."""
+    if mode == "mean":
+        total = sum(data)
+        return (
+            f"Add the values, then divide by how many there are ({len(data)}).",
+            f"The total is {total}, and {total} divided by {len(data)} is the mean.",
+        )
+    if mode == "median":
+        ordered = ", ".join(str(v) for v in sorted(data))
+        return (
+            f"Put the values in order first: {ordered}.",
+            "The median is the value in the middle of the sorted list.",
+        )
+    if mode == "mode":
+        return (
+            "Find the value that appears most often.",
+            "The mode is the value that shows up the most times.",
+        )
+    return (  # range
+        "Find the largest and the smallest value.",
+        f"The range is the largest ({max(data)}) minus the smallest ({min(data)}).",
     )
 
 
@@ -1526,6 +1592,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.SURFACE_AREA_NETS: _surface_area_nets_steps,
     KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: _mean_absolute_deviation_steps,
     KnowledgeComponentId.CENTER_SPREAD_SHAPE: _center_spread_steps,
+    KnowledgeComponentId.SUMMARY_STATISTICS: _summary_statistics_steps,
 }
 
 

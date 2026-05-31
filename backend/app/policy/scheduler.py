@@ -180,6 +180,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # box plot lays Q1/median/Q3 and the extremes on one) is the natural masterable second surface,
     # and its widget exists, so adding it here would promote it — deferred to avoid over-scoping.
     _KC.CENTER_SPREAD_SHAPE: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 7 (6.SP.3): SYMBOLIC = the single statistic entered in the editor. PRACTICE-ONLY
+    # for now; the NUMBER_LINE rep (the data set is points on the line, and center/spread are read
+    # off it) is the natural masterable second surface — its widget already exists — but adding it
+    # here would promote it, deferred to avoid over-scoping this build.
+    _KC.SUMMARY_STATISTICS: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

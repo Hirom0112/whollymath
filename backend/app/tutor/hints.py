@@ -668,6 +668,25 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If a spread came out larger than the biggest value, you added instead of subtracting.",
         ),
     ),
+    # Grade-6 Unit 7: index 0 (operation) orients toward the right procedure for the statistic
+    # asked — and toward sorting before reading the median; index 1 (magnitude) toward a sanity
+    # check on the size of the answer.
+    KnowledgeComponentId.SUMMARY_STATISTICS: (
+        _nudge(
+            KnowledgeComponentId.SUMMARY_STATISTICS,
+            "Match the step to the word: the median is the middle of the SORTED values — "
+            "order them first.",
+        ),
+        _nudge(
+            KnowledgeComponentId.SUMMARY_STATISTICS,
+            "Does the size make sense? The mean lands between the smallest and largest value.",
+        ),
+        _nudge(
+            KnowledgeComponentId.SUMMARY_STATISTICS,
+            "If you read the middle of the list as given, sort the numbers first, then take "
+            "the center.",
+        ),
+    ),
 }
 
 

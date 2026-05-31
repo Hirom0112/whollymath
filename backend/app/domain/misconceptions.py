@@ -168,6 +168,11 @@ class MisconceptionId(StrEnum):
     # Unit 7 (6.SP.2): computing a distribution's RANGE by ADDING the extremes (max + min) instead
     # of subtracting them (max - min) — the wrong operation, so the spread comes out far too large.
     RANGE_AS_SUM = "range-as-sum"
+    # Unit 7 (6.SP.3): finding the median WITHOUT sorting first — reading the middle value of the
+    # data set as it was GIVEN, rather than ordering the values and then taking the center. The
+    # learner knows "median = middle" but skips the sort step, so an unordered list gives the
+    # wrong center.
+    MEDIAN_WITHOUT_SORTING = "median-without-sorting"
 
 
 @dataclass(frozen=True)
@@ -615,6 +620,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         ),
         applicable_kcs=(KnowledgeComponentId.CENTER_SPREAD_SHAPE,),
     ),
+    Misconception(
+        id=MisconceptionId.MEDIAN_WITHOUT_SORTING,
+        name="Takes the middle without sorting first",
+        description=(
+            "Finds the median by reading the middle value of the data set AS GIVEN, skipping the "
+            "ordering step (for 3, 9, 5 answers the middle entry 9 instead of sorting to 3, 5, 9 "
+            "and reading 5). The learner knows 'median = the middle' but forgets that the middle "
+            "is the center of the SORTED list, so an unordered list yields the wrong center."
+        ),
+        applicable_kcs=(KnowledgeComponentId.SUMMARY_STATISTICS,),
+    ),
 )
 
 
@@ -900,6 +916,38 @@ def add_magnitudes_ignoring_sign(a: Rational, b: Rational) -> Rational:
     distinct, wrong value.
     """
     return abs(a) + abs(b)
+
+
+# KC_summary_statistics (6.SP.3) encodes its variable-length item as ``operands = (mode_code,
+# *data)`` — a leading sentinel stat-mode code followed by the data values. This is the canonical
+# code map (problem_generators re-exports it as ``_SUMMARY_STAT_MODE_CODE``); the median
+# misconception below decodes the mode to know when it applies.
+SUMMARY_STAT_MODE_CODE: dict[str, int] = {"mean": 0, "median": 1, "mode": 2, "range": 3}
+
+
+def unsorted_middle(operands: tuple[Rational, ...]) -> Rational | None:
+    """median-without-sorting: read the middle of the UNSORTED data, skipping the sort (6.SP.3).
+
+    The summary-statistics item is encoded as ``operands = (mode_code, *data)`` (a leading stat-mode
+    sentinel; see ``SUMMARY_STAT_MODE_CODE``). This error is median-specific: the learner takes the
+    center of the list AS GIVEN instead of sorting first — for 3, 9, 5 they read the middle entry 9
+    rather than the true median 5 (sorted 3, 5, 9). Returns the middle of the raw (unsorted) data
+    for a MEDIAN item with an odd-length data set (the generator only emits odd-length median items,
+    so "the middle" is a single, unambiguous element). Returns ``None`` for any non-median mode (no
+    median to mis-take) and for an unexpected shape (defensive — the verifier then reports OTHER
+    rather than a false match). Returned as a SymPy ``Rational`` so the verifier compares values
+    directly; whether it differs from the true median depends on the data, so the generator
+    guarantees a diagnostic gap on the median items it exercises (the verifier match is only used
+    when the values actually differ).
+    """
+    if not operands:
+        return None
+    mode_code, *data = operands
+    if mode_code != SUMMARY_STAT_MODE_CODE["median"]:
+        return None
+    if len(data) % 2 == 0 or not data:
+        return None  # the generator emits only odd-length median items; defensive otherwise
+    return data[len(data) // 2]
 
 
 def keep_original_sign(n: Rational) -> Rational:

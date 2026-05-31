@@ -954,6 +954,34 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (6.SP.3) ───
+    # Practice-only today (scheduler lives only on SYMBOLIC), so the probe never fires. Errors
+    # route back to SYMBOLIC — the NUMBER_LINE rep is advertised (the data set is points on the
+    # line) but isn't live yet, so "re-try on the same surface with a labeled hint" is the honest
+    # adaptation until NUMBER_LINE is promoted live (then it becomes the masterable second surface).
+    # The OPERATION route names the median-without-sorting / wrong-procedure error; the MAGNITUDE
+    # route covers a size slip. Probe over SYMBOLIC (the only live rep). NEVER routes to a rep with
+    # no surface.
+    _spec(
+        _KC.SUMMARY_STATISTICS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Match the step to the statistic — and for the median, sort the values first, "
+                "then take the middle.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Check the size: the mean and median land between the smallest and largest "
+                "value — re-check.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

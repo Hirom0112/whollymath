@@ -427,6 +427,24 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics ───
+    # Summary statistics (CCSS 6.SP.3): summarize a small data set with a single number — its
+    # MEAN, MEDIAN, MODE, or RANGE. The answer is one numeric value (a fraction for some means)
+    # entered in the symbolic editor (reuses the editor, NO new widget). Advertises SYMBOLIC +
+    # NUMBER_LINE (the data set is a set of points on the number line, and center/spread are read
+    # off that line — the canonical picture), but LIVE only on SYMBOLIC for now
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like the other Grade-6 KCs. The NUMBER_LINE
+    # widget already exists, so it is the natural candidate to promote to a masterable second rep
+    # later; kept SYMBOLIC-only here to not over-scope this build.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.SUMMARY_STATISTICS,
+        skill_name="Summarize a data set with one number",
+        description=(
+            "Compute a summary statistic of a small data set — its mean, median, mode, or range "
+            "(e.g. the mean of 4, 8, 6, 10 is 7; the range of 2, 7, 4 is 5)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
     # ─── Grade-6 content build (2026-05-30) — Unit 4: Expressions ───
     # Write an algebraic expression from a word phrase (6.EE.2a / 6.EE.B.6): the answer is a typed
     # expression STRING ("p + 7", "3*n"), graded by SymPy equivalence — the FIRST expression-answer

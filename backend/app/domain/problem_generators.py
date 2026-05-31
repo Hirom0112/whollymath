@@ -52,7 +52,13 @@ from app.domain.center_spread import (
     range_spread,
 )
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
-from app.domain.misconceptions import classify_sets_for_value
+from app.domain.misconceptions import SUMMARY_STAT_MODE_CODE, classify_sets_for_value
+
+# KC_summary_statistics (6.SP.3) encodes its variable-length data set as ``operands =
+# (mode_code, *data)`` — a leading stat-mode sentinel followed by the data values. The mode codes
+# live in misconceptions (the median misconception decodes them); re-exported here as the module's
+# public name for the generator and its tests.
+_SUMMARY_STAT_MODE_CODE = SUMMARY_STAT_MODE_CODE
 
 # ─── The shared Problem type ─────────────────────────────────────────────────
 
@@ -1159,6 +1165,111 @@ def _generate_signed_numbers(
         representations_available=get_kc(KnowledgeComponentId.SIGNED_NUMBERS).representations,
         operands=(Rational(n),),
     )
+
+
+# ─── Grade-6 content build (2026-05-30) — Unit 7: Statistics (CCSS 6.SP.3) ───
+
+# Value pool the data set is drawn from, by difficulty tier (CP.B easy→hard): higher tiers use
+# larger values (slightly harder arithmetic). The statistic computed (mean/median/mode/range) is
+# chosen separately so all four appear across seeds.
+_STAT_VALUE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3, 4, 5, 6),
+    2: (2, 4, 6, 8, 10, 12),
+    3: (5, 8, 10, 12, 15, 18),
+    4: (10, 14, 18, 20, 24, 30),
+}
+_STAT_VALUE_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14)
+_STAT_MODE_NAMES: tuple[str, ...] = ("mean", "median", "mode", "range")
+
+
+def _summary_statistic(mode: str, data: list[int]) -> Rational:
+    """The SymPy-exact summary statistic of ``data`` for ``mode`` (mean/median/mode/range).
+
+    Mean divides by the count, so it can be fractional — kept exact as a ``Rational`` (never a
+    float). Median is the center of the SORTED data (this generator emits odd-length median sets,
+    so the median is a single middle element). Mode is the most-frequent value (the generator
+    guarantees a unique mode). Range is max - min. Domain-only (SymPy decides the value; CLAUDE.md
+    §8.2).
+    """
+    if mode == "mean":
+        return sum((Rational(v) for v in data), Rational(0)) / len(data)
+    if mode == "median":
+        ordered = sorted(data)
+        return Rational(ordered[len(ordered) // 2])
+    if mode == "mode":
+        return Rational(max(set(data), key=data.count))
+    return Rational(max(data) - min(data))  # range
+
+
+def _generate_summary_statistics(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_summary_statistics: compute one statistic of a small data set; a single numeric answer.
+
+    Variable-length data set encoding (the 6.SP.3 wrinkle): unlike the fixed-arity numeric KCs,
+    the item carries a VARIABLE-LENGTH data set PLUS which statistic to compute. We encode both in
+    the existing ``operands: tuple[Rational, ...]`` with a LEADING stat-mode sentinel —
+    ``operands = (mode_code, *data)`` (codes in ``_SUMMARY_STAT_MODE_CODE``). The verifier's
+    median-without-sorting model decodes ``operands[0]`` to know when it applies, and matches via
+    the variable-length ``operand_count=None`` row, so no fixed arity is assumed.
+
+    The statistic (mean/median/mode/range) is chosen via the seeded RNG so all four appear. Means
+    can be fractional and are kept exact as ``Rational`` (SymPy decides — §8.2). MEDIAN items are
+    emitted at ODD length AND with the unsorted-middle DISTINCT from the sorted median, so the
+    median-without-sorting misconception is always diagnostic. MODE items have a unique mode. The
+    answer is entered in the existing symbolic editor (NO new widget). ``difficulty`` widens the
+    value pool.
+    """
+    pool = (
+        _STAT_VALUE_BY_DIFFICULTY.get(difficulty, _STAT_VALUE_POOL)
+        if difficulty
+        else _STAT_VALUE_POOL
+    )
+    mode = rng.choice(_STAT_MODE_NAMES)
+    data = _sample_stat_data(rng, mode, pool)
+    statement = f"Find the {mode} of {', '.join(str(v) for v in data)}."
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.SUMMARY_STATISTICS, seed, surface_format),
+        kc=KnowledgeComponentId.SUMMARY_STATISTICS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=_summary_statistic(mode, data),
+        representations_available=get_kc(KnowledgeComponentId.SUMMARY_STATISTICS).representations,
+        operands=(Rational(_SUMMARY_STAT_MODE_CODE[mode]), *(Rational(v) for v in data)),
+    )
+
+
+def _sample_stat_data(rng: random.Random, mode: str, pool: tuple[int, ...]) -> list[int]:
+    """Sample a small data set well-formed for ``mode`` (the statistic to be computed).
+
+    - mean/range: 3-6 values drawn with replacement (any small set is valid).
+    - median: an ODD-length set (3 or 5) whose UNSORTED middle differs from the sorted median, so
+      the median-without-sorting misconception is genuinely wrong (re-samples until it is).
+    - mode: a set with a UNIQUE most-frequent value (re-samples until the top value is unique),
+      so "the mode" is well-defined.
+    """
+    for _ in range(200):  # bounded re-sampling; the conditions are easy to satisfy in this pool
+        if mode == "median":
+            size = rng.choice((3, 5))
+        else:
+            size = rng.randint(3, 6)
+        data = [rng.choice(pool) for _ in range(size)]
+        if mode == "median":
+            if data[len(data) // 2] != sorted(data)[len(data) // 2]:
+                return data
+            continue
+        if mode == "mode":
+            counts = sorted((data.count(v) for v in set(data)), reverse=True)
+            if len(counts) >= 2 and counts[0] > counts[1]:
+                return data
+            continue
+        return data  # mean / range: any set works
+    # Fallback (the loop above effectively always returns): a hand-built valid set per mode.
+    if mode == "median":
+        return [pool[2], pool[0], pool[1]]  # unsorted middle pool[0] != sorted middle pool[1]
+    if mode == "mode":
+        return [pool[0], pool[0], pool[1]]  # pool[0] is the unique mode
+    return [pool[0], pool[1], pool[2]]
 
 
 # ─── Grade-6 content build (2026-05-30) — Unit-INT: Integer multiply & divide (TEKS 6.3C/D) ───
@@ -2500,6 +2611,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.SURFACE_AREA_NETS: _generate_surface_area_nets,
     KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION: _generate_mean_absolute_deviation,
     KnowledgeComponentId.CENTER_SPREAD_SHAPE: _generate_center_spread,
+    KnowledgeComponentId.SUMMARY_STATISTICS: _generate_summary_statistics,
 }
 
 
