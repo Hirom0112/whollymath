@@ -94,6 +94,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # numbers); the ramp widens the edge POOL (larger numbers, modest denominators ≤ 4), not
             # by reaching large fraction denominators — so it is not a denominator-narrowing ramp.
             KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+            # polygons-coordinate-plane has NO operands (a point-set answer; the coordinate
+            # magnitude ramps the rectangle range, not a denominator) — nothing on the denom path.
+            KnowledgeComponentId.POLYGONS_COORDINATE_PLANE,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

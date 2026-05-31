@@ -148,6 +148,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # (V = l*w*h), so it forward-unlocks on KC_multiply_fractions — the live Unit-2 skill the
     # geometry directly builds on (matching its REMEDIATION_ROUTING drop, also MULTIPLY_FRACTIONS).
     _KC.VOLUME_FRACTIONAL_EDGES: frozenset({_KC.MULTIPLY_FRACTIONS}),
+    # Grade-6 Unit 6 (6.G.3): drawing polygons in the plane and finding a missing rectangle corner
+    # IS plotting/reading integer points — it directly extends plotting single points — so it
+    # forward-unlocks on KC_coordinate_plane (6.NS.8), the live coordinate KC it builds on (matching
+    # its REMEDIATION_ROUTING drop, also COORDINATE_PLANE).
+    _KC.POLYGONS_COORDINATE_PLANE: frozenset({_KC.COORDINATE_PLANE}),
 }
 
 
@@ -188,6 +193,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.TRIANGLE_PROPERTIES,  # Grade-6 Unit 6 (TEKS 6.8A): triangle properties, on number-line
     _KC.AREA_POLYGONS,  # Grade-6 Unit 6: area of polygons, evaluating a formula (on evaluate-expr)
     _KC.VOLUME_FRACTIONAL_EDGES,  # Grade-6 Unit 6 (6.G.2): prism volume V=l*w*h, on multiply frac
+    _KC.POLYGONS_COORDINATE_PLANE,  # Grade-6 Unit 6 (6.G.3): polygons in the plane, on coord-plane
 )
 
 

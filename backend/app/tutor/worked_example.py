@@ -1364,6 +1364,9 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.TRIANGLE_PROPERTIES: _triangle_properties_steps,
     KnowledgeComponentId.AREA_POLYGONS: _area_polygons_steps,
     KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES: _volume_fractional_edges_steps,
+    # 6.G.3 reuses KC_coordinate_plane's "read the order, then plot" steps — the answer is the same
+    # point-set form, and the steps land on the canonical points whether one corner or four.
+    KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: _coordinate_plane_steps,
 }
 
 

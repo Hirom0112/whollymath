@@ -853,6 +853,27 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.AREA_MODEL)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Polygons in the coordinate plane (6.G.3) ───
+    # Draw polygons / use coordinates in the plane — REUSES KC_coordinate_plane's point-set answer
+    # surface. Practice-only (scheduler lives only on COORDINATE_PLANE — the coordinate-plane widget
+    # is the only surface that accepts a plotted point set; WORD_PROBLEM is the phrase framing with
+    # no surface state), so the probe never fires. Errors route back to COORDINATE_PLANE — the live
+    # answer surface — "re-try on the same surface with a labeled hint" is the honest adaptation.
+    # The OPERATION route names the coordinate-swap / axis-order confusion directly. NEVER routes to
+    # a rep with no surface state (WORD_PROBLEM). Probe over COORDINATE_PLANE (the only live rep).
+    _spec(
+        _KC.POLYGONS_COORDINATE_PLANE,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.COORDINATE_PLANE,
+                "Read the FIRST number as across (x), the SECOND as up/down (y) — order matters.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.COORDINATE_PLANE,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

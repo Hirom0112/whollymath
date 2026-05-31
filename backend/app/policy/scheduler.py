@@ -159,6 +159,12 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # stack-of-unit-cubes picture) is the natural masterable second surface, but it has no widget
     # yet, so adding it here would promote it — deferred to avoid over-scoping this build.
     _KC.VOLUME_FRACTIONAL_EDGES: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 6 (6.G.3): COORDINATE_PLANE = the four-quadrant point-plotting grid (REUSES
+    # KC_coordinate_plane's coordinate-plane widget). Live on COORDINATE_PLANE (its default + only
+    # answer surface); the WORD_PROBLEM rep is the phrase framing with no surface state.
+    # PRACTICE-ONLY (one live rep, like KC_coordinate_plane) — a second masterable surface awaits
+    # its own widget.
+    _KC.POLYGONS_COORDINATE_PLANE: (_REP.COORDINATE_PLANE,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

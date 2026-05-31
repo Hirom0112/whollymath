@@ -604,6 +604,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "If you added the edges, that is the wrong move — volume comes from multiplying them.",
         ),
     ),
+    # Grade-6 Unit 6 (6.G.3): index 0 orients to the (x, y) order; index 1 to opposite corners
+    # sharing a coordinate; index 2 to closing the rectangle from the three given corners.
+    KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: (
+        _nudge(
+            KnowledgeComponentId.POLYGONS_COORDINATE_PLANE,
+            "The first number moves you across (x); the second moves you up or down (y).",
+        ),
+        _nudge(
+            KnowledgeComponentId.POLYGONS_COORDINATE_PLANE,
+            "In a rectangle with sides along the grid, corners line up and share their numbers.",
+        ),
+        _nudge(
+            KnowledgeComponentId.POLYGONS_COORDINATE_PLANE,
+            "The missing corner reuses the x of one given corner and the y of another — pair them.",
+        ),
+    ),
 }
 
 

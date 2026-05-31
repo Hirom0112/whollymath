@@ -2165,6 +2165,73 @@ def _generate_volume_fractional_edges(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 6: Polygons in the coordinate plane (6.G.3) ───
+
+
+def _generate_polygons_coordinate_plane(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_polygons_coordinate_plane: draw polygons / use coordinates in the plane (CCSS 6.G.3).
+
+    Picks one of two item kinds (seeded), both about an axis-aligned rectangle whose four corners
+    are ``(x1,y1),(x2,y1),(x1,y2),(x2,y2)``:
+
+    * ``missing_vertex`` — show three corners, ask for the fourth. The answer is the SINGLE missing
+      corner (a one-element point set).
+    * ``name_vertices`` — describe the rectangle by its x- and y-extents, ask for all four corners.
+      The answer is the four-vertex polygon.
+
+    The answer kind is COORDINATE — graded by the SAME verifier path as KC_coordinate_plane
+    (ORDER-INSENSITIVE set equality on ``correct_points``), never a magnitude; ``correct_value`` is
+    a ``Rational(0)`` placeholder (never read on the COORDINATE path). ``operands`` is empty; the
+    coordinate-swap misconception is replayed from ``correct_points`` by the verifier, not operands.
+    """
+    bound = (
+        _COORDINATE_RANGE_BY_DIFFICULTY.get(difficulty, _COORDINATE_RANGE_DEFAULT)
+        if difficulty
+        else _COORDINATE_RANGE_DEFAULT
+    )
+    # An axis-aligned rectangle: two distinct x's and two distinct y's, with a real positive width
+    # and height so the four corners are always four distinct points.
+    x1 = rng.randint(-bound, bound)
+    x2 = x1 + rng.randint(1, max(1, bound))  # strictly to the right
+    y1 = rng.randint(-bound, bound)
+    y2 = y1 + rng.randint(1, max(1, bound))  # strictly above
+    corners = ((x1, y1), (x2, y1), (x1, y2), (x2, y2))
+
+    if rng.choice(("missing_vertex", "name_vertices")) == "missing_vertex":
+        missing_index = rng.randrange(len(corners))
+        missing = corners[missing_index]
+        shown = tuple(c for i, c in enumerate(corners) if i != missing_index)
+        shown_text = "; ".join(f"({cx}, {cy})" for cx, cy in shown)
+        statement = (
+            f"Three corners of a rectangle are {shown_text}. Give the fourth corner so the four "
+            "points form a rectangle with sides parallel to the axes."
+        )
+        points: tuple[tuple[int, int], ...] = (missing,)
+    else:
+        statement = (
+            f"Plot the four corners of the rectangle whose left and right sides are at x = {x1} "
+            f"and x = {x2}, and whose bottom and top sides are at y = {y1} and y = {y2}."
+        )
+        points = corners
+
+    return Problem(
+        problem_id=_generated_id(
+            KnowledgeComponentId.POLYGONS_COORDINATE_PLANE, seed, surface_format
+        ),
+        kc=KnowledgeComponentId.POLYGONS_COORDINATE_PLANE,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(0),  # placeholder; the COORDINATE path grades correct_points
+        representations_available=get_kc(
+            KnowledgeComponentId.POLYGONS_COORDINATE_PLANE
+        ).representations,
+        answer_kind=AnswerKind.COORDINATE,
+        correct_points=_format_points(points),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -2199,6 +2266,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.TRIANGLE_PROPERTIES: _generate_triangle_properties,
     KnowledgeComponentId.AREA_POLYGONS: _generate_area_polygons,
     KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES: _generate_volume_fractional_edges,
+    KnowledgeComponentId.POLYGONS_COORDINATE_PLANE: _generate_polygons_coordinate_plane,
 }
 
 

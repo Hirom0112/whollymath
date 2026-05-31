@@ -477,7 +477,13 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "across the line y = x by accident, so the ordered pair's ORDER is reversed. Harmless "
             "for a point already on y = x (e.g. (3, 3)), where swapping changes nothing."
         ),
-        applicable_kcs=(KnowledgeComponentId.COORDINATE_PLANE,),
+        # Applies to BOTH coordinate KCs: KC_coordinate_plane (6.NS.8) and
+        # KC_polygons_coordinate_plane (6.G.3, where transposing the missing rectangle corner is the
+        # same axis-order confusion).
+        applicable_kcs=(
+            KnowledgeComponentId.COORDINATE_PLANE,
+            KnowledgeComponentId.POLYGONS_COORDINATE_PLANE,
+        ),
     ),
     Misconception(
         id=MisconceptionId.INTEGER_NOT_RATIONAL,

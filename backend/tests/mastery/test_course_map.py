@@ -60,7 +60,8 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.INTEGER_MULTIPLY_DIVIDE,  # Grade-6 Unit-INT (TEKS 6.3C/D, built 2026-05-30)
         KC.TRIANGLE_PROPERTIES,  # Grade-6 Unit 6 (TEKS 6.8A, built 2026-05-30)
         KC.AREA_POLYGONS,  # Grade-6 Unit 6 (6.G.1, built 2026-05-30)
-        KC.VOLUME_FRACTIONAL_EDGES,  # Grade-6 Unit 6 (6.G.2, built 2026-05-30), last on the spine
+        KC.VOLUME_FRACTIONAL_EDGES,  # Grade-6 Unit 6 (6.G.2, built 2026-05-30)
+        KC.POLYGONS_COORDINATE_PLANE,  # Grade-6 Unit 6 (6.G.3, built 2026-05-30), last on the spine
     ]
 
 

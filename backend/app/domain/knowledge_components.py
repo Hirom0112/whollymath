@@ -665,6 +665,27 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.AREA_MODEL),
     ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 6: Geometry (CCSS 6.G.3) ───
+    # Draw polygons in the coordinate plane given vertices, and use coordinates to solve problems:
+    # give the missing vertex of an axis-aligned rectangle from its other three corners, or name the
+    # four corners of a rectangle described by its x- and y-extents (6.G.3). The answer is a SET of
+    # integer-coordinate POINTS — REUSES the coordinate point-set contract KC_coordinate_plane
+    # (6.NS.8) established (answer_kind "coordinate", widget_id "coordinate_plane"), graded
+    # ORDER-INSENSITIVELY by the SAME domain verifier path (_verify_coordinate / parse_points) — NO
+    # new answer kind, widget, or grading path. Advertises COORDINATE_PLANE + WORD_PROBLEM (the
+    # phrase IS a word problem; the >=2-rep contract), LIVE only on COORDINATE_PLANE
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY; COORDINATE_PLANE is the default surface, so
+    # widget_id resolves to "coordinate_plane".
+    KnowledgeComponent(
+        id=KnowledgeComponentId.POLYGONS_COORDINATE_PLANE,
+        skill_name="Draw polygons in the coordinate plane",
+        description=(
+            "Draw polygons in the coordinate plane from their vertices and use coordinates to "
+            "solve problems — find the missing corner of a rectangle from its other three corners, "
+            "or name the four corners of a rectangle from its width and height."
+        ),
+        representations=(Representation.COORDINATE_PLANE, Representation.WORD_PROBLEM),
+    ),
 )
 
 
