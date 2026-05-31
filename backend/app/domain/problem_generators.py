@@ -77,6 +77,11 @@ class AnswerKind(StrEnum):
     # same solution set, so "x>=5" == "5<=x"), not a Rational match; the surface picks the free-text
     # inequality widget. Wire contract (frozen): answer_kind="inequality" + widget_id="inequality".
     INEQUALITY = "inequality"
+    # A set of integer-coordinate POINTS — a single point "(2,-1)" or a polygon vertex list
+    # "(0,0),(3,0),(3,2)". Its truth is ORDER-INSENSITIVE SET EQUALITY against ``correct_points``
+    # (a polygon's vertices match in any order), graded by the domain verifier — never a Rational
+    # match. Wire contract (frozen): answer_kind="coordinate" + widget_id="coordinate_plane".
+    COORDINATE = "coordinate"
 
 
 @dataclass(frozen=True)
@@ -148,6 +153,13 @@ class Problem:
     # so "x>=5" == "5<=x" but "x>3" != "x>=3". ``None`` for every other item; ``correct_value``
     # carries a ``Rational(0)`` placeholder for an inequality item (never read on this path).
     correct_inequality: str | None = None
+    # For a COORDINATE item (answer_kind=COORDINATE): the canonical answer as a comma-separated
+    # list of integer-coordinate points ("(2,-1)" or "(0,0),(3,0),(3,2)"). The verifier grades a
+    # submitted answer by ORDER-INSENSITIVE SET equality against this (parse both to a set of
+    # integer tuples), so the vertices may be listed in any order. ``None`` for every other item;
+    # ``correct_value`` carries a ``Rational(0)`` placeholder for a coordinate item (never read on
+    # the COORDINATE path).
+    correct_points: str | None = None
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), the chosen surface
@@ -1498,6 +1510,86 @@ def _generate_inequalities(
     )
 
 
+# ─── Grade-6 content build (2026-05-30) — Unit 3: The coordinate plane (6.NS.8) ───
+
+# Coordinate magnitudes by difficulty tier (the easy→hard ramp; CP.B): higher tiers reach farther
+# from the origin and across more quadrants. Tier 1 stays small and near the axes; tier 4 spans the
+# full four-quadrant range a 6th-grader works in.
+_COORDINATE_RANGE_BY_DIFFICULTY: dict[int, int] = {1: 3, 2: 5, 3: 8, 4: 10}
+_COORDINATE_RANGE_DEFAULT = 6
+
+
+def _format_point(x: int, y: int) -> str:
+    """Render one integer point in the frozen ``(x,y)`` answer shape (no spaces)."""
+    return f"({x},{y})"
+
+
+def _format_points(points: tuple[tuple[int, int], ...]) -> str:
+    """Render an ordered list of points as the frozen ``(x,y),(x,y),...`` answer string."""
+    return ",".join(_format_point(x, y) for x, y in points)
+
+
+def _nonzero(rng: random.Random, bound: int) -> int:
+    """A nonzero integer in ``[-bound, bound]`` — keeps a 'plot the point' item off the axes so the
+    quadrant (and thus the sign pattern the misconception perturbs) is unambiguous."""
+    value = 0
+    while value == 0:
+        value = rng.randint(-bound, bound)
+    return value
+
+
+def _generate_coordinate_plane(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_coordinate_plane: identify/plot points in the four-quadrant plane (6.NS.8 / TEKS 6.11A).
+
+    Picks one of three item kinds (seeded): plot a single point, reflect a point across an axis, or
+    plot the vertices of an axis-aligned rectangle (a polygon). The answer is the resulting SET of
+    integer points, rendered to the canonical ``correct_points`` string ("(2,-1)" or
+    "(0,0),(3,0),(0,2),(3,2)"). The answer kind is COORDINATE — graded by the verifier as an
+    ORDER-INSENSITIVE set, never a magnitude; ``correct_value`` is a ``Rational(0)`` placeholder
+    (never read on the COORDINATE path). ``operands`` is empty; the coordinate-swap misconception is
+    replayed from ``correct_points`` by the verifier, not from operands.
+    """
+    bound = (
+        _COORDINATE_RANGE_BY_DIFFICULTY.get(difficulty, _COORDINATE_RANGE_DEFAULT)
+        if difficulty
+        else _COORDINATE_RANGE_DEFAULT
+    )
+    kind = rng.choice(("plot", "reflect", "rectangle"))
+    if kind == "plot":
+        x, y = _nonzero(rng, bound), _nonzero(rng, bound)
+        statement = f"Plot the point ({x}, {y})."
+        points: tuple[tuple[int, int], ...] = ((x, y),)
+    elif kind == "reflect":
+        x, y = _nonzero(rng, bound), _nonzero(rng, bound)
+        axis = rng.choice(("x", "y"))
+        # Reflecting across the x-axis negates y; across the y-axis negates x.
+        reflected = (x, -y) if axis == "x" else (-x, y)
+        statement = f"Reflect the point ({x}, {y}) across the {axis}-axis and plot the image."
+        points = (reflected,)
+    else:  # rectangle: four axis-aligned corners spanning two distinct x's and two distinct y's
+        x1 = rng.randint(-bound, bound)
+        x2 = x1 + rng.randint(1, max(1, bound))  # strictly to the right — a real, positive width
+        y1 = rng.randint(-bound, bound)
+        y2 = y1 + rng.randint(1, max(1, bound))  # strictly above — a real, positive height
+        statement = (
+            f"Plot the four corners of the rectangle with width from x = {x1} to x = {x2} and "
+            f"height from y = {y1} to y = {y2}."
+        )
+        points = ((x1, y1), (x2, y1), (x1, y2), (x2, y2))
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.COORDINATE_PLANE, seed, surface_format),
+        kc=KnowledgeComponentId.COORDINATE_PLANE,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(0),  # placeholder; the COORDINATE path grades correct_points
+        representations_available=get_kc(KnowledgeComponentId.COORDINATE_PLANE).representations,
+        answer_kind=AnswerKind.COORDINATE,
+        correct_points=_format_points(points),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -1524,6 +1616,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.ONE_STEP_EQUATIONS: _generate_one_step_equations,
     KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _generate_equivalent_expressions,
     KnowledgeComponentId.INEQUALITIES: _generate_inequalities,
+    KnowledgeComponentId.COORDINATE_PLANE: _generate_coordinate_plane,
 }
 
 

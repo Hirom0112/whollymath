@@ -134,6 +134,11 @@ class Representation(StrEnum):
     # (same variable, direction, and bound — i.e. same solution set), rendered by the inequality
     # input widget (widget_id "inequality").
     INEQUALITY = "inequality"
+    # The four-quadrant coordinate plane (Unit 3, 6.NS.8). The learner plots/identifies one or more
+    # integer-coordinate points; the answer is a set of points ("(2,-1)" or "(0,0),(3,0),(3,2)")
+    # graded ORDER-INSENSITIVELY by the domain verifier, rendered by the coordinate-plane widget
+    # (widget_id "coordinate_plane").
+    COORDINATE_PLANE = "coordinate_plane"
 
 
 @dataclass(frozen=True)
@@ -501,6 +506,25 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
             "x >= 5; 'under 13' is x < 13)."
         ),
         representations=(Representation.INEQUALITY, Representation.WORD_PROBLEM),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 3: The coordinate plane ───
+    # Identify/plot points in the four-quadrant coordinate plane (6.NS.8 / TEKS 6.11A): the answer
+    # is a SET of integer-coordinate POINTS — a single point "(2,-1)" or a polygon vertex list
+    # "(0,0),(3,0),(3,2)" — graded ORDER-INSENSITIVELY by the domain verifier (a polygon's vertices
+    # match in any order; a single point is a one-element set). The FIRST point-set answer KC,
+    # establishing the wire contract the coordinate-plane widget consumes (answer_kind
+    # "coordinate", widget_id "coordinate_plane"). Advertises COORDINATE_PLANE + WORD_PROBLEM (the
+    # phrase IS a word problem; the ≥2-rep contract), LIVE only on COORDINATE_PLANE
+    # (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY; COORDINATE_PLANE is the default surface, so
+    # widget_id resolves to "coordinate_plane".
+    KnowledgeComponent(
+        id=KnowledgeComponentId.COORDINATE_PLANE,
+        skill_name="Plot points in the coordinate plane",
+        description=(
+            "Plot and identify points in the four-quadrant coordinate plane, including reflecting "
+            "a point across an axis and reading distance along a shared row or column."
+        ),
+        representations=(Representation.COORDINATE_PLANE, Representation.WORD_PROBLEM),
     ),
 )
 

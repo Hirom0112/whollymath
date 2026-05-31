@@ -109,6 +109,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # prerequisite directly upstream (its own §11 prereqs, e.g. KC_ordering_inequalities, are not
     # yet live).
     _KC.INEQUALITIES: frozenset({_KC.WRITE_EXPRESSIONS}),
+    # Grade-6 Unit 3: a point in the coordinate plane is two signed numbers, each a position on an
+    # axis — the number line generalized to two dimensions — so plotting points forward-unlocks on
+    # number-line placement (judging where a signed number sits on a line is the readiness for
+    # locating it along each axis). The live foundation KC the skill conceptually rests on.
+    _KC.COORDINATE_PLANE: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
 }
 
 
@@ -141,6 +146,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5: solve one-step equations, on number-line placement
     _KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4: rewrite as equivalent, on write expressions
     _KC.INEQUALITIES,  # Grade-6 Unit 5: write inequalities, on write expressions
+    _KC.COORDINATE_PLANE,  # Grade-6 Unit 3: plot points in the plane, on number-line placement
 )
 
 

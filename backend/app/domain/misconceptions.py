@@ -34,6 +34,7 @@ and judging correctness are separate, later slices.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal
@@ -119,6 +120,10 @@ class MisconceptionId(StrEnum):
     # constraint, e.g. "x < 5" for "at least 5" (which is x >= 5), keeping the bound but reversing
     # the comparison.
     FLIPPED_INEQUALITY = "flipped-inequality"
+    # Unit 3 (6.NS.8): a coordinate-swap error — plotting/reading a point with its coordinates
+    # transposed, putting (x, y) at (y, x) (moving up first, then across, or reflecting across
+    # y = x by accident).
+    COORDINATE_SWAP = "coordinate-swap"
 
 
 @dataclass(frozen=True)
@@ -428,6 +433,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "so the OPERATION (the relation) points the wrong way."
         ),
         applicable_kcs=(KnowledgeComponentId.INEQUALITIES,),
+    ),
+    Misconception(
+        id=MisconceptionId.COORDINATE_SWAP,
+        name="Coordinate swap",
+        description=(
+            "Plots or reads a point with its two coordinates transposed — putting (x, y) at "
+            "(y, x). The learner moves up the y-axis first and then across, or reflects the point "
+            "across the line y = x by accident, so the ordered pair's ORDER is reversed. Harmless "
+            "for a point already on y = x (e.g. (3, 3)), where swapping changes nothing."
+        ),
+        applicable_kcs=(KnowledgeComponentId.COORDINATE_PLANE,),
     ),
 )
 
@@ -887,6 +903,66 @@ def distributive_error(source_expression: str | None) -> str | None:
     if partial == full:
         return None  # the partial form is coincidentally still the full expansion
     return str(sstr(partial))
+
+
+# An integer-coordinate point tuple: "(x,y)" with optional sign and surrounding whitespace. This is
+# the ONLY shape a coordinate answer is allowed to take — a strictly-two-integer ordered pair, NOT
+# an expression — so parsing never evaluates arbitrary input (CLAUDE.md §8.2). A learner who types a
+# decimal, a third coordinate, or a variable produces no match, which the caller scores wrong.
+_POINT_LITERAL = re.compile(r"\(\s*([+-]?\d+)\s*,\s*([+-]?\d+)\s*\)")
+
+
+def parse_points(text: str | None) -> frozenset[tuple[int, int]] | None:
+    """Parse a coordinate answer string to a SET of integer ``(x, y)`` points, or ``None``.
+
+    The canonical shape is a comma-separated list of integer-coordinate tuples — a single point
+    ``"(2,-1)"`` or a polygon vertex list ``"(0,0),(3,0),(3,2)"``. We match each ``(int, int)``
+    tuple with ``_POINT_LITERAL`` (never ``eval``/``sympify`` — a coordinate is two integers, not an
+    expression) and collect them into a ``frozenset``, so the answer is ORDER-INSENSITIVE and
+    duplicate-free (the verifier grades by set equality; a polygon's vertices match in any order).
+
+    Returns ``None`` when the string is not a clean list of integer points: empty, malformed,
+    decimal/variable coordinates, a 1- or 3-tuple, or any leftover non-whitespace text outside the
+    matched tuples. Returning ``None`` (never raising) lets the verifier score garbled learner input
+    wrong instead of crashing on it (CLAUDE.md §8.2). This is the single source of truth for how a
+    coordinate answer string becomes a comparable set — the verifier and the simulator both read it.
+    """
+    if text is None:
+        return None
+    matches = list(_POINT_LITERAL.finditer(text))
+    if not matches:
+        return None
+    # Reject trailing junk: everything outside the matched tuples must be commas/whitespace, so a
+    # "(1,2,3)" or "(1.5,2)" (which leaves un-matched characters) is rejected rather than half-read.
+    leftover = _POINT_LITERAL.sub("", text)
+    if leftover.strip(", \t\n"):
+        return None
+    return frozenset((int(x), int(y)) for x, y in (m.groups() for m in matches))
+
+
+def swap_coordinates(correct_points: str | None) -> str | None:
+    """coordinate-swap: plot/read each point with its two coordinates transposed, (x, y) -> (y, x).
+
+    Given the CANONICAL answer string (e.g. ``"(2,-1)"`` or ``"(0,0),(3,0),(3,2)"``), return the
+    coordinate-swapped answer a learner who moves up first then across (or reflects across y = x)
+    would produce (``"(-1,2)"``, ``"(0,0),(0,3),(2,3)"``). Returns ``None`` when swapping yields the
+    SAME set of points — every point already lies on y = x, or the figure is symmetric across it —
+    so the verifier never flags a still-correct answer as the misconception. Returns ``None`` on an
+    unparseable canonical string (a construction bug surfaces elsewhere, not here).
+
+    Pure/deterministic, domain-owned (CLAUDE.md §7); it reasons over the point SET, the one place
+    this KC's "math" lives. The result is rendered in the same ``(x,y),(x,y)`` shape the generator
+    emits so the verifier can re-parse it through ``parse_points``.
+    """
+    original = parse_points(correct_points)
+    if original is None:
+        return None
+    swapped = frozenset((y, x) for (x, y) in original)
+    if swapped == original:
+        return None  # symmetric across y = x — swapping changes nothing, so there is no wrong form
+    # Render in a stable order so the output is deterministic (the verifier re-parses to a set, so
+    # order does not affect correctness; we sort only for reproducibility, PROJECT.md §4.1).
+    return ",".join(f"({x},{y})" for x, y in sorted(swapped))
 
 
 def subtract_across(num1: int, den1: int, num2: int, den2: int) -> WrongFraction:

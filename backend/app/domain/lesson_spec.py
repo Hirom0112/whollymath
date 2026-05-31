@@ -45,6 +45,7 @@ class WidgetId(StrEnum):
     WORD_PROBLEM = "word_problem"
     EXPRESSION = "expression"  # the free-text ExpressionInput (a typed algebra string)
     INEQUALITY = "inequality"  # the free-text inequality input (a typed relational string)
+    COORDINATE_PLANE = "coordinate_plane"  # the four-quadrant point-plotting grid widget
 
 
 _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
@@ -54,6 +55,7 @@ _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
     Representation.WORD_PROBLEM: WidgetId.WORD_PROBLEM,
     Representation.EXPRESSION: WidgetId.EXPRESSION,
     Representation.INEQUALITY: WidgetId.INEQUALITY,
+    Representation.COORDINATE_PLANE: WidgetId.COORDINATE_PLANE,
 }
 
 
@@ -657,6 +659,27 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
         ),
         transfer_probe=TransferProbeSpec(
             has_error_finding=False, probe_representations=(_R.INEQUALITY,)
+        ),
+    ),
+    # ─── Grade-6 content build (2026-05-30) — Unit 3: The coordinate plane ───
+    # Coordinate plane (6.NS.8 / TEKS 6.11A) — the FIRST point-set-answer lesson. Practice-only
+    # (scheduler lives only on COORDINATE_PLANE — the coordinate-plane widget is the only surface
+    # that accepts a plotted point set; WORD_PROBLEM is the phrase framing with no surface state),
+    # so the probe never fires. Errors route back to COORDINATE_PLANE — the live answer surface —
+    # "re-try on the same surface with a labeled hint" is the honest adaptation. The OPERATION route
+    # names the coordinate-swap / axis-order confusion directly. Probe over COORDINATE_PLANE (the
+    # only live rep).
+    _spec(
+        _KC.COORDINATE_PLANE,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.COORDINATE_PLANE,
+                "Read the FIRST number as across (x), the SECOND as up/down (y) — order matters.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.COORDINATE_PLANE,)
         ),
     ),
 )

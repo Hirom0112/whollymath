@@ -65,11 +65,13 @@ from app.domain.misconceptions import (
     keep_original_sign,
     multiply_without_inverting,
     natural_number_bias_number_line,
+    parse_points,
     part_part_ratio,
     place_value_slip,
     reversed_operands,
     signed_not_magnitude,
     subtract_across,
+    swap_coordinates,
 )
 from app.domain.problem_generators import AnswerKind, Problem
 
@@ -411,6 +413,49 @@ def _verify_inequality(problem: Problem, submitted: Submitted) -> VerificationRe
     )
 
 
+def _verify_coordinate(problem: Problem, submitted: Submitted) -> VerificationResult:
+    """Verify a COORDINATE answer by ORDER-INSENSITIVE SET equality against ``correct_points``.
+
+    Grading rule (the frozen coordinate contract): parse the submission and the canonical answer to
+    SETS of integer ``(x, y)`` points (``parse_points``) and compare the sets — a polygon's vertices
+    match in any order, a single point is a one-element set. SymPy/domain decides by parsing integer
+    tuples; never an LLM (CLAUDE.md §8.2). Unparseable input (blank, malformed, decimal/variable
+    coordinates, wrong arity, trailing junk) is wrong (OTHER), never a crash. A wrong-but-parseable
+    answer that equals the coordinate-swapped set (e.g. "(-1,2)" for the canonical "(2,-1)") is the
+    coordinate-swap misconception → OPERATION; any other wrong set is OTHER.
+    """
+    canonical_text = problem.correct_points
+    if canonical_text is None:
+        # Construction bug, not learner input: a COORDINATE problem must carry its answer.
+        raise ValueError(f"coordinate problem {problem.problem_id!r} needs correct_points")
+
+    submitted_points = parse_points(str(submitted))
+    if submitted_points is None:
+        return VerificationResult(
+            is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+        )
+
+    canonical_points = parse_points(canonical_text)  # generator-built, always parseable
+    if submitted_points == canonical_points:
+        return VerificationResult(
+            is_correct=True, error_category=ErrorCategory.NONE, matched_misconception=None
+        )
+
+    # Coordinate-swap misconception: the submission equals the (x, y) -> (y, x) transposed set of a
+    # non-symmetric figure (``swap_coordinates`` returns None when swapping changes nothing).
+    swapped_text = swap_coordinates(canonical_text)
+    if swapped_text is not None and submitted_points == parse_points(swapped_text):
+        return VerificationResult(
+            is_correct=False,
+            error_category=ErrorCategory.OPERATION,
+            matched_misconception=MisconceptionId.COORDINATE_SWAP,
+        )
+
+    return VerificationResult(
+        is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
+    )
+
+
 def _verify_common_denominator(problem: Problem, submitted: Submitted) -> VerificationResult:
     """Verify a common-denominator answer: ANY positive common multiple is correct (§3.4.1).
 
@@ -727,6 +772,9 @@ def verify(problem: Problem, submitted: Submitted) -> VerificationResult:
 
     if problem.answer_kind is AnswerKind.INEQUALITY:
         return _verify_inequality(problem, submitted)
+
+    if problem.answer_kind is AnswerKind.COORDINATE:
+        return _verify_coordinate(problem, submitted)
 
     if problem.kc is KnowledgeComponentId.COMMON_DENOMINATOR:
         return _verify_common_denominator(problem, submitted)

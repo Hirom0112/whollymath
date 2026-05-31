@@ -466,6 +466,22 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Let a letter stand for the number, then ask which values the words allow.",
         ),
     ),
+    # Grade-6 Unit 3: index 0 orients to the (x, y) order; index 1 to the sign-per-quadrant idea;
+    # index 2 to reflection as a sign flip on one axis.
+    KnowledgeComponentId.COORDINATE_PLANE: (
+        _nudge(
+            KnowledgeComponentId.COORDINATE_PLANE,
+            "The first number moves you across (x); the second moves you up or down (y).",
+        ),
+        _nudge(
+            KnowledgeComponentId.COORDINATE_PLANE,
+            "A negative coordinate means left (for x) or down (for y) from the center.",
+        ),
+        _nudge(
+            KnowledgeComponentId.COORDINATE_PLANE,
+            "Reflecting across an axis flips the sign of just one coordinate — keep the other.",
+        ),
+    ),
 }
 
 

@@ -934,6 +934,35 @@ def _inequality_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _coordinate_plane_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'read the order, then plot' steps for a coordinate-plane problem (Unit 3).
+
+    The answer is a SET of points, not a magnitude, so the steps land on the canonical
+    ``problem.correct_points`` string rather than a Rational — the last step's ``revealed_value``
+    stays ``None`` (a narrative/coordinate step, the documented non-magnitude case) and its
+    ``shown`` carries the points. Raises if missing (§8.5)."""
+    canonical = problem.correct_points
+    if canonical is None:
+        raise ValueError(f"coordinate problem {problem.problem_id} needs correct_points")
+    return (
+        WorkedStep(
+            shown="Start at the center (0, 0), the origin where the two axes cross.",
+            why_prompt="Why is every point measured from the origin?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Move ACROSS by the first number (x), then UP or DOWN by the second (y).",
+            why_prompt="Why does the order of the two numbers change where the point lands?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"The point(s) plot at {canonical}.",
+            why_prompt="Why does each sign decide which side of an axis the point sits on?",
+            revealed_value=None,
+        ),
+    )
+
+
 def _terminating_decimal_places(value: Rational) -> int:
     """Decimal places a terminating rational needs — ``max(power of 2, power of 5)`` in its
     reduced denominator (SymPy reduces 2/10 to 1/5, so we factor q rather than assume a
@@ -1015,6 +1044,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.ONE_STEP_EQUATIONS: _one_step_equations_steps,
     KnowledgeComponentId.EQUIVALENT_EXPRESSIONS: _equivalent_expression_steps,
     KnowledgeComponentId.INEQUALITIES: _inequality_steps,
+    KnowledgeComponentId.COORDINATE_PLANE: _coordinate_plane_steps,
 }
 
 

@@ -39,6 +39,12 @@ _STATE_FOR_REPRESENTATION: dict[Representation, SurfaceState] = {
     # SYMBOLIC_FOCUS rather than adding a sixth state — the "exactly five surface states" set stays
     # closed (PROJECT.md §3.5 / ARCHITECTURE.md §2 "adapt with restraint").
     Representation.INEQUALITY: SurfaceState.SYMBOLIC_FOCUS,
+    # The four-quadrant coordinate plane is an AXIS-BASED point-placement surface — the number line
+    # generalized to two axes (the number line is literally one axis of the plane), so it reuses the
+    # NUMBER_LINE_PRIMARY state rather than adding a sixth — the "exactly five surface states" set
+    # stays closed (PROJECT.md §3.5). The frontend picks the concrete widget by widget_id
+    # ("coordinate_plane"), so the shared axis-placement state does not conflate the two widgets.
+    Representation.COORDINATE_PLANE: SurfaceState.NUMBER_LINE_PRIMARY,
 }
 
 

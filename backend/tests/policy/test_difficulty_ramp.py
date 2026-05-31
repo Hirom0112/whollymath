@@ -65,6 +65,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # inequalities has NO operands (an inequality answer; the integer bound ramps the
             # constraint phrase, not a denominator) — nothing to read on the denominator path.
             KnowledgeComponentId.INEQUALITIES,
+            # coordinate-plane has NO operands (a point-set answer; the coordinate magnitude ramps
+            # the plane range, not a denominator) — nothing to read on the denominator path.
+            KnowledgeComponentId.COORDINATE_PLANE,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

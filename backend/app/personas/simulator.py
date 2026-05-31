@@ -49,6 +49,7 @@ from app.domain.misconceptions import (
     natural_number_bias_number_line,
     reversed_operands,
     subtract_across,
+    swap_coordinates,
 )
 from app.domain.problem_generators import AnswerKind, Problem
 from app.personas.persona_config import KnowledgeMode, PersonaConfig
@@ -210,8 +211,9 @@ def _correct_answer(problem: Problem) -> Rational | str:
     Layer 3 never recomputes math (that is the domain's job); it only reads the
     answer the generator/verifier already established as correct and decides whether
     the persona produces it. For an EXPRESSION item the correct answer is the canonical
-    expression STRING (graded by SymPy equivalence), not a magnitude; every other item
-    is the SymPy ``correct_value``.
+    expression STRING (graded by SymPy equivalence); for a COORDINATE item it is the canonical
+    point-set STRING (graded by set equality), neither a magnitude; every other item is the SymPy
+    ``correct_value``.
     """
     if problem.answer_kind is AnswerKind.EXPRESSION:
         if problem.correct_expression is None:  # construction bug, not learner input
@@ -221,6 +223,10 @@ def _correct_answer(problem: Problem) -> Rational | str:
         if problem.correct_inequality is None:  # construction bug, not learner input
             raise ValueError(f"inequality problem {problem.problem_id} has no correct_inequality")
         return problem.correct_inequality
+    if problem.answer_kind is AnswerKind.COORDINATE:
+        if problem.correct_points is None:  # construction bug, not learner input
+            raise ValueError(f"coordinate problem {problem.problem_id} has no correct_points")
+        return problem.correct_points
     return problem.correct_value
 
 
@@ -238,9 +244,10 @@ def _misconception_wrong_answer(problem: Problem) -> Rational | str | None:
 
     For an EXPRESSION item the wrong answer is the named misconception's expression STRING: the
     reversed-operands form (e.g. "7 - p" for "p - 7") for write-expressions, or the distributive-
-    error form (e.g. "3*x + 2" for the given "3*(x + 2)") for equivalent-expressions. ``None`` when
-    the error changes nothing (a commutative phrase, or a source with no distributable structure),
-    so a persona holding the error still answers correctly there.
+    error form (e.g. "3*x + 2" for the given "3*(x + 2)") for equivalent-expressions. For a
+    COORDINATE item it is the coordinate-swapped point set ("(−1,2)" for "(2,−1)"). ``None`` when
+    the error changes nothing (a commutative phrase, a source with no distributable structure, or a
+    figure symmetric across y = x), so a persona holding the error still answers correctly there.
     """
     if problem.answer_kind is AnswerKind.EXPRESSION:
         if problem.kc is KnowledgeComponentId.EQUIVALENT_EXPRESSIONS:
@@ -251,6 +258,8 @@ def _misconception_wrong_answer(problem: Problem) -> Rational | str | None:
         # The flipped-direction form (same bound, reversed comparison) — always defined for a real
         # inequality, so a persona holding the error answers wrong on every item.
         return flipped_inequality(problem.correct_inequality)
+    if problem.answer_kind is AnswerKind.COORDINATE:
+        return swap_coordinates(problem.correct_points)
 
     operands = problem.operands
     if operands is None:

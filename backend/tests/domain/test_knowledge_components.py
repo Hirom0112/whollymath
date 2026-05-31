@@ -68,6 +68,8 @@ EXPECTED_CATALOG_IDS = {
     "KC_equivalent_expressions",
     # Unit 5 (inequality-answer; the first relational answer kind, 6.EE.8).
     "KC_inequalities",
+    # Unit 3 (coordinate-answer; the first point-set answer kind, 6.NS.8).
+    "KC_coordinate_plane",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -92,6 +94,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_one_step_equations",
     "KC_equivalent_expressions",
     "KC_inequalities",
+    "KC_coordinate_plane",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -106,12 +109,11 @@ EXPECTED_GRADE6_KCS = {
     # U2 — Fractions & Decimals (6.NS.1–4). KC_multiply_fractions + KC_gcf_lcm + KC_divide_fractions
     # + KC_multi_digit_division + KC_decimal_operations all moved to EXPECTED_CATALOG_IDS
     # (built 2026-05-30, T2 / kc-gcf / kc-conv); KC_unit_conversion likewise moved (Unit 1).
-    # U3 — Rational Numbers (6.NS.5–8). KC_absolute_value + KC_signed_numbers moved to
-    # EXPECTED_CATALOG_IDS (built 2026-05-30).
+    # U3 — Rational Numbers (6.NS.5–8). KC_absolute_value + KC_signed_numbers + KC_coordinate_plane
+    # (6.NS.8, the first point-set answer kind) moved to EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_rationals_on_line",
     "KC_ordering_inequalities",
     "KC_classify_number_sets",
-    "KC_coordinate_plane",
     # U-INT — Integer Arithmetic (TEKS 6.3C/D). KC_integer_add_subtract moved to
     # EXPECTED_CATALOG_IDS (built 2026-05-30).
     "KC_integer_multiply_divide",
@@ -163,7 +165,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 23 content-complete + 23 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 24 content-complete + 22 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:
