@@ -54,11 +54,21 @@ export class AppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AppStackProps) {
     super(scope, id, props);
 
-    // ---- Anthropic API key secret (real value populated post-deploy by the operator).
+    // ---- API-key secrets. CDK creates the secret *shells* but does NOT manage their values
+    // (no secretStringValue): the real keys are populated out-of-band via `put-secret-value`
+    // after deploy, so subsequent `cdk deploy`s never clobber them back to a placeholder. Each
+    // shell is born with an auto-generated random value that the operator overwrites.
     const anthropicSecret = new secretsmanager.Secret(this, 'AnthropicApiKey', {
       secretName: 'whollymath/anthropic-api-key',
-      description: 'Anthropic API key; populate after deploy',
-      secretStringValue: cdk.SecretValue.unsafePlainText('REPLACE_ME'),
+      description: 'Anthropic API key; value set out-of-band post-deploy.',
+    });
+    const langsmithSecret = new secretsmanager.Secret(this, 'LangsmithApiKey', {
+      secretName: 'whollymath/langsmith-api-key',
+      description: 'LangSmith API key (LLM-call tracing); value set out-of-band post-deploy.',
+    });
+    const mathpixSecret = new secretsmanager.Secret(this, 'MathpixAppKey', {
+      secretName: 'whollymath/mathpix-app-key',
+      description: 'Mathpix app key (homework-scan OCR); value set out-of-band post-deploy.',
     });
 
     // ---- Backend: ECS cluster + ALB Fargate service.
@@ -94,6 +104,11 @@ export class AppStack extends cdk.Stack {
       circuitBreaker: { rollback: true },
       // Single-task demo: don't drop the one running task below the desired count mid-deploy.
       minHealthyPercent: 100,
+      // The entrypoint runs `alembic upgrade head` before uvicorn binds, and the task fetches
+      // its secrets at startup — so a new task isn't answerable for ~30-90s. Give it grace before
+      // ALB health checks count against the deployment circuit breaker (a too-short window was
+      // tripping a rollback on task-def changes even though the task came up healthy).
+      healthCheckGracePeriod: cdk.Duration.seconds(120),
       // natGateways:0 → tasks need a public IP in a PUBLIC subnet to reach ECR + Anthropic.
       assignPublicIp: true,
       taskSubnets: { subnetType: ec2.SubnetType.PUBLIC },
@@ -108,20 +123,33 @@ export class AppStack extends cdk.Stack {
         environment: {
           DB_PORT: '5432',
           DB_NAME: 'whollymath',
+          // Non-secret LangSmith config; the API key rides in `secrets` below. Tracing is a
+          // no-op passthrough unless LANGSMITH_TRACING=true AND a key is present (Slice PL.0).
+          LANGSMITH_TRACING: 'true',
+          LANGSMITH_PROJECT: 'whollymath',
         },
         secrets: {
           DB_HOST: ecs.Secret.fromSecretsManager(props.dbSecret, 'host'),
           DB_USER: ecs.Secret.fromSecretsManager(props.dbSecret, 'username'),
           DB_PASSWORD: ecs.Secret.fromSecretsManager(props.dbSecret, 'password'),
           ANTHROPIC_API_KEY: ecs.Secret.fromSecretsManager(anthropicSecret),
+          LANGSMITH_API_KEY: ecs.Secret.fromSecretsManager(langsmithSecret),
+          MATHPIX_APP_KEY: ecs.Secret.fromSecretsManager(mathpixSecret),
         },
       },
     });
 
-    // Health check hits the app's /health endpoint.
+    // Health check hits the app's /health endpoint. Tuned to mark a new task healthy FAST:
+    // 2 successes × 15s = ~30s, well inside the deployment circuit breaker's patience. The
+    // defaults (5 × 30s = 150s) exceeded the grace window, so a task-def update killed a
+    // perfectly healthy new task for "failed ELB health checks" before it could go healthy.
     service.targetGroup.configureHealthCheck({
       path: '/health',
       healthyHttpCodes: '200',
+      interval: cdk.Duration.seconds(15),
+      timeout: cdk.Duration.seconds(5),
+      healthyThresholdCount: 2,
+      unhealthyThresholdCount: 3,
     });
 
     // The task reads HelpNeed artifacts from the ML bucket.
@@ -199,6 +227,14 @@ export class AppStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'AnthropicSecretArn', {
       value: anthropicSecret.secretArn,
       description: 'ARN of the Anthropic API key secret (populate the value post-deploy)',
+    });
+    new cdk.CfnOutput(this, 'LangsmithSecretArn', {
+      value: langsmithSecret.secretArn,
+      description: 'ARN of the LangSmith API key secret (populate the value post-deploy)',
+    });
+    new cdk.CfnOutput(this, 'MathpixSecretArn', {
+      value: mathpixSecret.secretArn,
+      description: 'ARN of the Mathpix app key secret (populate the value post-deploy)',
     });
   }
 }
