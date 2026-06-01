@@ -741,6 +741,23 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "the group.",
         ),
     ),
+    # Grade-6 Unit 4/5 (6.EE.9): index 0 (operation) orients toward MULTIPLYING the input by the
+    # rate (the relationship is multiplicative, not additive); index 1 reinforces which variable
+    # depends on which — you choose the input, the rule decides the output.
+    KnowledgeComponentId.DEPENDENT_VARS: (
+        _nudge(
+            KnowledgeComponentId.DEPENDENT_VARS,
+            "The rule MULTIPLIES the input by the rate to get the output — it does not add them.",
+        ),
+        _nudge(
+            KnowledgeComponentId.DEPENDENT_VARS,
+            "You pick the input value; the rule then decides the output that depends on it.",
+        ),
+        _nudge(
+            KnowledgeComponentId.DEPENDENT_VARS,
+            "Put your input into the rule, then follow what it tells you the matching output is.",
+        ),
+    ),
 }
 
 

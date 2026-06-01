@@ -94,6 +94,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # Its REMEDIATION_ROUTING drop is to KC_exponents (not yet live), so the forward edge uses the
     # live Unit-4 KC the skill conceptually rests on — mirroring the WRITE_EXPRESSIONS pattern.
     _KC.EVALUATE_EXPRESSIONS: frozenset({_KC.WRITE_EXPRESSIONS}),
+    # Grade-6 Unit 4/5 (6.EE.9): relating a dependent variable to an independent one IS evaluating
+    # a relationship rule y = a*x at a given x (find y from x), so it forward-unlocks on
+    # KC_evaluate_expressions — the live Unit-4 skill of substituting a value and evaluating, which
+    # it directly builds on (matching how AREA_POLYGONS, also "evaluate a formula", is wired).
+    _KC.DEPENDENT_VARS: frozenset({_KC.EVALUATE_EXPRESSIONS}),
     # Grade-6 Unit 5: solving x + b = c / a*x = c rests on the variable STANDING FOR a number (a
     # point on the line) and on judging the size of that number, so it forward-unlocks on
     # number-line placement — the live foundation KC the algebra skill conceptually rests on,
@@ -221,6 +226,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.WRITE_EXPRESSIONS,  # Grade-6 Unit 4: write expressions, on number-line placement
     _KC.EVALUATE_EXPRESSIONS,  # Grade-6 Unit 4: evaluate at a value, builds on writing expressions
     _KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5: solve one-step equations, on number-line placement
+    _KC.DEPENDENT_VARS,  # Grade-6 Unit 4/5 (6.EE.9): relate dependent/independent vars, on evaluate
     _KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4: rewrite as equivalent, on write expressions
     _KC.INEQUALITIES,  # Grade-6 Unit 5: write inequalities, on write expressions
     _KC.COORDINATE_PLANE,  # Grade-6 Unit 3: plot points in the plane, on number-line placement
@@ -283,6 +289,9 @@ REMEDIATION_ROUTING: dict[KnowledgeComponentId, tuple[KnowledgeComponentId, ...]
     # U4–U5 — Expressions & Equations
     _KC_.EVALUATE_EXPRESSIONS: (_KC_.EXPONENTS,),
     _KC_.ONE_STEP_EQUATIONS: (_KC_.EVALUATE_EXPRESSIONS,),
+    # 6.EE.9: relating dependent/independent vars is evaluating a rule y = a*x at x, so a struggling
+    # learner drops to KC_evaluate_expressions (substitute-and-evaluate) one level down.
+    _KC_.DEPENDENT_VARS: (_KC_.EVALUATE_EXPRESSIONS,),
     # U6 — Geometry
     _KC_.AREA_POLYGONS: (_KC_.EVALUATE_EXPRESSIONS,),
     _KC_.VOLUME_FRACTIONAL_EDGES: (_KC_.MULTIPLY_FRACTIONS,),

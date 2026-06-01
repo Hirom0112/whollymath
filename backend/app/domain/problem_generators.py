@@ -2215,6 +2215,94 @@ def _generate_coordinate_plane(
     )
 
 
+# ─── Grade-6 content build (2026-05-31) — Unit 4/5: Dependent variables (CCSS 6.EE.9) ───
+
+# The rate ``a`` (the multiplicative relationship y = a*x) and the independent value ``x`` by
+# difficulty tier (the easy→hard ramp; CP.B): higher tiers use larger rates/values. ``a >= 2`` and
+# ``x >= 2`` throughout, with the single ``(a == 2, x == 2)`` case excluded at generation, so the
+# correct dependent value ``a*x`` is always DISTINCT from the additive-confusion slip ``a + x``
+# (they are equal only at a = x = 2), keeping the misconception diagnostic.
+_DEPENDENT_RATE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4),
+    2: (3, 4, 5),
+    3: (4, 6, 7),
+    4: (6, 8, 9),
+}
+_DEPENDENT_VALUE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 4),
+    2: (4, 5, 6),
+    3: (5, 7, 8),
+    4: (8, 9, 10),
+}
+_DEPENDENT_RATE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7)
+_DEPENDENT_VALUE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8)
+
+
+def _generate_dependent_vars(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_dependent_vars: relate a dependent variable to an independent one (CCSS 6.EE.9).
+
+    The relationship is ``y = a*x``; given the INDEPENDENT value ``x``, the DEPENDENT value is
+    ``y = a*x``. The math (rate ``a``, value ``x``) is sampled FIRST and identically for every
+    surface, so the same seed yields the same relationship whether shown symbolically or on the
+    coordinate plane (mastery rule 2 — two surfaces of one skill). ``operands = (a, x)`` lets the
+    verifier replay the dependent-independent-swap misconception (additive ``a + x``).
+
+    Two REAL surfaces share this relationship (so the KC is masterable, PROJECT.md §3.4 rule 2):
+
+      - **SYMBOLIC** (default) — "y = {a}x. What is y when x = {x}?" — a single NUMERIC dependent
+        value entered in the NUMBER_ENTRY editor (graded by SymPy substitute-and-evaluate);
+      - **COORDINATE_PLANE** — "y = {a}x. Plot the point (x, y) when x = {x}." — the COORDINATE
+        answer "(x, a*x)" graded ORDER-INSENSITIVELY by the existing coordinate verifier, rendered
+        by the live coordinate-plane widget (REUSES that contract, no new widget).
+
+    ``a >= 2`` and ``x >= 2`` keep the additive slip ``a + x`` distinct from the correct ``a*x``;
+    the single ``(2, 2)`` collision (where ``2 + 2 == 2 * 2``) is resampled, so the misconception is
+    always diagnostic. ``difficulty`` widens the rate/value pools.
+    """
+    rate_pool = (
+        _DEPENDENT_RATE_BY_DIFFICULTY.get(difficulty, _DEPENDENT_RATE_POOL)
+        if difficulty
+        else _DEPENDENT_RATE_POOL
+    )
+    value_pool = (
+        _DEPENDENT_VALUE_BY_DIFFICULTY.get(difficulty, _DEPENDENT_VALUE_POOL)
+        if difficulty
+        else _DEPENDENT_VALUE_POOL
+    )
+    a = rng.choice(rate_pool)
+    x = rng.choice(value_pool)
+    # Resample the one collision (2 + 2 == 2 * 2) so the additive slip stays distinct from a*x.
+    while a == 2 and x == 2:
+        a = rng.choice(rate_pool)
+        x = rng.choice(value_pool)
+    dependent = a * x
+    if surface_format is Representation.COORDINATE_PLANE:
+        statement = f"The rule is y = {a}x. Plot the point (x, y) on the line when x = {x}."
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.DEPENDENT_VARS, seed, surface_format),
+            kc=KnowledgeComponentId.DEPENDENT_VARS,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=Rational(0),  # placeholder; the COORDINATE path grades correct_points
+            representations_available=get_kc(KnowledgeComponentId.DEPENDENT_VARS).representations,
+            operands=(Rational(a), Rational(x)),
+            answer_kind=AnswerKind.COORDINATE,
+            correct_points=_format_point(x, dependent),
+        )
+    statement = f"The rule is y = {a}x. What is y when x = {x}?"
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.DEPENDENT_VARS, seed, surface_format),
+        kc=KnowledgeComponentId.DEPENDENT_VARS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(dependent),
+        representations_available=get_kc(KnowledgeComponentId.DEPENDENT_VARS).representations,
+        operands=(Rational(a), Rational(x)),
+    )
+
+
 # ─── Grade-6 content build (2026-05-30) — Unit 3: classify number sets (TEKS 6.2A) ───
 
 # The values to classify, as (numerator, denominator) pairs spanning every membership case so the
@@ -2923,6 +3011,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.DATA_DISPLAYS: _generate_data_displays,
     KnowledgeComponentId.CATEGORICAL_DATA: _generate_categorical_data,
     KnowledgeComponentId.STATISTICAL_QUESTIONS: _generate_statistical_questions,
+    KnowledgeComponentId.DEPENDENT_VARS: _generate_dependent_vars,
 }
 
 

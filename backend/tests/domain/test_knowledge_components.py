@@ -108,6 +108,10 @@ EXPECTED_CATALOG_IDS = {
     # Unit 7 (YES_NO; CCSS 6.SP.1 — recognize a statistical question (anticipates variability),
     # reusing the yes/no answer kind over a curated question bank).
     "KC_statistical_questions",
+    # Unit 4/5 (CCSS 6.EE.9 — relate a dependent variable to an independent one. MASTERABLE: two
+    # live surfaces from one y = a*x relationship — SYMBOLIC (scalar y) + COORDINATE_PLANE (plot
+    # the (x,y) point), reusing the live coordinate widget).
+    "KC_dependent_vars",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -148,6 +152,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_data_displays",
     "KC_categorical_data",
     "KC_statistical_questions",
+    "KC_dependent_vars",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -173,8 +178,9 @@ EXPECTED_GRADE6_KCS = {
     # KC_evaluate_expressions (6.EE.2c, masterable numeric), KC_equivalent_expressions (6.EE.3/4,
     # reuses the expression-answer contract), KC_expression_parts (6.EE.2b, numeric —
     # coefficient/constant/term-count), and KC_exponents (6.EE.1, masterable numeric) all moved to
-    # EXPECTED_CATALOG_IDS (built 2026-05-30).
-    "KC_dependent_vars",
+    # EXPECTED_CATALOG_IDS (built 2026-05-30). KC_dependent_vars (6.EE.9) moved to
+    # EXPECTED_CATALOG_IDS (built 2026-05-31 — the first KC with two answer kinds across its reps:
+    # SYMBOLIC scalar + COORDINATE_PLANE point, masterable).
     # U5 — Equations & Inequalities (6.EE.5–9). KC_one_step_equations moved to EXPECTED_CATALOG_IDS
     # (built 2026-05-30 — the first masterable-live Grade-6 KC); KC_inequalities moved to
     # EXPECTED_CATALOG_IDS (built 2026-05-30 — the first inequality-answer KC, 6.EE.8).
@@ -216,7 +222,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 39 content-complete + 7 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 40 content-complete + 6 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

@@ -830,6 +830,31 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
     ),
+    # ─── Grade-6 content build (2026-05-31) — Unit 4/5: Dependent variables (CCSS 6.EE.9) ───
+    # Use variables for two quantities that change in relationship and analyze how the DEPENDENT
+    # variable depends on the INDEPENDENT one. The gradeable form anchors on a relationship equation
+    # y = a*x: given the independent value x, find the dependent value y. Offers TWO REAL live
+    # surfaces answered from the SAME relationship, so this KC is MASTERABLE (the §3.4 rule-2
+    # representation-diversity gate is reachable live, like KC_evaluate_expressions):
+    #   - SYMBOLIC (default) — the scalar dependent value y entered in the NUMBER_ENTRY editor
+    #     ("y = 3x, what is y when x = 4?" -> 12), graded NUMERIC by SymPy substitute-and-evaluate;
+    #   - COORDINATE_PLANE — plot the point (x, y) that satisfies the relationship for the given x
+    #     ("plot (x, y) when x = 4" -> (4,12)), REUSING the live coordinate-plane widget and the
+    #     existing order-insensitive coordinate verifier (per the project handoff: dependent_vars
+    #     can reuse the live coordinate widget).
+    # Two answer kinds across one KC's reps (NUMERIC + COORDINATE) — the wire keys the widget on the
+    # surface and the verifier on answer_kind PER PROBLEM, so both surfaces grade cleanly. Errors
+    # route to the OTHER live surface (each has a real surface state), never to a rep without one.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.DEPENDENT_VARS,
+        skill_name="Relate dependent and independent variables",
+        description=(
+            "Use variables for two quantities that change together, write the relationship, and "
+            "find the dependent value from the independent one — for y = 3x, when x is 4 the "
+            "dependent value y is 12 (multiply by the rate, not add)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.COORDINATE_PLANE),
+    ),
 )
 
 

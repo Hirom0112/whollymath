@@ -190,6 +190,12 @@ class MisconceptionId(StrEnum):
     # the verifier does NOT classify this id (a wrong yes/no is scored MAGNITUDE / no misconception,
     # like every YES_NO item). It lives here for catalog completeness and hint framing only.
     TREATS_ANY_AS_STATISTICAL = "treats-any-as-statistical"
+    # Unit 4/5 (6.EE.9): confusing the dependent/independent relationship — treating the
+    # MULTIPLICATIVE rule y = a·x as ADDITIVE, computing a + x instead of a·x ("y = 3x, x = 4"
+    # answered 7 instead of 12). The learner reads the rate as something to ADD to the input rather
+    # than to multiply it by, so the relationship between the two variables is applied with the
+    # wrong operation.
+    DEPENDENT_INDEPENDENT_SWAP = "dependent-independent-swap"
 
 
 @dataclass(frozen=True)
@@ -681,6 +687,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "statistical question anticipates VARIABILITY, so its answers vary across the data."
         ),
         applicable_kcs=(KnowledgeComponentId.STATISTICAL_QUESTIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.DEPENDENT_INDEPENDENT_SWAP,
+        name="Confuses the dependent/independent relationship",
+        description=(
+            "Applies the rule relating two variables with the WRONG operation — treats a "
+            "multiplicative relationship y = a·x as additive, so 'y = 3x, find y when x = 4' "
+            "becomes 3 + 4 = 7 instead of 3 × 4 = 12. The learner reads the rate as something to "
+            "ADD to the input rather than to multiply it by, mishandling how the dependent "
+            "variable depends on the independent one."
+        ),
+        applicable_kcs=(KnowledgeComponentId.DEPENDENT_VARS,),
     ),
 )
 
@@ -1192,6 +1210,21 @@ def multiply_base_by_exponent(base: int, exponent: int) -> Rational:
     the single ``2^2 == 2*2`` collision excluded), so a match is always diagnostic.
     """
     return Rational(base * exponent)
+
+
+def add_instead_of_applying_rate(rate: int, value: int) -> Rational:
+    """dependent-independent-swap: apply a multiplicative rule y = a·x as ADDITIVE — a + x (6.EE.9).
+
+    For the relationship ``y = rate·x``, the dependent value at ``x = value`` is ``rate * value``.
+    The learner who confuses the relationship reads the rate as something to ADD to the input rather
+    than to multiply it by, computing ``rate + value`` ("y = 3x at x = 4" -> 3 + 4 = 7 instead of
+    3 × 4 = 12). Returned as a SymPy ``Rational`` so the verifier compares values directly; it
+    differs from the correct ``rate * value`` for every item in the generator's scope
+    (``rate >= 2`` and ``value >= 2`` with the single ``2 + 2 == 2 * 2`` collision excluded), since
+    then ``rate * value - (rate + value) = (rate - 1)*(value - 1) - 1 > 0``, so a match is always
+    diagnostic.
+    """
+    return Rational(rate + value)
 
 
 def inverse_operation_error(operands: tuple[Rational, ...]) -> Rational | None:

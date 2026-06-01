@@ -200,6 +200,13 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # WORD_PROBLEM is the SAME judgment with no separate surface state, so it is advertised for the
     # ≥2-rep contract but is not a live answer surface (and never an error target).
     _KC.STATISTICAL_QUESTIONS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 4/5 (6.EE.9): SYMBOLIC = the scalar dependent value y entered in the
+    # NUMBER_ENTRY editor ("y = 3x, find y at x = 4"); COORDINATE_PLANE = the SAME relationship
+    # answered by plotting the point (x, y) (REUSES the live coordinate-plane widget). BOTH surfaces
+    # are LIVE and built from the same (a, x) relationship, so this KC is MASTERABLE (two real
+    # representations meet §3.4 rule 2) — like EVALUATE_EXPRESSIONS, not the practice-only Grade-6
+    # KCs. Each rep has a real surface state, so an error on one routes honestly to the other.
+    _KC.DEPENDENT_VARS: (_REP.SYMBOLIC, _REP.COORDINATE_PLANE),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

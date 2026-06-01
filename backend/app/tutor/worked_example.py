@@ -1468,6 +1468,50 @@ def _coordinate_plane_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _dependent_vars_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'substitute into the rule, then read the output' steps for a dependent-vars problem.
+
+    ``operands = (a, x)`` for the relationship ``y = a*x``. The SAME relationship has two live
+    surfaces (CCSS 6.EE.9), so the builder branches on ``answer_kind``:
+
+      - NUMERIC (SYMBOLIC) — the answer is the dependent value ``a*x == problem.correct_value``;
+        the steps land on that magnitude.
+      - COORDINATE (COORDINATE_PLANE) — the answer is the point ``(x, a*x)`` in
+        ``problem.correct_points``; the steps land on that point string (``revealed_value`` stays
+        ``None``, the documented non-magnitude case, like ``_coordinate_plane_steps``).
+
+    Raises if the operands are missing (CLAUDE.md §8.5)."""
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"dependent-vars problem {problem.problem_id} needs (a, x) operands")
+    a, x = (int(operand) for operand in operands)
+    product = a * x
+    is_coordinate = problem.correct_points is not None
+    first_two = (
+        WorkedStep(
+            shown=f"The independent value is x = {x}; put it into the rule y = {a}x.",
+            why_prompt="Why does choosing the input value let the rule decide the output?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"MULTIPLY by the rate (don't add): y = {a} · {x} = {product}.",
+            why_prompt="Why does the rate multiply the input instead of adding to it?",
+            revealed_value=None if is_coordinate else Rational(product),
+        ),
+    )
+    if is_coordinate:
+        canonical = problem.correct_points
+        return (
+            *first_two,
+            WorkedStep(
+                shown=f"So the point (x, y) plots at {canonical}.",
+                why_prompt="Why does the dependent value y sit above the input x on the line?",
+                revealed_value=None,
+            ),
+        )
+    return first_two
+
+
 def _classify_number_sets_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'walk the nested sets from largest in' steps for a classify problem (Unit 3, TEKS 6.2A).
 
@@ -1750,6 +1794,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.DATA_DISPLAYS: _data_displays_steps,
     KnowledgeComponentId.CATEGORICAL_DATA: _categorical_data_steps,
     KnowledgeComponentId.STATISTICAL_QUESTIONS: _statistical_questions_steps,
+    KnowledgeComponentId.DEPENDENT_VARS: _dependent_vars_steps,
 }
 
 

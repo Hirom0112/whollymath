@@ -1121,6 +1121,35 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-31) — Unit 4/5: Dependent variables (6.EE.9) ───
+    # Relate a dependent variable to an independent one — a MASTERABLE lesson: SYMBOLIC +
+    # COORDINATE_PLANE are BOTH live and built from the same y = a*x relationship, so errors route
+    # to the OTHER live surface and the probe draws from both reps. An OPERATION slip (computing the
+    # additive a + x instead of the multiplicative a*x) routes to COORDINATE_PLANE — plotting the
+    # point on the line makes the multiplicative relationship visible; a MAGNITUDE slip routes to
+    # SYMBOLIC, the equation surface where the rule is read directly. Both reps have a real surface
+    # state (SYMBOLIC_FOCUS / NUMBER_LINE_PRIMARY), so each route is honest. This KC is scalar on
+    # SYMBOLIC (NUMBER_ENTRY, NOT a fraction KC) and a point-set on COORDINATE_PLANE — _FRACTION_
+    # ANSWER_KCS is correctly NOT touched.
+    _spec(
+        _KC.DEPENDENT_VARS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.COORDINATE_PLANE,
+                "Plot the point on the line — the rate MULTIPLIES the input, it isn't added to it.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Put the value in for x and read the rule — multiply by the rate to size y.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False,
+            probe_representations=(_R.SYMBOLIC, _R.COORDINATE_PLANE),
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

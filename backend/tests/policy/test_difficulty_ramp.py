@@ -119,6 +119,9 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # statistical-questions is a YES/NO item: its operands are the equality truth carrier
             # (0/1, denom 1), NOT magnitudes — there is no item to ramp by difficulty at all.
             KnowledgeComponentId.STATISTICAL_QUESTIONS,
+            # dependent-vars operands are (rate, value) — whole numbers (denominator 1); the
+            # difficulty widens the rate/value magnitude pools, not a fraction-denominator pool.
+            KnowledgeComponentId.DEPENDENT_VARS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

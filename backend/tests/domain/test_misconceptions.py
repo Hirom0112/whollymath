@@ -94,6 +94,8 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "wrong-denominator",  # KC_categorical_data (Unit 7, TEKS 6.12D)
     "treats-any-as-statistical",  # KC_statistical_questions (Unit 7, 6.SP.1) — registry/hint
     # framing only; the YES_NO verifier never classifies it (a wrong yes/no is MAGNITUDE / none).
+    "dependent-independent-swap",  # KC_dependent_vars (Unit 4/5, 6.EE.9) — multiplicative rule
+    # y = a*x applied as additive a + x; OPERATION on the SYMBOLIC surface.
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

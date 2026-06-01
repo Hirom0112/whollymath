@@ -55,6 +55,7 @@ from app.domain.misconceptions import (
     WrongFraction,
     add_across,
     add_edges_instead_of_multiplying,
+    add_instead_of_applying_rate,
     add_magnitudes_ignoring_sign,
     additive_ratio,
     confuse_coefficient_with_constant,
@@ -933,6 +934,19 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.WRONG_DENOMINATOR,
         predict=wrong_denominator_relative_frequency,
+    ),
+    # dependent-independent-swap: applied the multiplicative relationship y = a*x as ADDITIVE,
+    # computing a + x instead of a*x ("y = 3x at x = 4" -> 7 instead of 12). Operands are (a, x).
+    # A wrong OPERATION (the rate was added to the input, not multiplied by it); the generator
+    # excludes a = x = 2, so the additive value always differs from the correct product and the
+    # match is diagnostic. (Only the SYMBOLIC/NUMERIC surface routes here; the COORDINATE surface's
+    # coordinate-swap is classified by _verify_coordinate, not this numeric path.)
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.DEPENDENT_VARS,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.DEPENDENT_INDEPENDENT_SWAP,
+        predict=lambda ops: add_instead_of_applying_rate(int(ops[0]), int(ops[1])),
     ),
 )
 
