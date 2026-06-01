@@ -1,0 +1,7 @@
+# CDK build artifacts
+cdk.out/
+*.js
+*.d.ts
+
+# CDK keeps cdk.context.json tracked on purpose (deterministic synth without AWS calls).
+!cdk.context.json

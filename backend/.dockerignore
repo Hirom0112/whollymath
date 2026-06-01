@@ -1,0 +1,25 @@
+# Virtualenvs — recreated inside the image by `uv sync`.
+.venv
+
+# Python bytecode / caches.
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Tests — not shipped in the runtime image.
+tests
+
+# Local data, including the SQLite dev DB. MUST NOT ship to prod.
+data
+*.db
+*.sqlite
+*.sqlite3
+
+# Version control.
+.git
+
+# Docs not needed at runtime.
+README.md
+T1_T2_COORDINATION.md

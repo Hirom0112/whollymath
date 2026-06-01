@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "lib": ["ES2022"],
     "strict": true,
     "noImplicitAny": true,
@@ -10,7 +10,12 @@
     "noUnusedParameters": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "declaration": false,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "noEmit": true,
+    "types": ["node"]
   },
-  "include": ["bin", "lib"]
+  "include": ["bin/**/*.ts", "lib/**/*.ts"],
+  "exclude": ["node_modules", "cdk.out"]
 }
