@@ -128,7 +128,7 @@ export function Homework({
   }
 
   if (phase === 'waiting') {
-    const uploadUrl = `${window.location.origin}/?hwupload=${encodeURIComponent(assign.token)}`;
+    const uploadUrl = `${window.location.origin}/hw/upload?token=${encodeURIComponent(assign.token)}`;
     return (
       <Shell onBack={onBack}>
         <p className="wm-hw-lesson">{lessonLabel(assign.target_kc)}</p>
