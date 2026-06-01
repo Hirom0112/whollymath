@@ -10,5 +10,8 @@ export { ClassifySets, selectionToAnswer, answerToSelection } from './ClassifySe
 // Display-only stimulus (not a WorkspaceWidget answer input): a labeled geometry figure for the
 // Unit-6 area/volume problem statements; geometry answers stay numeric via NumberEntry.
 export { FigureStimulus, describeFigure, type FigureSpec } from './FigureStimulus';
+// Display-only stats stimulus (dot plot / frequency table / histogram) for the Unit-7 stats problem
+// statements; stats answers stay numeric/yes-no — this only visualizes the data set.
+export { StatsStimulus } from './StatsStimulus';
 export { CoordinatePlane, pointsToAnswer, answerToPoints, type GridPoint } from './CoordinatePlane';
 export { selectWidget, type WidgetKind, type WorkspaceWidgetProps } from './WidgetContract';

@@ -1,0 +1,96 @@
+/* Display-only statistics stimulus for the Unit-7 stats problem statements (dot plot, frequency
+   table, histogram). Navy ink on cream, serif labels — matching FigureStimulus. Static (no
+   animation), so inherently reduced-motion safe. Class names unique app-wide (prefix wm-statstim-). */
+
+.wm-statstim {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto 0.5rem;
+}
+
+.wm-statstim-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The plot axis — solid navy line. */
+.wm-statstim-axis {
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* A per-value tick under the axis. */
+.wm-statstim-tick {
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2;
+}
+
+/* One dot per occurrence, stacked above its value. */
+.wm-statstim-dot {
+  fill: var(--wm-navy-deep);
+  stroke: var(--wm-cream);
+  stroke-width: 1.5;
+}
+
+/* Histogram bar — navy on faint cream fill, like the figure outlines. */
+.wm-statstim-bar {
+  fill: var(--wm-cream-2);
+  fill-opacity: 0.85;
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+/* The count printed above each histogram bar. */
+.wm-statstim-barcount {
+  fill: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Axis value labels (the value under each tick / the bin range). */
+.wm-statstim-axislabel {
+  fill: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* The axis caption (what the axis measures). */
+.wm-statstim-caption {
+  fill: var(--wm-ink-soft);
+  font-family: var(--wm-font-serif);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Frequency / data table — bordered navy-on-cream, serif. */
+.wm-statstim-table {
+  border-collapse: collapse;
+  font-family: var(--wm-font-serif);
+  color: var(--wm-navy-deep);
+  min-width: 220px;
+}
+
+.wm-statstim-table th,
+.wm-statstim-table td {
+  border: 2px solid var(--wm-navy-deep);
+  padding: 0.4rem 1rem;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.wm-statstim-table thead th {
+  background: var(--wm-cream-2);
+  font-weight: 700;
+}
+
+.wm-statstim-table tbody th {
+  font-weight: 600;
+  text-transform: capitalize;
+}

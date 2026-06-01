@@ -91,6 +91,26 @@ const SETS_SESSION: StartSessionResponse = {
   },
 };
 
+// A stats session (KC_summary_statistics, 6.SP.3): the problem carries a DISPLAY-ONLY dot-plot
+// stimulus visualizing its data set. The answer stays numeric (number_entry); the stimulus is shown
+// in the statement area, additive to the prompt text. Pins that the Tutor renders the data visual.
+const STATS_SESSION: StartSessionResponse = {
+  session_id: 'sess-stats',
+  surface_state: 'S1_symbolic_focus',
+  problem: {
+    problem_id: 'gen-stats-1',
+    kc: 'KC_summary_statistics',
+    surface_format: 'symbolic',
+    statement: 'Find the mean of 4, 4, 5, 6, 9.',
+    widget_id: 'number_entry',
+    stimulus: {
+      kind: 'dot_plot',
+      values: [4, 4, 5, 6, 9],
+      axis_label: 'Value',
+    },
+  },
+};
+
 const CORRECT_TURN: TurnResponse = {
   correct: true,
   error_type: 'none',
@@ -302,6 +322,21 @@ describe('Tutor', () => {
       submitted_answer: 'whole,integer,rational',
       action: 'submit_answer',
     });
+  });
+
+  it('renders the display-only stats stimulus in the statement area for a stats problem', () => {
+    mockFetch();
+    render(<Tutor session={STATS_SESSION} />);
+
+    // The dot plot is drawn (5 data points → 5 dots), additive to the prompt text which still shows.
+    expect(screen.getByText(/find the mean of 4, 4, 5, 6, 9/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /dot plot/i })).toBeInTheDocument();
+  });
+
+  it('shows no stats stimulus on a non-stats problem', () => {
+    mockFetch();
+    render(<Tutor session={SESSION} />);
+    expect(screen.queryByRole('img', { name: /dot plot|histogram/i })).not.toBeInTheDocument();
   });
 
   it('requesting a hint surfaces the nudge (mascot speech) without advancing', async () => {

@@ -188,3 +188,27 @@ def test_hint_request_returns_nudge_without_advancing() -> None:
     assert response.next_surface_state is started.surface_state
     assert response.next_problem is not None
     assert response.next_problem.problem_id == started.problem.problem_id
+
+
+def test_stats_problem_view_carries_a_display_only_stimulus() -> None:
+    """A stats lesson's ProblemView carries a structured ``stimulus`` (the data set as a visual),
+    while a non-stats lesson carries none. The stimulus is the QUESTION INPUT, never the answer:
+    the wire ProblemView ships no ``correct_value``/``operands`` (§8.2), so the answer cannot ride
+    in via the stimulus — this guards that the new field stays answer-free at the seam.
+    """
+    store = SessionStore()
+    stats = store.start_kc(KnowledgeComponentId.SUMMARY_STATISTICS)
+    assert stats.problem.stimulus is not None
+    assert stats.problem.stimulus.kind == "dot_plot"
+    # The data set the surface will draw is non-empty and matches what the prompt lists.
+    assert len(stats.problem.stimulus.values) > 0
+    for value in stats.problem.stimulus.values:
+        assert str(value) in stats.problem.statement  # picture agrees with the prompt text
+
+    categorical = store.start_kc(KnowledgeComponentId.CATEGORICAL_DATA)
+    assert categorical.problem.stimulus is not None
+    assert categorical.problem.stimulus.kind == "frequency_table"
+
+    # A non-stats lesson gets no stats stimulus.
+    addition = store.start(_ADDITION_ROUTE_KEY)
+    assert addition.problem.stimulus is None

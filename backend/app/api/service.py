@@ -40,8 +40,13 @@ from app.api.schemas import (
     ActionType,
     CourseNodeView,
     CourseView,
+    DotPlotStimulusView,
     ErrorType,
     EventBatchRequest,
+    FrequencyRowView,
+    FrequencyTableStimulusView,
+    HistogramBinView,
+    HistogramStimulusView,
     InteractionEventIn,
     InterventionKind,
     InterventionView,
@@ -50,6 +55,7 @@ from app.api.schemas import (
     ProblemView,
     RouteOptionView,
     StartSessionResponse,
+    StatsStimulusView,
     StudyPlanView,
     SurfaceState,
     TurnRequest,
@@ -66,6 +72,13 @@ from app.domain.curriculum import CatalogUnit, all_units, get_unit
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 from app.domain.lesson_spec import widget_for_representation
 from app.domain.problem_generators import Problem
+from app.domain.stats_stimulus import (
+    DotPlotStimulus,
+    FrequencyTableStimulus,
+    HistogramStimulus,
+    StatsStimulus,
+    stimulus_for,
+)
 from app.domain.verifier import verify
 from app.events.ingest import ingest_events
 from app.helpneed.events_features import build_episodes
@@ -137,6 +150,31 @@ class UnknownRouteError(LookupError):
     """
 
 
+def _stats_stimulus_view(stimulus: StatsStimulus | None) -> StatsStimulusView | None:
+    """Project a domain ``StatsStimulus`` to its answer-free wire view, or ``None``.
+
+    A pure shape projection of already-decided data (no SymPy, no answer — §8.2): the domain
+    stimulus carries only the data set the prompt already lists, so the wire view does too.
+    """
+    if stimulus is None:
+        return None
+    if isinstance(stimulus, DotPlotStimulus):
+        return DotPlotStimulusView(values=list(stimulus.values), axis_label=stimulus.axis_label)
+    if isinstance(stimulus, FrequencyTableStimulus):
+        return FrequencyTableStimulusView(
+            rows=[FrequencyRowView(label=label, count=count) for label, count in stimulus.rows],
+            category_label=stimulus.category_label,
+            count_label=stimulus.count_label,
+        )
+    if isinstance(stimulus, HistogramStimulus):
+        return HistogramStimulusView(
+            bins=[HistogramBinView(lo=lo, hi=hi, count=count) for lo, hi, count in stimulus.bins],
+            bin_width=stimulus.bin_width,
+            axis_label=stimulus.axis_label,
+        )
+    return None  # pragma: no cover — the union above is exhaustive
+
+
 def _problem_view(problem: Problem) -> ProblemView:
     """Project a domain ``Problem`` to the answer-free ``ProblemView`` the wire ships.
 
@@ -174,6 +212,7 @@ def _problem_view(problem: Problem) -> ProblemView:
         axis_min=axis_min,
         axis_max=axis_max,
         given_denominator=problem.given_denominator,
+        stimulus=_stats_stimulus_view(stimulus_for(problem.kc, problem.operands)),
     )
 
 

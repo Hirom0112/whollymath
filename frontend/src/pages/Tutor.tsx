@@ -24,6 +24,7 @@ import {
   NumberEntry,
   NumberLine,
   selectWidget,
+  StatsStimulus,
   SymbolicEditor,
   tickFraction,
   YesNo,
@@ -783,6 +784,9 @@ export function Tutor({
             </p>
           ) : null}
           <h2 className="wm-tutor-statement">{problem.statement}</h2>
+          {/* Display-only stats visual (dot plot / table / histogram) — additive to the prompt
+              text, never an answer input. Renders only when the problem carries a stats stimulus. */}
+          <StatsStimulus problem={problem} />
 
           {phase !== 'feedback' ? (
             <form className="wm-tutor-form" onSubmit={handleSubmit}>

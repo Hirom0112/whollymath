@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -162,6 +162,86 @@ class RemediationView(BaseModel):
     )
 
 
+class DotPlotStimulusView(BaseModel):
+    """A display-only dot plot for a stats problem statement (Unit-7, CCSS 6.SP).
+
+    Carries the QUESTION INPUT — the raw data set — never the answer (the computed statistic lives
+    only server-side, §8.2). The surface stacks one dot above each occurrence of a value. Derived
+    from the same data the prompt text lists (single source of truth — ``domain/stats_stimulus``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["dot_plot"] = "dot_plot"
+    values: list[int] = Field(description="The raw data values; the surface stacks dots per value.")
+    axis_label: str = Field(min_length=1, description="What the number-line axis measures.")
+
+
+class FrequencyRowView(BaseModel):
+    """One row of a frequency/data table: a category label and its count.
+
+    A named model (not a bare tuple) so the generated TS type is precise — pydantic2ts loses the
+    element types of a tuple field (it emits ``[unknown, unknown]``), which would force casts on
+    the surface and risk regen drift. A small model regenerates stably as ``{label, count}``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    label: str = Field(min_length=1, description="The category name (e.g. 'red').")
+    count: int = Field(ge=0, description="How many were counted in this category.")
+
+
+class FrequencyTableStimulusView(BaseModel):
+    """A display-only frequency / data table for a categorical-data problem statement (TEKS 6.12D).
+
+    One labeled count per category — the survey breakdown the prompt already names — never the
+    answer. Derived from the problem's per-category counts (``domain/stats_stimulus``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["frequency_table"] = "frequency_table"
+    rows: list[FrequencyRowView] = Field(description="One labeled count per category, in order.")
+    category_label: str = Field(min_length=1, description="Header for the category column.")
+    count_label: str = Field(min_length=1, description="Header for the count column.")
+
+
+class HistogramBinView(BaseModel):
+    """One bar of a histogram: an inclusive ``[lo, hi]`` value range and the count of points in it.
+
+    A named model (not a bare tuple) for the same precise-regen reason as ``FrequencyRowView``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    lo: int = Field(description="Inclusive lower bound of the bin.")
+    hi: int = Field(description="Inclusive upper bound of the bin.")
+    count: int = Field(ge=0, description="How many data points fall in this bin.")
+
+
+class HistogramStimulusView(BaseModel):
+    """A display-only histogram for a binned data-display problem statement (CCSS 6.SP.4).
+
+    Data grouped into equal-width bins, one bar per occupied bin showing its frequency — the same
+    bins the prompt's bin-frequency question reads. Carries no answer (``domain/stats_stimulus``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["histogram"] = "histogram"
+    bins: list[HistogramBinView] = Field(description="One bar per occupied bin, ordered by lo.")
+    bin_width: int = Field(ge=1, description="The equal bin width.")
+    axis_label: str = Field(min_length=1, description="What the axis measures.")
+
+
+# A stats problem carries exactly ONE of these display-only stimuli (or none). Discriminated on
+# ``kind`` so the generated TS type is a tagged union the surface can switch on.
+StatsStimulusView = Annotated[
+    DotPlotStimulusView | FrequencyTableStimulusView | HistogramStimulusView,
+    Field(discriminator="kind"),
+]
+
+
 class ProblemView(BaseModel):
     """The learner-facing view of one presented problem (ARCHITECTURE.md §10 step 12).
 
@@ -249,6 +329,15 @@ class ProblemView(BaseModel):
             "Equivalence fill-the-top only: the denominator named in the question "
             "('?/8'), pre-filled and locked so the learner enters only the numerator. "
             "Null otherwise."
+        ),
+    )
+    stimulus: StatsStimulusView | None = Field(
+        default=None,
+        description=(
+            "DISPLAY-ONLY visual of a stats problem's data set (a dot plot, frequency table, or "
+            "histogram) — the question input, never the answer (§8.2). The surface draws it in the "
+            "problem statement; the prompt text stays as the accessible fallback. Null for every "
+            "non-stats problem."
         ),
     )
 

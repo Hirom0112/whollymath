@@ -684,6 +684,24 @@ export interface DemoLoginResponse {
   token: string;
 }
 /**
+ * A display-only dot plot for a stats problem statement (Unit-7, CCSS 6.SP).
+ *
+ * Carries the QUESTION INPUT — the raw data set — never the answer (the computed statistic lives
+ * only server-side, §8.2). The surface stacks one dot above each occurrence of a value. Derived
+ * from the same data the prompt text lists (single source of truth — ``domain/stats_stimulus``).
+ */
+export interface DotPlotStimulusView {
+  kind?: "dot_plot";
+  /**
+   * The raw data values; the surface stacks dots per value.
+   */
+  values: number[];
+  /**
+   * What the number-line axis measures.
+   */
+  axis_label: string;
+}
+/**
  * A buffered batch of interaction events for one session (Slice PL.2).
  *
  * The surface accumulates events client-side and flushes them in one POST to ``/events``.
@@ -772,6 +790,84 @@ export interface InterventionView {
    * The pre-written nudge text (no LLM, §8.1).
    */
   text: string;
+}
+/**
+ * One row of a frequency/data table: a category label and its count.
+ *
+ * A named model (not a bare tuple) so the generated TS type is precise — pydantic2ts loses the
+ * element types of a tuple field (it emits ``[unknown, unknown]``), which would force casts on
+ * the surface and risk regen drift. A small model regenerates stably as ``{label, count}``.
+ */
+export interface FrequencyRowView {
+  /**
+   * The category name (e.g. 'red').
+   */
+  label: string;
+  /**
+   * How many were counted in this category.
+   */
+  count: number;
+}
+/**
+ * A display-only frequency / data table for a categorical-data problem statement (TEKS 6.12D).
+ *
+ * One labeled count per category — the survey breakdown the prompt already names — never the
+ * answer. Derived from the problem's per-category counts (``domain/stats_stimulus``).
+ */
+export interface FrequencyTableStimulusView {
+  kind?: "frequency_table";
+  /**
+   * One labeled count per category, in order.
+   */
+  rows: FrequencyRowView[];
+  /**
+   * Header for the category column.
+   */
+  category_label: string;
+  /**
+   * Header for the count column.
+   */
+  count_label: string;
+}
+/**
+ * One bar of a histogram: an inclusive ``[lo, hi]`` value range and the count of points in it.
+ *
+ * A named model (not a bare tuple) for the same precise-regen reason as ``FrequencyRowView``.
+ */
+export interface HistogramBinView {
+  /**
+   * Inclusive lower bound of the bin.
+   */
+  lo: number;
+  /**
+   * Inclusive upper bound of the bin.
+   */
+  hi: number;
+  /**
+   * How many data points fall in this bin.
+   */
+  count: number;
+}
+/**
+ * A display-only histogram for a binned data-display problem statement (CCSS 6.SP.4).
+ *
+ * Data grouped into equal-width bins, one bar per occupied bin showing its frequency — the same
+ * bins the prompt's bin-frequency question reads. Carries no answer (``domain/stats_stimulus``).
+ */
+export interface HistogramStimulusView {
+  kind?: "histogram";
+  /**
+   * One bar per occupied bin, ordered by lo.
+   */
+  bins: HistogramBinView[];
+  /**
+   * The equal bin width.
+   */
+  bin_width: number;
+  /**
+   * What the axis measures.
+   */
+  axis_label: string;
 }
 /**
  * Start a homework run for a skill (the desktop, at lesson end). Returns a token for the QR.
@@ -1150,6 +1246,10 @@ export interface ProblemView {
    * Equivalence fill-the-top only: the denominator named in the question ('?/8'), pre-filled and locked so the learner enters only the numerator. Null otherwise.
    */
   given_denominator?: number | null;
+  /**
+   * DISPLAY-ONLY visual of a stats problem's data set (a dot plot, frequency table, or histogram) — the question input, never the answer (§8.2). The surface draws it in the problem statement; the prompt text stays as the accessible fallback. Null for every non-stats problem.
+   */
+  stimulus?: (DotPlotStimulusView | FrequencyTableStimulusView | HistogramStimulusView) | null;
 }
 /**
  * The read-back of a snapped handwritten answer, for the learner to confirm (Slice HR.C2).
@@ -1338,6 +1438,10 @@ export interface ProblemView1 {
    * Equivalence fill-the-top only: the denominator named in the question ('?/8'), pre-filled and locked so the learner enters only the numerator. Null otherwise.
    */
   given_denominator?: number | null;
+  /**
+   * DISPLAY-ONLY visual of a stats problem's data set (a dot plot, frequency table, or histogram) — the question input, never the answer (§8.2). The surface draws it in the problem statement; the prompt text stays as the accessible fallback. Null for every non-stats problem.
+   */
+  stimulus?: (DotPlotStimulusView | FrequencyTableStimulusView | HistogramStimulusView) | null;
 }
 /**
  * What a returning learner should do next (Slice 6.x — spaced repetition).
