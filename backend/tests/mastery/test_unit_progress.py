@@ -65,57 +65,122 @@ def _lessons_by_slug(unit: UnitProgress) -> dict[str, LessonProgress]:
 # --- Fresh learner ---------------------------------------------------------
 
 
-def test_fresh_learner_fraction_lessons_show_course_map_statuses() -> None:
-    """U2's real-KC lessons reflect the course-map node status (DAT.6)."""
+def test_fresh_learner_locked_unit_forces_all_lessons_locked() -> None:
+    """A LOCKED unit (u2 for a fresh learner) -> every playable lesson LOCKED.
+
+    Intra-unit display gating (DEC.1-lesson): when the unit itself is locked,
+    no lesson inside it is playable, so every playable lesson renders LOCKED
+    regardless of its raw course-map node status. u2_l0/u2_l1 happen to be
+    DAG-locked at the node level too, but the display gate is what guarantees
+    LOCKED here (the unit gate dominates).
+    """
     progress = build_unit_progress(all_units(), _course([]), frozenset())
     u2 = _by_slug(progress)["u2"]
-    lessons = _lessons_by_slug(u2)
-
-    # u2_l0 -> KC_equivalence; prereq NUMBER_LINE_PLACEMENT unmet -> LOCKED.
-    assert lessons["u2_l0"].kc_id == "KC_equivalence"
-    assert lessons["u2_l0"].status is CourseNodeStatus.LOCKED
-    assert lessons["u2_l0"].probability is None
-    # u2_l1 -> KC_addition_unlike; also locked on a fresh learner.
-    assert lessons["u2_l1"].status is CourseNodeStatus.LOCKED
+    assert u2.status is UnitStatus.LOCKED
+    for lp in u2.lessons:
+        if lp.concept_only:
+            continue
+        assert lp.status is CourseNodeStatus.LOCKED, lp.lesson_slug
 
 
-def test_fresh_learner_number_line_lesson_available_as_root() -> None:
-    """U3's number-line lessons map to the AVAILABLE root node."""
+def test_number_line_root_renders_available_in_an_unlocked_unit() -> None:
+    """The number-line root KC renders AVAILABLE as the first lesson of an unlocked unit.
+
+    In the real catalog u3's number-line lessons map to the AVAILABLE root
+    course-map node, but u3 is a LOCKED unit for a fresh learner, so the
+    display gate forces its lessons LOCKED. To see the raw root status surface,
+    put the number-line lesson in the FIRST (unlocked) unit: as the first
+    not-yet-done playable lesson it renders AVAILABLE.
+    """
+    synthetic = (
+        CatalogUnit(
+            slug="nl-first",
+            title="NL First",
+            order=1,
+            ccss_cluster="x",
+            teks_cluster="x",
+            description="x",
+            lessons=(
+                CatalogLesson(
+                    slug="nl_l1",
+                    unit_slug="nl-first",
+                    order=1,
+                    title="Number line",
+                    kc_id="KC_number_line_placement",
+                    ccss_code="6.NS.6",
+                    teks_code="6.2C",
+                    description="x",
+                ),
+                CatalogLesson(
+                    slug="nl_l2",
+                    unit_slug="nl-first",
+                    order=2,
+                    title="Number line again",
+                    kc_id="KC_number_line_placement",
+                    ccss_code="6.NS.6",
+                    teks_code="6.2C",
+                    description="x",
+                ),
+            ),
+        ),
+    )
+    progress = build_unit_progress(synthetic, _course([]), frozenset())
+    lessons = _lessons_by_slug(progress[0])
+    # First lesson is the next-to-do -> AVAILABLE; the second locks behind it.
+    assert lessons["nl_l1"].kc_id == "KC_number_line_placement"
+    assert lessons["nl_l1"].status is CourseNodeStatus.AVAILABLE
+    assert lessons["nl_l2"].status is CourseNodeStatus.LOCKED
+
+
+def test_fresh_learner_unbuilt_lessons_zero_percent() -> None:
+    """Forward-declared / None KC lessons keep probability None; every unit 0% (DAT.6).
+
+    Note: the *displayed* status of these placeholder lessons is now subject to
+    intra-unit display gating (DEC.1-lesson) — u1's first lesson is AVAILABLE,
+    the rest LOCKED, and a locked unit's placeholders render LOCKED. The raw
+    "forward-declared/None -> AVAILABLE placeholder" resolution is verified
+    directly on ``_lesson_progress`` in
+    ``test_lesson_progress_resolves_placeholder_to_available`` below. Here we
+    assert the progress math the display gate must not disturb: no progress
+    anywhere -> probability None on placeholders and 0% across every unit.
+    """
     progress = build_unit_progress(all_units(), _course([]), frozenset())
-    u3 = _by_slug(progress)["u3"]
-    lessons = _lessons_by_slug(u3)
-    # u3_l2 / u3_l3 reuse KC_number_line_placement (the root) -> AVAILABLE.
-    assert lessons["u3_l2"].kc_id == "KC_number_line_placement"
-    assert lessons["u3_l2"].status is CourseNodeStatus.AVAILABLE
-    assert lessons["u3_l3"].status is CourseNodeStatus.AVAILABLE
-
-
-def test_fresh_learner_unbuilt_lessons_default_available_zero_percent() -> None:
-    """Forward-declared / None KC lessons default to AVAILABLE; unit 0% (DAT.6)."""
-    progress = build_unit_progress(all_units(), _course([]), frozenset())
-
-    # u1 now MIXES built lessons with placeholders: KC_unit_rate (u1_l3/l4) is content-complete
-    # (Grade-6 build) and gates on its prerequisite, so it is not an AVAILABLE placeholder. Every
-    # still-unbuilt (forward-declared) u1 lesson defaults to the AVAILABLE placeholder.
-    from app.domain.knowledge_components import LIVE_KCS
 
     u1 = _by_slug(progress)["u1"]
     for lp in u1.lessons:
-        if lp.kc_id and KnowledgeComponentId(lp.kc_id) in LIVE_KCS:
-            continue  # a built lesson — gated by its prereq, not a placeholder
-        assert lp.status is CourseNodeStatus.AVAILABLE
         assert lp.probability is None
     assert u1.percent_complete == 0.0
 
-    # u2_l7 has kc_id None (interleave gate) -> AVAILABLE placeholder.
+    # u2_l7 has kc_id None (interleave gate); no node, so probability stays None.
     u2 = _by_slug(progress)["u2"]
     gate = _lessons_by_slug(u2)["u2_l7"]
     assert gate.kc_id is None
-    assert gate.status is CourseNodeStatus.AVAILABLE
     assert gate.probability is None
 
     # No progress anywhere -> 0% across every unit.
     assert all(u.percent_complete == 0.0 for u in progress)
+
+
+def test_lesson_progress_resolves_placeholder_to_available() -> None:
+    """RAW resolution: a forward-declared/None kc_id -> AVAILABLE placeholder, None prob.
+
+    This is the un-gated mastery-truth mapping in ``_lesson_progress`` (DAT.6),
+    asserted directly so the intra-unit display gate (which can override the
+    *displayed* status) cannot mask a regression in placeholder resolution.
+    """
+    from app.mastery.unit_progress import _lesson_progress
+
+    # None kc_id (interleave gate).
+    gate = _lesson_progress("gate", None, {}, concept_only=False)
+    assert gate.status is CourseNodeStatus.AVAILABLE
+    assert gate.probability is None
+    assert gate.playable is False
+
+    # Forward-declared string not in the enum.
+    fwd = _lesson_progress("fwd", "KC_not_a_real_kc", {}, concept_only=False)
+    assert fwd.status is CourseNodeStatus.AVAILABLE
+    assert fwd.probability is None
+    assert fwd.playable is False
 
 
 def test_playable_is_true_exactly_for_content_complete_kcs() -> None:
@@ -240,6 +305,108 @@ def test_all_lessons_complete_makes_unit_mastered() -> None:
     progress = build_unit_progress(synthetic, course, frozenset({KC.NUMBER_LINE_PLACEMENT}))
     assert progress[0].status is UnitStatus.MASTERED
     assert progress[0].percent_complete == 1.0
+
+
+# --- Intra-unit lesson progression (DEC.1 applied at lesson granularity) ----
+
+
+def test_fresh_learner_unit1_first_lesson_available_rest_locked() -> None:
+    """Fresh learner opens u1 -> u1_l1 AVAILABLE, u1_l2..u1_l6 LOCKED.
+
+    This is the core bug fix: u1 is the open entry point, so it must be
+    PLAYABLE in order. Every u1 lesson's raw course-map node is DAG-locked
+    (KC_ratio_language sits behind KC_equivalence, etc.), which made the unit a
+    dead end. The intra-unit display gate (DEC.1-lesson) makes the first
+    not-yet-done playable lesson AVAILABLE and locks the rest.
+    """
+    progress = build_unit_progress(all_units(), _course([]), frozenset())
+    u1 = _by_slug(progress)["u1"]
+    assert u1.status is UnitStatus.AVAILABLE
+    lessons = _lessons_by_slug(u1)
+    assert lessons["u1_l1"].status is CourseNodeStatus.AVAILABLE
+    for slug in ("u1_l2", "u1_l3", "u1_l4", "u1_l5", "u1_l6"):
+        assert lessons[slug].status is CourseNodeStatus.LOCKED, slug
+
+
+def test_fresh_learner_locked_unit_all_lessons_locked() -> None:
+    """A LOCKED unit (u2 for a fresh learner) -> every playable lesson LOCKED.
+
+    The unit gate dominates: when a unit is locked, no lesson inside it is
+    reachable, so the first-lesson-available rule does NOT apply.
+    """
+    progress = build_unit_progress(all_units(), _course([]), frozenset())
+    u2 = _by_slug(progress)["u2"]
+    assert u2.status is UnitStatus.LOCKED
+    for lp in u2.lessons:
+        if lp.concept_only:
+            continue
+        assert lp.status is CourseNodeStatus.LOCKED, lp.lesson_slug
+
+
+def test_mastering_unit1_first_lesson_advances_to_second() -> None:
+    """After u1_l1 is mastered, u1_l2 is AVAILABLE and u1_l3 LOCKED.
+
+    The play cursor advances exactly one lesson: the mastered lesson keeps its
+    MASTERED status (mastery truth), the next not-yet-done lesson opens, and
+    everything after it stays LOCKED.
+    """
+    course = _course([ReviewableSkill(KC.RATIO_LANGUAGE, True, 0.95, _NOW)])
+    progress = build_unit_progress(all_units(), course, frozenset({KC.RATIO_LANGUAGE}))
+    u1 = _by_slug(progress)["u1"]
+    # u1 has progress -> in_progress; it stays unlocked.
+    assert u1.status is UnitStatus.IN_PROGRESS
+    lessons = _lessons_by_slug(u1)
+    assert lessons["u1_l1"].status is CourseNodeStatus.MASTERED  # mastery truth kept
+    assert lessons["u1_l2"].status is CourseNodeStatus.AVAILABLE  # next to do
+    assert lessons["u1_l3"].status is CourseNodeStatus.LOCKED  # locked behind l2
+
+
+def test_in_progress_lesson_is_the_cursor_and_locks_later_lessons() -> None:
+    """A lesson IN_PROGRESS is kept and is the cursor: later lessons LOCK.
+
+    Touching (not yet mastering) u1_l1's KC makes its node IN_PROGRESS. That is
+    the current lesson, so u1_l2 onward LOCK behind it rather than one opening.
+    """
+    course = _course([ReviewableSkill(KC.RATIO_LANGUAGE, False, 0.4, _NOW)])
+    progress = build_unit_progress(all_units(), course, frozenset())
+    u1 = _by_slug(progress)["u1"]
+    assert u1.status is UnitStatus.IN_PROGRESS
+    lessons = _lessons_by_slug(u1)
+    assert lessons["u1_l1"].status is CourseNodeStatus.IN_PROGRESS
+    assert lessons["u1_l2"].status is CourseNodeStatus.LOCKED
+
+
+def test_concept_only_lessons_keep_concept_rendering_in_unlocked_unit() -> None:
+    """Concept-only lessons (U8) keep their own state, untouched by display gating.
+
+    DEC.FINLIT: u8's four concept_only lessons are not part of the play
+    progression. Even when u8 is unlocked (mastering everything before it), they
+    must NOT be flipped to AVAILABLE/LOCKED by the lesson cursor — they keep the
+    raw node status the surface renders as the concept lesson.
+    """
+    from app.mastery.unit_progress import _display_gated_lessons, _lesson_progress
+
+    # Build u8's raw lessons directly so we control the unit-unlocked path.
+    u8 = next(u for u in all_units() if u.slug == "u8")
+    raw = tuple(
+        _lesson_progress(lesson.slug, lesson.kc_id, {}, concept_only=lesson.concept_only)
+        for lesson in u8.lessons
+    )
+    gated = {
+        lp.lesson_slug: lp for lp in _display_gated_lessons(raw, unit_status=UnitStatus.AVAILABLE)
+    }
+    raw_by_slug = {lp.lesson_slug: lp for lp in raw}
+    for slug in ("u8_l1", "u8_l2", "u8_l4", "u8_l5"):
+        assert gated[slug].concept_only is True
+        # Untouched: same status it had raw (the concept rendering).
+        assert gated[slug].status is raw_by_slug[slug].status, slug
+
+    # And in a LOCKED unit, concept-only lessons are STILL untouched (not forced LOCKED).
+    gated_locked = {
+        lp.lesson_slug: lp for lp in _display_gated_lessons(raw, unit_status=UnitStatus.LOCKED)
+    }
+    for slug in ("u8_l1", "u8_l2", "u8_l4", "u8_l5"):
+        assert gated_locked[slug].status is raw_by_slug[slug].status, slug
 
 
 # --- Gating (DEC.1 = progressive) ------------------------------------------

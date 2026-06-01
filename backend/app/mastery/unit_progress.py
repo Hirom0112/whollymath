@@ -24,6 +24,21 @@ when its predecessor is mastered. The foundation fraction skills remain a
 remediation drop-down (CURRICULUM_STANDARD.md §11), **not** a start gate, so the
 KC prerequisite DAG is no longer consulted here.
 
+**Lesson gating is ALSO progressive (DEC.1-lesson, owner-resolved 2026-05-31).**
+The unit gate alone is not enough: every lesson inside an unlocked unit used to
+take its status straight from its per-KC course-map node, which is DAG-gated, so
+a fresh learner who opened the now-available Unit 1 saw all six lessons
+``locked`` — a dead end. So after computing the unit status from the RAW
+node-derived lesson statuses, :func:`build_unit_progress` overlays an intra-unit
+progressive gate on each lesson's *displayed* status (see
+:func:`_display_gated_lessons`): within an unlocked unit the learner walks
+lessons in catalog order — the first not-yet-done playable lesson is
+``available``, later ones ``locked`` until the earlier ones are mastered; a
+locked unit renders every playable lesson ``locked``. This is a **display
+concern only**: the unit status and percent-complete keep using the mastery
+truth from the nodes (raw lessons), never the overlay, so the overlay cannot
+feed back into unit aggregation.
+
 Pure: no DB, no SymPy, no LLM, no clock. The course map is computed upstream
 with an injected ``now``; this overlay only reshapes already-derived state,
 so it is deterministic for a given input.
@@ -268,6 +283,98 @@ def _unit_status(
     return UnitStatus.LOCKED
 
 
+def _display_gated_lessons(
+    lessons: tuple[LessonProgress, ...],
+    *,
+    unit_status: UnitStatus,
+) -> tuple[LessonProgress, ...]:
+    """Apply INTRA-UNIT progressive gating to each lesson's *displayed* status.
+
+    The unit status and percent are computed from the RAW node-derived lesson
+    statuses (the mastery truth); this function runs **after** those and only
+    overrides the status the surface renders, so an open unit is actually
+    playable in order. It mirrors the unit-level progressive model (DEC.1) at
+    lesson granularity (DEC.1-lesson, owner-resolved 2026-05-31): within an
+    unlocked unit the learner walks lessons in catalog order — the first
+    not-yet-done playable lesson is ``available``, later ones ``locked`` until
+    the earlier ones are mastered.
+
+    Rules (catalog order):
+
+    * **Locked unit** -> every *playable* lesson is ``locked``; concept-only
+      lessons keep their own state (they render the concept, not the play
+      progression).
+    * **Available / in_progress / mastered unit** -> walk lessons tracking
+      ``all_prior_playable_done`` (starts ``True``):
+
+      - ``concept_only`` lesson: untouched (not part of the play progression).
+      - playable lesson already ``mastered``/``due_review``: kept (mastery
+        truth); counts as done, so ``all_prior_playable_done`` stays ``True``.
+      - playable lesson ``in_progress``: kept; it is the current lesson, so
+        ``all_prior_playable_done`` becomes ``False`` and later lessons lock.
+      - playable lesson not started (raw ``locked``/``available``): if every
+        prior playable lesson is done -> ``available`` (the next to do), then
+        ``all_prior_playable_done`` becomes ``False``; else -> ``locked``.
+
+    This does not feed back into unit aggregation — the caller computes
+    ``unit_status`` and percent from the raw lessons first, then passes them
+    here only for display.
+
+    Args:
+        lessons: This unit's RAW per-lesson progress, in catalog order.
+        unit_status: The already-computed unit status (from the raw lessons).
+
+    Returns:
+        The lessons with display-gated statuses, in the same order.
+    """
+    gated: list[LessonProgress] = []
+    unit_locked = unit_status is UnitStatus.LOCKED
+    all_prior_playable_done = True
+    for lp in lessons:
+        if lp.concept_only:
+            # Concept-only lessons render their own state, untouched, and are
+            # not part of the play progression (no effect on the cursor).
+            gated.append(lp)
+            continue
+        if unit_locked:
+            gated.append(_with_status(lp, CourseNodeStatus.LOCKED))
+            continue
+        if lp.status in _COMPLETED_STATUSES:
+            # Mastered / due_review: keep the mastery truth; counts as done.
+            gated.append(lp)
+            continue
+        if lp.status is CourseNodeStatus.IN_PROGRESS:
+            # The current lesson: keep in_progress, lock everything after it.
+            gated.append(lp)
+            all_prior_playable_done = False
+            continue
+        # Not started (raw locked/available): the first such lesson with all
+        # priors done is the next to do (available); the rest lock.
+        if all_prior_playable_done:
+            gated.append(_with_status(lp, CourseNodeStatus.AVAILABLE))
+            all_prior_playable_done = False
+        else:
+            gated.append(_with_status(lp, CourseNodeStatus.LOCKED))
+    return tuple(gated)
+
+
+def _with_status(lp: LessonProgress, status: CourseNodeStatus) -> LessonProgress:
+    """Return a copy of ``lp`` with its displayed ``status`` overridden.
+
+    Only the displayed status changes; ``probability``, ``playable``,
+    ``concept_only`` and the slug/kc are preserved from the raw node-derived
+    progress (the override is a display concern, not a mastery-truth edit).
+    """
+    return LessonProgress(
+        lesson_slug=lp.lesson_slug,
+        kc_id=lp.kc_id,
+        status=status,
+        probability=lp.probability,
+        playable=lp.playable,
+        concept_only=lp.concept_only,
+    )
+
+
 def _percent_complete(lessons: tuple[LessonProgress, ...]) -> float:
     """Fraction of PLAYABLE lessons completed (mastered or due-for-review).
 
@@ -323,23 +430,31 @@ def build_unit_progress(
     result: list[UnitProgress] = []
     prev_unit_mastered = False
     for index, unit in enumerate(units):
-        lessons = tuple(
+        # RAW node-derived lesson statuses = the mastery truth. Unit status and
+        # percent are computed from these and MUST NOT see the display override
+        # below (that would let intra-unit display gating feed back into unit
+        # aggregation and corrupt the unit status).
+        raw_lessons = tuple(
             _lesson_progress(
                 lesson.slug, lesson.kc_id, nodes_by_kc, concept_only=lesson.concept_only
             )
             for lesson in unit.lessons
         )
         status = _unit_status(
-            lessons,
+            raw_lessons,
             is_first_unit=index == 0,
             prev_unit_mastered=prev_unit_mastered,
         )
+        # Display-only: gate each lesson's rendered status so an unlocked unit is
+        # playable in order (DEC.1 applied at lesson granularity). Computed AFTER
+        # status/percent, never fed back into them.
+        display_lessons = _display_gated_lessons(raw_lessons, unit_status=status)
         result.append(
             UnitProgress(
                 unit_slug=unit.slug,
                 status=status,
-                percent_complete=_percent_complete(lessons),
-                lessons=lessons,
+                percent_complete=_percent_complete(raw_lessons),
+                lessons=display_lessons,
             )
         )
         prev_unit_mastered = status is UnitStatus.MASTERED
