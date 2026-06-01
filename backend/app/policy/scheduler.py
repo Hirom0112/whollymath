@@ -215,6 +215,18 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # representations meet §3.4 rule 2) — like DEPENDENT_VARS. Each rep has a real surface state, so
     # an error on one routes honestly to the other (never to WORD_PROBLEM, which is not a rep here).
     _KC.EQUATION_SOLUTIONS: (_REP.NUMBER_LINE, _REP.SYMBOLIC),
+    # Grade-6 Unit 8 (TEKS 6.14C): SYMBOLIC = the ending balance entered in the NUMBER_ENTRY editor
+    # (a currency/decimal answer — a SYMBOLIC SCALAR KC, not a fraction KC); NUMBER_LINE = an
+    # overdraft YES/NO check ("is the balance enough to cover a $X withdrawal?", reusing the yes/no
+    # answer surface, NO new widget). BOTH surfaces are LIVE and built from one register, so the
+    # KC is MASTERABLE (two real representations meet §3.4 rule 2) — like EQUATION_SOLUTIONS. Each
+    # rep has a real surface state, so an error on one routes honestly to the other.
+    _KC.CHECK_REGISTER: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 8 (TEKS 6.14H): SYMBOLIC = the lifetime-income / income-difference scalar entered
+    # in the NUMBER_ENTRY editor. PRACTICE-ONLY (one live answer surface, like UNIT_RATE); the
+    # WORD_PROBLEM rep is the salary-scenario framing with no separate surface state, advertised for
+    # the ≥2-rep contract but not a live answer surface (and never an error target).
+    _KC.LIFETIME_INCOME: (_REP.SYMBOLIC,),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

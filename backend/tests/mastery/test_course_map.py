@@ -70,7 +70,9 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.SUMMARY_STATISTICS,  # Grade-6 Unit 7 (6.SP.3, built 2026-05-30)
         KC.DATA_DISPLAYS,  # Grade-6 Unit 7 (6.SP.4, built 2026-05-30)
         KC.CATEGORICAL_DATA,  # Grade-6 Unit 7 (TEKS 6.12D, built 2026-05-30)
-        KC.STATISTICAL_QUESTIONS,  # Grade-6 Unit 7 (6.SP.1, built 2026-05-30), last on the spine
+        KC.STATISTICAL_QUESTIONS,  # Grade-6 Unit 7 (6.SP.1, built 2026-05-30)
+        KC.CHECK_REGISTER,  # Grade-6 Unit 8 (TEKS 6.14C, built 2026-05-31), on signed add/subtract
+        KC.LIFETIME_INCOME,  # Grade-6 Unit 8 (TEKS 6.14H, built 2026-05-31), last on the spine
     ]
 
 

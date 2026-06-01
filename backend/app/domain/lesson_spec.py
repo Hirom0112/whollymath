@@ -1179,6 +1179,59 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.NUMBER_LINE, _R.SYMBOLIC)
         ),
     ),
+    # ─── Grade-6 content build (2026-05-31) — Unit 8: Check register (TEKS 6.14C) ───
+    # Balance a check register — a MASTERABLE lesson: SYMBOLIC (the ending-balance scalar) and
+    # NUMBER_LINE (an overdraft YES/NO check) are BOTH live and built from the same register, so
+    # errors route to a rep that HAS a surface state and the probe draws from both. An OPERATION
+    # slip (adding a withdrawal instead of subtracting it) routes to SYMBOLIC — the register surface
+    # where each entry's sign is visible; a MAGNITUDE slip (a misjudged overdraft YES/NO — the only
+    # category the YES_NO verifier emits) routes to NUMBER_LINE, where the balance is compared to
+    # the withdrawal. Both reps have a real surface state (SYMBOLIC_FOCUS / NUMBER_LINE_PRIMARY), so
+    # route is honest (never WORD_PROBLEM). SCALAR on SYMBOLIC (currency/decimal → NUMBER_ENTRY, NOT
+    # a fraction KC) and YES_NO on NUMBER_LINE — _FRACTION_ANSWER_KCS untouched.
+    _spec(
+        _KC.CHECK_REGISTER,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Add each deposit and SUBTRACT each withdrawal — re-run the balance in order.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.NUMBER_LINE,
+                "Compare the balance with the withdrawal — is there enough to cover it?",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC, _R.NUMBER_LINE)
+        ),
+    ),
+    # ─── Grade-6 content build (2026-05-31) — Unit 8: Lifetime income (TEKS 6.14H) ───
+    # Salary & lifetime income. PRACTICE-ONLY today (scheduler lives only on SYMBOLIC, like
+    # KC_unit_rate), so the probe never fires. The modeled error is forgetting to multiply by the
+    # years (answering the annual figure) — an OPERATION slip; it routes back to SYMBOLIC (the
+    # WORD_PROBLEM rep has no surface state), so "re-try on the same surface with a labeled hint" is
+    # the honest adaptation. The WORD_PROBLEM rep is the salary-scenario framing (satisfies the
+    # ≥2-rep contract); it becomes the masterable surface when a word-problem widget lands (T3).
+    _spec(
+        _KC.LIFETIME_INCOME,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Multiply the yearly amount by the working years — one year isn't the total.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Lifetime income is many years of salary — it should be far bigger than one year.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

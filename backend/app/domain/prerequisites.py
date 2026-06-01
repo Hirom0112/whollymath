@@ -201,6 +201,17 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # candidate against it), so it forward-unlocks on KC_one_step_equations — the live Unit-5 skill
     # directly upstream (it tests solutions to exactly those one-step equations).
     _KC.EQUATION_SOLUTIONS: frozenset({_KC.ONE_STEP_EQUATIONS}),
+    # Grade-6 Unit 8 (TEKS 6.14C): balancing a check register is keeping a RUNNING BALANCE by adding
+    # deposits and subtracting withdrawals — directed (signed) combination of amounts, exactly the
+    # skill KC_integer_add_subtract teaches — so it forward-unlocks on KC_integer_add_subtract, the
+    # live KC it conceptually rests on (matching its REMEDIATION_ROUTING drop, also
+    # INTEGER_ADD_SUBTRACT).
+    _KC.CHECK_REGISTER: frozenset({_KC.INTEGER_ADD_SUBTRACT}),
+    # Grade-6 Unit 8 (TEKS 6.14H): lifetime income is annual salary MULTIPLIED by the working years
+    # (and a comparison is a difference times the years), so it forward-unlocks on
+    # KC_multiply_fractions — the live multiplication skill it directly builds on (matching the
+    # first of its REMEDIATION_ROUTING drops, MULTIPLY_FRACTIONS).
+    _KC.LIFETIME_INCOME: frozenset({_KC.MULTIPLY_FRACTIONS}),
 }
 
 
@@ -251,6 +262,8 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.DATA_DISPLAYS,  # Grade-6 Unit 7 (6.SP.4): read a data display, on number-line placement
     _KC.CATEGORICAL_DATA,  # Grade-6 Unit 7 (TEKS 6.12D): summarize categorical data, on ratios
     _KC.STATISTICAL_QUESTIONS,  # Grade-6 Unit 7 (6.SP.1): recognize statistical questions, on line
+    _KC.CHECK_REGISTER,  # Grade-6 Unit 8 (TEKS 6.14C): balance a check register, on signed add/sub
+    _KC.LIFETIME_INCOME,  # Grade-6 Unit 8 (TEKS 6.14H): lifetime income, on fraction multiplication
 )
 
 

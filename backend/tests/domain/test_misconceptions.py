@@ -98,6 +98,10 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     # y = a*x applied as additive a + x; OPERATION on the SYMBOLIC surface.
     "solution-substitution-error",  # KC_equation_solutions (Unit 5, 6.EE.5) — solving x + b = c by
     # adding b instead of subtracting it (c + b not c - b); OPERATION on the SYMBOLIC solve surface.
+    "add-withdrawal-instead-of-subtracting",  # KC_check_register (Unit 8, 6.14C) — ADDED a
+    # withdrawal to the running balance instead of subtracting it; OPERATION on the SYMBOLIC rep.
+    "forgot-multiply-by-years",  # KC_lifetime_income (Unit 8, 6.14H) — answered the annual figure
+    # instead of multiplying by the working years; OPERATION on the SYMBOLIC surface.
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

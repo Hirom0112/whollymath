@@ -127,6 +127,16 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # are whole numbers too. The difficulty widens the constant/solution magnitude pools,
             # not a fraction-denominator pool.
             KnowledgeComponentId.EQUATION_SOLUTIONS,
+            # check-register operands are (start, *signed_transactions) — currency amounts in
+            # quarter-dollar steps (denominators 1/2/4, not a fraction-curriculum denominator pool);
+            # the default NUMBER_LINE surface is a YES/NO overdraft check whose operands are the
+            # equality truth carrier (0/1, denom 1). The ramp widens the dollar/length pools, not a
+            # fraction-denominator pool.
+            KnowledgeComponentId.CHECK_REGISTER,
+            # lifetime-income operands are (mode, salary[, salary_b], years) — all whole numbers
+            # (denominator 1); the difficulty widens the salary/years magnitude pools, not a
+            # fraction-denominator pool.
+            KnowledgeComponentId.LIFETIME_INCOME,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

@@ -1787,6 +1787,112 @@ def _decimal_text(value: Rational) -> str:
     return f"{sign}{digits[:-places]}.{digits[-places:]}"
 
 
+def _check_register_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'run the balance, adding deposits and subtracting withdrawals' steps (Unit 8, 6.14C).
+
+    The SAME register has two live surfaces, so the builder branches on ``answer_kind`` (like
+    ``_equation_solutions_steps``):
+
+      - YES_NO (NUMBER_LINE) — an overdraft verdict, not a magnitude: the steps land on the verdict
+        in the final step's ``shown`` text and keep ``revealed_value`` ``None`` (the documented
+        non-magnitude case). The truth rides in ``operands`` as the verifier reads it (equal ⇒ the
+        balance is enough ⇒ YES).
+      - NUMERIC (SYMBOLIC) — the ending balance ``problem.correct_value``; the steps land on it,
+        reading the signed transactions from ``operands = (start, *signed_transactions)``.
+
+    Raises if the operands are missing (CLAUDE.md §8.5)."""
+    operands = problem.operands
+    if operands is None or len(operands) < 2:
+        raise ValueError(
+            f"check-register problem {problem.problem_id} needs (start, *transactions)"
+        )
+    if problem.answer_kind is AnswerKind.YES_NO:
+        enough = bool(operands[0] == operands[1])
+        verdict = "IS enough to cover it" if enough else "is NOT enough to cover it"
+        why = (
+            "Why does a balance at least as big as the withdrawal cover it?"
+            if enough
+            else "Why does a balance smaller than the withdrawal leave you short?"
+        )
+        return (
+            WorkedStep(
+                shown="To check an overdraft, compare the balance with the withdrawal amount.",
+                why_prompt="Why does the balance have to be at least the withdrawal to cover it?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown="If the balance is at least the withdrawal, it covers it; otherwise it falls "
+                "short.",
+                why_prompt="Why can't you spend more than the balance you have?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"So the balance {verdict}.",
+                why_prompt=why,
+                revealed_value=None,
+            ),
+        )
+    start = operands[0]
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=f"Start with the opening balance: ${_decimal_text(start)}.",
+            why_prompt="Why is the opening balance where the running total begins?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown="Go entry by entry: ADD each deposit, and SUBTRACT each withdrawal.",
+            why_prompt="Why does a withdrawal lower the balance while a deposit raises it?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"After every entry, the ending balance is ${_decimal_text(answer)}.",
+            why_prompt="Why would adding a withdrawal (instead of subtracting) overstate the "
+            "balance?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _lifetime_income_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'multiply the yearly amount by the years' steps for a lifetime-income item (6.14H).
+
+    ``operands = (mode, *args)``: mode 0 is the lifetime-income item ``(0, salary, years)``; mode 1
+    is the comparison item ``(1, a, b, years)``. Either way the answer is ``problem.correct_value``
+    (salary × years, or the annual difference × years). The steps make the × years step explicit so
+    the learner sees why the yearly figure alone is not the lifetime total. Raises if missing
+    (§8.5).
+    """
+    operands = problem.operands
+    if operands is None or len(operands) < 3:
+        raise ValueError(f"lifetime-income problem {problem.problem_id} needs (mode, ...) operands")
+    answer = problem.correct_value
+    if int(operands[0]) == 0:
+        salary, years = int(operands[1]), int(operands[2])
+        yearly_text, yearly_value = f"${salary:,} a year", salary
+    else:
+        a, b, years = int(operands[1]), int(operands[2]), int(operands[3])
+        yearly_text, yearly_value = f"the ${a - b:,} a year MORE that job A pays", a - b
+    return (
+        WorkedStep(
+            shown=f"Find the amount per year first: {yearly_text}.",
+            why_prompt="Why is the yearly amount the right starting point?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Lifetime income stretches that over every working year, so multiply by "
+            f"{years} years.",
+            why_prompt="Why do you multiply by the years instead of stopping at one year?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So the total is ${yearly_value:,} x {years} = ${int(answer):,}.",
+            why_prompt="Why is answering just the yearly amount far too small?",
+            revealed_value=answer,
+        ),
+    )
+
+
 # ─── The public builder ───────────────────────────────────────────────────────
 
 
@@ -1859,6 +1965,8 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.STATISTICAL_QUESTIONS: _statistical_questions_steps,
     KnowledgeComponentId.DEPENDENT_VARS: _dependent_vars_steps,
     KnowledgeComponentId.EQUATION_SOLUTIONS: _equation_solutions_steps,
+    KnowledgeComponentId.CHECK_REGISTER: _check_register_steps,
+    KnowledgeComponentId.LIFETIME_INCOME: _lifetime_income_steps,
 }
 
 

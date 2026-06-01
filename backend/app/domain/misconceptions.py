@@ -201,6 +201,17 @@ class MisconceptionId(StrEnum):
     # c - b ("x + 4 = 9" -> x = 9 + 4 = 13 instead of 9 - 4 = 5). The candidate is tested with the
     # wrong inverse, so the value claimed to make the equation true does not.
     SOLUTION_SUBSTITUTION_ERROR = "solution-substitution-error"
+    # Unit 8 (TEKS 6.14C): a sign slip in a check register — ADDING a withdrawal to the running
+    # balance instead of subtracting it. The learner treats every transaction as a deposit, so the
+    # ending balance comes out too high by twice the withdrawal (a withdrawal of W flips from −W to
+    # +W, a 2W swing). The running balance no longer reflects the money actually spent.
+    ADD_WITHDRAWAL_INSTEAD_OF_SUBTRACTING = "add-withdrawal-instead-of-subtracting"
+    # Unit 8 (TEKS 6.14H): forgetting to multiply by the YEARS when finding lifetime income —
+    # answering the annual salary (or the annual income difference) itself instead of the salary
+    # times the working years ("$40,000/yr over 30 years" answered 40,000 instead of 1,200,000). The
+    # learner reads the per-year figure as the lifetime total, missing that income accumulates over
+    # the working years.
+    FORGOT_MULTIPLY_BY_YEARS = "forgot-multiply-by-years"
 
 
 @dataclass(frozen=True)
@@ -715,6 +726,28 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "they claim makes the equation true does not actually balance it."
         ),
         applicable_kcs=(KnowledgeComponentId.EQUATION_SOLUTIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.ADD_WITHDRAWAL_INSTEAD_OF_SUBTRACTING,
+        name="Adds a withdrawal instead of subtracting it",
+        description=(
+            "Treats every check-register entry as money coming IN — adding a withdrawal to the "
+            "running balance instead of subtracting it. The ending balance ends up too high (a "
+            "withdrawal of 20 raises the balance by 20 rather than lowering it), because the "
+            "learner ignores that a withdrawal takes money out of the account."
+        ),
+        applicable_kcs=(KnowledgeComponentId.CHECK_REGISTER,),
+    ),
+    Misconception(
+        id=MisconceptionId.FORGOT_MULTIPLY_BY_YEARS,
+        name="Forgets to multiply income by the years",
+        description=(
+            "Reads the annual salary as the lifetime total — answering the per-year figure (or the "
+            "per-year income difference) instead of multiplying it by the number of working years. "
+            "'$40,000 a year over 30 years' is reported as 40,000 rather than 1,200,000, missing "
+            "that lifetime income accumulates year after year."
+        ),
+        applicable_kcs=(KnowledgeComponentId.LIFETIME_INCOME,),
     ),
 )
 
@@ -1285,6 +1318,49 @@ def solution_substitution_error(operands: tuple[Rational, ...]) -> Rational | No
         return None
     b, c = operands
     return c + b
+
+
+def add_withdrawal_instead_of_subtracting(operands: tuple[Rational, ...]) -> Rational | None:
+    """add-withdrawal-instead-of-subtracting: a check-register sign slip (TEKS 6.14C).
+
+    The check-register ENDING-BALANCE item encodes its data as ``operands = (start,
+    *signed_transactions)`` — the starting balance followed by each transaction as a SIGNED amount
+    (deposits +, withdrawals −). The correct running balance is the SymPy sum of all of them. The
+    learner who makes this error ADDS a withdrawal instead of subtracting it, so the FIRST
+    withdrawal (the first negative transaction) flips from ``−W`` to ``+W`` — a ``2W`` swing — so
+    the answer is ``correct + 2W``. Returned as a SymPy ``Rational`` so the verifier compares values
+    directly; the generator always includes at least one nonzero withdrawal, so ``2W > 0`` and the
+    slip always differs from the correct balance (diagnostic). Returns ``None`` if there is no
+    withdrawal to flip (defensive; the verifier then reports OTHER rather than over-claiming).
+    """
+    if len(operands) < 2:
+        return None
+    correct = sum(operands, Rational(0))
+    for amount in operands[1:]:
+        if (
+            amount < 0
+        ):  # the first withdrawal: adding it instead of subtracting is a +2|amount| swing
+            return correct - 2 * amount
+    return None
+
+
+def forgot_to_multiply_by_years(operands: tuple[Rational, ...]) -> Rational | None:
+    """forgot-multiply-by-years: read the annual figure as the lifetime total (TEKS 6.14H).
+
+    The lifetime-income item encodes its data as ``operands = (mode, *args)``: mode 0 is the
+    LIFETIME-INCOME item ``(mode, salary, years)`` (correct ``salary * years``); mode 1 is the
+    income-COMPARISON item ``(mode, salary_a, salary_b, years)`` (correct ``(salary_a − salary_b) *
+    years``). The learner who makes this error forgets the ``× years`` step and answers the ANNUAL
+    figure — the salary itself (mode 0) or the annual difference ``salary_a − salary_b`` (mode 1).
+    Returned as a SymPy ``Rational`` so the verifier compares values directly. The generator keeps
+    ``years >= 2`` and a positive annual figure, so the un-multiplied value always differs from the
+    correct product (diagnostic). Returns ``None`` for an unexpected operand shape (defensive).
+    """
+    if len(operands) == 3 and operands[0] == 0:  # (mode=0, salary, years) -> answered salary
+        return operands[1]
+    if len(operands) == 4 and operands[0] == 1:  # (mode=1, a, b, years) -> answered a - b
+        return operands[1] - operands[2]
+    return None
 
 
 def confuse_coefficient_with_constant(operands: tuple[Rational, ...]) -> Rational | None:

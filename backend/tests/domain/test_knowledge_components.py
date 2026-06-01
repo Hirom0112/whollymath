@@ -117,6 +117,15 @@ EXPECTED_CATALOG_IDS = {
     # answer kind) + SYMBOLIC (the scalar solve c − b, NUMBER_ENTRY). Distinct from
     # KC_one_step_equations (solve from scratch, 6.EE.7)).
     "KC_equation_solutions",
+    # Unit 8 (TEKS 6.14C — balance a check register: a running balance over a variable-length
+    # signed-transaction tuple. MASTERABLE: SYMBOLIC (the ending-balance currency scalar) +
+    # NUMBER_LINE (an overdraft YES/NO check, reusing the yes/no answer kind)). One of the two
+    # SymPy-gradeable U8 financial-literacy KCs (DEC.FINLIT).
+    "KC_check_register",
+    # Unit 8 (TEKS 6.14H — salary & lifetime income: annual salary × working years, and the
+    # education-level income comparison, behind an item-mode flag. PRACTICE-ONLY like KC_unit_rate —
+    # SYMBOLIC live, WORD_PROBLEM advertised). The other SymPy-gradeable U8 KC (DEC.FINLIT).
+    "KC_lifetime_income",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -159,6 +168,8 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_statistical_questions",
     "KC_dependent_vars",
     "KC_equation_solutions",
+    "KC_check_register",
+    "KC_lifetime_income",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -205,9 +216,10 @@ EXPECTED_GRADE6_KCS = {
     # breakdown over a variable-length count list), and KC_statistical_questions (6.SP.1 — recognize
     # a statistical question, the first YES_NO Grade-6 KC) all moved to EXPECTED_CATALOG_IDS
     # (built 2026-05-30).
-    # U8 — Personal Financial Literacy (TEKS 6.14)
-    "KC_check_register",
-    "KC_lifetime_income",
+    # U8 — Personal Financial Literacy (TEKS 6.14). KC_check_register (6.14C — balance a check
+    # register) + KC_lifetime_income (6.14H — salary & lifetime income), the two SymPy-gradeable
+    # financial-literacy KCs, moved to EXPECTED_CATALOG_IDS (built 2026-05-31, DEC.FINLIT). The
+    # other four U8 lessons stay concept stubs (no math KC), so no U8 ontology-only KC remains.
 }
 
 
@@ -229,7 +241,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 41 content-complete + 5 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 43 content-complete + 3 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

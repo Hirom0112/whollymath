@@ -57,6 +57,7 @@ from app.domain.misconceptions import (
     add_edges_instead_of_multiplying,
     add_instead_of_applying_rate,
     add_magnitudes_ignoring_sign,
+    add_withdrawal_instead_of_subtracting,
     additive_ratio,
     confuse_coefficient_with_constant,
     count_three_faces_only,
@@ -67,6 +68,7 @@ from app.domain.misconceptions import (
     flip_result_sign,
     flipped_inequality,
     forget_triangle_half,
+    forgot_to_multiply_by_years,
     gcf_lcm_confusion,
     inverse_operation_error,
     invert_conversion,
@@ -960,6 +962,34 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.SOLUTION_SUBSTITUTION_ERROR,
         predict=solution_substitution_error,
+    ),
+    # add-withdrawal-instead-of-subtracting: ADDED a withdrawal to the running balance instead of
+    # subtracting it (a sign slip), so the ending balance is too high by twice that withdrawal. The
+    # check-register item is VARIABLE-LENGTH — operands are (start, *signed_transactions) — so this
+    # row uses ``operand_count=None`` to match any arity; the predictor flips the first withdrawal.
+    # A wrong OPERATION (the wrong sign on a withdrawal). The generator always includes a nonzero
+    # withdrawal, so the slip always differs from the correct balance and the match is diagnostic.
+    # (Only the SYMBOLIC ending-balance surface routes here; the NUMBER_LINE overdraft yes/no
+    # surface is classified by _verify_yes_no, not this numeric path.)
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.CHECK_REGISTER,
+        operand_count=None,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.ADD_WITHDRAWAL_INSTEAD_OF_SUBTRACTING,
+        predict=add_withdrawal_instead_of_subtracting,
+    ),
+    # forgot-multiply-by-years: answered the ANNUAL figure (the salary, or the annual income
+    # difference) instead of multiplying by the working years. The lifetime-income item carries a
+    # leading MODE flag and has two arities — (0, salary, years) and (1, a, b, years) — so this row
+    # uses ``operand_count=None`` to match any arity; the predictor decodes operands[0]. A wrong
+    # OPERATION (skipped the × years step). The generator keeps years >= 2, so the un-multiplied
+    # value always differs from the correct product and the match is diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.LIFETIME_INCOME,
+        operand_count=None,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.FORGOT_MULTIPLY_BY_YEARS,
+        predict=forgot_to_multiply_by_years,
     ),
 )
 

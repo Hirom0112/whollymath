@@ -775,6 +775,38 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "To find which value works, undo the equation with the OPPOSITE operation.",
         ),
     ),
+    # Grade-6 Unit 8 (TEKS 6.14C): index 0 (operation) orients toward the sign of each entry —
+    # deposits add, withdrawals subtract; index 1 reinforces tracking the running balance in order.
+    KnowledgeComponentId.CHECK_REGISTER: (
+        _nudge(
+            KnowledgeComponentId.CHECK_REGISTER,
+            "Add each deposit, but SUBTRACT each withdrawal — money out lowers the balance.",
+        ),
+        _nudge(
+            KnowledgeComponentId.CHECK_REGISTER,
+            "Work the entries in order, keeping a running total as you go.",
+        ),
+        _nudge(
+            KnowledgeComponentId.CHECK_REGISTER,
+            "A withdrawal takes money OUT — check you took it away, not added it.",
+        ),
+    ),
+    # Grade-6 Unit 8 (TEKS 6.14H): index 0 (operation) orients toward multiplying the yearly amount
+    # by the years; index 1 reinforces that the yearly figure alone is not the lifetime total.
+    KnowledgeComponentId.LIFETIME_INCOME: (
+        _nudge(
+            KnowledgeComponentId.LIFETIME_INCOME,
+            "Lifetime income is the yearly amount MULTIPLIED by how many years you work.",
+        ),
+        _nudge(
+            KnowledgeComponentId.LIFETIME_INCOME,
+            "The salary for ONE year is not the whole lifetime — multiply by the years.",
+        ),
+        _nudge(
+            KnowledgeComponentId.LIFETIME_INCOME,
+            "For a comparison, find the yearly difference first, then stretch it over the years.",
+        ),
+    ),
 }
 
 

@@ -885,6 +885,50 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.NUMBER_LINE, Representation.SYMBOLIC),
     ),
+    # ─── Grade-6 content build (2026-05-31) — Unit 8: Check register (TEKS 6.14C) ───
+    # Balance a check register: keep a RUNNING BALANCE across a short sequence of deposits (+) and
+    # withdrawals (−). One of the two SymPy-gradeable financial-literacy KCs (owner decision
+    # DEC.FINLIT). Offers TWO REAL live surfaces, so this KC is MASTERABLE (the §3.4 rule-2 gate is
+    # reachable live, like KC_equation_solutions):
+    #   - SYMBOLIC (default) — the ENDING BALANCE: the exact SymPy sum of the starting balance and
+    #     the signed transactions, a currency/decimal answer entered in the NUMBER_ENTRY editor (NOT
+    #     a fraction KC — the editor cannot express a decimal). The data is VARIABLE-LENGTH (the
+    #     operands (start, *signed_transactions)), matched ``operand_count=None`` like the stats.
+    #   - NUMBER_LINE — an OVERDRAFT YES/NO check ("is the balance enough to cover a $X
+    #     withdrawal?"), whose SymPy truth (balance >= X) rides in ``operands`` exactly as
+    #     KC_equation_solutions encodes its yes/no truth, so the SAME ``_verify_yes_no`` path grades
+    #     it.
+    # Both reps have a real surface state (SYMBOLIC_FOCUS / NUMBER_LINE_PRIMARY), so an error on one
+    # routes honestly to the other — never to a rep without a surface state.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.CHECK_REGISTER,
+        skill_name="Balance a check register",
+        description=(
+            "Keep a running balance in a check register: add each deposit and subtract each "
+            "withdrawal from the starting balance to find the ending balance (start 100, deposit "
+            "50, withdraw 20 leaves 130), and tell whether the balance covers the next withdrawal."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.NUMBER_LINE),
+    ),
+    # ─── Grade-6 content build (2026-05-31) — Unit 8: Lifetime income (TEKS 6.14H) ───
+    # Salary & lifetime income: lifetime income = annual salary × working years, and comparing
+    # income across education levels. The other SymPy-gradeable financial-literacy KC (DEC.FINLIT).
+    # The gradeable form is a NUMERIC scalar in the NUMBER_ENTRY editor (NOT a fraction KC): default
+    # item is "$X/year over Y years -> X*Y", and a second item MODE frames the education-level
+    # COMPARISON ("how much MORE does job A earn than job B over Y years -> (A−B)*Y"). Advertises
+    # SYMBOLIC + WORD_PROBLEM (the ≥2-rep contract; the salary scenario IS a word problem), but LIVE
+    # only on SYMBOLIC for now (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY like KC_unit_rate;
+    # errors route to SYMBOLIC (a rep WITH a surface state), never to WORD_PROBLEM.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.LIFETIME_INCOME,
+        skill_name="Find lifetime income from a salary",
+        description=(
+            "Find lifetime income by MULTIPLYING annual salary by the number of working years "
+            "($40,000 a year for 30 years is $1,200,000), and compare income across education "
+            "levels by the difference over those years — not by reading the yearly salary alone."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
 )
 
 

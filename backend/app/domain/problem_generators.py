@@ -3066,6 +3066,260 @@ def _generate_statistical_questions(
     )
 
 
+# ─── Grade-6 content build (2026-05-31) — Unit 8: Check register (TEKS 6.14C) ───
+
+# Starting-balance and transaction-amount magnitudes (in dollars) by difficulty tier (CP.B
+# easy→hard). Amounts include 0.25 / 0.50 cents fractions (via the _CENTS quarters) so some ending
+# balances carry cents — the currency/decimal answer the verifier parses exactly. Higher tiers use
+# larger balances and longer transaction sequences.
+_CHECK_REGISTER_START_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (50, 80, 100),
+    2: (100, 150, 200),
+    3: (200, 300, 500),
+    4: (500, 800, 1000),
+}
+_CHECK_REGISTER_START_POOL: tuple[int, ...] = (50, 80, 100, 150, 200, 300, 500)
+_CHECK_REGISTER_AMOUNT_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (10, 15, 20, 25),
+    2: (20, 30, 40, 50),
+    3: (35, 50, 60, 75),
+    4: (50, 75, 100, 120),
+}
+_CHECK_REGISTER_AMOUNT_POOL: tuple[int, ...] = (10, 15, 20, 25, 30, 40, 50, 60, 75)
+# Cents fractions added to whole-dollar amounts so balances carry cents (kept exact as Rationals,
+# never floats): a quarter of a dollar gives 0.25/0.50/0.75 — the currency answer the verifier sees.
+_CHECK_REGISTER_CENTS: tuple[Rational, ...] = (
+    Rational(0),
+    Rational(1, 4),
+    Rational(1, 2),
+    Rational(3, 4),
+)
+_CHECK_REGISTER_LEN_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3),
+    2: (3, 4),
+    3: (4, 5),
+    4: (5, 6),
+}
+_CHECK_REGISTER_LEN_POOL: tuple[int, ...] = (2, 3, 4)
+
+
+def _check_register_amount(rng: random.Random, pool: tuple[int, ...]) -> Rational:
+    """A currency amount: a whole-dollar magnitude from ``pool`` plus a 0/0.25/0.50/0.75 cents part,
+    kept exact as a SymPy ``Rational`` (no float ever touches the value; CLAUDE.md §8.2)."""
+    return Rational(rng.choice(pool)) + rng.choice(_CHECK_REGISTER_CENTS)
+
+
+def _generate_check_register(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_check_register (TEKS 6.14C): keep a RUNNING BALANCE across deposits/withdrawals.
+
+    The math (a starting balance and a sequence of signed transactions — deposits +, withdrawals −)
+    is sampled FIRST, identically for every surface, so the same seed yields the same register
+    whichever way it is shown. At least one nonzero WITHDRAWAL is always present, so the
+    add-withdrawal-instead-of-subtracting misconception is always replayable and diagnostic.
+
+    Two REAL live surfaces (so the KC is masterable, PROJECT.md §3.4 rule 2):
+
+      - **SYMBOLIC** (default) — the ENDING BALANCE: the SymPy sum of the start and the signed
+        transactions, a currency answer entered in the NUMBER_ENTRY editor. ``operands = (start,
+        *signed_transactions)`` is VARIABLE-LENGTH (matched ``operand_count=None`` like the stats
+        KCs), so the verifier can replay the sign-slip misconception from it.
+      - **NUMBER_LINE** — an OVERDRAFT YES/NO check "is the balance enough to cover a $X
+        withdrawal?". The SymPy truth ``balance >= X`` is encoded as a yes/no equality carrier the
+        SAME way KC_equation_solutions encodes its truth — ``(1, 1)`` for enough (equal → YES),
+        ``(1, 0)`` for not enough (not equal → NO) — so ``_verify_yes_no`` grades it (SymPy decides;
+        CLAUDE.md §8.2). Both verdicts appear across seeds (the cover amount straddles the balance).
+
+    Deterministic per seed (PROJECT.md §4.1).
+    """
+    start_pool = (
+        _CHECK_REGISTER_START_BY_DIFFICULTY.get(difficulty, _CHECK_REGISTER_START_POOL)
+        if difficulty
+        else _CHECK_REGISTER_START_POOL
+    )
+    amount_pool = (
+        _CHECK_REGISTER_AMOUNT_BY_DIFFICULTY.get(difficulty, _CHECK_REGISTER_AMOUNT_POOL)
+        if difficulty
+        else _CHECK_REGISTER_AMOUNT_POOL
+    )
+    length_pool = (
+        _CHECK_REGISTER_LEN_BY_DIFFICULTY.get(difficulty, _CHECK_REGISTER_LEN_POOL)
+        if difficulty
+        else _CHECK_REGISTER_LEN_POOL
+    )
+    start = _check_register_amount(rng, start_pool)
+    count = rng.choice(length_pool)
+    # Build signed transactions, tracking the running balance so a withdrawal never overdraws it
+    # (the ending balance stays positive — a sensible register, and a positive currency answer). The
+    # LAST transaction is forced to a withdrawal the running balance can cover, so at least one
+    # withdrawal is always present (the sign-slip misconception is then always replayable).
+    transactions: list[Rational] = []
+    running = start
+    for index in range(count):
+        amount = _check_register_amount(rng, amount_pool)
+        must_withdraw = index == count - 1
+        # Non-final withdrawals must leave the balance STRICTLY positive (amount < running), so the
+        # running balance never reaches 0 before the forced final withdrawal — which can then always
+        # take a nonzero amount (min(amount, running) > 0), guaranteeing >= 1 nonzero withdrawal.
+        if must_withdraw:
+            amount = min(amount, running)  # running > 0 here, so this withdrawal is nonzero
+            transactions.append(-amount)
+            running -= amount
+        elif rng.random() < 0.5 and amount < running:
+            transactions.append(-amount)
+            running -= amount
+        else:
+            transactions.append(amount)
+            running += amount
+    balance = running
+
+    if surface_format is Representation.NUMBER_LINE:
+        # An overdraft check: "is the balance enough to cover a $cover withdrawal?". The cover
+        # amount straddles the balance (seed parity), so both YES (enough) and NO (not enough) show.
+        margin = _check_register_amount(rng, amount_pool)
+        if seed % 2 == 0:
+            cover = balance - margin if balance - margin > 0 else balance  # enough → YES
+        else:
+            cover = balance + margin  # more than the balance → NO
+        enough = bool(balance >= cover)
+        operands = (Rational(1), Rational(1)) if enough else (Rational(1), Rational(0))
+        statement = (
+            f"After the transactions the balance is ${_money(balance)}. "
+            f"Is that enough to cover a ${_money(cover)} withdrawal?"
+        )
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.CHECK_REGISTER, seed, surface_format),
+            kc=KnowledgeComponentId.CHECK_REGISTER,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=operands[0],  # anchor; the yes/no truth is operands[0] == operands[1]
+            representations_available=get_kc(KnowledgeComponentId.CHECK_REGISTER).representations,
+            operands=operands,
+            answer_kind=AnswerKind.YES_NO,
+        )
+
+    lines = "; ".join(
+        (f"deposit ${_money(amount)}" if amount > 0 else f"withdraw ${_money(-amount)}")
+        for amount in transactions
+    )
+    statement = (
+        f"A check register starts at ${_money(start)}. Then: {lines}. What is the ending balance?"
+    )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.CHECK_REGISTER, seed, surface_format),
+        kc=KnowledgeComponentId.CHECK_REGISTER,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=balance,
+        representations_available=get_kc(KnowledgeComponentId.CHECK_REGISTER).representations,
+        operands=(start, *transactions),  # variable-length (start, *signed transactions)
+    )
+
+
+def _money(value: Rational) -> str:
+    """Render an exact currency ``Rational`` as a dollars-and-cents string ("182.50", "100").
+
+    Pure integer arithmetic, no float (CLAUDE.md §8.2). A whole-dollar amount renders bare ("100");
+    an amount with cents renders two decimal places ("182.50"). The generator only produces amounts
+    in quarter-dollar steps, so the value is always exact to the penny."""
+    cents = value * 100
+    if cents.q != 1:  # not a whole number of cents — should never happen for generated amounts
+        raise ValueError(f"check-register amount {value} is not exact to the penny")
+    cents_int = int(cents)
+    if cents_int % 100 == 0:
+        return str(cents_int // 100)
+    return f"{cents_int // 100}.{cents_int % 100:02d}"
+
+
+# ─── Grade-6 content build (2026-05-31) — Unit 8: Lifetime income (TEKS 6.14H) ───
+
+# Annual-salary and working-year pools by difficulty tier (CP.B easy→hard). Salaries are whole
+# thousands and years are whole numbers (>= 2, so the un-multiplied "forgot the years" slip always
+# differs from the correct product). Higher tiers use larger salaries and longer careers.
+_INCOME_SALARY_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (20000, 25000, 30000),
+    2: (30000, 35000, 40000),
+    3: (40000, 50000, 60000),
+    4: (55000, 70000, 90000),
+}
+_INCOME_SALARY_POOL: tuple[int, ...] = (20000, 25000, 30000, 40000, 50000, 60000)
+_INCOME_YEARS_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (2, 3, 5),
+    2: (5, 10, 15),
+    3: (20, 25, 30),
+    4: (30, 35, 40),
+}
+_INCOME_YEARS_POOL: tuple[int, ...] = (2, 5, 10, 20, 30, 40)
+
+
+def _generate_lifetime_income(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_lifetime_income (TEKS 6.14H): lifetime income = annual salary × working years.
+
+    Two item MODES (chosen by seed parity, so both appear across a lesson), both NUMERIC scalars on
+    the SYMBOLIC surface (entered in the NUMBER_ENTRY editor):
+
+      - **mode 0 (lifetime income)** — "$salary/year over years years -> salary * years". ``operands
+        = (0, salary, years)`` lets the verifier replay the forgot-the-years slip (answered the
+        salary). The salary is a whole-dollar figure; the answer is an integer.
+      - **mode 1 (income comparison)** — "how much MORE does job A ($a/yr) earn than job B ($b/yr)
+        over years years? -> (a − b) * years". ``operands = (1, a, b, years)`` (a > b). The slip is
+        the annual difference ``a − b`` (forgot the years).
+
+    ``years >= 2`` keeps the un-multiplied "forgot the years" value distinct from the correct value
+    (diagnostic). The KC is PRACTICE-ONLY (SYMBOLIC live; WORD_PROBLEM advertised for the ≥2-rep
+    contract), so the surface_format is validated but the items read the same regardless. Difficulty
+    widens the salary and years pools. Deterministic per seed (PROJECT.md §4.1).
+    """
+    salary_pool = (
+        _INCOME_SALARY_BY_DIFFICULTY.get(difficulty, _INCOME_SALARY_POOL)
+        if difficulty
+        else _INCOME_SALARY_POOL
+    )
+    years_pool = (
+        _INCOME_YEARS_BY_DIFFICULTY.get(difficulty, _INCOME_YEARS_POOL)
+        if difficulty
+        else _INCOME_YEARS_POOL
+    )
+    years = rng.choice(years_pool)
+    if seed % 2 == 0:  # mode 0 — lifetime income
+        salary = rng.choice(salary_pool)
+        statement = (
+            f"A job pays ${salary:,} per year. Over {years} years of work, "
+            f"what is the total lifetime income?"
+        )
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.LIFETIME_INCOME, seed, surface_format),
+            kc=KnowledgeComponentId.LIFETIME_INCOME,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=Rational(salary * years),
+            representations_available=get_kc(KnowledgeComponentId.LIFETIME_INCOME).representations,
+            operands=(Rational(0), Rational(salary), Rational(years)),
+        )
+    # mode 1 — income comparison across education levels (a higher-paying job vs a lower-paying one)
+    salary_a = rng.choice(salary_pool)
+    salary_b = rng.choice(salary_pool)
+    while salary_b >= salary_a:  # a strictly out-earns b, so the difference is positive
+        salary_a = rng.choice(salary_pool)
+        salary_b = rng.choice(salary_pool)
+    statement = (
+        f"Job A (with a degree) pays ${salary_a:,} per year; job B pays ${salary_b:,} per year. "
+        f"Over {years} years, how much MORE does job A earn in total?"
+    )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.LIFETIME_INCOME, seed, surface_format),
+        kc=KnowledgeComponentId.LIFETIME_INCOME,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational((salary_a - salary_b) * years),
+        representations_available=get_kc(KnowledgeComponentId.LIFETIME_INCOME).representations,
+        operands=(Rational(1), Rational(salary_a), Rational(salary_b), Rational(years)),
+    )
+
+
 # The flat KC -> generator registry. A KC without a generator would fail the "a generator exists
 # for every live KC" contract (test_generators), so this grows with LIVE_KCS.
 GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
@@ -3110,6 +3364,8 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.STATISTICAL_QUESTIONS: _generate_statistical_questions,
     KnowledgeComponentId.DEPENDENT_VARS: _generate_dependent_vars,
     KnowledgeComponentId.EQUATION_SOLUTIONS: _generate_equation_solutions,
+    KnowledgeComponentId.CHECK_REGISTER: _generate_check_register,
+    KnowledgeComponentId.LIFETIME_INCOME: _generate_lifetime_income,
 }
 
 
