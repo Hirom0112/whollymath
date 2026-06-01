@@ -20,7 +20,7 @@ import type { ProblemView } from '../api';
 export type WidgetKind =
   | 'number_line' // NumberLine — drag a marker (placement / a 0–1 arithmetic result)
   | 'yes_no' // YesNo — a relational judgment ("same amount?", "is a > b?")
-  | 'number_entry' // NumberEntry — a single whole number (a shared piece-size; §3.4.1)
+  | 'number_entry' // NumberEntry — a single scalar value (integer / decimal / negative / a/b)
   | 'expression' // ExpressionInput — a typed algebra string (write/equivalent expressions)
   | 'inequality' // InequalityInput — a one-variable inequality (relation + boundary; 6.EE.8)
   | 'coordinate_plane' // CoordinatePlane — plotted integer point(s) (6.NS.8 / 6.EE.9 / 6.G.3)
@@ -44,12 +44,12 @@ export interface WorkspaceWidgetProps<TValue> {
  * state, so the same KC can be answered in more than one representation (mastery rule 2). Order
  * matters: the most specific signal wins.
  *
- * TODO(T3→T1, HR.A5): the whole-number-answer branch below is the one case the wire contract can't
- * yet express. These KCs' answers are a single whole number, but `surface_format`/`answer_kind` read
- * exactly like the fraction editor ('symbolic' + 'numeric'), and the backend `widget_id` is derived
- * from representation alone (SYMBOLIC → 'fraction_editor'), so it can't distinguish them. Flagged to
- * T1 to extend the HR.A1 `WidgetId` to carry 'number_entry'; once it does, this branch reads
- * `problem.widget_id` and the kc references drop.
+ * The whole-number / scalar branch is now driven by the authoritative `widget_id` the backend emits
+ * (HR.A1 extended `WidgetId` with 'number_entry'): a SYMBOLIC scalar KC (percent, gcf/lcm, an
+ * integer sum, an exponent, an area/volume, a summary statistic, …) carries widget_id
+ * 'number_entry'; a SYMBOLIC fraction KC carries 'fraction_editor'. The old hardcoded KC-name list
+ * (common_denominator / unit_rate / equivalent_ratios) is gone — the backend decides per KC, so
+ * adding a scalar lesson needs no frontend change.
  */
 export function selectWidget(problem: ProblemView): WidgetKind {
   // A relational yes/no judgment is answered with the buttons, never a fraction input — the server
@@ -76,19 +76,14 @@ export function selectWidget(problem: ProblemView): WidgetKind {
     return 'number_line';
   }
 
-  // A handful of symbolic KCs answer with a single whole number, not a fraction, so they get the
-  // one-box entry rather than the two-box fraction editor: common-denominator's shared piece-size
-  // (§3.4.1), a unit rate ("2 mph"), and an equivalent-ratio missing term. The only kc-keyed case —
-  // see the TODO above; it collapses into the widget-id path when T1 surfaces 'number_entry'.
-  if (
-    problem.kc === 'KC_common_denominator' ||
-    problem.kc === 'KC_unit_rate' ||
-    problem.kc === 'KC_equivalent_ratios'
-  ) {
-    return 'number_entry';
-  }
+  // A SYMBOLIC scalar answer (a plain integer, decimal, or negative — a percent amount, a GCF/LCM,
+  // an integer sum, an exponent, an area/volume, a summary statistic, …) gets the one-box entry, not
+  // the two-box fraction editor. The backend marks these with widget_id 'number_entry' per KC (its
+  // `_FRACTION_ANSWER_KCS` tie-break), so we route on the authoritative widget_id — no KC list.
+  if (problem.widget_id === 'number_entry') return 'number_entry';
 
-  // Everything else (symbolic equivalence/add/sub, incl. the locked-denominator fill-the-top variant
-  // signalled by `given_denominator`) is the fraction editor.
+  // Everything else (symbolic equivalence/add/sub and the other fraction-answer KCs, incl. the
+  // locked-denominator fill-the-top variant signalled by `given_denominator`) is the fraction editor
+  // — the backend emits widget_id 'fraction_editor' for them, and it is also the safe default.
   return 'fraction_editor';
 }

@@ -39,7 +39,8 @@ class WidgetId(StrEnum):
     matching SVG components live in ``frontend/src/workspace/`` (FractionBar, NumberLine,
     SymbolicEditor — CLAUDE.md §7)."""
 
-    FRACTION_EDITOR = "fraction_editor"  # symbolic
+    FRACTION_EDITOR = "fraction_editor"  # symbolic, fraction-shaped answer (two-box n/d)
+    NUMBER_ENTRY = "number_entry"  # symbolic, scalar answer (single box: int / decimal / negative)
     NUMBER_LINE = "number_line"
     FRACTION_BARS = "fraction_bars"  # area model
     WORD_PROBLEM = "word_problem"
@@ -50,6 +51,12 @@ class WidgetId(StrEnum):
 
 
 _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
+    # SYMBOLIC is the one representation whose widget is NOT fixed by representation alone: both a
+    # fraction-shaped answer (numerator/denominator) and a scalar-numeric answer (a plain integer,
+    # decimal, or negative) render on the SYMBOLIC surface and read identically as
+    # SYMBOLIC + NUMERIC on the wire. The per-KC ``_FRACTION_ANSWER_KCS`` set (below) breaks the
+    # tie; this default (FRACTION_EDITOR) is what a SYMBOLIC fraction KC gets, and the resolver
+    # overrides to NUMBER_ENTRY for the scalar ones. Each NON-symbolic representation maps 1:1 here.
     Representation.SYMBOLIC: WidgetId.FRACTION_EDITOR,
     Representation.NUMBER_LINE: WidgetId.NUMBER_LINE,
     Representation.AREA_MODEL: WidgetId.FRACTION_BARS,
@@ -61,12 +68,62 @@ _WIDGET_FOR_REPRESENTATION: dict[Representation, WidgetId] = {
 }
 
 
-def widget_for_representation(representation: Representation) -> WidgetId:
+# The KCs whose canonical SYMBOLIC answer is a FRACTION the learner enters as numerator-over-
+# denominator (the two-box fraction editor). Everything else with a SYMBOLIC + NUMERIC answer is a
+# SCALAR — a plain integer, decimal, or negative the learner types into the single-box NUMBER_ENTRY
+# (e.g. a percent amount, a GCF/LCM, an integer sum, an exponent, an area/volume/surface-area, a
+# summary statistic). This is the STABLE per-KC signal that fixes the answer widget for the whole
+# lesson: it is keyed on the KC's INTENDED answer shape, NOT on whether a single generated
+# problem's answer happens to reduce to an integer (which flips per-problem — the wrong route key).
+#
+# Membership is the KC's answer concept, verified against the canonical answers the generators emit:
+#   - equivalence / addition_unlike / subtraction_unlike: the answer IS a fraction a/b.
+#   - multiply_fractions / divide_fractions: a fraction product/quotient (e.g. 1/2, 9/8).
+#   - ratio_language: "what FRACTION of the counters are red?" — a part/whole fraction (1/3).
+#   - volume_fractional_edges: a product of fractional edge lengths (e.g. 2/9, 5/4).
+# NOT in the set, despite reading as SYMBOLIC + NUMERIC:
+#   - common_denominator: the answer is the shared piece-size, a whole number (12) — scalar.
+#     (This corrects the old hardcoded frontend KC list, which already routed it to number entry.)
+#   - decimal_operations: the answer is a DECIMAL the learner types ("0.04"), not a fraction box —
+#     NUMBER_ENTRY accepts the decimal; the fraction editor cannot express it.
+#   - summary_statistics / categorical_data: MIXED answer shapes (a mean can be 11/3, a count is an
+#     integer, "what fraction surveyed" is 8/19), so they need the single box that accepts integers,
+#     decimals AND a/b — NUMBER_ENTRY — not the two-box editor that can only express a fraction.
+_FRACTION_ANSWER_KCS: frozenset[KnowledgeComponentId] = frozenset(
+    {
+        KnowledgeComponentId.EQUIVALENCE,
+        KnowledgeComponentId.ADDITION_UNLIKE,
+        KnowledgeComponentId.SUBTRACTION_UNLIKE,
+        KnowledgeComponentId.MULTIPLY_FRACTIONS,
+        KnowledgeComponentId.DIVIDE_FRACTIONS,
+        KnowledgeComponentId.RATIO_LANGUAGE,
+        KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+    }
+)
+
+
+def widget_for_representation(
+    representation: Representation,
+    kc: KnowledgeComponentId | None = None,
+) -> WidgetId:
     """The live widget that renders a representation — the single source of truth (HR.A1/A5).
 
     The wire carries this on each ``ProblemView`` so the frontend ``selectWidget(problemView)``
     reads ``widget_id`` directly instead of branching on the KC (HR.A5 — a new widget plugs in for
-    free). Raises ``KeyError`` for an unmapped representation (every representation maps today)."""
+    free). Raises ``KeyError`` for an unmapped representation (every representation maps today).
+
+    ``kc`` is the AUTHORITATIVE tie-breaker for the SYMBOLIC surface, whose answer widget is not
+    fixed by representation alone (see ``_WIDGET_FOR_REPRESENTATION``/``_FRACTION_ANSWER_KCS``): a
+    SYMBOLIC problem on a fraction-answer KC gets the two-box FRACTION_EDITOR, every other
+    SYMBOLIC + NUMERIC (scalar) KC gets the single-box NUMBER_ENTRY. Passing ``kc`` is therefore
+    required to get the right widget for SYMBOLIC; ``None`` keeps the representation-only default
+    (FRACTION_EDITOR for SYMBOLIC) for callers that have no KC and only need the rep's widget."""
+    if (
+        representation is Representation.SYMBOLIC
+        and kc is not None
+        and kc not in _FRACTION_ANSWER_KCS
+    ):
+        return WidgetId.NUMBER_ENTRY
     return _WIDGET_FOR_REPRESENTATION[representation]
 
 
@@ -117,12 +174,17 @@ class LessonSpec:
 
     @property
     def widgets(self) -> tuple[WidgetId, ...]:
-        """The live widget for each representation, in representation order."""
-        return tuple(_WIDGET_FOR_REPRESENTATION[rep] for rep in self.representations)
+        """The live widget for each representation, in representation order.
+
+        Threads this lesson's ``kc`` so the SYMBOLIC entry resolves to the scalar NUMBER_ENTRY for a
+        non-fraction-answer KC (the tie-break ``widget_for_representation`` makes), not the bare
+        FRACTION_EDITOR default."""
+        return tuple(widget_for_representation(rep, self.kc) for rep in self.representations)
 
     def widget_for(self, representation: Representation) -> WidgetId:
-        """The widget that renders ``representation`` (raises ``KeyError`` if unmapped)."""
-        return _WIDGET_FOR_REPRESENTATION[representation]
+        """The widget that renders ``representation`` for THIS lesson (raises ``KeyError`` if
+        unmapped). Threads ``self.kc`` so the SYMBOLIC tie-break (fraction vs scalar) is applied."""
+        return widget_for_representation(representation, self.kc)
 
     def generate(
         self,

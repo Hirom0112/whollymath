@@ -166,7 +166,7 @@ def _problem_view(problem: Problem) -> ProblemView:
         problem_id=problem.problem_id,
         kc=problem.kc,
         surface_format=problem.surface_format,
-        widget_id=widget_for_representation(problem.surface_format).value,
+        widget_id=widget_for_representation(problem.surface_format, problem.kc).value,
         statement=problem.statement,
         answer_kind=problem.answer_kind,
         yes_no_relation=problem.yes_no_relation,
