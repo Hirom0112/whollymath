@@ -41,6 +41,9 @@ function toPathNode(lesson: LessonView, index: number): PathNode<string> {
     status: lesson.status,
     tint: TINTS[index % TINTS.length],
     progressPct: lesson.probability != null ? lesson.probability * 100 : null,
+    // A concept-only lesson (DEC.FINLIT) renders as an honest non-interactive "Concept lesson"
+    // row, never the status CTA — the rail reads this flag straight from the backend contract.
+    conceptOnly: lesson.concept_only === true,
   };
 }
 
@@ -102,6 +105,15 @@ export function Unit({
       // member of `LIVE_KCS`), hence a real KnowledgeComponentId. A playable lesson always carries
       // a non-null kc_id (a null kc_id is never playable), but we guard for type-narrowing.
       if (lesson.kc_id != null) onStartLesson(lesson.kc_id as KnowledgeComponentId);
+    } else if (lesson.concept_only === true) {
+      // A concept-only lesson is deliberately NOT a tutor lesson (DEC.FINLIT). It must never start
+      // a session, and "coming soon" would be dishonest (nothing interactive is on the way) — so we
+      // show the honest concept-lesson note instead. This branch precedes the "coming soon" one
+      // because a concept lesson is also `playable=false`.
+      setNotice(
+        `“${lesson.title}” is a concept lesson — covered in the TEKS personal-financial-literacy ` +
+          `strand, not an interactive tutor lesson.`,
+      );
     } else {
       setNotice(`“${lesson.title}” is coming soon — its lessons aren't built yet.`);
     }

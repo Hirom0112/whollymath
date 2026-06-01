@@ -1073,6 +1073,17 @@ class LessonView(BaseModel):
             "its 'coming soon' notice on — it replaces the stale hardcoded frontend LIVE_KCS."
         ),
     )
+    concept_only: bool = Field(
+        default=False,
+        description=(
+            "True for a lesson we deliberately chose NOT to build as an interactive tutor lesson — "
+            "a pure-concept TEKS item with no SymPy/tutor mechanism (DEC.FINLIT: the four "
+            "non-arithmetic Unit-8 financial-literacy lessons). The surface renders an honest "
+            "'concept lesson' state for these — NOT 'coming soon', which would falsely imply a "
+            "tutor lesson is on the way. A genuinely-unbuilt-but-planned lesson (playable=False "
+            "AND concept_only=False) keeps the 'coming soon' notice."
+        ),
+    )
 
 
 class UnitView(BaseModel):

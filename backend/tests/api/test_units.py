@@ -41,6 +41,7 @@ _LESSON_KEYS = {
     "status",
     "probability",
     "playable",
+    "concept_only",
 }
 
 
@@ -98,3 +99,24 @@ def test_unit_detail_unknown_slug_is_404() -> None:
     app = create_app()
     status_code, _ = get(app, "/unit/no-such-unit")
     assert status_code == 404
+
+
+def test_unit_detail_lesson_view_exposes_concept_only_flag() -> None:
+    """``concept_only`` rides the wire and is True for exactly the four U8 concept lessons.
+
+    DEC.FINLIT: u8_l1/u8_l2/u8_l4/u8_l5 are pure-concept TEKS items we deliberately stubbed
+    (no SymPy/tutor mechanism), so the surface can render an honest "concept lesson" state.
+    The two SymPy-graded U8 lessons (u8_l3 check register, u8_l6 lifetime income) are NOT
+    concept-only. Asserting it on the wire (not just the overlay) proves the flag survives the
+    LessonView projection the frontend reads.
+    """
+    app = create_app()
+    status_code, body = get(app, "/unit/u8")
+    assert status_code == 200, body
+    by_slug = {lesson["lesson_slug"]: lesson for lesson in body["lessons"]}
+    concept_slugs = {"u8_l1", "u8_l2", "u8_l4", "u8_l5"}
+    for slug, lesson in by_slug.items():
+        assert lesson["concept_only"] is (slug in concept_slugs), slug
+    # The two arithmetic U8 lessons stay non-concept (they have a real tutor mechanism).
+    assert by_slug["u8_l3"]["concept_only"] is False
+    assert by_slug["u8_l6"]["concept_only"] is False

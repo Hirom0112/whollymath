@@ -140,7 +140,33 @@ def test_playable_is_true_exactly_for_content_complete_kcs() -> None:
     assert lessons["u2_l0"].playable is True  # KC_equivalence — built
     assert lessons["u2_l4"].playable is True  # KC_multiply_fractions — built (namespace fix)
     assert lessons["u2_l7"].playable is False  # interleave gate, kc_id None
-    assert lessons["u8_l1"].playable is False  # KC_banking — genuinely unbuilt
+    assert lessons["u8_l1"].playable is False  # KC_banking — concept lesson, no tutor mechanism
+
+
+def test_concept_only_is_true_exactly_for_the_four_u8_concept_lessons() -> None:
+    """``concept_only`` flags the lessons we deliberately chose NOT to build as tutor lessons.
+
+    DEC.FINLIT: the four non-arithmetic Unit-8 financial-literacy lessons (u8_l1, u8_l2,
+    u8_l4, u8_l5) are pure-concept TEKS items with no SymPy/tutor mechanism — stubbed by
+    owner decision, NOT genuinely-unbuilt-but-planned. ``concept_only`` must be ``True`` for
+    exactly those four and ``False`` for everything else: the two SymPy-graded U8 lessons
+    (u8_l3, u8_l6), the interleave gates, and every forward-declared/unbuilt lesson (which
+    keep the honest "coming soon"). This is what lets the surface render an honest "concept
+    lesson" state instead of a misleading "coming soon".
+    """
+    progress = build_unit_progress(all_units(), _course([]), frozenset())
+    lessons = {lp.lesson_slug: lp for u in progress for lp in u.lessons}
+
+    concept_slugs = {"u8_l1", "u8_l2", "u8_l4", "u8_l5"}
+    for slug, lp in lessons.items():
+        assert lp.concept_only is (slug in concept_slugs), f"{slug}"
+
+    # Spot-check the boundary cases explicitly: the two SymPy-graded U8 lessons are NOT
+    # concept-only, nor are interleave gates or a forward-declared/unbuilt lesson.
+    assert lessons["u8_l3"].concept_only is False  # check register — SymPy-graded
+    assert lessons["u8_l6"].concept_only is False  # lifetime income — SymPy-graded
+    assert lessons["u2_l7"].concept_only is False  # interleave gate
+    assert lessons["u4_l6"].concept_only is False  # dependent_vars — unbuilt-but-planned
 
 
 # --- Progress / percent math ----------------------------------------------

@@ -1795,6 +1795,7 @@ class SessionStore:
                 status=lp.status,
                 probability=lp.probability,
                 playable=lp.playable,
+                concept_only=lp.concept_only,
             )
             for lp in unit_progress.lessons
         ]

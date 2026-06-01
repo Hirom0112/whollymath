@@ -82,6 +82,17 @@ class CatalogLesson:
     ccss_code: str | None
     teks_code: str | None
     description: str
+    # True ONLY for lessons we deliberately decided NOT to build as interactive
+    # tutor lessons — pure-concept TEKS items with no SymPy/tutor mechanism
+    # (DEC.FINLIT: the four non-arithmetic Unit-8 financial-literacy lessons).
+    # These are honestly "concept lessons" the surface labels as such, NOT
+    # "coming soon" (which would imply a tutor lesson is on the way). It is the
+    # SETTLED counterpart to ``playable``: ``playable=False`` says the tutor
+    # can't serve this lesson today; ``concept_only=True`` says it never will,
+    # by owner decision — so the surface must not promise a build. Defaults
+    # False; a genuinely-unbuilt-but-planned lesson (e.g. an interleave gate, a
+    # forward-declared Wave-3 KC) leaves it False and keeps "coming soon".
+    concept_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -839,6 +850,9 @@ _U8 = CatalogUnit(
             ccss_code=None,
             teks_code="6.14A",
             description="Features/costs of a checking account vs a debit card.",
+            # Pure-concept TEKS item, no SymPy/tutor mechanism — DEC.FINLIT
+            # decision to stub (not build) this as a concept lesson.
+            concept_only=True,
         ),
         CatalogLesson(
             slug="u8_l2",
@@ -849,6 +863,7 @@ _U8 = CatalogUnit(
             ccss_code=None,
             teks_code="6.14B",
             description="Compare debit and credit card use.",
+            concept_only=True,  # DEC.FINLIT concept lesson (no tutor mechanism)
         ),
         CatalogLesson(
             slug="u8_l3",
@@ -869,6 +884,7 @@ _U8 = CatalogUnit(
             ccss_code=None,
             teks_code="6.14D",
             description="Why credit history matters; what is in a credit report.",
+            concept_only=True,  # DEC.FINLIT concept lesson (no tutor mechanism)
         ),
         CatalogLesson(
             slug="u8_l5",
@@ -879,6 +895,7 @@ _U8 = CatalogUnit(
             ccss_code=None,
             teks_code="6.14G",
             description="Grants/scholarships/loans/work-study.",
+            concept_only=True,  # DEC.FINLIT concept lesson (no tutor mechanism)
         ),
         CatalogLesson(
             slug="u8_l6",

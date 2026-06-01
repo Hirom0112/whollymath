@@ -32,6 +32,13 @@ export interface PathNode<TId extends string = string> {
   tint: PathNodeTint;
   /** 0–100 mastery/progress bar; null hides the bar. */
   progressPct: number | null;
+  /**
+   * True for a lesson deliberately NOT built as an interactive tutor lesson — a pure-concept
+   * item with no tutor mechanism (DEC.FINLIT). Such a row shows an honest "Concept lesson"
+   * badge + copy instead of a status CTA, and the host's `onSelect` must not start a session
+   * for it. Defaults to absent/false (a normal, status-driven row).
+   */
+  conceptOnly?: boolean;
 }
 
 // Per-status label + call-to-action. The label is always rendered (status is never color-only).
@@ -43,12 +50,21 @@ const STATUS_META: Record<PathNodeStatus, { label: string; cta: string | null }>
   due_review: { label: 'Time to review', cta: 'Review' },
 };
 
+// A concept-only lesson is honest about NOT being an interactive tutor lesson: it carries its
+// own badge + CTA copy (DEC.FINLIT), never the status "Ready to start"/"Start" of a tutor lesson.
+const CONCEPT_BADGE = 'Concept lesson';
+const CONCEPT_CTA = 'Covered in the TEKS personal-financial-literacy strand — not a tutor lesson.';
+
 function StatusBadge({ status }: { status: PathNodeStatus }): React.JSX.Element {
   return (
     <span className={`wm-pathrail-badge wm-pathrail-badge--${status}`}>
       {STATUS_META[status].label}
     </span>
   );
+}
+
+function ConceptBadge(): React.JSX.Element {
+  return <span className="wm-pathrail-badge wm-pathrail-badge--concept">{CONCEPT_BADGE}</span>;
 }
 
 // The gold mastery star beside a mastered row's name — the drawn brand spark (never an emoji),
@@ -74,12 +90,19 @@ function PathRow<TId extends string>({
   lockedCta: string;
   onSelect: (id: TId) => void;
 }): React.JSX.Element {
-  const locked = node.status === 'locked';
+  // A concept-only lesson is non-interactive by design (DEC.FINLIT): never locked-styled,
+  // never status-driven. It stays clickable so the host can surface its explanatory note.
+  const conceptOnly = node.conceptOnly === true;
+  const locked = !conceptOnly && node.status === 'locked';
   const meta = STATUS_META[node.status];
   const pct = node.progressPct != null ? Math.round(node.progressPct) : null;
 
   return (
-    <li className={`wm-pathrail-node wm-pathrail-node--${node.status}`}>
+    <li
+      className={`wm-pathrail-node wm-pathrail-node--${node.status}${
+        conceptOnly ? ' wm-pathrail-node--concept' : ''
+      }`}
+    >
       <span className="wm-pathrail-rail" aria-hidden="true">
         <span className={`wm-pathrail-dot wm-pathrail-dot--${node.tint}`}>
           {node.status === 'mastered' ? '✓' : index + 1}
@@ -87,7 +110,9 @@ function PathRow<TId extends string>({
       </span>
       <button
         type="button"
-        className={`wm-pathrail-card wm-pathrail-card--${node.tint}`}
+        className={`wm-pathrail-card wm-pathrail-card--${node.tint}${
+          conceptOnly ? ' wm-pathrail-card--concept' : ''
+        }`}
         disabled={locked}
         aria-disabled={locked}
         onClick={() => {
@@ -97,17 +122,19 @@ function PathRow<TId extends string>({
         <span className="wm-pathrail-card-top">
           <span className="wm-pathrail-skill">
             {node.title}
-            {node.status === 'mastered' ? <MasteryStar /> : null}
+            {!conceptOnly && node.status === 'mastered' ? <MasteryStar /> : null}
           </span>
-          <StatusBadge status={node.status} />
+          {conceptOnly ? <ConceptBadge /> : <StatusBadge status={node.status} />}
         </span>
         <span className="wm-pathrail-desc">{node.description}</span>
-        {pct != null ? (
+        {!conceptOnly && pct != null ? (
           <span className="wm-pathrail-progress" aria-hidden="true">
             <span className="wm-pathrail-progress-fill" style={{ width: `${String(pct)}%` }} />
           </span>
         ) : null}
-        <span className="wm-pathrail-cta">{locked ? lockedCta : meta.cta}</span>
+        <span className="wm-pathrail-cta">
+          {conceptOnly ? CONCEPT_CTA : locked ? lockedCta : meta.cta}
+        </span>
       </button>
     </li>
   );

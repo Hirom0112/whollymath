@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhollyMath — Teacher Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* neutrals & structure */
+  --wm-page-bg:#e9e1cc; --wm-cream:#f7efdc; --wm-cream-2:#f1e7c9;
+  --wm-navy-deep:#1f2c5c; --wm-navy:#2f43a6; --wm-blue:#3a59d9;
+  --wm-blue-bright:#4a6cf0; --wm-blue-press:#2f4dc9;
+  --wm-blue-tile:#b9d3ef; --wm-blue-soft:#b9c8ee;
+  --wm-ink:#161616; --wm-ink-soft:#2a2a2a;
+  /* meaning layer (load-bearing) */
+  --wm-mean-correct:#9ad17c; --wm-mean-correct-ink:#3f7a3a;
+  --wm-mean-attention:#e0a33a; --wm-mean-attention-ink:#9a6a12;
+  --wm-mean-wrong:#d9663f; --wm-mean-wrong-ink:#a8401d;
+  --wm-mean-magnitude:#2f9c93; --wm-mean-operation:#5b62d6;
+  --wm-mean-spark:#f5cf5b; --wm-info-ink:#2f43a6;
+  /* card tints */
+  --wm-card-warm:#f8e1d4; --wm-card-mint:#d9ecdb; --wm-card-sky:#d8e6f7;
+  --wm-card-butter:#f6e9bf; --wm-card-lavender:#e7ddf3;
+  /* type */
+  --wm-font-serif:'Fraunces',Georgia,serif;
+  --wm-font-sans:'Inter',system-ui,sans-serif;
+  /* radius */
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:22px; --r-pill:999px;
+  /* shadow */
+  --sh-card:0 2px 0 rgba(20,30,70,.08), inset 0 0 0 1.5px rgba(20,30,70,.06);
+  --sh-soft:0 18px 40px -18px rgba(20,30,70,.30);
+  --sh-loud:0 6px 0 var(--wm-navy-deep);
+  --ease:cubic-bezier(.4,0,.2,1);
+  --proto-h:38px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100vh}
+body{
+  font-family:var(--wm-font-sans); color:var(--wm-ink);
+  background:var(--wm-page-bg);
+  -webkit-font-smoothing:antialiased; line-height:1.5; font-size:16px;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:linear-gradient(rgba(31,44,92,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(31,44,92,.035) 1px,transparent 1px);
+  background-size:34px 34px;
+}
+h1,h2,h3{margin:0; font-family:var(--wm-font-serif); letter-spacing:-.5px; font-weight:600; color:var(--wm-ink)}
+button{font-family:inherit; cursor:pointer}
+a{color:inherit; text-decoration:none}
+:focus-visible{outline:3px solid var(--wm-blue-bright); outline-offset:2px; border-radius:6px}
+
+/* ---------- prototype nav ---------- */
+.proto{
+  position:sticky; top:0; z-index:60;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:8px 16px; background:#15203f; color:#cdd6f5;
+  font-size:12.5px; border-bottom:1px solid rgba(255,255,255,.08);
+}
+.proto .tag{font-weight:700; letter-spacing:1px; color:#7f8fce; text-transform:uppercase; font-size:11px}
+.proto button{
+  background:transparent; color:#cdd6f5; border:1px solid rgba(255,255,255,.16);
+  padding:5px 11px; border-radius:var(--r-pill); font-size:12.5px; font-weight:500;
+  transition:background .14s var(--ease);
+}
+.proto button:hover{background:rgba(255,255,255,.10)}
+.proto button[aria-current="true"]{background:var(--wm-blue-bright); border-color:transparent; color:#fff}
+.proto .spacer{flex:1}
+.proto select{
+  background:#1f2c5c; color:#cdd6f5; border:1px solid rgba(255,255,255,.18);
+  border-radius:var(--r-pill); padding:5px 10px; font:inherit; font-size:12.5px;
+}
+
+/* ---------- app shell (persistent sidenav + topbar) ---------- */
+#app{
+  display:grid; grid-template-areas:"top top" "side main";
+  grid-template-columns:248px 1fr; grid-template-rows:auto 1fr;
+  position:relative; z-index:1; min-height:calc(100vh - var(--proto-h));
+}
+.topbar{
+  grid-area:top; position:sticky; top:var(--proto-h); z-index:40;
+  background:var(--wm-navy-deep); color:#fff;
+  display:flex; align-items:center; gap:14px; padding:13px 26px;
+}
+.brand{display:flex; align-items:center; gap:11px; font-family:var(--wm-font-serif); font-weight:600; font-size:21px}
+.pie{width:26px; height:26px; border-radius:50%;
+  background:conic-gradient(var(--wm-mean-spark) 0deg 90deg,var(--wm-mean-wrong) 90deg 180deg,var(--wm-blue-bright) 180deg 270deg,var(--wm-mean-magnitude) 270deg 360deg);
+  box-shadow:inset 0 0 0 4px var(--wm-navy-deep), 0 0 0 1.5px rgba(255,255,255,.25)}
+.tpill{font-family:var(--wm-font-sans); font-size:10.5px; font-weight:700; letter-spacing:1.5px;
+  background:rgba(255,255,255,.14); padding:3px 9px; border-radius:var(--r-pill); margin-left:2px}
+.topbar .spacer{flex:1}
+.user-avatar{width:34px; height:34px; border-radius:50%; background:var(--wm-mean-operation); color:#fff;
+  font-weight:700; font-size:13px; display:grid; place-items:center; border:1.5px solid #fff; flex:none}
+
+/* sidenav — deep-navy/blue frame, continuous with the top bar */
+.sidenav{grid-area:side; color:#cdd6f5;
+  background:linear-gradient(185deg, var(--wm-navy-deep) 0%, #18244e 60%, #16204a 100%);
+  border-right:1px solid rgba(255,255,255,.06);
+  padding:24px 14px; display:flex; flex-direction:column;
+  position:sticky; top:calc(var(--proto-h) + 52px); align-self:start; height:calc(100vh - var(--proto-h) - 52px)}
+.cls-selector{margin-bottom:22px}
+.cls-label{font-size:11px; font-weight:700; letter-spacing:1px; color:rgba(205,214,245,.55); text-transform:uppercase; margin-bottom:7px; padding-left:10px}
+.cls-btn{width:100%; display:flex; align-items:center; gap:10px; padding:10px; background:rgba(255,255,255,.06);
+  border-radius:var(--r-md); border:1px solid rgba(255,255,255,.12); text-align:left; transition:background .14s var(--ease)}
+.cls-btn:hover{background:rgba(255,255,255,.10)}
+.cls-btn .name{font-family:var(--wm-font-serif); font-weight:600; font-size:15px; color:#fff}
+.cls-btn .meta{font-size:12px; color:rgba(205,214,245,.7)}
+.nav-group{display:flex; flex-direction:column; gap:3px; margin-bottom:22px}
+.nav-group.footer{margin-top:auto; margin-bottom:0; padding-top:16px; border-top:1px solid rgba(255,255,255,.08)}
+.nav-link{display:flex; align-items:center; gap:11px; padding:10px 14px; color:#c2cdf0;
+  font-weight:500; font-size:14.5px; border-radius:10px; transition:background .14s var(--ease), color .14s var(--ease)}
+.nav-link:hover{background:rgba(255,255,255,.09); color:#fff}
+.nav-link.active{background:var(--wm-blue-bright); color:#fff; font-weight:600; box-shadow:0 8px 18px -8px rgba(74,108,240,.85)}
+.nav-link svg{opacity:.75; flex:none}
+.nav-link:hover svg{opacity:1}
+.nav-link.active svg{opacity:1; color:#fff}
+
+/* main content area */
+.page{grid-area:main; padding:30px 40px 80px; min-width:0}
+.content-narrow{max-width:880px}
+
+/* ---------- roster header ---------- */
+.r-head h1{font-size:30px; line-height:1.12}
+.r-head .sub{color:var(--wm-ink-soft); font-size:15px; margin-top:4px}
+
+.summary{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:22px 0 22px}
+.stat{
+  background:#fff; border-radius:var(--r-lg); box-shadow:var(--sh-card); padding:16px 18px;
+  display:flex; align-items:center; gap:14px;
+}
+.stat .ico{width:38px; height:38px; border-radius:var(--r-sm); display:grid; place-items:center; flex:none}
+.stat .num{font-family:var(--wm-font-serif); font-size:32px; font-weight:600; line-height:1}
+.stat .lab{font-size:13px; color:var(--wm-ink-soft); font-weight:500; margin-top:2px}
+.stat.s-struggling .ico{background:rgba(217,102,63,.16); color:var(--wm-mean-wrong-ink)}
+.stat.s-needs .ico{background:rgba(224,163,58,.18); color:var(--wm-mean-attention-ink)}
+.stat.s-ontrack .ico{background:rgba(154,209,124,.22); color:var(--wm-mean-correct-ink)}
+
+/* roster split layout: ranked list + triage rail */
+.split-content{display:grid; grid-template-columns:1.35fr 1fr; gap:24px; align-items:start}
+.secondary-info{display:flex; flex-direction:column; gap:18px; position:sticky; top:calc(var(--proto-h) + 78px)}
+.triage{background:linear-gradient(180deg,var(--wm-card-warm),#fff); box-shadow:var(--sh-card), 0 18px 40px -22px rgba(217,102,63,.3)}
+.triage .thead-row{display:flex; align-items:flex-start; gap:10px; margin-bottom:4px}
+.triage .whead{font-family:var(--wm-font-serif); font-size:21px; font-weight:600; line-height:1.2}
+.triage .wdetail{font-size:14.5px; color:var(--wm-ink-soft); margin-top:8px; line-height:1.55}
+.triage .wbtn{width:100%; margin-top:18px}
+
+/* search */
+.search{position:relative; margin:0 0 18px}
+.search svg{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#6a7088}
+.search input{
+  width:100%; padding:12px 14px 12px 42px; font:inherit; font-size:15px;
+  border-radius:var(--r-md); border:1.5px solid rgba(20,30,70,.14); background:#fff; color:var(--wm-ink);
+}
+.search input::placeholder{color:#8389a0}
+
+/* section */
+.section{margin-bottom:26px}
+.sec-head{display:flex; align-items:center; gap:11px; margin-bottom:11px; padding-left:14px;
+  border-left:4px solid var(--rule,transparent); border-radius:2px}
+.sec-head .stitle{font-family:var(--wm-font-serif); font-size:21px; font-weight:600}
+.sec-head .scount{font-family:var(--wm-font-serif); font-weight:600; font-size:15px; color:var(--wm-ink-soft);
+  background:rgba(20,30,70,.06); padding:1px 10px; border-radius:var(--r-pill)}
+.sec-head .sblurb{font-size:13px; color:var(--wm-ink-soft); margin-left:auto; text-align:right}
+.sec-struggling{--rule:var(--wm-mean-wrong)}
+.sec-needs{--rule:var(--wm-mean-attention)}
+.sec-ontrack{--rule:var(--wm-mean-correct)}
+
+/* ---------- student row ---------- */
+.row{
+  width:100%; text-align:left; background:#fff; border:none;
+  border-radius:var(--r-lg); box-shadow:var(--sh-card);
+  padding:16px 18px; margin-bottom:11px; display:grid; gap:14px;
+  grid-template-columns:1fr auto 26px; align-items:center;
+  transition:transform .16s var(--ease), box-shadow .16s var(--ease);
+}
+.row:hover{transform:translateY(-1px); box-shadow:0 6px 0 -2px rgba(20,30,70,.10), inset 0 0 0 1.5px rgba(20,30,70,.10)}
+.row .name{font-family:var(--wm-font-serif); font-size:20px; font-weight:600; line-height:1.1}
+.row .reason{font-size:13.5px; color:var(--wm-ink-soft); margin-top:3px}
+.row .where{font-size:12.5px; color:#6a7088; margin-top:5px; display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+.row .where .dot{width:3px;height:3px;border-radius:50%;background:#9aa0b6}
+.row .right{display:flex; flex-direction:column; align-items:flex-end; gap:9px; min-width:200px}
+.badges{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end}
+.row .chev{color:#9aa0b6; display:grid; place-items:center}
+
+/* progress bar */
+.prog{display:flex; align-items:center; gap:9px; width:200px}
+.prog .track{flex:1; height:7px; border-radius:var(--r-pill); background:rgba(20,30,70,.10); overflow:hidden}
+.prog .fill{height:100%; border-radius:var(--r-pill); background:var(--wm-blue-bright)}
+.prog .pct{font-family:var(--wm-font-serif); font-size:13px; font-weight:600; color:var(--wm-ink-soft); min-width:34px; text-align:right}
+.prog.notstarted .pct{color:#8389a0}
+
+/* ---------- chips & badges ---------- */
+.chip{display:inline-flex; align-items:center; gap:6px; border-radius:var(--r-pill);
+  font-weight:600; line-height:1; white-space:nowrap}
+.chip.md{font-size:13px; padding:6px 12px}
+.chip.sm{font-size:11.5px; padding:4px 9px}
+.chip svg{flex:none}
+.chip-struggling{background:rgba(217,102,63,.15); color:var(--wm-mean-wrong-ink)}
+.chip-needs{background:rgba(224,163,58,.18); color:var(--wm-mean-attention-ink)}
+.chip-ontrack{background:rgba(154,209,124,.24); color:var(--wm-mean-correct-ink)}
+
+.badge{display:inline-flex; align-items:center; gap:6px; border-radius:var(--r-pill);
+  font-weight:600; line-height:1.2; white-space:nowrap}
+.badge.compact{font-size:11.5px; padding:4px 9px}
+.badge svg{flex:none}
+.badge-urgent{background:rgba(217,102,63,.15); color:var(--wm-mean-wrong-ink)}
+.badge-warn{background:rgba(224,163,58,.18); color:var(--wm-mean-attention-ink)}
+.badge-info{background:rgba(74,108,240,.13); color:var(--wm-info-ink)}
+
+/* full alert (drill-in) */
+.alert-full{display:flex; gap:11px; padding:13px 15px; border-radius:var(--r-md); align-items:flex-start}
+.alert-full .ai{margin-top:1px; flex:none}
+.alert-full .al{font-weight:700; font-size:13.5px; display:flex; align-items:center; gap:8px}
+.alert-full .am{font-size:14px; margin-top:3px; color:var(--wm-ink-soft)}
+.alert-full .sev{font-size:10.5px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; opacity:.8}
+.af-urgent{background:rgba(217,102,63,.12); color:var(--wm-mean-wrong-ink); box-shadow:inset 0 0 0 1.5px rgba(217,102,63,.3)}
+.af-warn{background:rgba(224,163,58,.14); color:var(--wm-mean-attention-ink); box-shadow:inset 0 0 0 1.5px rgba(224,163,58,.32)}
+.af-info{background:rgba(74,108,240,.10); color:var(--wm-info-ink); box-shadow:inset 0 0 0 1.5px rgba(74,108,240,.25)}
+
+/* ---------- empty / all-clear ---------- */
+.empty{background:#fff; border-radius:var(--r-lg); box-shadow:var(--sh-card);
+  padding:40px 28px; text-align:center; color:var(--wm-ink-soft)}
+.empty h2{font-size:22px; margin-bottom:6px; color:var(--wm-ink)}
+.allclear{background:linear-gradient(180deg,var(--wm-card-mint),#fff);
+  border-radius:var(--r-xl); box-shadow:var(--sh-card); padding:40px 26px; text-align:center}
+.allclear .ring{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;margin:0 auto 14px;
+  background:rgba(154,209,124,.3); color:var(--wm-mean-correct-ink)}
+.allclear h2{font-size:24px; margin-bottom:6px}
+.allclear p{color:var(--wm-ink-soft); margin:0 auto; font-size:14.5px}
+
+/* loading skeleton */
+.skel{background:#fff; border-radius:var(--r-lg); box-shadow:var(--sh-card); padding:16px 18px; margin-bottom:11px}
+.sk{background:linear-gradient(90deg,rgba(20,30,70,.06),rgba(20,30,70,.12),rgba(20,30,70,.06));
+  background-size:200% 100%; border-radius:6px; animation:shimmer 1.4s var(--ease) infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.loading-note{text-align:center; color:var(--wm-ink-soft); margin:8px 0 20px; font-size:14px}
+
+/* error banner */
+.errbox{background:rgba(217,102,63,.10); box-shadow:inset 0 0 0 1.5px rgba(217,102,63,.3);
+  border-radius:var(--r-md); padding:16px 18px; color:var(--wm-mean-wrong-ink); display:flex; gap:12px; align-items:flex-start}
+.errbox h3{font-size:15px; color:var(--wm-mean-wrong-ink); margin-bottom:3px}
+.errbox p{font-size:13.5px; margin:0}
+.errbox button{margin-top:9px; background:var(--wm-mean-wrong); color:#fff; border:none; padding:7px 14px; border-radius:var(--r-pill); font-size:13px; font-weight:600}
+
+/* ---------- drill-in ---------- */
+.back{background:transparent; border:none; color:var(--wm-navy); font-weight:600; font-size:14px;
+  display:inline-flex; align-items:center; gap:7px; padding:6px 0; margin-bottom:8px}
+.d-identity{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:6px}
+.d-identity h1{font-size:30px}
+.d-reason{color:var(--wm-ink-soft); font-size:15px; margin-bottom:18px}
+.card{background:#fff; border-radius:var(--r-lg); box-shadow:var(--sh-card); padding:20px 22px; margin-bottom:16px}
+.card > .ctitle{font-size:12px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#6a7088; margin-bottom:14px}
+.alerts-banner{display:flex; flex-direction:column; gap:10px; margin-bottom:16px}
+
+/* WHY hero */
+.why{background:linear-gradient(180deg,var(--wm-card-sky),#fff); box-shadow:var(--sh-card), 0 18px 40px -22px rgba(20,30,70,.4)}
+.why .whead{font-family:var(--wm-font-serif); font-size:23px; font-weight:600; line-height:1.2; letter-spacing:-.5px}
+.why .wdetail{font-size:15.5px; color:var(--wm-ink-soft); margin-top:10px; line-height:1.55}
+.why .wtags{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px}
+.wtag{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; padding:6px 12px;
+  border-radius:var(--r-pill); background:#fff; box-shadow:inset 0 0 0 1.5px rgba(20,30,70,.10); color:var(--wm-ink-soft)}
+.wtag .k{color:#6a7088; font-weight:600}
+.wtag.misc{box-shadow:inset 0 0 0 1.5px rgba(91,98,214,.4); color:var(--wm-mean-operation)}
+.proxy-note{font-size:11.5px; color:#6a7088; margin-top:12px; display:flex; gap:6px; align-items:flex-start}
+
+/* working on */
+.working .wo-unit{font-family:var(--wm-font-serif); font-size:19px; font-weight:600}
+.working .wo-lesson{font-size:14px; color:var(--wm-ink-soft); margin:4px 0 14px}
+.working .prog{width:100%}
+
+/* skills */
+.skills-grid{display:grid; grid-template-columns:1fr 1fr; gap:26px}
+.skills-col h4{font-size:13px; font-weight:700; letter-spacing:.4px; margin-bottom:12px; display:flex; align-items:center; gap:7px}
+.skill{margin-bottom:13px}
+.skill .top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; gap:10px}
+.skill .sn{font-size:14px; font-weight:500}
+.skill .sp{font-family:var(--wm-font-serif); font-size:14px; font-weight:600; color:var(--wm-ink-soft)}
+.skill .strack{height:6px; border-radius:var(--r-pill); background:rgba(20,30,70,.09); overflow:hidden}
+.skill .sfill{height:100%; border-radius:var(--r-pill)}
+.skill.str .sfill{background:var(--wm-mean-correct)}
+.skill.str .sp{color:var(--wm-mean-correct-ink)}
+.skill.weak .sfill{background:var(--wm-mean-wrong)}
+.skill.weak .sp{color:var(--wm-mean-wrong-ink)}
+.skill .status{font-size:11px; color:#8389a0; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-left:7px}
+.col-empty{font-size:13.5px; color:#8389a0; padding:8px 0}
+.developing-note{font-size:12.5px; color:var(--wm-ink-soft); margin-top:6px; padding-top:12px;
+  border-top:1px solid rgba(20,30,70,.08); display:flex; gap:7px; align-items:flex-start}
+.developing-note .dn-k{color:var(--wm-mean-attention-ink); font-weight:600}
+
+/* timeline */
+.tl{display:flex; flex-direction:column; gap:0}
+.tl .ev{display:flex; gap:13px; padding:9px 0; position:relative}
+.tl .od{width:13px; height:13px; border-radius:50%; flex:none; margin-top:3px; box-shadow:0 0 0 3px #fff}
+.tl .ev:not(:last-child) .od::after{content:""; position:absolute; left:6px; top:16px; bottom:-2px; width:1.5px; background:rgba(20,30,70,.10)}
+.od-correct{background:var(--wm-mean-correct)} .od-incorrect{background:var(--wm-mean-wrong)} .od-neutral{background:#9aa0b6}
+.tl .elabel{font-size:14px} .tl .etime{font-size:12px; color:#8389a0; margin-top:1px}
+.tl .ekind{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin-left:8px}
+.ek-correct{color:var(--wm-mean-correct-ink)} .ek-incorrect{color:var(--wm-mean-wrong-ink)} .ek-neutral{color:#6a7088}
+
+/* assign */
+.assign-list{display:flex; flex-direction:column; gap:9px}
+.unit{display:flex; align-items:center; gap:13px; padding:13px 15px; border-radius:var(--r-md);
+  box-shadow:inset 0 0 0 1.5px rgba(20,30,70,.10); background:#fff}
+.unit.assigned{box-shadow:inset 0 0 0 2px var(--wm-mean-correct); background:var(--wm-card-mint)}
+.unit .ut{font-weight:600; font-size:15px; flex:1}
+.unit .ulocked{font-size:12px; color:var(--wm-mean-attention-ink); font-weight:600; display:flex; align-items:center; gap:5px}
+.unit .assigned-tag{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--wm-mean-correct-ink)}
+.btn-assign{background:var(--wm-navy); color:#fff; border:none; padding:8px 16px; border-radius:var(--r-pill);
+  font-size:13.5px; font-weight:600; transition:background .14s; white-space:nowrap}
+.btn-assign:hover{background:var(--wm-blue)}
+.btn-assign:active{background:var(--wm-blue-press)}
+.btn-assign:disabled{opacity:.55; cursor:default}
+.btn-assign.confirm{background:var(--wm-mean-wrong)}
+.btn-assign.confirm:hover{background:var(--wm-mean-wrong-ink)}
+.btn-ghost{background:transparent; color:var(--wm-ink-soft); border:1.5px solid rgba(20,30,70,.16);
+  padding:8px 14px; border-radius:var(--r-pill); font-size:13px; font-weight:600}
+.confirm-row{display:flex; gap:7px; align-items:center}
+.confirm-q{font-size:12.5px; color:var(--wm-mean-wrong-ink); font-weight:600; margin-right:3px}
+
+/* primary button (triage hero) */
+.btn-primary{background:var(--wm-navy); color:#fff; border:none; padding:11px 20px; border-radius:var(--r-pill);
+  font-size:14.5px; font-weight:600; transition:background .14s; white-space:nowrap;
+  display:inline-flex; align-items:center; justify-content:center; gap:9px}
+.btn-primary:hover{background:var(--wm-blue)}
+.btn-primary:active{background:var(--wm-blue-press)}
+
+/* toast */
+.toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120%);
+  background:var(--wm-navy-deep); color:#fff; padding:13px 20px; border-radius:var(--r-pill);
+  font-size:14px; font-weight:500; box-shadow:var(--sh-soft); z-index:90; display:flex; gap:10px; align-items:center;
+  transition:transform .3s var(--ease)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--wm-mean-wrong-ink)}
+
+/* ---------- class skills (triage rollup) ---------- */
+.cls-intro{color:var(--wm-ink-soft); font-size:15px; margin:6px 0 22px; max-width:640px}
+.skillcard{background:#fff; border-radius:var(--r-lg); box-shadow:var(--sh-card); margin-bottom:11px; overflow:hidden}
+.skillcard .sc-head{display:flex; align-items:center; gap:14px; padding:16px 18px; width:100%; background:none; border:none; text-align:left}
+.sc-count{width:46px; height:46px; border-radius:var(--r-md); display:grid; place-items:center; flex:none;
+  font-family:var(--wm-font-serif); font-size:22px; font-weight:600}
+.sc-count.hot{background:rgba(217,102,63,.16); color:var(--wm-mean-wrong-ink)}
+.sc-count.med{background:rgba(224,163,58,.18); color:var(--wm-mean-attention-ink)}
+.sc-name{font-family:var(--wm-font-serif); font-size:18px; font-weight:600}
+.sc-sub{font-size:13px; color:var(--wm-ink-soft); margin-top:2px}
+.sc-chev{margin-left:auto; color:#9aa0b6; transition:transform .2s var(--ease)}
+.skillcard.open .sc-chev{transform:rotate(90deg)}
+.sc-body{padding:0 18px 16px 78px; display:none}
+.skillcard.open .sc-body{display:block}
+.stuckrow{display:flex; align-items:center; gap:11px; padding:9px 0; border-top:1px solid rgba(20,30,70,.07); width:100%; background:none; border-left:none; border-right:none; border-bottom:none; text-align:left}
+.stuckrow .sname{font-weight:600; font-size:14.5px; flex:1}
+.stuckrow .spct{font-family:var(--wm-font-serif); font-weight:600; font-size:13.5px; color:var(--wm-mean-wrong-ink)}
+
+/* ---------- components gallery ---------- */
+.gallery h2{font-size:24px; margin:30px 0 4px}
+.gallery .gnote{font-size:13.5px; color:var(--wm-ink-soft); margin-bottom:16px}
+.specrow{background:#fff; border-radius:var(--r-lg); box-shadow:var(--sh-card); padding:18px 20px; margin-bottom:14px}
+.specrow .label{font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#6a7088; margin-bottom:12px}
+.specset{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.dormant-note{font-size:11.5px; color:var(--wm-mean-attention-ink); margin-top:9px; display:flex; gap:6px; align-items:flex-start; font-weight:500}
+
+/* ---------- sign-in (full overlay) ---------- */
+.signin-wrap{position:fixed; inset:var(--proto-h) 0 0 0; z-index:45; background:var(--wm-page-bg); display:none}
+.signin-wrap.active{display:block}
+.signin{display:grid; grid-template-columns:1.05fr 1fr; height:100%; position:relative; z-index:1}
+.si-left{background:var(--wm-navy-deep); position:relative; overflow:hidden; display:grid; place-items:center; padding:40px}
+.si-left .c{position:absolute; border-radius:50%; mix-blend-mode:screen}
+.si-grid{position:absolute; inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:40px 40px}
+.preview-card{position:relative; background:#fff; border-radius:var(--r-xl); box-shadow:0 30px 60px -20px rgba(0,0,0,.5);
+  padding:18px; width:min(330px,80%); transform:rotate(-2deg)}
+.preview-card .pc-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(20,30,70,.07)}
+.preview-card .pc-row:last-child{border:none}
+.pc-dot{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center}
+.pc-name{font-family:var(--wm-font-serif); font-weight:600; font-size:14px}
+.pc-meta{font-size:11px; color:#8389a0}
+.si-right{background:#fff; display:grid; place-items:center; padding:40px; overflow:auto}
+.si-inner{width:min(380px,100%)}
+.si-mark{display:flex; align-items:center; gap:10px; margin-bottom:30px}
+.si-mark .pie{width:30px;height:30px;box-shadow:inset 0 0 0 4px #fff,0 0 0 1.5px rgba(20,30,70,.12)}
+.si-mark .wm{font-family:var(--wm-font-serif); font-weight:600; font-size:20px}
+.si-tpill{font-size:10px; font-weight:700; letter-spacing:1.5px; background:rgba(47,67,166,.1); color:var(--wm-navy); padding:3px 9px; border-radius:var(--r-pill)}
+.si-inner h1{font-size:38px; line-height:1.08; margin-bottom:12px}
+.si-inner .lead{font-size:16px; color:var(--wm-ink-soft); margin-bottom:30px}
+.btn-google{width:100%; background:#fff; color:var(--wm-ink); border:1.5px solid rgba(20,30,70,.18);
+  padding:13px; border-radius:var(--r-md); font-size:15px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:11px;
+  box-shadow:var(--sh-card); transition:transform .14s}
+.btn-google:hover{transform:translateY(-1px)}
+.demo-link{display:block; width:100%; text-align:center; background:none; border:none; color:var(--wm-navy);
+  font-weight:600; font-size:14.5px; margin-top:16px; padding:8px}
+.si-foot{font-size:12px; color:#8389a0; margin-top:26px; line-height:1.5}
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){
+  .split-content{grid-template-columns:1fr}
+  .secondary-info{position:static; order:-1}
+}
+@media (max-width:1024px){
+  #app{grid-template-areas:"top" "main"; grid-template-columns:1fr}
+  .sidenav{display:none}
+}
+@media (max-width:880px){ .signin{grid-template-columns:1fr} .si-left{display:none} }
+@media (max-width:680px){
+  .page{padding:24px 18px 60px}
+  .summary{grid-template-columns:1fr}
+  .skills-grid{grid-template-columns:1fr; gap:20px}
+  .row{grid-template-columns:1fr 26px; gap:10px}
+  .row .right{grid-column:1 / -1; align-items:stretch; min-width:0}
+  .badges{justify-content:flex-start}
+  .prog{width:100%}
+  .row .chev{position:absolute; right:18px; top:18px}
+  .row{position:relative}
+  .sec-head .sblurb{display:none}
+  .si-inner h1{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important; transition:none !important}
+}
+</style>
+</head>
+<body>
+
+<!-- prototype navigation (review affordance, not product chrome) -->
+<nav class="proto" aria-label="Prototype navigation">
+  <span class="tag">Prototype</span>
+  <button data-view="signin">Sign-in</button>
+  <button data-view="roster" aria-current="true">Roster</button>
+  <button data-view="student">Drill-in</button>
+  <button data-view="class">Class skills</button>
+  <button data-view="gallery">Components &amp; states</button>
+  <span class="spacer"></span>
+  <label for="stateSel" style="opacity:.7">Preview state:</label>
+  <select id="stateSel">
+    <option value="normal">Roster — normal</option>
+    <option value="loading">Roster — loading</option>
+    <option value="error">Roster — load error</option>
+    <option value="emptyroster">Roster — empty roster</option>
+    <option value="allclear">Roster — all clear</option>
+  </select>
+</nav>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand"><span class="pie"></span><span>WhollyMath</span></div>
+    <span class="tpill">TEACHER</span>
+    <span class="spacer"></span>
+    <div class="user-avatar" title="Ms. Alvarez" aria-label="Ms. Alvarez">A</div>
+  </header>
+  <aside class="sidenav" id="sidenav" aria-label="Primary navigation"></aside>
+  <main class="page"><div id="mainContent"></div></main>
+</div>
+
+<div class="signin-wrap" id="signinView"></div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================ ICONS (inline SVG, never emoji) ============================ */
+const I = {
+  triangle:(c='currentColor')=>`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5 22 20H2L12 3.5Z" stroke="${c}" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.5" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.1" fill="${c}"/></svg>`,
+  // solid-filled triangle: distinguishes URGENT from WARN by shape in grayscale (review finding #1)
+  triangleSolid:(c='currentColor')=>`<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 22 20H2L12 3.5Z" fill="${c}"/><path d="M12 9.7v4.4" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.15" fill="#fff"/></svg>`,
+  eye:(c='currentColor')=>`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z" stroke="${c}" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" stroke="${c}" stroke-width="2"/></svg>`,
+  // dedicated misconception glyph (review finding #7): a "thought/branch" mark, not the observe eye
+  misc:(c='currentColor')=>`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3a6 6 0 0 0-3.6 10.8c.4.3.6.7.6 1.2v.5h6v-.5c0-.5.2-.9.6-1.2A6 6 0 0 0 12 3Z" stroke="${c}" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 18.5h5M10.5 21h3" stroke="${c}" stroke-width="2" stroke-linecap="round"/></svg>`,
+  check:(c='currentColor')=>`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4.5 12.5 4.5 4.5L19.5 6.5" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  info:(c='currentColor')=>`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="${c}" stroke-width="2"/><path d="M12 11v5" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.6" r="1.1" fill="${c}"/></svg>`,
+  chev:(c='currentColor')=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 5 7 7-7 7" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  search:(c='currentColor')=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="${c}" stroke-width="2"/><path d="m16 16 4 4" stroke="${c}" stroke-width="2" stroke-linecap="round"/></svg>`,
+  star:(c='currentColor',f='currentColor')=>`<svg width="16" height="16" viewBox="0 0 24 24" fill="${f}" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.86-4.25 4.14 1 5.86L12 17.9l-5.25 2.76 1-5.86L3.5 9.66l5.9-.86L12 3.5Z" stroke="${c}" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+  back:(c='currentColor')=>`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m14 6-6 6 6 6" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  up:(c='currentColor')=>`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V6m0 0-6 6m6-6 6 6" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  down:(c='currentColor')=>`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v13m0 0 6-6m-6 6-6-6" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  steady:(c='currentColor')=>`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+  google:()=>`<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.2c0-.7-.06-1.4-.18-2.05H12v3.88h5.9a5.05 5.05 0 0 1-2.19 3.31v2.75h3.54c2.07-1.9 3.25-4.7 3.25-7.89Z"/><path fill="#34A853" d="M12 23c2.95 0 5.43-.98 7.24-2.65l-3.54-2.75c-.98.66-2.24 1.05-3.7 1.05-2.85 0-5.26-1.92-6.12-4.5H2.22v2.84A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.88 14.15a6.6 6.6 0 0 1 0-4.3V7.01H2.22a11 11 0 0 0 0 9.98l3.66-2.84Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3.04.55 4.18 1.63l3.13-3.13C17.43 2.18 14.95 1 12 1A11 11 0 0 0 2.22 7.01l3.66 2.84C6.74 7.42 9.15 5.5 12 5.5Z"/></svg>`,
+  home:(c='currentColor')=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg>`,
+  grid:(c='currentColor')=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`,
+  layers:(c='currentColor')=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>`,
+  signout:(c='currentColor')=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+  updown:(c='currentColor')=>`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>`,
+};
+
+/* ============================ DATA ============================ */
+const CATEGORY = {
+  struggling:{label:'Struggling', icon:'triangle', chip:'chip-struggling', sec:'sec-struggling', stat:'s-struggling',
+              blurb:'Has an urgent signal; look here first.'},
+  needs_attention:{label:'Needs attention', icon:'eye', chip:'chip-needs', sec:'sec-needs', stat:'s-needs',
+              blurb:'A warning worth a check-in.'},
+  on_track:{label:'On track', icon:'check', chip:'chip-ontrack', sec:'sec-ontrack', stat:'s-ontrack',
+              blurb:'Moving along; no action needed.'},
+};
+// Severity icons differ by SHAPE, not just color (review finding #1):
+// urgent = solid triangle · warn = outline triangle · info = circle
+const SEV = {
+  urgent:{word:'Urgent', icon:'triangleSolid', badge:'badge-urgent', full:'af-urgent'},
+  warn:{word:'Warning', icon:'triangle', badge:'badge-warn', full:'af-warn'},
+  info:{word:'Note', icon:'info', badge:'badge-info', full:'af-info'},
+};
+const ALERT_LABEL = {
+  STUCK:'Stuck', REPEATED_MISCONCEPTION:'Repeated misconception', FAILING_TREND:'Falling accuracy',
+  LOW_ENGAGEMENT:'Low engagement', HINT_DEPENDENT:'Hint dependent', IDLE:'Idle', REMEDIATION_STUCK:'Stuck in remediation',
+};
+const ALERT_SEV = {
+  STUCK:'urgent', REPEATED_MISCONCEPTION:'urgent', REMEDIATION_STUCK:'urgent',
+  FAILING_TREND:'warn', LOW_ENGAGEMENT:'warn', HINT_DEPENDENT:'warn', IDLE:'info',
+};
+const a=(kind,message)=>({kind,severity:ALERT_SEV[kind],message});
+const UNITS = [
+  {unit_id:'u_found', title:'Fraction foundations'},
+  {unit_id:'u_addsub', title:'Adding & subtracting fractions'},
+  {unit_id:'u_mult', title:'Multiplying fractions'},
+  {unit_id:'u_ratios', title:'Ratios & rates'},
+  {unit_id:'u_percents', title:'Percents'},
+  {unit_id:'u_prop', title:'Proportional reasoning'},
+];
+const sk=(name,probability,status)=>({skill_name:name, probability, status});
+
+const STUDENTS = [
+  { student_id:'s1', name:'Maya Chen', category:'struggling',
+    category_reason:'Missed the last 3 problems in a row.',
+    current_unit_title:'Adding & subtracting fractions', current_lesson_title:'Add fractions with unlike denominators',
+    percent_complete:0.45,
+    alerts:[a('STUCK','Missed the last 3 problems in a row.')],
+    why:{headline:'Natural-number bias is showing up in Add fractions with unlike denominators.',
+         detail:'Add fractions with unlike denominators is the weakest skill (p(known) 35%), and the error pattern matches natural-number bias. Recent accuracy on this work is 40%.',
+         matched_misconception:'Natural-number bias', helpneed_trend:'rising', recent_error_rate:0.6},
+    skills:[sk('Identify equivalent fractions',0.92,'mastered'), sk('Find a common denominator',0.78,'in_progress'),
+            sk('Add fractions with unlike denominators',0.35,'in_progress'), sk('Subtract fractions with unlike denominators',0.42,'in_progress')],
+    timeline:[{at:'8m ago',label:'Answered 1/2 + 1/3 (added across)',outcome:'incorrect'},
+              {at:'21m ago',label:'Answered 2/5 + 1/5',outcome:'correct'},
+              {at:'34m ago',label:'Answered 3/4 + 1/6 (added across)',outcome:'incorrect'},
+              {at:'48m ago',label:'Answered 1/3 + 1/3',outcome:'incorrect'},
+              {at:'1h ago',label:'Reviewed common denominators',outcome:'neutral'}],
+    assigned_unit_id:'u_addsub',
+    assignable:[{...UNITS[0],available:true},{...UNITS[1],available:true},{...UNITS[2],available:true},{...UNITS[4],available:false}] },
+
+  { student_id:'s2', name:'Darius Williams', category:'struggling',
+    category_reason:'The same operation error on 3 of the last 8 attempts.',
+    current_unit_title:'Multiplying fractions', current_lesson_title:'Multiply two fractions',
+    percent_complete:0.30,
+    alerts:[a('REPEATED_MISCONCEPTION','The same operation error on 3 of the last 8 attempts.'),
+            a('FAILING_TREND','Accuracy fell from 75% to 35% over recent work.')],
+    why:{headline:'Multiply-as-add is showing up in Multiply two fractions.',
+         detail:'Multiply two fractions is the weakest skill (p(known) 33%); the recurring error matches treating multiplication like addition. Recent accuracy on this work is 35%.',
+         matched_misconception:'Multiply as add', helpneed_trend:'falling', recent_error_rate:0.55},
+    skills:[sk('Find a common denominator',0.81,'mastered'), sk('Identify equivalent fractions',0.74,'in_progress'),
+            sk('Multiply two fractions',0.33,'in_progress'), sk('Find the GCF or LCM',0.46,'in_progress')],
+    timeline:[{at:'15m ago',label:'Answered 2/3 × 3/4 (added numerators)',outcome:'incorrect'},
+              {at:'30m ago',label:'Answered 1/2 × 4/5',outcome:'incorrect'},
+              {at:'55m ago',label:'Answered 3/5 × 1/2',outcome:'correct'},
+              {at:'2h ago',label:'Answered 2/7 × 1/3 (added)',outcome:'incorrect'}],
+    assigned_unit_id:null,
+    assignable:[{...UNITS[1],available:true},{...UNITS[2],available:true},{...UNITS[5],available:false}] },
+
+  { student_id:'s3', name:'Priya Shah', category:'struggling',
+    category_reason:'Missed the last 3 problems in a row.',
+    current_unit_title:'Percents', current_lesson_title:'Find a percent of a number',
+    percent_complete:0.50,
+    alerts:[a('STUCK','Missed the last 3 problems in a row.'),
+            a('HINT_DEPENDENT','Gets answers right but only 12% were unscaffolded; leaning on hints rather than solving independently.')],
+    why:{headline:'Percent-as-amount is showing up in Find a percent of a number.',
+         detail:'Find a percent of a number is the weakest skill (p(known) 38%); answers treat the percent as a raw count rather than a proportion. Recent accuracy on this work is 50%.',
+         matched_misconception:'Percent as amount', helpneed_trend:'steady', recent_error_rate:0.5},
+    skills:[sk('Find an equivalent ratio',0.84,'mastered'), sk('Find a unit rate',0.71,'in_progress'),
+            sk('Find a percent of a number',0.38,'in_progress')],
+    timeline:[{at:'5m ago',label:'Answered 20% of 60',outcome:'incorrect'},
+              {at:'12m ago',label:'Answered 25% of 80',outcome:'incorrect'},
+              {at:'19m ago',label:'Answered 10% of 50',outcome:'incorrect'},
+              {at:'26m ago',label:'Answered 50% of 40 (with hint)',outcome:'correct'}],
+    assigned_unit_id:'u_percents',
+    assignable:[{...UNITS[3],available:true},{...UNITS[4],available:true},{...UNITS[5],available:false}] },
+
+  { student_id:'s4', name:'Sofia Ramirez', category:'needs_attention',
+    category_reason:'Accuracy fell from 80% to 30% over recent work.',
+    current_unit_title:'Ratios & rates', current_lesson_title:'Find a unit rate',
+    percent_complete:0.60,
+    alerts:[a('FAILING_TREND','Accuracy fell from 80% to 30% over recent work.')],
+    why:{headline:'Rate inversion is showing up in Find a unit rate.',
+         detail:'Find a unit rate is the weakest active skill (p(known) 44%); recent answers invert the rate (e.g. items-per-dollar vs dollars-per-item). Recent accuracy on this work is 45%.',
+         matched_misconception:'Rate inversion', helpneed_trend:'rising', recent_error_rate:0.45},
+    skills:[sk('Read ratio language',0.88,'mastered'), sk('Find an equivalent ratio',0.76,'in_progress'),
+            sk('Find a unit rate',0.44,'in_progress')],
+    timeline:[{at:'10m ago',label:'Answered $6 for 3 lb',outcome:'incorrect'},
+              {at:'24m ago',label:'Answered 12 mi in 4 hr',outcome:'incorrect'},
+              {at:'40m ago',label:'Answered 8 apples for $4',outcome:'correct'},
+              {at:'1h ago',label:'Answered 10 pages in 5 min',outcome:'correct'}],
+    assigned_unit_id:'u_ratios',
+    assignable:[{...UNITS[3],available:true},{...UNITS[4],available:true},{...UNITS[5],available:true}] },
+
+  { student_id:'s5', name:"Liam O'Brien", category:'needs_attention',
+    category_reason:'Only 2 problems attempted so far.',
+    current_unit_title:'Fraction foundations', current_lesson_title:'Identify equivalent fractions',
+    percent_complete:0.10,
+    alerts:[a('LOW_ENGAGEMENT','Only 2 problems attempted so far.')],
+    why:{headline:'Not enough work yet to diagnose.',
+         detail:'Only 2 problems attempted; a reliable read on strengths and misconceptions needs more practice. Check back after the next session.',
+         matched_misconception:null, helpneed_trend:null, recent_error_rate:null},
+    skills:[sk('Identify equivalent fractions',0.52,'in_progress')],
+    timeline:[{at:'2d ago',label:'Answered 2/4 = ?/8',outcome:'correct'},
+              {at:'2d ago',label:'Answered 1/3 = ?/9',outcome:'incorrect'}],
+    assigned_unit_id:'u_found',
+    assignable:[{...UNITS[0],available:true},{...UNITS[1],available:false}] },
+
+  { student_id:'s6', name:'Noah Kim', category:'needs_attention',
+    category_reason:'2 skills below target, but no urgent flags.',
+    current_unit_title:'Ratios & rates', current_lesson_title:'Find an equivalent ratio',
+    percent_complete:0.55,
+    alerts:[],
+    why:{headline:'Additive ratio reasoning is showing up in Find an equivalent ratio.',
+         detail:'Find an equivalent ratio is the weakest active skill (p(known) 41%); answers scale ratios by adding rather than multiplying. Recent accuracy on this work is 60%.',
+         matched_misconception:'Additive ratio reasoning', helpneed_trend:'steady', recent_error_rate:0.4},
+    skills:[sk('Read ratio language',0.79,'in_progress'), sk('Find a common denominator',0.83,'mastered'),
+            sk('Find an equivalent ratio',0.41,'in_progress'), sk('Find a unit rate',0.48,'in_progress')],
+    timeline:[{at:'18m ago',label:'Answered 2:3 = 4:?',outcome:'correct'},
+              {at:'35m ago',label:'Answered 3:5 = ?:10 (added 2)',outcome:'incorrect'},
+              {at:'52m ago',label:'Answered 1:4 = 3:?',outcome:'correct'}],
+    assigned_unit_id:null,
+    assignable:[{...UNITS[3],available:true},{...UNITS[4],available:true}] },
+
+  { student_id:'s7', name:'Emma Johnson', category:'needs_attention',
+    category_reason:'Gets answers right but only 10% were unscaffolded.',
+    current_unit_title:'Adding & subtracting fractions', current_lesson_title:'Subtract fractions with unlike denominators',
+    percent_complete:0.65,
+    alerts:[a('HINT_DEPENDENT','Gets answers right but only 10% were unscaffolded; leaning on hints rather than solving independently.')],
+    why:{headline:'Heavy hint reliance on Subtract fractions with unlike denominators.',
+         detail:'Most correct answers on this lesson used a hint; independent accuracy is much lower, so mastery may be overstated. The underlying skill to watch is finding common denominators.',
+         matched_misconception:null, helpneed_trend:'rising', recent_error_rate:0.30},
+    skills:[sk('Add fractions with unlike denominators',0.72,'in_progress'), sk('Identify equivalent fractions',0.9,'mastered'),
+            sk('Subtract fractions with unlike denominators',0.49,'in_progress')],
+    timeline:[{at:'9m ago',label:'Answered 3/4 − 1/3 (with hint)',outcome:'correct'},
+              {at:'22m ago',label:'Answered 5/6 − 1/4 (with hint)',outcome:'correct'},
+              {at:'40m ago',label:'Answered 2/3 − 1/2',outcome:'incorrect'}],
+    assigned_unit_id:'u_addsub',
+    assignable:[{...UNITS[1],available:true},{...UNITS[2],available:true}] },
+
+  { student_id:'s8', name:'Jordan Lee', category:'on_track',
+    category_reason:'Keeping pace — no urgent or warning flags.',
+    current_unit_title:'Percents', current_lesson_title:'Find a percent of a number',
+    percent_complete:0.70,
+    alerts:[a('IDLE','No activity for 5 days.')],
+    why:{headline:'No active concern — pace has simply paused.',
+         detail:'No urgent or warning signals. The only note is 5 days without activity; a nudge to resume may help.',
+         matched_misconception:null, helpneed_trend:'steady', recent_error_rate:0.15},
+    skills:[sk('Find a unit rate',0.86,'mastered'), sk('Read ratio language',0.91,'mastered'),
+            sk('Find a percent of a number',0.74,'in_progress')],
+    timeline:[{at:'5d ago',label:'Answered 30% of 90',outcome:'correct'},
+              {at:'5d ago',label:'Answered 15% of 60',outcome:'correct'}],
+    assigned_unit_id:'u_percents',
+    assignable:[{...UNITS[4],available:true},{...UNITS[5],available:true}] },
+
+  { student_id:'s9', name:'Grace Nguyen', category:'on_track',
+    category_reason:'Keeping pace — no alerts.',
+    current_unit_title:'Ratios & rates', current_lesson_title:'Read ratio language',
+    percent_complete:0.80,
+    alerts:[],
+    why:{headline:'On pace across the board.',
+         detail:'No urgent or warning signals and no skill below target. Strong, independent accuracy on recent work.',
+         matched_misconception:null, helpneed_trend:'falling', recent_error_rate:0.08},
+    skills:[sk('Identify equivalent fractions',0.95,'mastered'), sk('Find a common denominator',0.93,'mastered'),
+            sk('Add fractions with unlike denominators',0.88,'mastered'), sk('Read ratio language',0.82,'in_progress')],
+    timeline:[{at:'12m ago',label:'Answered 4:6 simplified',outcome:'correct'},
+              {at:'25m ago',label:'Answered ratio of 3 to 9',outcome:'correct'},
+              {at:'44m ago',label:'Answered 2:5 in words',outcome:'correct'}],
+    assigned_unit_id:'u_ratios',
+    assignable:[{...UNITS[3],available:true},{...UNITS[4],available:true},{...UNITS[5],available:true}] },
+
+  { student_id:'s10', name:'Ethan Brooks', category:'on_track',
+    category_reason:'Not started yet — no work to flag.',
+    current_unit_title:null, current_lesson_title:null,
+    percent_complete:0,
+    alerts:[],
+    why:{headline:'Not started yet.',
+         detail:'No problems attempted, so there is nothing to diagnose. Assign a starting unit below to begin.',
+         matched_misconception:null, helpneed_trend:null, recent_error_rate:null},
+    skills:[],
+    timeline:[],
+    assigned_unit_id:null,
+    assignable:[{...UNITS[0],available:true},{...UNITS[3],available:true}] },
+];
+
+const CLASS_NAME='Period 3 · Grade 6 Math', TEACHER_NAME='Ms. Alvarez';
+
+/* ============================ NAV (sidenav links → real views only) ============================ */
+const NAV = [
+  {view:'roster', icon:'home', label:'Home'},
+  {view:'class', icon:'layers', label:'Class skills'},
+  {view:'gallery', icon:'grid', label:'Components'},
+];
+
+/* ============================ STATE ============================ */
+let state = { view:'roster', studentId:'s1', search:'', rosterState:'normal', confirmingUnit:null, busyUnit:null };
+
+/* ============================ HELPERS ============================ */
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct = f => Math.round(f*100);
+const byId = id => STUDENTS.find(s=>s.student_id===id);
+const dataset = () => state.rosterState==='allclear' ? STUDENTS.filter(s=>s.category==='on_track') : STUDENTS;
+
+function catChip(category,size='md'){
+  const c=CATEGORY[category];
+  return `<span class="chip ${size} ${c.chip}">${I[c.icon]()}<span>${c.label}</span></span>`;
+}
+function alertBadge(al){
+  const s=SEV[al.severity];
+  return `<span class="badge compact ${s.badge}" title="${esc(s.word)}: ${esc(al.message)}">${I[s.icon]()}<span>${ALERT_LABEL[al.kind]}</span></span>`;
+}
+function progress(frac){
+  const p=pct(frac); const ns = (frac===0);
+  // not-started: visible "—" matched by aria-valuetext so AT doesn't read a misleading 0% (review finding #5)
+  return `<div class="prog ${ns?'notstarted':''}" role="progressbar" aria-valuenow="${p}" aria-valuemin="0" aria-valuemax="100" ${ns?'aria-valuetext="Not started"':`aria-label="Unit progress ${p}%"`}>
+    <div class="track"><div class="fill" style="width:${p}%"></div></div>
+    <span class="pct">${ns?'—':p+'%'}</span></div>`;
+}
+function trendTag(t){
+  if(!t) return '';
+  const ic = t==='rising'?I.up():t==='falling'?I.down():I.steady();
+  return `<span class="wtag"><span class="k">Help-need</span>${ic}<span>${t}</span></span>`;
+}
+
+/* ============================ SIDENAV ============================ */
+function renderSidenav(){
+  const links = NAV.map(n=>`<a href="#" class="nav-link" data-view="${n.view}">${I[n.icon]()}<span>${n.label}</span></a>`).join('');
+  document.getElementById('sidenav').innerHTML = `
+    <div class="cls-selector"><div class="cls-label">Active class</div>
+      <button class="cls-btn" aria-label="Active class: Period 3, Grade 6 Math">
+        <span class="user-avatar" style="width:30px;height:30px;border:none;font-size:12px">A</span>
+        <div><div class="name">Period 3</div><div class="meta">Grade 6 Math</div></div>
+        <span style="margin-left:auto;opacity:.5">${I.updown()}</span></button></div>
+    <nav class="nav-group" aria-label="Sections">${links}</nav>
+    <div class="nav-group footer">
+      <a href="#" class="nav-link" data-view="signin">${I.signout()}<span>Sign out</span></a>
+    </div>`;
+}
+
+/* ============================ ROSTER ============================ */
+function renderRoster(){
+  const ds=dataset();
+  if(state.rosterState==='loading') return rosterLoading();
+  if(state.rosterState==='error') return rosterError();
+  if(state.rosterState==='emptyroster') return `<div class="r-head"><h1>${esc(CLASS_NAME)}</h1><p class="sub">${esc(TEACHER_NAME)}</p></div><div class="empty" style="margin-top:24px"><h2>No students on your roster yet.</h2><p>Once students join ${esc(CLASS_NAME)}, they'll appear here ranked by who needs help first.</p></div>`;
+
+  const q=state.search.trim().toLowerCase();
+  const filtered = ds.filter(s=>s.name.toLowerCase().includes(q));
+  const counts = {struggling:0,needs_attention:0,on_track:0};
+  ds.forEach(s=>counts[s.category]++);
+
+  const groups = {struggling:[],needs_attention:[],on_track:[]};
+  filtered.forEach(s=>groups[s.category].push(s));
+
+  const isAllClear = !q && groups.struggling.length===0 && groups.needs_attention.length===0 && groups.on_track.length>0;
+
+  // left column: ranked list (or empty/all-clear list)
+  let list='';
+  if(q && filtered.length===0){
+    list = `<div class="empty"><h2>No students match “${esc(state.search)}”.</h2><p>Try a different name, or clear the search to see the full class.</p></div>`;
+  } else {
+    list += section('struggling',groups.struggling);
+    list += section('needs_attention',groups.needs_attention);
+    list += section('on_track',groups.on_track);
+  }
+
+  // right rail: triage hero (most-urgent first) or all-clear hero
+  const primary = ds.find(s=>s.category==='struggling') || ds.find(s=>s.category==='needs_attention');
+  let rail;
+  if(isAllClear || !primary){
+    rail = `<div class="card allclear"><div class="ring">${I.check('#3f7a3a')}</div>
+      <h2>Whole class on track</h2>
+      <p>No urgent or warning signals anywhere in ${esc(CLASS_NAME)} right now. Nothing needs triage — students are keeping pace.</p></div>`;
+  } else {
+    rail = triageHero(primary);
+  }
+
+  return `<div class="r-head"><h1>${esc(CLASS_NAME)}</h1><p class="sub">${esc(TEACHER_NAME)} · ${ds.length} students</p></div>
+    <div class="summary">
+      ${stat('struggling',counts.struggling)}
+      ${stat('needs_attention',counts.needs_attention)}
+      ${stat('on_track',counts.on_track)}
+    </div>
+    <div class="split-content">
+      <div class="primary-list">
+        <div class="search">${I.search('#6a7088')}
+          <input id="searchInput" type="search" placeholder="Filter by student name…" value="${esc(state.search)}" aria-label="Filter students by name" autocomplete="off">
+        </div>
+        ${list}
+      </div>
+      <aside class="secondary-info">${rail}</aside>
+    </div>`;
+}
+function triageHero(s){
+  const where = s.current_unit_title ? ` in ${esc(s.current_unit_title)}` : '';
+  return `<div class="card triage">
+    <div class="ctitle">Highest-priority triage</div>
+    <div class="thead-row">${I.triangleSolid('var(--wm-mean-wrong)')}<h2 class="whead">Check in with ${esc(s.name)}</h2></div>
+    <div class="wdetail"><strong style="color:var(--wm-mean-wrong-ink)">${esc(s.category_reason)}</strong>${where} Their most-urgent signal puts them at the top of the class right now.</div>
+    <button class="btn-primary wbtn" data-student="${s.student_id}">${I.eye('#fff')} Open ${esc(s.name.split(' ')[0])}'s profile</button>
+  </div>`;
+}
+function stat(cat,n){
+  const c=CATEGORY[cat];
+  return `<div class="stat ${c.stat}"><span class="ico">${I[c.icon]()}</span>
+    <span><span class="num">${n}</span><div class="lab">${c.label}</div></span></div>`;
+}
+function section(cat,list){
+  if(list.length===0) return '';
+  const c=CATEGORY[cat];
+  return `<section class="section ${c.sec}">
+    <div class="sec-head">${I[c.icon]('var(--rule)')}<span class="stitle">${c.label}</span>
+      <span class="scount">${list.length}</span><span class="sblurb">${c.blurb}</span></div>
+    ${list.map(rowHTML).join('')}
+  </section>`;
+}
+function rowHTML(s){
+  const where = (s.current_lesson_title||s.current_unit_title)
+    ? `${esc(s.current_lesson_title||'—')}<span class="dot"></span>${esc(s.current_unit_title||'—')}`
+    : `<span style="color:#8389a0">Not started</span>`;
+  const badges = s.alerts.length
+    ? `<div class="badges">${s.alerts.map(alertBadge).join('')}</div>`
+    : `<div class="badges"><span class="badge compact badge-info" style="background:rgba(154,209,124,.2);color:#3f7a3a">${I.check()}<span>No alerts</span></span></div>`;
+  return `<button class="row" data-student="${s.student_id}">
+    <div>
+      <div class="name">${esc(s.name)}</div>
+      <div class="reason">${esc(s.category_reason)}</div>
+      <div class="where">${where}</div>
+    </div>
+    <div class="right">${badges}${progress(s.percent_complete)}</div>
+    <span class="chev">${I.chev()}</span>
+  </button>`;
+}
+function rosterLoading(){
+  const sk=`<div class="skel"><div class="sk" style="height:20px;width:40%;margin-bottom:9px"></div><div class="sk" style="height:13px;width:65%;margin-bottom:14px"></div><div class="sk" style="height:7px;width:100%"></div></div>`;
+  return `<div class="r-head"><div class="sk" style="height:30px;width:280px;border-radius:8px"></div></div>
+    <p class="loading-note">Loading your class…</p>${sk+sk+sk}`;
+}
+function rosterError(){
+  return `<div class="r-head"><h1>${esc(CLASS_NAME)}</h1></div>
+    <div class="errbox" role="alert" style="margin-top:20px"><span class="ai">${I.triangle('var(--wm-mean-wrong)')}</span>
+      <div><h3>Couldn't load your class</h3><p>Something went wrong fetching the roster. Your connection may have dropped.</p>
+      <button onclick="setRosterState('normal')">Try again</button></div></div>`;
+}
+
+/* ============================ DRILL-IN ============================ */
+function renderStudent(){
+  const s=byId(state.studentId);
+  if(!s) return `<div class="content-narrow"><button class="back" data-view="roster">${I.back()} Back to class</button><div class="errbox" role="alert"><span class="ai">${I.triangle('var(--wm-mean-wrong)')}</span><div><h3>Couldn't load this student</h3><p>They may not be on your roster.</p></div></div></div>`;
+
+  // alerts banner
+  const banner = s.alerts.length
+    ? s.alerts.map(al=>{const sv=SEV[al.severity];
+        return `<div class="alert-full ${sv.full}"><span class="ai">${I[sv.icon]()}</span>
+          <div><div class="al"><span class="sev">${sv.word}</span>${ALERT_LABEL[al.kind]}</div>
+          <div class="am">${esc(al.message)}</div></div></div>`;}).join('')
+    : `<div class="alert-full af-info" style="background:rgba(154,209,124,.14);color:#3f7a3a;box-shadow:inset 0 0 0 1.5px rgba(154,209,124,.4)">
+        <span class="ai">${I.check('#3f7a3a')}</span><div><div class="al">No alerts</div><div class="am">This student is moving along — nothing flagged right now.</div></div></div>`;
+
+  // WHY tags
+  const w=s.why; const tags=[];
+  if(w.matched_misconception) tags.push(`<span class="wtag misc">${I.misc('var(--wm-mean-operation)')}<span class="k">Misconception</span><span>${esc(w.matched_misconception)}</span></span>`);
+  if(w.helpneed_trend) tags.push(trendTag(w.helpneed_trend));
+  if(w.recent_error_rate!=null) tags.push(`<span class="wtag"><span class="k">Recent errors</span><span>${pct(w.recent_error_rate)}%</span></span>`);
+
+  // skills split — mastered/due_review OR in_progress≥0.70 = strength; in_progress<0.50 = weak
+  const strengths = s.skills.filter(k=> (k.status==='mastered'||k.status==='due_review') || (k.status==='in_progress'&&k.probability>=0.70))
+    .sort((a,b)=>b.probability-a.probability);
+  const weak = s.skills.filter(k=> k.status==='in_progress'&&k.probability<0.50).sort((a,b)=>a.probability-b.probability);
+  // developing band 0.50–0.69 belongs to neither column — name it so it doesn't read as a gap (review finding #3)
+  const developing = s.skills.filter(k=> k.status==='in_progress'&&k.probability>=0.50&&k.probability<0.70)
+    .sort((a,b)=>b.probability-a.probability);
+
+  const working = s.current_unit_title
+    ? `<div class="wo-unit">${esc(s.current_unit_title)}</div><div class="wo-lesson">Current lesson: ${esc(s.current_lesson_title||'—')}</div>${progress(s.percent_complete)}`
+    : `<div class="wo-unit" style="color:#8389a0">Not started</div><div class="wo-lesson">No unit in progress yet. Assign one below to begin.</div>${progress(0)}`;
+
+  return `<div class="content-narrow">
+    <button class="back" data-view="roster">${I.back()} Back to class</button>
+
+    <div class="d-identity"><h1>${esc(s.name)}</h1>${catChip(s.category,'md')}</div>
+    <p class="d-reason">${esc(s.category_reason)}</p>
+
+    <div class="alerts-banner" aria-live="polite" aria-label="Alerts for ${esc(s.name)}">${banner}</div>
+
+    <div class="card why">
+      <div class="ctitle">What's going on</div>
+      <div class="whead">${esc(w.headline)}</div>
+      <div class="wdetail">${esc(w.detail)}</div>
+      ${tags.length?`<div class="wtags">${tags.join('')}</div>`:''}
+      ${w.helpneed_trend?`<div class="proxy-note">${I.info('#6a7088')}<span>Help-need trend is a behavioral proxy from the answer stream (wrong or hinted = needed help), comparing the earlier and later half of recent work — not a precise ML confidence readout.</span></div>`:''}
+    </div>
+
+    <div class="card working"><div class="ctitle">Working on</div>${working}</div>
+
+    <div class="card"><div class="ctitle">Skills</div>
+      <div class="skills-grid">
+        <div class="skills-col"><h4>${I.check('var(--wm-mean-correct-ink)')}<span style="color:var(--wm-mean-correct-ink)">Strengths</span></h4>
+          ${strengths.length?strengths.map(skillRow).join(''):`<div class="col-empty">No strengths recorded yet.</div>`}</div>
+        <div class="skills-col"><h4>${I.triangle('var(--wm-mean-wrong-ink)')}<span style="color:var(--wm-mean-wrong-ink)">Needs work</span></h4>
+          ${weak.length?weak.map(skillRow).join(''):`<div class="col-empty">Nothing flagged below target.</div>`}</div>
+      </div>
+      ${developing.length?`<div class="developing-note">${I.info('var(--wm-mean-attention-ink)')}<span><span class="dn-k">${developing.length} skill${developing.length>1?'s':''} developing (50–69%)</span> — on target but not yet a strength, so ${developing.length>1?'they are':'it is'} listed in neither column: ${developing.map(k=>esc(k.skill_name)+' '+pct(k.probability)+'%').join(', ')}.</span></div>`:''}
+      ${s.skills.length===0?`<div class="col-empty" style="margin-top:4px">No skills touched yet — untouched skills aren't shown as failing.</div>`:''}
+    </div>
+
+    <div class="card"><div class="ctitle">Recent activity</div>
+      ${s.timeline.length?`<div class="tl">${s.timeline.map(timelineRow).join('')}</div>`:`<div class="col-empty">No recent activity.</div>`}</div>
+
+    <div class="card"><div class="ctitle">Assign next unit</div>
+      <div class="assign-list">${s.assignable.map(u=>unitRow(s,u)).join('')}</div></div>
+  </div>`;
+}
+function skillRow(k){
+  const weak = k.status==='in_progress'&&k.probability<0.50;
+  const cls = weak?'weak':'str';
+  const statusTxt = k.status==='in_progress'?'In progress':k.status.charAt(0).toUpperCase()+k.status.slice(1).replace('_',' ');
+  return `<div class="skill ${cls}">
+    <div class="top"><span class="sn">${esc(k.skill_name)}<span class="status">${statusTxt}</span></span><span class="sp">${pct(k.probability)}%</span></div>
+    <div class="strack"><div class="sfill" style="width:${pct(k.probability)}%"></div></div></div>`;
+}
+function timelineRow(e){
+  const word = e.outcome==='correct'?'Correct':e.outcome==='incorrect'?'Incorrect':'Note';
+  return `<div class="ev"><span class="od od-${e.outcome}"></span>
+    <div><div class="elabel">${esc(e.label)}<span class="ekind ek-${e.outcome}">${e.outcome==='correct'?I.check():e.outcome==='incorrect'?I.triangle():I.info()}${word}</span></div>
+    <div class="etime">${esc(e.at)}</div></div></div>`;
+}
+function unitRow(s,u){
+  const isAssigned = s.assigned_unit_id===u.unit_id;
+  const busy = state.busyUnit===u.unit_id;
+  const confirming = state.confirmingUnit===u.unit_id;
+  let right;
+  if(isAssigned){
+    right = `<span class="assigned-tag">${I.star('var(--wm-mean-correct-ink)','var(--wm-mean-spark)')} Assigned</span>`;
+  } else if(busy){
+    right = `<button class="btn-assign" disabled>Assigning…</button>`;
+  } else if(confirming){
+    right = `<span class="confirm-row"><span class="confirm-q">Assign anyway?</span>
+      <button class="btn-assign confirm" data-assign="${u.unit_id}" data-force="1">Yes, assign</button>
+      <button class="btn-ghost" data-cancel="1">Cancel</button></span>`;
+  } else if(!u.available){
+    right = `<button class="btn-assign" data-assign="${u.unit_id}" data-locked="1">Assign</button>`;
+  } else {
+    right = `<button class="btn-assign" data-assign="${u.unit_id}">Assign</button>`;
+  }
+  return `<div class="unit ${isAssigned?'assigned':''}">
+    <span class="ut">${esc(u.title)}</span>
+    ${!u.available && !isAssigned ? `<span class="ulocked">${I.triangle()}Prerequisites not met</span>`:''}
+    ${right}</div>`;
+}
+
+/* ============================ CLASS SKILLS (triage rollup) ============================ */
+function renderClass(){
+  const map={};
+  STUDENTS.forEach(s=>s.skills.forEach(k=>{
+    if(k.status==='in_progress'&&k.probability<0.50){
+      (map[k.skill_name]=map[k.skill_name]||[]).push({name:s.name,id:s.student_id,p:k.probability});
+    }
+  }));
+  const ranked=Object.entries(map).map(([skill,list])=>({skill,list:list.sort((a,b)=>a.p-b.p)}))
+    .sort((a,b)=>b.list.length-a.list.length);
+
+  const cards = ranked.map((r,i)=>{
+    const hot=r.list.length>=2;
+    return `<div class="skillcard ${i===0?'open':''}" data-skill="${esc(r.skill)}">
+      <button class="sc-head" data-toggle="${esc(r.skill)}">
+        <span class="sc-count ${hot?'hot':'med'}">${r.list.length}</span>
+        <span><span class="sc-name">${esc(r.skill)}</span>
+        <div class="sc-sub">${r.list.length} ${r.list.length===1?'student':'students'} below target (p(known) &lt; 50%)</div></span>
+        <span class="sc-chev">${I.chev()}</span>
+      </button>
+      <div class="sc-body">
+        ${r.list.map(st=>`<button class="stuckrow" data-student="${st.id}">
+          <span class="sname">${esc(st.name)}</span><span class="spct">${pct(st.p)}% known</span>${I.chev('#9aa0b6')}</button>`).join('')}
+      </div></div>`;
+  }).join('');
+
+  return `<div class="content-narrow">
+    <button class="back" data-view="roster">${I.back()} Back to class</button>
+    <div class="r-head"><h1>Class skills</h1></div>
+    <p class="cls-intro">Skills where students are currently stuck, ranked by how many. Built from the same per-skill mastery probabilities (p(known)) as the drill-in — a student counts as stuck on a skill that's <em>in progress</em> and below 50%. Tap a skill to see exactly who, then jump into any student.</p>
+    ${ranked.length?cards:`<div class="empty"><h2>No common sticking points</h2><p>No skill currently has students below target — nothing to group.</p></div>`}
+  </div>`;
+}
+
+/* ============================ COMPONENTS GALLERY ============================ */
+function renderGallery(){
+  const spec=(label,html)=>`<div class="specrow"><div class="label">${label}</div><div class="specset">${html}</div></div>`;
+  const allAlerts = Object.keys(ALERT_LABEL).map(k=>alertBadge(a(k,''))).join('');
+  const fullUrgent = `<div class="alert-full af-urgent" style="max-width:420px"><span class="ai">${I.triangleSolid()}</span><div><div class="al"><span class="sev">Urgent</span>Stuck</div><div class="am">Missed the last 3 problems in a row.</div></div></div>`;
+  const fullWarn = `<div class="alert-full af-warn" style="max-width:420px"><span class="ai">${I.triangle()}</span><div><div class="al"><span class="sev">Warning</span>Low engagement</div><div class="am">Only 2 problems attempted so far.</div></div></div>`;
+  const fullInfo = `<div class="alert-full af-info" style="max-width:420px"><span class="ai">${I.info()}</span><div><div class="al"><span class="sev">Note</span>Idle</div><div class="am">No activity for 5 days.</div></div></div>`;
+
+  return `<div class="content-narrow gallery">
+    <button class="back" data-view="roster">${I.back()} Back to class</button>
+    <div class="r-head"><h1>Components &amp; states</h1></div>
+    <p class="gnote">The reusable primitives, each tied to the token system. Every state pairs color with an icon and a word — color is never the sole signal. Severity icons also differ by shape: solid triangle (urgent), outline triangle (warning), circle (note).</p>
+
+    <h2>Category chips</h2><p class="gnote">Drives roster grouping + identity. Two sizes.</p>
+    ${spec('Medium (drill-in)', catChip('struggling')+catChip('needs_attention')+catChip('on_track'))}
+    ${spec('Small (summary)', catChip('struggling','sm')+catChip('needs_attention','sm')+catChip('on_track','sm'))}
+
+    <h2>Alert badges — compact</h2><p class="gnote">Roster rows. Returned most-severe-first. All 7 named rules; tier reads in grayscale via icon shape:</p>
+    ${spec('All rules', allAlerts)}
+    <div class="dormant-note">${I.info('var(--wm-mean-attention-ink)')}<span>“Stuck in remediation” is wired but dormant — remediation routing isn't built yet, so it never fires in production today. Styled as urgent for when it goes live.</span></div>
+
+    <h2>Alert banners — full</h2><p class="gnote">Drill-in. Severity word + icon + plain-language message. Banner is <code>aria-live="polite"</code>.</p>
+    ${spec('Three severities', fullUrgent+fullWarn+fullInfo)}
+
+    <h2>Progress bar</h2><p class="gnote">Structural blue fill (not a meaning color). Always carries a numeric % — never width/color alone. Not-started reads “—” with <code>aria-valuetext="Not started"</code>.</p>
+    ${spec('States', `<div style="width:220px">${progress(0.65)}</div><div style="width:220px">${progress(0)}</div>`)}
+
+    <h2>Skill rows</h2><p class="gnote">Strength uses meaning-green; weakness uses coral — both are state, so both earn a meaning color. Mastered green appears only when earned.</p>
+    ${spec('Strength / weakness', `<div style="width:280px">${skillRow(sk('Identify equivalent fractions',0.92,'mastered'))}${skillRow(sk('Add fractions with unlike denominators',0.35,'in_progress'))}</div>`)}
+
+    <h2>Timeline items</h2>
+    ${spec('Outcomes', `<div class="tl" style="width:340px">${timelineRow({at:'8m ago',label:'Answered 2/5 + 1/5',outcome:'correct'})}${timelineRow({at:'21m ago',label:'Answered 1/2 + 1/3 (added across)',outcome:'incorrect'})}${timelineRow({at:'1h ago',label:'Reviewed common denominators',outcome:'neutral'})}</div>`)}
+
+    <h2>Stat summary</h2>
+    ${spec('Class header', `<div class="summary" style="width:100%">${stat('struggling',3)}${stat('needs_attention',4)}${stat('on_track',3)}</div>`)}
+  </div>`;
+}
+
+/* ============================ SIGN-IN ============================ */
+function renderSignin(){
+  return `<div class="signin">
+    <div class="si-left">
+      <div class="si-grid"></div>
+      <div class="c" style="width:280px;height:280px;background:var(--wm-blue-bright);opacity:.5;top:-60px;left:-40px"></div>
+      <div class="c" style="width:220px;height:220px;background:var(--wm-mean-magnitude);opacity:.45;bottom:-40px;right:30px"></div>
+      <div class="c" style="width:160px;height:160px;background:var(--wm-mean-spark);opacity:.35;top:40%;left:30%"></div>
+      <div class="preview-card" aria-hidden="true">
+        <div class="pc-row"><span class="pc-dot" style="background:rgba(217,102,63,.16)">${I.triangleSolid('var(--wm-mean-wrong-ink)')}</span><div><div class="pc-name">Maya Chen</div><div class="pc-meta">Missed the last 3 in a row</div></div></div>
+        <div class="pc-row"><span class="pc-dot" style="background:rgba(224,163,58,.18)">${I.eye('var(--wm-mean-attention-ink)')}</span><div><div class="pc-name">Sofia Ramirez</div><div class="pc-meta">Falling accuracy</div></div></div>
+        <div class="pc-row"><span class="pc-dot" style="background:rgba(154,209,124,.24)">${I.check('var(--wm-mean-correct-ink)')}</span><div><div class="pc-name">Grace Nguyen</div><div class="pc-meta">Keeping pace</div></div></div>
+      </div>
+    </div>
+    <div class="si-right"><div class="si-inner">
+      <div class="si-mark"><span class="pie"></span><span class="wm">WhollyMath</span><span class="si-tpill">TEACHER</span></div>
+      <h1>See your class<br>at a glance.</h1>
+      <p class="lead">Sign in to see who needs help first, why they're stuck, and what to assign next.</p>
+      <button class="btn-google" data-view="roster">${I.google()} Sign in with Google</button>
+      <button class="demo-link" data-view="roster">Continue as a demo teacher</button>
+      <p class="si-foot">The demo class uses synthetic student data. No real student records are shown.</p>
+    </div></div>
+  </div>`;
+}
+
+/* ============================ ROUTER ============================ */
+function render(){
+  const main=document.getElementById('mainContent');
+  const signin=document.getElementById('signinView');
+  if(state.view==='signin'){
+    signin.innerHTML=renderSignin(); signin.classList.add('active');
+  } else {
+    signin.classList.remove('active'); signin.innerHTML='';
+    let html='';
+    if(state.view==='roster') html=renderRoster();
+    else if(state.view==='student') html=renderStudent();
+    else if(state.view==='class') html=renderClass();
+    else if(state.view==='gallery') html=renderGallery();
+    main.innerHTML=html;
+  }
+  syncNav();
+  const si=document.getElementById('searchInput');
+  if(si && state._focusSearch){ si.focus(); si.setSelectionRange(si.value.length,si.value.length); state._focusSearch=false; }
+}
+function syncNav(){
+  document.querySelectorAll('.proto button[data-view]').forEach(b=>
+    b.setAttribute('aria-current', b.dataset.view===state.view ? 'true':'false'));
+  document.querySelectorAll('.sidenav .nav-link[data-view]').forEach(l=>
+    l.classList.toggle('active', l.dataset.view===state.view));
+}
+
+/* ============================ EVENTS ============================ */
+function setRosterState(s){ state.rosterState=s; state.search=''; state.view='roster'; render(); }
+function go(view){ state.view=view; state.confirmingUnit=null; render(); window.scrollTo({top:0,behavior:'instant'in document.body.style?'instant':'auto'}); }
+
+document.addEventListener('click', e=>{
+  const v=e.target.closest('[data-view]');
+  if(v){ if(v.tagName==='A') e.preventDefault(); if(v.closest('.proto')) state.rosterState='normal'; go(v.dataset.view); return; }
+  const row=e.target.closest('[data-student]');
+  if(row && !e.target.closest('[data-assign],[data-cancel]')){ state.studentId=row.dataset.student; go('student'); return; }
+  const tog=e.target.closest('[data-toggle]');
+  if(tog){ tog.closest('.skillcard').classList.toggle('open'); return; }
+  const cancel=e.target.closest('[data-cancel]');
+  if(cancel){ state.confirmingUnit=null; render(); return; }
+  const as=e.target.closest('[data-assign]');
+  if(as){ handleAssign(as.dataset.assign, as.dataset.locked==='1', as.dataset.force==='1'); return; }
+});
+
+document.addEventListener('input', e=>{
+  if(e.target.id==='searchInput'){ state.search=e.target.value; state._focusSearch=true; render(); }
+});
+
+document.getElementById('stateSel').addEventListener('change', e=>{ setRosterState(e.target.value); });
+
+function handleAssign(unitId, locked, forced){
+  const s=byId(state.studentId);
+  // locked unit → inline confirm first (teacher judgment overrides the advisory gate)
+  if(locked && !forced){ state.confirmingUnit=unitId; render(); return; }
+  state.confirmingUnit=null;
+  // optimistic write + busy state, then reconcile
+  state.busyUnit=unitId; render();
+  setTimeout(()=>{
+    s.assigned_unit_id=unitId;
+    state.busyUnit=null;
+    render();
+    const u=s.assignable.find(x=>x.unit_id===unitId);
+    showToast(`Assigned “${u.title}” to ${s.name}.`);
+  }, 650);
+}
+let toastT;
+function showToast(msg,err){
+  const t=document.getElementById('toast');
+  t.innerHTML=(err?I.triangle('#fff'):I.check('#fff'))+`<span>${esc(msg)}</span>`;
+  t.classList.toggle('err',!!err); t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+/* ============================ INIT ============================ */
+renderSidenav();
+render();
+</script>
+</body>
+</html>

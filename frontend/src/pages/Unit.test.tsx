@@ -31,7 +31,7 @@ const DETAIL: UnitDetailView = {
   teks_cluster: '6.4 / 6.5',
   status: 'available',
   percent_complete: 0,
-  lesson_count: 3,
+  lesson_count: 4,
   assigned: false,
   lessons: [
     {
@@ -63,6 +63,19 @@ const DETAIL: UnitDetailView = {
       status: 'locked',
       probability: null,
       playable: true,
+    },
+    {
+      // A concept lesson (DEC.FINLIT): not built as a tutor lesson, so it must render the honest
+      // "Concept lesson" state — NOT "coming soon" — and never start a session.
+      lesson_slug: 'u1_l4',
+      title: 'Paying for college',
+      kc_id: 'KC_college_pay',
+      ccss_code: null,
+      teks_code: '6.14G',
+      status: 'available',
+      probability: null,
+      playable: false,
+      concept_only: true,
     },
   ],
 };
@@ -106,6 +119,30 @@ describe('Unit', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Unit conversion/ }));
     expect(onStartLesson).not.toHaveBeenCalled();
     expect(await screen.findByText(/coming soon/)).toBeInTheDocument();
+  });
+
+  it('renders the honest concept-lesson state (not "coming soon") for a concept_only lesson', async () => {
+    mockUnit(DETAIL);
+    render(<Unit slug="u1" onStartLesson={vi.fn()} onBack={vi.fn()} onFoundation={vi.fn()} />);
+    expect(await screen.findByText('Paying for college')).toBeInTheDocument();
+    // The honest "Concept lesson" badge is shown, and the row never claims "coming soon".
+    expect(screen.getByText('Concept lesson')).toBeInTheDocument();
+    expect(
+      screen.getByText(/not a tutor lesson|not an interactive tutor lesson/i),
+    ).toBeInTheDocument();
+  });
+
+  it('does NOT call onStartLesson when a concept_only lesson is clicked (no /session)', async () => {
+    mockUnit(DETAIL);
+    const onStartLesson = vi.fn();
+    render(
+      <Unit slug="u1" onStartLesson={onStartLesson} onBack={vi.fn()} onFoundation={vi.fn()} />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /Paying for college/ }));
+    expect(onStartLesson).not.toHaveBeenCalled();
+    // It shows the honest concept note, NOT the "coming soon" copy.
+    expect(await screen.findByText(/concept lesson — covered in the TEKS/i)).toBeInTheDocument();
+    expect(screen.queryByText(/coming soon/)).not.toBeInTheDocument();
   });
 
   it('disables a locked lesson', async () => {

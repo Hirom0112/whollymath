@@ -214,6 +214,22 @@
   color: #6f6852;
   border-color: #c9c0a6;
 }
+/* A concept lesson (DEC.FINLIT): deliberately non-interactive, so it reads as a calm,
+   informational tag — distinct from the actionable status badges, never "Ready to start". */
+.wm-pathrail-badge--concept {
+  background: var(--wm-cream-2);
+  color: #5a5240;
+  border-color: #c9c0a6;
+  border-style: dashed;
+}
+/* The concept-lesson card is visibly non-interactive (no hover lift, muted, dashed edge) so a
+   learner reads it as "reference, not a button to start". It stays clickable only so the unit
+   page can surface its explanatory note. */
+.wm-pathrail-card--concept {
+  cursor: default;
+  border-style: dashed;
+  opacity: 0.92;
+}
 
 /* Thin mastery-progress bar (probability of the touched row). */
 .wm-pathrail-progress {

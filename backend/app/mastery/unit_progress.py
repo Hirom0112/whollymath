@@ -99,6 +99,13 @@ class LessonProgress:
             frontend ``LIVE_KCS``); it reuses the same ``LIVE_KCS`` membership
             ``_resolve_kc`` already computes, so it cannot drift from the
             backend's own gating.
+        concept_only: ``True`` for a lesson we deliberately chose NOT to build as
+            an interactive tutor lesson — a pure-concept TEKS item with no
+            SymPy/tutor mechanism (DEC.FINLIT: the four non-arithmetic Unit-8
+            financial-literacy lessons). Mirrored straight from the catalog
+            ``CatalogLesson.concept_only``; the overlay adds no logic of its own.
+            It lets the surface render an honest "concept lesson" state instead of
+            the misleading "coming soon" a ``playable=False`` lesson would show.
     """
 
     lesson_slug: str
@@ -106,6 +113,7 @@ class LessonProgress:
     status: CourseNodeStatus
     probability: float | None
     playable: bool
+    concept_only: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +163,8 @@ def _lesson_progress(
     lesson_slug: str,
     kc_id: str | None,
     nodes_by_kc: dict[KnowledgeComponentId, CourseNode],
+    *,
+    concept_only: bool,
 ) -> LessonProgress:
     """Derive one lesson's progress from the course map.
 
@@ -166,6 +176,8 @@ def _lesson_progress(
         lesson_slug: The lesson slug.
         kc_id: The lesson's raw catalog ``kc_id``.
         nodes_by_kc: Course-map nodes indexed by KC.
+        concept_only: The catalog lesson's ``concept_only`` flag, mirrored
+            straight through (no logic of its own — DEC.FINLIT).
 
     Returns:
         The :class:`LessonProgress` for this lesson.
@@ -183,6 +195,7 @@ def _lesson_progress(
             status=CourseNodeStatus.AVAILABLE,
             probability=None,
             playable=playable,
+            concept_only=concept_only,
         )
     return LessonProgress(
         lesson_slug=lesson_slug,
@@ -190,6 +203,7 @@ def _lesson_progress(
         status=node.status,
         probability=node.probability,
         playable=playable,
+        concept_only=concept_only,
     )
 
 
@@ -286,7 +300,10 @@ def build_unit_progress(
     result: list[UnitProgress] = []
     for unit in units:
         lessons = tuple(
-            _lesson_progress(lesson.slug, lesson.kc_id, nodes_by_kc) for lesson in unit.lessons
+            _lesson_progress(
+                lesson.slug, lesson.kc_id, nodes_by_kc, concept_only=lesson.concept_only
+            )
+            for lesson in unit.lessons
         )
         first_kc_id = unit.lessons[0].kc_id if unit.lessons else None
         result.append(

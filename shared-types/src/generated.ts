@@ -960,6 +960,10 @@ export interface LessonView {
    * True when the lesson's KC is CONTENT-COMPLETE (in the backend LIVE_KCS — generator + spec + hints), so POST /session can start it. False for a forward-declared/unbuilt kc_id or a null kc_id (an interleave gate). The authoritative flag the frontend gates its 'coming soon' notice on — it replaces the stale hardcoded frontend LIVE_KCS.
    */
   playable: boolean;
+  /**
+   * True for a lesson we deliberately chose NOT to build as an interactive tutor lesson — a pure-concept TEKS item with no SymPy/tutor mechanism (DEC.FINLIT: the four non-arithmetic Unit-8 financial-literacy lessons). The surface renders an honest 'concept lesson' state for these — NOT 'coming soon', which would falsely imply a tutor lesson is on the way. A genuinely-unbuilt-but-planned lesson (playable=False AND concept_only=False) keeps the 'coming soon' notice.
+   */
+  concept_only?: boolean;
 }
 /**
  * A per-KC mastery readout returned to the surface (ARCHITECTURE.md §6).

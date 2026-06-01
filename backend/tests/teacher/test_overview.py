@@ -123,8 +123,12 @@ def test_current_unit_and_lesson_picks_in_progress_and_first_undone_lesson() -> 
             UnitStatus.IN_PROGRESS,
             0.5,
             (
-                LessonProgress("u-frac-l1", _EQ.value, CourseNodeStatus.MASTERED, 0.95, True),
-                LessonProgress("u-frac-l2", _CD.value, CourseNodeStatus.IN_PROGRESS, 0.3, True),
+                LessonProgress(
+                    "u-frac-l1", _EQ.value, CourseNodeStatus.MASTERED, 0.95, True, False
+                ),
+                LessonProgress(
+                    "u-frac-l2", _CD.value, CourseNodeStatus.IN_PROGRESS, 0.3, True, False
+                ),
             ),
         ),
         _unit_progress("u-ratio", UnitStatus.LOCKED, 0.0, ()),
