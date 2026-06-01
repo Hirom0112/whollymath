@@ -1794,6 +1794,7 @@ class SessionStore:
                 teks_code=catalog_lessons[lp.lesson_slug].teks_code,
                 status=lp.status,
                 probability=lp.probability,
+                playable=lp.playable,
             )
             for lp in unit_progress.lessons
         ]

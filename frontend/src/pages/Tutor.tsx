@@ -166,14 +166,55 @@ const TRANSITION_REASON: Record<SurfaceState, string> = {
   S5_transfer_probe: 'Final check — let’s prove it really sticks.',
 };
 
-// Kid-friendly names for the per-KC progress strip (the mastery snapshot keys on KC id).
+// Human names for the per-KC progress strip (the mastery snapshot keys on KC id) AND the header
+// title fallback. Covers EVERY live KC (the backend registry's 39 KCs), so no surface ever renders
+// a raw `KC_foo` id — the strip can show any KC the session touches (the goal KC plus interleaved
+// companions), and the header falls back here when `KC_TITLE` has no fuller phrasing. The first
+// five fraction KCs keep their terse kid-friendly strip labels; the rest use the registry's
+// `skill_name` (knowledge_components.py) verbatim, the one source of truth for a KC's human name —
+// keep this list in sync when a new KC enters `LIVE_KCS`.
 const KC_LABEL: Record<string, string> = {
+  // The five foundation fraction KCs — terse, kid-friendly strip labels.
   KC_equivalence: 'Equivalent fractions',
   KC_common_denominator: 'Common denominator',
   KC_addition_unlike: 'Adding fractions',
   KC_subtraction_unlike: 'Subtracting fractions',
   KC_number_line_placement: 'Number line',
+  // The Grade-6 KCs — the registry `skill_name` for each (knowledge_components.py).
+  KC_ratio_language: 'Read ratio language',
+  KC_unit_rate: 'Find a unit rate',
+  KC_equivalent_ratios: 'Find an equivalent ratio',
+  KC_percent: 'Find a percent of a number',
+  KC_multiply_fractions: 'Multiply two fractions',
+  KC_divide_fractions: 'Divide two fractions',
+  KC_unit_conversion: 'Convert units via proportions',
+  KC_gcf_lcm: 'Find the GCF or LCM',
+  KC_multi_digit_division: 'Divide multi-digit whole numbers',
+  KC_decimal_operations: 'Operate on decimals',
+  KC_absolute_value: 'Find an absolute value',
+  KC_integer_add_subtract: 'Add and subtract integers',
+  KC_signed_numbers: 'Find the opposite of a number',
+  KC_summary_statistics: 'Summarize a data set with one number',
+  KC_data_displays: 'Read a data display',
   KC_write_expressions: 'Writing expressions',
+  KC_evaluate_expressions: 'Evaluate an expression',
+  KC_exponents: 'Evaluate an exponent',
+  KC_one_step_equations: 'Solve a one-step equation',
+  KC_equivalent_expressions: 'Write an equivalent expression',
+  KC_inequalities: 'Write an inequality',
+  KC_coordinate_plane: 'Plot points in the coordinate plane',
+  KC_classify_number_sets: 'Classify number sets',
+  KC_expression_parts: 'Identify parts of an expression',
+  KC_integer_multiply_divide: 'Multiply and divide integers',
+  KC_triangle_properties: 'Apply triangle properties',
+  KC_area_polygons: 'Find the area of polygons',
+  KC_volume_fractional_edges: 'Find the volume of a prism with fractional edges',
+  KC_polygons_coordinate_plane: 'Draw polygons in the coordinate plane',
+  KC_surface_area_nets: 'Find the surface area of a prism from its net',
+  KC_mean_absolute_deviation: 'Find the mean absolute deviation of a data set',
+  KC_center_spread_shape: 'Describe a distribution by center and spread',
+  KC_categorical_data: 'Summarize categorical data',
+  KC_statistical_questions: 'Recognize statistical questions',
 };
 
 // Fuller, sentence-style lesson titles for the header headline (the mock shows the human

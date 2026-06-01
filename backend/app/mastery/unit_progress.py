@@ -90,12 +90,22 @@ class LessonProgress:
             :attr:`CourseNodeStatus.AVAILABLE` (the neutral placeholder).
         probability: The node's mastery probability when resolved, else
             ``None``.
+        playable: ``True`` when the lesson's ``kc_id`` resolves to a
+            CONTENT-COMPLETE KC (a member of ``LIVE_KCS`` — generator + spec +
+            hints), so ``POST /session`` can actually serve it. ``False`` for a
+            forward-declared/unbuilt ``kc_id`` or ``None``. This is the single
+            authoritative "can the tutor start this lesson" flag the frontend
+            gates its "coming soon" notice on (replacing the stale hardcoded
+            frontend ``LIVE_KCS``); it reuses the same ``LIVE_KCS`` membership
+            ``_resolve_kc`` already computes, so it cannot drift from the
+            backend's own gating.
     """
 
     lesson_slug: str
     kc_id: str | None
     status: CourseNodeStatus
     probability: float | None
+    playable: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,6 +171,10 @@ def _lesson_progress(
         The :class:`LessonProgress` for this lesson.
     """
     resolved = _resolve_kc(kc_id)
+    # ``_resolve_kc`` returns a member only when ``kc_id`` is a CONTENT-COMPLETE KC
+    # (in ``LIVE_KCS``), so a non-None resolution is exactly "the tutor can serve this
+    # lesson" — the authoritative ``playable`` signal (reused, never re-derived).
+    playable = resolved is not None
     node = nodes_by_kc.get(resolved) if resolved is not None else None
     if node is None:
         return LessonProgress(
@@ -168,12 +182,14 @@ def _lesson_progress(
             kc_id=kc_id,
             status=CourseNodeStatus.AVAILABLE,
             probability=None,
+            playable=playable,
         )
     return LessonProgress(
         lesson_slug=lesson_slug,
         kc_id=kc_id,
         status=node.status,
         probability=node.probability,
+        playable=playable,
     )
 
 

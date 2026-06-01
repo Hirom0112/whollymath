@@ -37,20 +37,22 @@ const DETAIL: UnitDetailView = {
     {
       lesson_slug: 'u1_l1',
       title: 'Ratio language',
-      kc_id: 'KC_equivalence', // a LIVE KC (has a generator) → launches the Tutor
+      kc_id: 'KC_equivalence', // backend reports playable → launches the Tutor
       ccss_code: '6.RP.1',
       teks_code: '6.4A',
       status: 'available',
       probability: null,
+      playable: true,
     },
     {
       lesson_slug: 'u1_l2',
       title: 'Unit conversion',
-      kc_id: 'KC_unit_conversion', // catalog KC with NO live generator yet → "coming soon"
+      kc_id: 'KC_unbuilt', // backend reports playable=false (unbuilt KC) → "coming soon"
       ccss_code: '6.RP.3d',
       teks_code: '6.4H',
       status: 'available',
       probability: null,
+      playable: false,
     },
     {
       lesson_slug: 'u1_l3',
@@ -60,6 +62,7 @@ const DETAIL: UnitDetailView = {
       teks_code: '6.4E',
       status: 'locked',
       probability: null,
+      playable: true,
     },
   ],
 };

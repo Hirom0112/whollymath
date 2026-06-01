@@ -40,6 +40,7 @@ _LESSON_KEYS = {
     "teks_code",
     "status",
     "probability",
+    "playable",
 }
 
 

@@ -1065,6 +1065,14 @@ class LessonView(BaseModel):
         le=1.0,
         description="Stored BKT mastery level for the lesson's KC; null if not yet started.",
     )
+    playable: bool = Field(
+        description=(
+            "True when the lesson's KC is CONTENT-COMPLETE (in the backend LIVE_KCS — generator + "
+            "spec + hints), so POST /session can start it. False for a forward-declared/unbuilt "
+            "kc_id or a null kc_id (an interleave gate). The authoritative flag the frontend gates "
+            "its 'coming soon' notice on — it replaces the stale hardcoded frontend LIVE_KCS."
+        ),
+    )
 
 
 class UnitView(BaseModel):

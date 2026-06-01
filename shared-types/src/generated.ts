@@ -956,6 +956,10 @@ export interface LessonView {
    * Stored BKT mastery level for the lesson's KC; null if not yet started.
    */
   probability?: number | null;
+  /**
+   * True when the lesson's KC is CONTENT-COMPLETE (in the backend LIVE_KCS — generator + spec + hints), so POST /session can start it. False for a forward-declared/unbuilt kc_id or a null kc_id (an interleave gate). The authoritative flag the frontend gates its 'coming soon' notice on — it replaces the stale hardcoded frontend LIVE_KCS.
+   */
+  playable: boolean;
 }
 /**
  * A per-KC mastery readout returned to the surface (ARCHITECTURE.md §6).

@@ -115,6 +115,32 @@ def test_fresh_learner_unbuilt_lessons_default_available_zero_percent() -> None:
     assert all(u.percent_complete == 0.0 for u in progress)
 
 
+def test_playable_is_true_exactly_for_content_complete_kcs() -> None:
+    """``playable`` is the authoritative "tutor can serve this lesson" flag.
+
+    It must be ``True`` for exactly the lessons whose ``kc_id`` is a CONTENT-COMPLETE KC
+    (in ``LIVE_KCS``) and ``False`` for forward-declared/unbuilt strings and ``None`` —
+    the contract the frontend gates its "coming soon" notice on. Asserting it tracks
+    ``LIVE_KCS`` membership exactly is what keeps the frontend gate from drifting (the
+    stale hardcoded frontend ``LIVE_KCS`` this replaces).
+    """
+    from app.domain.knowledge_components import LIVE_KCS
+
+    progress = build_unit_progress(all_units(), _course([]), frozenset())
+    for unit in progress:
+        for lp in unit.lessons:
+            expected = lp.kc_id is not None and lp.kc_id in {kc.value for kc in LIVE_KCS}
+            assert lp.playable is expected, f"{lp.lesson_slug} ({lp.kc_id})"
+
+    # Spot-check the two namespaces explicitly: a built KC is playable, the interleave
+    # gate (None kc_id) and a genuinely-unbuilt KC are not.
+    lessons = {lp.lesson_slug: lp for u in progress for lp in u.lessons}
+    assert lessons["u2_l0"].playable is True  # KC_equivalence — built
+    assert lessons["u2_l4"].playable is True  # KC_multiply_fractions — built (namespace fix)
+    assert lessons["u2_l7"].playable is False  # interleave gate, kc_id None
+    assert lessons["u8_l1"].playable is False  # KC_banking — genuinely unbuilt
+
+
 # --- Progress / percent math ----------------------------------------------
 
 
