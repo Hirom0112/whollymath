@@ -6,24 +6,25 @@ These tests assert the *pure* logic that bridges the curriculum catalog
 unit progress aggregation and gating are load-bearing for the student
 unit/lesson shell, so every rule below has an assertion.
 
+Unit gating is PROGRESSIVE (DEC.1 = progressive, owner-resolved 2026-05-31):
+a unit unlocks when it is FIRST in catalog order or the PREVIOUS unit is
+mastered — it does NOT consult the per-KC prerequisite DAG. So on a fresh
+learner the first catalog unit (``u1``) is ``available`` and every later unit
+is ``locked`` until its predecessor is mastered. Lesson-level statuses still
+come from the course map; only the per-KC *unit gate* is gone.
+
 Catalog facts the fixtures rely on (transcribed from ``curriculum.py``):
 
-* Only the five fraction KCs are real ``KnowledgeComponentId`` members. The
-  catalog lessons that resolve to them are ``u2_l0`` (``KC_equivalence``),
-  ``u2_l1`` (``KC_addition_unlike``), and ``u3_l2`` / ``u3_l3`` (both
-  ``KC_number_line_placement``). Every other lesson's ``kc_id`` is a
-  forward-declared string or ``None``.
-* Unit ``u2``'s FIRST lesson (``u2_l0``) is ``KC_equivalence`` — a DAG node
-  whose prereq is ``NUMBER_LINE_PLACEMENT``. So ``u2`` is gated.
-* Unit ``u3``'s first lesson (``u3_l1``) is ``KC_signed_numbers`` — now a BUILT
-  DAG node (Grade-6 build, 2026-05-30) whose prereq is ``NUMBER_LINE_PLACEMENT``,
-  so ``u3`` is gated (LOCKED until that prereq is confirmed). A unit that still
-  defaults available is one whose first lesson is forward-declared/``None`` (e.g.
-  ``u8`` → ``KC_banking``, not yet a member of the enum). ``u4``'s first
-  lesson (``u4_l1`` → ``KC_exponents``) is now a BUILT DAG node (Grade-6 build,
-  2026-05-30), so ``u4`` is also gated, not the neutral default; ``u5``'s first
-  lesson (``u5_l1`` → ``KC_equation_solutions``, repointed 2026-05-31) is likewise
-  now BUILT, so ``u5`` is gated too.
+* ``u1`` is the FIRST unit in catalog order, so it is always ``available`` to a
+  fresh learner. Its six lessons all resolve to content-complete Grade-6 KCs
+  (``KC_ratio_language`` … ``KC_unit_conversion``), so mastering all six makes
+  ``u1`` ``mastered`` and unlocks ``u2``.
+* The catalog units in order are ``u1, u2, u3, uint, u4, u5, u6, u7, u8``
+  (``uint`` — Integer Operations — sits 4th). Progression follows that order.
+* ``u8``'s four financial-literacy lessons (``u8_l1, u8_l2, u8_l4, u8_l5``) are
+  ``concept_only`` (DEC.FINLIT): they are excluded from the unit's
+  mastered/percent aggregation, so ``u8`` completes on its two SymPy-graded
+  lessons (``u8_l3, u8_l6``).
 """
 
 from __future__ import annotations
@@ -241,25 +242,65 @@ def test_all_lessons_complete_makes_unit_mastered() -> None:
     assert progress[0].percent_complete == 1.0
 
 
-# --- Gating (DAT.7 / DEC.1) ------------------------------------------------
+# --- Gating (DEC.1 = progressive) ------------------------------------------
 
 
-def test_gating_locks_unit_when_first_lesson_kc_prereqs_unmet() -> None:
-    """U2 is LOCKED on a fresh learner: u2_l0's KC prereq is unmet."""
+def _master_unit_skills(unit_slug: str) -> tuple[list[ReviewableSkill], frozenset[KC]]:
+    """Build the mastered ReviewableSkills + confirmed set for every live KC in a unit.
+
+    Used to drive a unit to MASTERED so the NEXT unit unlocks under progressive
+    gating. Only lessons whose ``kc_id`` resolves to a content-complete KC need
+    a skill — placeholder/concept lessons don't gate the unit's mastered status.
+    """
+    unit = next(u for u in all_units() if u.slug == unit_slug)
+    kcs: set[KC] = set()
+    for lesson in unit.lessons:
+        if lesson.kc_id is None:
+            continue
+        try:
+            kc = KC(lesson.kc_id)
+        except ValueError:
+            continue
+        kcs.add(kc)
+    skills = [ReviewableSkill(kc, True, 0.95, _NOW) for kc in kcs]
+    return skills, frozenset(kcs)
+
+
+def test_fresh_learner_first_unit_available_rest_locked() -> None:
+    """Progressive gating (DEC.1): fresh learner -> u1 available, u2..u8 locked.
+
+    The first catalog unit is always reachable; every later unit is locked until
+    its predecessor is mastered. This is the core fix: the old per-KC DAG gate
+    wrongly locked u1 (its first KC needs an unmet prereq) and inverted u8 to
+    "available" (its first KC was unbuilt).
+    """
     progress = build_unit_progress(all_units(), _course([]), frozenset())
-    assert _by_slug(progress)["u2"].status is UnitStatus.LOCKED
+    by_slug = _by_slug(progress)
+    assert by_slug["u1"].status is UnitStatus.AVAILABLE
+    later = [u.slug for u in all_units() if u.slug != "u1"]
+    for slug in later:
+        assert by_slug[slug].status is UnitStatus.LOCKED, slug
+    # The inverted-u8 anomaly is fixed: u8 is locked, not falsely available.
+    assert by_slug["u8"].status is UnitStatus.LOCKED
 
 
-def test_gating_unlocks_unit_when_first_lesson_kc_prereqs_met() -> None:
-    """Confirming NUMBER_LINE_PLACEMENT unlocks U2 (KC_equivalence available)."""
-    confirmed = frozenset({KC.NUMBER_LINE_PLACEMENT})
-    course = _course([ReviewableSkill(KC.NUMBER_LINE_PLACEMENT, True, 0.95, _NOW)])
+def test_mastering_first_unit_unlocks_second_only() -> None:
+    """After u1 is mastered, u2 unlocks (AVAILABLE) but u3 stays LOCKED.
+
+    Progressive gating advances exactly one unit: the predecessor of u3 (u2) is
+    not yet mastered, so u3 remains locked.
+    """
+    skills, confirmed = _master_unit_skills("u1")
+    course = _course(skills)
     progress = build_unit_progress(all_units(), course, confirmed)
-    assert _by_slug(progress)["u2"].status is UnitStatus.AVAILABLE
+    by_slug = _by_slug(progress)
+    assert by_slug["u1"].status is UnitStatus.MASTERED
+    assert by_slug["u2"].status is UnitStatus.AVAILABLE
+    assert by_slug["u3"].status is UnitStatus.LOCKED
 
 
-def test_gating_root_first_lesson_unit_available() -> None:
-    """A unit whose first lesson KC is a DAG root -> available even fresh."""
+def test_first_unit_synthetic_is_available_fresh() -> None:
+    """The first unit in order is available even with nothing confirmed."""
     synthetic = (
         CatalogUnit(
             slug="root-first",
@@ -286,70 +327,99 @@ def test_gating_root_first_lesson_unit_available() -> None:
     assert progress[0].status is UnitStatus.AVAILABLE
 
 
-def test_gating_forward_declared_first_lesson_defaults_available() -> None:
-    """A unit whose first lesson is a forward-declared (unbuilt) KC defaults to available (DEC.3).
-
-    U8's first lesson (KC_banking) is not a member of the enum, so it is not in the prerequisite
-    DAG and cannot gate — the unit falls back to the neutral AVAILABLE placeholder. U1, U3, U4, and
-    now U5 are NO LONGER such cases: their first lessons (KC_ratio_language, KC_signed_numbers,
-    KC_exponents, and — repointed 2026-05-31 — KC_equation_solutions) are now BUILT, so they are
-    real DAG nodes that gate on their prerequisites — covered below.
-    """
-    progress = build_unit_progress(all_units(), _course([]), frozenset())
-    assert _by_slug(progress)["u8"].status is UnitStatus.AVAILABLE
-
-
-def test_gating_built_first_lesson_locks_until_prereq_confirmed() -> None:
-    """U1/U3/U4/U5 first lessons are now BUILT KCs, so each gates on its prerequisite.
-
-    With nothing confirmed, KC_ratio_language (U1), KC_signed_numbers (U3), KC_exponents (U4), and
-    KC_equation_solutions (U5, repointed 2026-05-31) are locked — their prerequisites (and those
-    prerequisites' own prereqs) are unconfirmed — so each unit is LOCKED, not the old
-    forward-declared AVAILABLE default. This is the intended consequence of making
-    u1_l1 / u3_l1 / u4_l1 / u5_l1 content-complete: real gating replaces the neutral placeholder
-    once the first lesson exists.
-    """
-    progress = build_unit_progress(all_units(), _course([]), frozenset())
-    assert _by_slug(progress)["u1"].status is UnitStatus.LOCKED
-    assert _by_slug(progress)["u3"].status is UnitStatus.LOCKED
-    assert _by_slug(progress)["u4"].status is UnitStatus.LOCKED
-    assert _by_slug(progress)["u5"].status is UnitStatus.LOCKED
-
-
-def test_gating_none_first_lesson_defaults_available() -> None:
-    """A unit whose first lesson has kc_id None defaults to available (DEC.3)."""
-    synthetic = (
-        CatalogUnit(
-            slug="none-first",
-            title="None First",
-            order=1,
-            ccss_cluster="x",
-            teks_cluster="x",
-            description="x",
-            lessons=(
-                CatalogLesson(
-                    slug="nf_l1",
-                    unit_slug="none-first",
-                    order=1,
-                    title="Gate",
-                    kc_id=None,
-                    ccss_code="6.NS.1",
-                    teks_code="6.3",
-                    description="x",
-                ),
+def test_second_unit_locked_until_first_mastered() -> None:
+    """A two-unit catalog: the second unit unlocks only when the first is mastered."""
+    nl_lesson = CatalogLesson(
+        slug="a_l1",
+        unit_slug="unit-a",
+        order=1,
+        title="Number line",
+        kc_id="KC_number_line_placement",
+        ccss_code="6.NS.6",
+        teks_code="6.2C",
+        description="x",
+    )
+    unit_a = CatalogUnit(
+        slug="unit-a",
+        title="A",
+        order=1,
+        ccss_cluster="x",
+        teks_cluster="x",
+        description="x",
+        lessons=(nl_lesson,),
+    )
+    unit_b = CatalogUnit(
+        slug="unit-b",
+        title="B",
+        order=2,
+        ccss_cluster="x",
+        teks_cluster="x",
+        description="x",
+        lessons=(
+            CatalogLesson(
+                slug="b_l1",
+                unit_slug="unit-b",
+                order=1,
+                title="Equivalence",
+                kc_id="KC_equivalence",
+                ccss_code="6.NS.1",
+                teks_code="6.3",
+                description="x",
             ),
         ),
     )
-    progress = build_unit_progress(synthetic, _course([]), frozenset())
-    assert progress[0].status is UnitStatus.AVAILABLE
+    catalog = (unit_a, unit_b)
+
+    # Fresh: A available, B locked.
+    fresh = _by_slug(build_unit_progress(catalog, _course([]), frozenset()))
+    assert fresh["unit-a"].status is UnitStatus.AVAILABLE
+    assert fresh["unit-b"].status is UnitStatus.LOCKED
+
+    # Master A's only KC -> A mastered, B unlocks.
+    course = _course([ReviewableSkill(KC.NUMBER_LINE_PLACEMENT, True, 0.95, _NOW)])
+    done = _by_slug(build_unit_progress(catalog, course, frozenset({KC.NUMBER_LINE_PLACEMENT})))
+    assert done["unit-a"].status is UnitStatus.MASTERED
+    assert done["unit-b"].status is UnitStatus.AVAILABLE
+
+
+def test_concept_only_lessons_excluded_from_mastered_and_percent() -> None:
+    """U8's two SymPy-graded lessons completing makes U8 mastered at 100% (DEC.FINLIT).
+
+    The four concept_only lessons (u8_l1/l2/l4/l5) are excluded from both the
+    mastered aggregation and percent-complete, so mastering only u8_l3 (check
+    register) and u8_l6 (lifetime income) is enough to complete the unit.
+    """
+    from app.domain.knowledge_components import LIVE_KCS
+
+    u8 = next(u for u in all_units() if u.slug == "u8")
+    # The playable (non-concept) U8 lessons and their KCs.
+    playable_kcs: set[KC] = set()
+    for lesson in u8.lessons:
+        lp_kc = lesson.kc_id
+        if lp_kc is None:
+            continue
+        try:
+            kc = KC(lp_kc)
+        except ValueError:
+            continue
+        if kc in LIVE_KCS:
+            playable_kcs.add(kc)
+    assert playable_kcs, "expected at least one content-complete U8 lesson"
+
+    course = _course([ReviewableSkill(kc, True, 0.95, _NOW) for kc in playable_kcs])
+    progress = build_unit_progress(all_units(), course, frozenset(playable_kcs))
+    u8_prog = _by_slug(progress)["u8"]
+    # Concept-only lessons are NOT in the denominator, so percent hits 100%.
+    assert u8_prog.percent_complete == 1.0
+    assert u8_prog.status is UnitStatus.MASTERED
 
 
 def test_progress_beats_the_graph() -> None:
-    """A unit with real progress is at least in_progress even if graph locks it.
+    """A unit with real progress is at least in_progress even if progression locks it.
 
-    U2 is gated on NUMBER_LINE_PLACEMENT (locked with nothing confirmed), but a
-    learner who has *touched* KC_equivalence (u2_l0) -> in_progress wins,
-    mirroring course_map's "real progress beats the graph".
+    U2 is locked under progressive gating (u1 not mastered), but a learner who
+    has *touched* KC_equivalence (u2_l0) -> in_progress wins, mirroring
+    course_map's "real progress beats the graph".
     """
     # Touched but unconfirmed -> course node IN_PROGRESS for KC_equivalence.
     course = _course([ReviewableSkill(KC.EQUIVALENCE, False, 0.4, _NOW)])
@@ -396,7 +466,7 @@ def test_empty_unit_is_zero_percent_and_not_crash() -> None:
     )
     progress = build_unit_progress(synthetic, _course([]), frozenset())
     assert progress[0].percent_complete == 0.0
-    # No first lesson -> first_kc_id is None -> neutral available default.
+    # It is the first (and only) unit in order -> available under progressive gating.
     assert progress[0].status is UnitStatus.AVAILABLE
 
 
