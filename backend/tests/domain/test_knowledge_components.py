@@ -112,6 +112,11 @@ EXPECTED_CATALOG_IDS = {
     # live surfaces from one y = a*x relationship — SYMBOLIC (scalar y) + COORDINATE_PLANE (plot
     # the (x,y) point), reusing the live coordinate widget).
     "KC_dependent_vars",
+    # Unit 5 (CCSS 6.EE.5 — test whether a value is a solution by substitution. MASTERABLE: two live
+    # surfaces over one x + b = c equation — NUMBER_LINE (a YES/NO solution test, reusing the yes/no
+    # answer kind) + SYMBOLIC (the scalar solve c − b, NUMBER_ENTRY). Distinct from
+    # KC_one_step_equations (solve from scratch, 6.EE.7)).
+    "KC_equation_solutions",
 }
 
 # Content-complete KCs built BEYOND the fraction-only gem bank (the Grade-6 content build). They
@@ -153,6 +158,7 @@ GRADE6_BUILT_NOT_IN_BANK = {
     "KC_categorical_data",
     "KC_statistical_questions",
     "KC_dependent_vars",
+    "KC_equation_solutions",
 }
 
 # The Grade-6 ontology added for the cross-topic HelpNeed model (T1_T2_COORDINATION.md §4):
@@ -183,8 +189,9 @@ EXPECTED_GRADE6_KCS = {
     # SYMBOLIC scalar + COORDINATE_PLANE point, masterable).
     # U5 — Equations & Inequalities (6.EE.5–9). KC_one_step_equations moved to EXPECTED_CATALOG_IDS
     # (built 2026-05-30 — the first masterable-live Grade-6 KC); KC_inequalities moved to
-    # EXPECTED_CATALOG_IDS (built 2026-05-30 — the first inequality-answer KC, 6.EE.8).
-    "KC_equation_solutions",
+    # EXPECTED_CATALOG_IDS (built 2026-05-30 — the first inequality-answer KC, 6.EE.8);
+    # KC_equation_solutions (6.EE.5 — test a value by substitution) moved to EXPECTED_CATALOG_IDS
+    # (built 2026-05-31 — a YES/NO solution test + the scalar solve, masterable).
     # U6 — Geometry (6.G / TEKS 6.8). KC_triangle_properties (TEKS 6.8A — angle sum / base-height
     # area, numeric), KC_area_polygons (6.G.1 — masterable numeric, SYMBOLIC + AREA_MODEL),
     # KC_volume_fractional_edges (6.G.2 — a fractional-edge prism volume, exact Rational answer),
@@ -222,7 +229,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 40 content-complete + 6 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 46  # 41 content-complete + 5 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

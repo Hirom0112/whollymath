@@ -96,6 +96,8 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     # framing only; the YES_NO verifier never classifies it (a wrong yes/no is MAGNITUDE / none).
     "dependent-independent-swap",  # KC_dependent_vars (Unit 4/5, 6.EE.9) — multiplicative rule
     # y = a*x applied as additive a + x; OPERATION on the SYMBOLIC surface.
+    "solution-substitution-error",  # KC_equation_solutions (Unit 5, 6.EE.5) — solving x + b = c by
+    # adding b instead of subtracting it (c + b not c - b); OPERATION on the SYMBOLIC solve surface.
 }
 EXPECTED_ALL_MISCONCEPTION_IDS = EXPECTED_MISCONCEPTION_IDS | EXPECTED_GRADE6_MISCONCEPTION_IDS
 

@@ -82,6 +82,7 @@ from app.domain.misconceptions import (
     place_value_slip,
     reversed_operands,
     signed_not_magnitude,
+    solution_substitution_error,
     subtract_across,
     swap_coordinates,
     triangle_formula_error,
@@ -947,6 +948,18 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.DEPENDENT_INDEPENDENT_SWAP,
         predict=lambda ops: add_instead_of_applying_rate(int(ops[0]), int(ops[1])),
+    ),
+    # solution-substitution-error: solved x + b = c by ADDING b instead of subtracting it (moved
+    # the constant without flipping its sign), answering c + b instead of c - b. Operands are
+    # (b, c). A wrong OPERATION (the wrong inverse). With b > 0 the value c + b always differs from
+    # the correct c - b, so the match is always diagnostic. (Only the SYMBOLIC/NUMERIC solve surface
+    # routes here; the NUMBER_LINE yes/no surface is classified by _verify_yes_no, not this path.)
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.EQUATION_SOLUTIONS,
+        operand_count=2,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.SOLUTION_SUBSTITUTION_ERROR,
+        predict=solution_substitution_error,
     ),
 )
 

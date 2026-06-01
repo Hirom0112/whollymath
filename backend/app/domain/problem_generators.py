@@ -2303,6 +2303,103 @@ def _generate_dependent_vars(
     )
 
 
+# ─── Grade-6 content build (2026-05-31) — Unit 5: equation solutions (CCSS 6.EE.5) ───
+
+# The constant ``b`` and the solution ``x`` of the equation x + b = c (so c = b + x) by difficulty
+# tier (the easy→hard ramp; CP.B). Both pools are positive whole numbers; higher tiers use larger
+# numbers. ``b >= 1`` keeps the wrong-sign answer c + b distinct from the correct c - b, and keeps
+# a FALSE candidate (solution ± a small offset) from coinciding with the true solution. ``None`` /
+# out-of-range keeps the full pool (the pre-ramp default, unchanged for callers without a tier).
+_EQSOL_CONST_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
+    1: (1, 2, 3),
+    2: (2, 3, 4, 5),
+    3: (4, 5, 6, 7),
+    4: (6, 7, 8, 9),
+}
+_EQSOL_CONST_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9)
+_EQSOL_SOLUTION_POOL: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+# The wrong-candidate offsets a FALSE yes/no item draws from (added to the true solution to build a
+# value that is NOT the solution). All nonzero, so a FALSE candidate is never accidentally the true
+# one.
+_EQSOL_WRONG_OFFSETS: tuple[int, ...] = (-2, -1, 1, 2, 3)
+
+
+def _generate_equation_solutions(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_equation_solutions (CCSS 6.EE.5): test which value makes an equation true — two surfaces.
+
+    The equation is ``x + b = c`` (so the solution is ``c - b``). The math (b, the solution, and c)
+    is sampled FIRST and identically for every surface, so the same seed yields the same equation
+    whether shown as a YES/NO solution test or as a solve. ``operands = (b, c)`` lets the SYMBOLIC
+    verifier replay the wrong-sign substitution misconception (``c + b``).
+
+    Two REAL live surfaces (so the KC is masterable, PROJECT.md §3.4 rule 2):
+
+      - **NUMBER_LINE** (default) — a YES/NO judgment "Is x = {candidate} a solution to x + b = c?"
+        The candidate IS the solution on EVEN seeds (→ YES) and a near-miss on ODD seeds (→ NO), so
+        both verdicts appear. The SymPy SUBSTITUTION truth is computed here (does ``candidate + b ==
+        c``?) and encoded in ``operands_yes_no`` as the EQUIVALENCE YES_NO items do — ``(1, 1)`` for
+        a true candidate (equal → YES), ``(1, 0)`` for a false one (not equal → NO) — so the SAME
+        ``_verify_yes_no`` SymPy-equality path grades it (SymPy decides; CLAUDE.md §8.2). NO new
+        widget: the yes/no control renders from ``answer_kind=YES_NO``.
+      - **SYMBOLIC** — the SOLVE framing "Which value of x makes x + b = c true?" answered with the
+        scalar ``c - b`` in the NUMBER_ENTRY editor (NUMERIC; this KC is NOT in
+        _FRACTION_ANSWER_KCS, so it routes to NUMBER_ENTRY). ``operands = (b, c)`` carries the
+        equation for the verifier.
+
+    Deterministic per seed (PROJECT.md §4.1).
+    """
+    const_pool = (
+        _EQSOL_CONST_BY_DIFFICULTY.get(difficulty, _EQSOL_CONST_POOL)
+        if difficulty
+        else _EQSOL_CONST_POOL
+    )
+    b = rng.choice(const_pool)
+    solution = rng.choice(_EQSOL_SOLUTION_POOL)
+    c = b + solution  # the equation x + b = c has solution x = c - b = solution (by construction)
+
+    if surface_format is Representation.NUMBER_LINE:
+        is_true_candidate = seed % 2 == 0
+        if is_true_candidate:
+            candidate = solution
+        else:
+            # A near-miss that is NOT the solution; keep it positive so it is a sensible candidate.
+            offset = rng.choice(_EQSOL_WRONG_OFFSETS)
+            candidate = solution + offset
+            while candidate <= 0 or candidate == solution:
+                offset = rng.choice(_EQSOL_WRONG_OFFSETS)
+                candidate = solution + offset
+        # The SymPy substitution truth: does candidate + b equal c? Encoded as a yes/no operand pair
+        # the same way the EQUIVALENCE / STATISTICAL_QUESTIONS YES_NO items encode their truth.
+        substitutes_true = Rational(candidate + b) == Rational(c)
+        operands = (Rational(1), Rational(1)) if substitutes_true else (Rational(1), Rational(0))
+        statement = f"Is x = {candidate} a solution to x + {b} = {c}?"
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.EQUATION_SOLUTIONS, seed, surface_format),
+            kc=KnowledgeComponentId.EQUATION_SOLUTIONS,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=operands[0],  # anchor; the yes/no truth is operands[0] == operands[1]
+            representations_available=get_kc(
+                KnowledgeComponentId.EQUATION_SOLUTIONS
+            ).representations,
+            operands=operands,
+            answer_kind=AnswerKind.YES_NO,
+        )
+
+    statement = f"Which value of x makes x + {b} = {c} true?"
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.EQUATION_SOLUTIONS, seed, surface_format),
+        kc=KnowledgeComponentId.EQUATION_SOLUTIONS,
+        surface_format=surface_format,
+        statement=statement,
+        correct_value=Rational(c - b),  # the solution x = c - b
+        representations_available=get_kc(KnowledgeComponentId.EQUATION_SOLUTIONS).representations,
+        operands=(Rational(b), Rational(c)),  # (b, c) for the wrong-sign misconception replay
+    )
+
+
 # ─── Grade-6 content build (2026-05-30) — Unit 3: classify number sets (TEKS 6.2A) ───
 
 # The values to classify, as (numerator, denominator) pairs spanning every membership case so the
@@ -3012,6 +3109,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.CATEGORICAL_DATA: _generate_categorical_data,
     KnowledgeComponentId.STATISTICAL_QUESTIONS: _generate_statistical_questions,
     KnowledgeComponentId.DEPENDENT_VARS: _generate_dependent_vars,
+    KnowledgeComponentId.EQUATION_SOLUTIONS: _generate_equation_solutions,
 }
 
 

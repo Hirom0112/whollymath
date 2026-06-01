@@ -57,7 +57,7 @@ from app.domain.misconceptions import (
     DATA_DISPLAY_QUESTION_CODE,
     SUMMARY_STAT_MODE_CODE,
 )
-from app.domain.problem_generators import Problem
+from app.domain.problem_generators import AnswerKind, Problem
 
 # ─── The worked-example value types ──────────────────────────────────────────
 
@@ -1512,6 +1512,69 @@ def _dependent_vars_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     return first_two
 
 
+def _equation_solutions_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'substitute and check, or undo to solve' steps for an equation-solutions item (6.EE.5).
+
+    The SAME equation x + b = c has two live surfaces, so the builder branches on ``answer_kind``:
+
+      - YES_NO (NUMBER_LINE) — the answer is a verdict (is the candidate a solution?), not a
+        magnitude, so (like ``_statistical_questions_steps``) the steps land on the verdict in the
+        final step's ``shown`` text and keep ``revealed_value`` ``None`` (the documented
+        non-magnitude case). The truth rides in ``operands`` exactly as the verifier reads it
+        (equal ⇒ the candidate substitutes true ⇒ YES).
+      - NUMERIC (SYMBOLIC) — the answer is the solution ``c - b == problem.correct_value``; the
+        steps land on that magnitude (``operands = (b, c)``).
+
+    Raises if the operands are missing (CLAUDE.md §8.5)."""
+    operands = problem.operands
+    if operands is None or len(operands) != 2:
+        raise ValueError(f"equation-solutions problem {problem.problem_id} needs two operands")
+    if problem.answer_kind is AnswerKind.YES_NO:
+        substitutes_true = bool(operands[0] == operands[1])
+        verdict = "IS a solution" if substitutes_true else "is NOT a solution"
+        why = (
+            "Why does making both sides equal mean the value is a solution?"
+            if substitutes_true
+            else "Why does a value that leaves the sides unequal fail to be a solution?"
+        )
+        return (
+            WorkedStep(
+                shown="A value is a solution only if it makes the equation TRUE.",
+                why_prompt="Why is 'makes the equation true' the test for a solution?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown="Substitute the value for x, then check whether both sides come out equal.",
+                why_prompt="Why must you put the value in for x before you can decide?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"So that value {verdict}.",
+                why_prompt=why,
+                revealed_value=None,
+            ),
+        )
+    b, c = int(operands[0]), int(operands[1])
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=f"The equation is x + {b} = {c}. Find the value of x that makes it true.",
+            why_prompt="Why is solving an equation the same as finding which value makes it true?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Undo the + {b} with the OPPOSITE operation: x = {c} - {b}.",
+            why_prompt="Why does subtracting the same amount from both sides keep it balanced?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"So x = {answer.p}.",
+            why_prompt="Why can we check this by putting the value back into the equation?",
+            revealed_value=answer,
+        ),
+    )
+
+
 def _classify_number_sets_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'walk the nested sets from largest in' steps for a classify problem (Unit 3, TEKS 6.2A).
 
@@ -1795,6 +1858,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.CATEGORICAL_DATA: _categorical_data_steps,
     KnowledgeComponentId.STATISTICAL_QUESTIONS: _statistical_questions_steps,
     KnowledgeComponentId.DEPENDENT_VARS: _dependent_vars_steps,
+    KnowledgeComponentId.EQUATION_SOLUTIONS: _equation_solutions_steps,
 }
 
 

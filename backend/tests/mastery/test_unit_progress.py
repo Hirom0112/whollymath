@@ -19,9 +19,11 @@ Catalog facts the fixtures rely on (transcribed from ``curriculum.py``):
   DAG node (Grade-6 build, 2026-05-30) whose prereq is ``NUMBER_LINE_PLACEMENT``,
   so ``u3`` is gated (LOCKED until that prereq is confirmed). A unit that still
   defaults available is one whose first lesson is forward-declared/``None`` (e.g.
-  ``u5`` → ``KC_test_solution``, not yet a member of the enum). ``u4``'s first
+  ``u8`` → ``KC_banking``, not yet a member of the enum). ``u4``'s first
   lesson (``u4_l1`` → ``KC_exponents``) is now a BUILT DAG node (Grade-6 build,
-  2026-05-30), so ``u4`` is also gated, not the neutral default.
+  2026-05-30), so ``u4`` is also gated, not the neutral default; ``u5``'s first
+  lesson (``u5_l1`` → ``KC_equation_solutions``, repointed 2026-05-31) is likewise
+  now BUILT, so ``u5`` is gated too.
 """
 
 from __future__ import annotations
@@ -261,29 +263,31 @@ def test_gating_root_first_lesson_unit_available() -> None:
 def test_gating_forward_declared_first_lesson_defaults_available() -> None:
     """A unit whose first lesson is a forward-declared (unbuilt) KC defaults to available (DEC.3).
 
-    U5's first lesson (KC_test_solution) is not a member of the enum, so it is not in the
-    prerequisite DAG and cannot gate — the unit falls back to the neutral AVAILABLE placeholder.
-    U1, U3, and U4 are NO LONGER such cases: their first lessons (KC_ratio_language,
-    KC_signed_numbers, KC_exponents) are now BUILT (Grade-6 build, 2026-05-30), so they are real
-    DAG nodes that gate on their prerequisites — covered below.
+    U8's first lesson (KC_banking) is not a member of the enum, so it is not in the prerequisite
+    DAG and cannot gate — the unit falls back to the neutral AVAILABLE placeholder. U1, U3, U4, and
+    now U5 are NO LONGER such cases: their first lessons (KC_ratio_language, KC_signed_numbers,
+    KC_exponents, and — repointed 2026-05-31 — KC_equation_solutions) are now BUILT, so they are
+    real DAG nodes that gate on their prerequisites — covered below.
     """
     progress = build_unit_progress(all_units(), _course([]), frozenset())
-    assert _by_slug(progress)["u5"].status is UnitStatus.AVAILABLE
+    assert _by_slug(progress)["u8"].status is UnitStatus.AVAILABLE
 
 
 def test_gating_built_first_lesson_locks_until_prereq_confirmed() -> None:
-    """U1/U3/U4 first lessons are now BUILT KCs, so each gates on its prerequisite (not AVAILABLE).
+    """U1/U3/U4/U5 first lessons are now BUILT KCs, so each gates on its prerequisite.
 
-    With nothing confirmed, KC_ratio_language (U1), KC_signed_numbers (U3), and KC_exponents (U4)
-    are locked — their prerequisites (and those prerequisites' own prereqs) are unconfirmed — so
-    each unit is LOCKED, not the old forward-declared AVAILABLE default. This is the intended
-    consequence of making u1_l1 / u3_l1 / u4_l1 content-complete (Grade-6 build, 2026-05-30): real
-    gating replaces the neutral placeholder once the first lesson exists.
+    With nothing confirmed, KC_ratio_language (U1), KC_signed_numbers (U3), KC_exponents (U4), and
+    KC_equation_solutions (U5, repointed 2026-05-31) are locked — their prerequisites (and those
+    prerequisites' own prereqs) are unconfirmed — so each unit is LOCKED, not the old
+    forward-declared AVAILABLE default. This is the intended consequence of making
+    u1_l1 / u3_l1 / u4_l1 / u5_l1 content-complete: real gating replaces the neutral placeholder
+    once the first lesson exists.
     """
     progress = build_unit_progress(all_units(), _course([]), frozenset())
     assert _by_slug(progress)["u1"].status is UnitStatus.LOCKED
     assert _by_slug(progress)["u3"].status is UnitStatus.LOCKED
     assert _by_slug(progress)["u4"].status is UnitStatus.LOCKED
+    assert _by_slug(progress)["u5"].status is UnitStatus.LOCKED
 
 
 def test_gating_none_first_lesson_defaults_available() -> None:

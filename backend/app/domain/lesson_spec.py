@@ -1150,6 +1150,35 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             probe_representations=(_R.SYMBOLIC, _R.COORDINATE_PLANE),
         ),
     ),
+    # ─── Grade-6 content build (2026-05-31) — Unit 5: Equation solutions (CCSS 6.EE.5) ───
+    # Test whether a value is a solution — a MASTERABLE lesson: NUMBER_LINE (a YES/NO solution test)
+    # and SYMBOLIC (the scalar solve) are BOTH live and built from the same x + b = c equation, so
+    # errors route to a rep that HAS a surface state and the probe draws from both. An OPERATION
+    # slip (the wrong-sign substitution c + b on the solve) routes to SYMBOLIC — the equation
+    # surface where the inverse operation is visible; a MAGNITUDE slip (a misjudged YES/NO solution
+    # test — the only category the YES_NO verifier emits) routes to NUMBER_LINE, where the
+    # candidate's position is checked against the equation. Both reps have a real surface state
+    # (SYMBOLIC_FOCUS / NUMBER_LINE_PRIMARY), so each route is honest (never WORD_PROBLEM). This KC
+    # is SCALAR on SYMBOLIC (NUMBER_ENTRY, NOT a fraction KC) and YES_NO on NUMBER_LINE —
+    # _FRACTION_ANSWER_KCS untouched.
+    _spec(
+        _KC.EQUATION_SOLUTIONS,
+        error_routes=(
+            ErrorRoute(
+                _E.OPERATION,
+                _R.SYMBOLIC,
+                "Undo the equation with the OPPOSITE operation, then check the value works.",
+            ),
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.NUMBER_LINE,
+                "Substitute the value and see if both sides match — that is the solution test.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.NUMBER_LINE, _R.SYMBOLIC)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

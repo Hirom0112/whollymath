@@ -196,6 +196,11 @@ class MisconceptionId(StrEnum):
     # than to multiply it by, so the relationship between the two variables is applied with the
     # wrong operation.
     DEPENDENT_INDEPENDENT_SWAP = "dependent-independent-swap"
+    # Unit 5 (6.EE.5): a substitution / isolate-x sign error when solving x + b = c — moving the
+    # constant to the other side WITHOUT flipping its sign, so the learner answers c + b instead of
+    # c - b ("x + 4 = 9" -> x = 9 + 4 = 13 instead of 9 - 4 = 5). The candidate is tested with the
+    # wrong inverse, so the value claimed to make the equation true does not.
+    SOLUTION_SUBSTITUTION_ERROR = "solution-substitution-error"
 
 
 @dataclass(frozen=True)
@@ -699,6 +704,17 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "variable depends on the independent one."
         ),
         applicable_kcs=(KnowledgeComponentId.DEPENDENT_VARS,),
+    ),
+    Misconception(
+        id=MisconceptionId.SOLUTION_SUBSTITUTION_ERROR,
+        name="Wrong-sign substitution when testing a solution",
+        description=(
+            "Solves x + b = c by moving the constant to the other side WITHOUT flipping its sign — "
+            "answering c + b instead of c - b ('x + 4 = 9' gives x = 9 + 4 = 13 instead of "
+            "9 - 4 = 5). The learner substitutes / isolates x with the wrong inverse, so the value "
+            "they claim makes the equation true does not actually balance it."
+        ),
+        applicable_kcs=(KnowledgeComponentId.EQUATION_SOLUTIONS,),
     ),
 )
 
@@ -1252,6 +1268,23 @@ def inverse_operation_error(operands: tuple[Rational, ...]) -> Rational | None:
     if mode == 1:  # p*x = q  ->  subtracted p instead of dividing by it
         return q - p
     return None
+
+
+def solution_substitution_error(operands: tuple[Rational, ...]) -> Rational | None:
+    """solution-substitution-error: a wrong-sign isolate-x error on x + b = c (6.EE.5).
+
+    The equation-solutions SOLVE item encodes its equation as ``(b, c)`` for ``x + b = c`` (correct
+    solution ``c - b``). The learner who makes this error moves the constant to the other side
+    WITHOUT flipping its sign, answering ``c + b`` ('x + 4 = 9' -> x = 9 + 4 = 13 instead of
+    9 - 4 = 5). Returned as a SymPy ``Rational`` so the verifier compares values directly. The
+    generator keeps ``b > 0``, so ``c + b`` always differs from the correct ``c - b`` (they coincide
+    only at b = 0), making the misconception diagnostic. Returns ``None`` for an unexpected operand
+    shape (defensive; the verifier then reports OTHER rather than over-claiming a match).
+    """
+    if len(operands) != 2:
+        return None
+    b, c = operands
+    return c + b
 
 
 def confuse_coefficient_with_constant(operands: tuple[Rational, ...]) -> Rational | None:

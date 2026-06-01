@@ -758,6 +758,23 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Put your input into the rule, then follow what it tells you the matching output is.",
         ),
     ),
+    # Grade-6 Unit 5 (6.EE.5): index 0 (operation) orients toward SUBSTITUTING the value and
+    # checking both sides match; index 1 reinforces undoing the equation by the OPPOSITE operation
+    # to find which value works.
+    KnowledgeComponentId.EQUATION_SOLUTIONS: (
+        _nudge(
+            KnowledgeComponentId.EQUATION_SOLUTIONS,
+            "Put the value in for the letter, then check: do BOTH sides come out the same?",
+        ),
+        _nudge(
+            KnowledgeComponentId.EQUATION_SOLUTIONS,
+            "A value is a solution only if it makes the equation true when you substitute it.",
+        ),
+        _nudge(
+            KnowledgeComponentId.EQUATION_SOLUTIONS,
+            "To find which value works, undo the equation with the OPPOSITE operation.",
+        ),
+    ),
 }
 
 

@@ -196,6 +196,11 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     # KC the idea conceptually rests on (its own §11 statistics prereqs are not yet live, matching
     # how the other Unit-7 KCs are wired).
     _KC.STATISTICAL_QUESTIONS: frozenset({_KC.NUMBER_LINE_PLACEMENT}),
+    # Grade-6 Unit 5 (6.EE.5): testing whether a value is a solution to x + b = c rests on being
+    # able to SOLVE such an equation in the first place (you find the solution, then judge a
+    # candidate against it), so it forward-unlocks on KC_one_step_equations — the live Unit-5 skill
+    # directly upstream (it tests solutions to exactly those one-step equations).
+    _KC.EQUATION_SOLUTIONS: frozenset({_KC.ONE_STEP_EQUATIONS}),
 }
 
 
@@ -226,6 +231,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.WRITE_EXPRESSIONS,  # Grade-6 Unit 4: write expressions, on number-line placement
     _KC.EVALUATE_EXPRESSIONS,  # Grade-6 Unit 4: evaluate at a value, builds on writing expressions
     _KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5: solve one-step equations, on number-line placement
+    _KC.EQUATION_SOLUTIONS,  # Grade-6 Unit 5 (6.EE.5): test a value is a solution, on one-step eqns
     _KC.DEPENDENT_VARS,  # Grade-6 Unit 4/5 (6.EE.9): relate dependent/independent vars, on evaluate
     _KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4: rewrite as equivalent, on write expressions
     _KC.INEQUALITIES,  # Grade-6 Unit 5: write inequalities, on write expressions

@@ -207,6 +207,14 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # representations meet §3.4 rule 2) — like EVALUATE_EXPRESSIONS, not the practice-only Grade-6
     # KCs. Each rep has a real surface state, so an error on one routes honestly to the other.
     _KC.DEPENDENT_VARS: (_REP.SYMBOLIC, _REP.COORDINATE_PLANE),
+    # Grade-6 Unit 5 (6.EE.5): NUMBER_LINE = the YES/NO solution test ("Is x = N a solution to
+    # x + b = c?", a candidate at a point on the line; reuses the yes/no answer surface, NO new
+    # widget); SYMBOLIC = the scalar solve ("Which value makes x + b = c true?", c − b entered in
+    # the NUMBER_ENTRY editor — this is a SYMBOLIC SCALAR KC, not a fraction KC). BOTH surfaces are
+    # LIVE and built from the same x + b = c equation, so this KC is MASTERABLE (two real
+    # representations meet §3.4 rule 2) — like DEPENDENT_VARS. Each rep has a real surface state, so
+    # an error on one routes honestly to the other (never to WORD_PROBLEM, which is not a rep here).
+    _KC.EQUATION_SOLUTIONS: (_REP.NUMBER_LINE, _REP.SYMBOLIC),
 }
 
 # NOTE (2026-05-29): cross-skill interleaving was REMOVED — lessons are now single-skill (a

@@ -122,6 +122,11 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # dependent-vars operands are (rate, value) — whole numbers (denominator 1); the
             # difficulty widens the rate/value magnitude pools, not a fraction-denominator pool.
             KnowledgeComponentId.DEPENDENT_VARS,
+            # equation-solutions: the default NUMBER_LINE surface is a YES/NO solution test whose
+            # operands are the equality truth carrier (0/1, denom 1); the SYMBOLIC solve's (b, c)
+            # are whole numbers too. The difficulty widens the constant/solution magnitude pools,
+            # not a fraction-denominator pool.
+            KnowledgeComponentId.EQUATION_SOLUTIONS,
         ):
             continue
         easy_ops = _operand_denoms(kc, difficulty=1)

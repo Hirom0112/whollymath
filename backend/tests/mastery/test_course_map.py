@@ -51,6 +51,7 @@ def test_map_always_has_one_node_per_kc_in_spine_order() -> None:
         KC.WRITE_EXPRESSIONS,  # Grade-6 Unit 4 (built 2026-05-30)
         KC.EVALUATE_EXPRESSIONS,  # Grade-6 Unit 4 (built 2026-05-30)
         KC.ONE_STEP_EQUATIONS,  # Grade-6 Unit 5 (built 2026-05-30)
+        KC.EQUATION_SOLUTIONS,  # Grade-6 Unit 5 (6.EE.5, built 2026-05-31), on one-step equations
         KC.DEPENDENT_VARS,  # Grade-6 Unit 4/5 (6.EE.9, built 2026-05-31)
         KC.EQUIVALENT_EXPRESSIONS,  # Grade-6 Unit 4 (built 2026-05-30)
         KC.INEQUALITIES,  # Grade-6 Unit 5 (built 2026-05-30)

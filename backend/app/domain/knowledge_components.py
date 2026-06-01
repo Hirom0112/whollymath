@@ -855,6 +855,36 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         ),
         representations=(Representation.SYMBOLIC, Representation.COORDINATE_PLANE),
     ),
+    # ─── Grade-6 content build (2026-05-31) — Unit 5: Equation solutions (CCSS 6.EE.5) ───
+    # Understand solving an equation as the process of answering WHICH values make it true, and use
+    # SUBSTITUTION to decide whether a given number is a solution. This is TESTING a candidate value
+    # — deliberately distinct from KC_one_step_equations (solve from scratch, 6.EE.7), which stays a
+    # separate KC. Offers TWO REAL live surfaces over the same equation x + b = c, so this KC is
+    # MASTERABLE (the §3.4 rule-2 representation-diversity gate is reachable live, like
+    # KC_dependent_vars):
+    #   - NUMBER_LINE (default) — a YES/NO judgment "Is x = N a solution to x + b = c?" answered
+    #     with the yes/no control (REUSES the YES_NO answer kind, NO new widget). A candidate is a
+    #     point on the line; the SymPy SUBSTITUTION truth rides in ``operands`` ((1,1) → YES for a
+    #     true candidate, (1,0) → NO for a false one), so the SAME ``_verify_yes_no`` SymPy-equality
+    #     path grades it (SymPy decides, never an LLM — CLAUDE.md §8.2). Both true and false
+    #     candidates are generated, so "yes" is not always correct.
+    #   - SYMBOLIC — the SOLVE framing "Which value of x makes x + b = c true?" answered with the
+    #     scalar solution c − b in the NUMBER_ENTRY editor. This is a SYMBOLIC SCALAR KC (NOT a
+    #     fraction KC — kept OUT of lesson_spec._FRACTION_ANSWER_KCS), so it routes to NUMBER_ENTRY
+    #     via the widget contract; graded NUMERIC by SymPy.
+    # Both reps have a real surface state (NUMBER_LINE_PRIMARY / SYMBOLIC_FOCUS), so an error on one
+    # routes honestly to the other — never to a rep without a surface state (WORD_PROBLEM is not a
+    # rep here).
+    KnowledgeComponent(
+        id=KnowledgeComponentId.EQUATION_SOLUTIONS,
+        skill_name="Test whether a value is a solution",
+        description=(
+            "Understand solving an equation as finding which values make it true, and use "
+            "substitution to decide whether a given number is a solution — x = 5 is a solution to "
+            "x + 4 = 9 because 5 + 4 = 9, and the value that makes it true is 5."
+        ),
+        representations=(Representation.NUMBER_LINE, Representation.SYMBOLIC),
+    ),
 )
 
 

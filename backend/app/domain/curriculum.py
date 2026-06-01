@@ -598,7 +598,10 @@ _U5 = CatalogUnit(
             unit_slug="u5",
             order=1,
             title="What is a solution?",
-            kc_id="KC_test_solution",
+            # Repointed 2026-05-31: the stale forward-declared id KC_test_solution is now the BUILT
+            # KC_equation_solutions (6.EE.5 — test a value by substitution; the YES/NO solution
+            # test + the scalar solve, masterable). This lesson goes live with that KC.
+            kc_id="KC_equation_solutions",
             ccss_code="6.EE.5",
             teks_code="6.10B",
             description="Test which value makes an equation/inequality true.",
