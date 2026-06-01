@@ -139,10 +139,10 @@ export function CourseMap({
             ) : null}
           </div>
           <div>
-            <h1 className="wm-coursemap-headline">Your learning path</h1>
+            <h1 className="wm-coursemap-headline">Foundation work: the fraction basics</h1>
             <p className="wm-coursemap-subhead">
-              From “a fraction is a number” all the way to adding and subtracting. Pick a skill to
-              start — each one unlocks the next.
+              The five fraction skills underneath everything else — from “a fraction is a number”
+              all the way to adding and subtracting. Pick one to start; each unlocks the next.
             </p>
           </div>
         </header>
@@ -158,7 +158,14 @@ export function CourseMap({
         ) : null}
 
         {course !== null ? (
-          <LearningPathRail nodes={(course.nodes ?? []).map(toPathNode)} onSelect={onStartLesson} />
+          // Foundation-work home: render ONLY the five terminal foundation fraction skills, not the
+          // full Grade-6 catalog /course returns. `is_foundation` (backend-authoritative, derived
+          // from domain.knowledge_components.FOUNDATION_KCS) is the single source of that set — we
+          // don't re-hardcode the KC list here. The full Grade-6 path lives in the Units→lessons flow.
+          <LearningPathRail
+            nodes={(course.nodes ?? []).filter((node) => node.is_foundation).map(toPathNode)}
+            onSelect={onStartLesson}
+          />
         ) : null}
       </div>
     </main>

@@ -1097,6 +1097,13 @@ class CourseNodeView(BaseModel):
         le=1.0,
         description="Stored BKT mastery level for a touched skill; null if not yet started.",
     )
+    is_foundation: bool = Field(
+        description=(
+            "True iff this KC is one of the five terminal FOUNDATION fraction skills "
+            "(domain.knowledge_components.FOUNDATION_KCS). The foundation-work home renders only "
+            "these; the full Grade-6 path lives in the Units flow."
+        ),
+    )
 
 
 class CourseView(BaseModel):

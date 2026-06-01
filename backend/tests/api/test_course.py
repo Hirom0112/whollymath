@@ -24,7 +24,7 @@ from app.api.schemas import ActionType, StartSessionResponse, SurfaceState
 from app.auth.google import GoogleIdentity, InvalidIdTokenError
 from app.db import repositories as repo
 from app.db.engine import create_all, create_session_factory
-from app.domain.knowledge_components import LIVE_KCS
+from app.domain.knowledge_components import FOUNDATION_KCS, LIVE_KCS
 from app.domain.knowledge_components import KnowledgeComponentId as KCId
 from fastapi import FastAPI
 from sqlalchemy import Engine, create_engine
@@ -103,6 +103,25 @@ def test_anonymous_no_session_gets_fresh_default_map(app: FastAPI) -> None:
     assert set(nodes) == {kc.value for kc in LIVE_KCS}
     assert nodes[KCId.NUMBER_LINE_PLACEMENT.value]["status"] == "available"
     assert nodes[KCId.EQUIVALENCE.value]["status"] == "locked"
+
+
+def test_exactly_the_five_foundation_kcs_flagged_on_the_wire(app: FastAPI) -> None:
+    """`is_foundation` is true for exactly the five terminal foundation fraction KCs, false else.
+
+    The foundation-work home (CourseMap) filters on this flag, so the contract must be exact:
+    /course still returns every live KC, but precisely FOUNDATION_KCS carry the flag.
+    """
+    status_code, body = get(app, "/course")
+    assert status_code == 200, body
+    nodes = {n["kc_id"]: n for n in body["nodes"]}
+    # The general endpoint is unchanged: it still returns the whole live catalog.
+    assert set(nodes) == {kc.value for kc in LIVE_KCS}
+    flagged = {kc_id for kc_id, node in nodes.items() if node["is_foundation"]}
+    assert flagged == {kc.value for kc in FOUNDATION_KCS}
+    assert len(flagged) == 5
+    # And every other live KC is explicitly false (not merely absent).
+    for kc_id, node in nodes.items():
+        assert node["is_foundation"] is (kc_id in flagged)
 
 
 def test_demo_session_map_reflects_in_session_progress(app: FastAPI) -> None:

@@ -69,7 +69,12 @@ from app.db import repositories as repo
 from app.db.models import Unit
 from app.db.repositories import EventRow
 from app.domain.curriculum import CatalogUnit, all_units, get_unit
-from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
+from app.domain.knowledge_components import (
+    FOUNDATION_KCS,
+    KnowledgeComponentId,
+    Representation,
+    get_kc,
+)
 from app.domain.lesson_spec import widget_for_representation
 from app.domain.problem_generators import Problem
 from app.domain.stats_stimulus import (
@@ -1583,6 +1588,7 @@ class SessionStore:
                     status=node.status,
                     prerequisites=list(node.prerequisites),
                     probability=node.probability,
+                    is_foundation=node.kc in FOUNDATION_KCS,
                 )
                 for node in nodes
             ]

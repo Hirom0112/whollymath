@@ -642,6 +642,10 @@ export interface CourseNodeView {
    * Stored BKT mastery level for a touched skill; null if not yet started.
    */
   probability?: number | null;
+  /**
+   * True iff this KC is one of the five terminal FOUNDATION fraction skills (domain.knowledge_components.FOUNDATION_KCS). The foundation-work home renders only these; the full Grade-6 path lives in the Units flow.
+   */
+  is_foundation: boolean;
 }
 /**
  * The whole learning path for one learner (Slice CP.A.1).

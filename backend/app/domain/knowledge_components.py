@@ -987,6 +987,24 @@ KC_REGISTRY = KnowledgeComponentRegistry(_KNOWLEDGE_COMPONENTS)
 LIVE_KCS: frozenset[KnowledgeComponentId] = frozenset(kc.id for kc in _KNOWLEDGE_COMPONENTS)
 
 
+# The FIVE FOUNDATION fraction KCs — the terminal "basics" set (PROJECT.md §3.1; the same KCs
+# prerequisites.py calls terminal, "only the FIVE FOUNDATION fraction KCs are terminal"). This is
+# the foundation/remediation floor: a learner struggling in a Grade-6 lesson drops down to one of
+# these, and nothing auto-drops below them. The course-map "foundation work" home (CourseMap.tsx)
+# renders exactly this set, so it lives here — the single source of truth, next to ``LIVE_KCS`` —
+# rather than being re-hardcoded in the frontend. Membership is what drives ``CourseNodeView``'s
+# ``is_foundation`` flag on the /course wire.
+FOUNDATION_KCS: frozenset[KnowledgeComponentId] = frozenset(
+    {
+        KnowledgeComponentId.EQUIVALENCE,
+        KnowledgeComponentId.COMMON_DENOMINATOR,
+        KnowledgeComponentId.ADDITION_UNLIKE,
+        KnowledgeComponentId.SUBTRACTION_UNLIKE,
+        KnowledgeComponentId.NUMBER_LINE_PLACEMENT,
+    }
+)
+
+
 def get_kc(kc_id: KnowledgeComponentId | str) -> KnowledgeComponent:
     """Module-level shortcut for ``KC_REGISTRY.get`` (the common case)."""
     return KC_REGISTRY.get(kc_id)
