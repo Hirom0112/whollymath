@@ -2,83 +2,14 @@
    counterpart to the kid "world": light page background, generous whitespace, dense-but-legible
    rows. Reuses the brand tokens + the shared TeacherSignals primitives. Unique classes app-wide. */
 
-.wm-teacher {
-  min-height: 100vh;
-  background: var(--wm-page-bg);
-  color: var(--wm-ink);
-  font-family: var(--wm-font-sans);
-}
+/* The top bar + side-nav now live in the shared TeacherShell (.wm-tshell-*); this file styles only
+   the roster content that renders inside the shell's <main>. */
 
-/* ── Top bar ── */
+/* ── Content wrapper (inside the shell main) ── */
 
-.wm-teacher-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 24px;
-  background: var(--wm-navy-deep);
-  color: var(--wm-cream);
-}
-
-.wm-teacher-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.wm-teacher-brand-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: conic-gradient(
-    var(--wm-yellow) 0 25%,
-    var(--wm-coral) 25% 50%,
-    var(--wm-blue-bright) 50% 75%,
-    var(--wm-teal) 75% 100%
-  );
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
-}
-
-.wm-teacher-brand-name {
-  font-family: var(--wm-font-serif);
-  font-weight: 600;
-  font-size: 18px;
-  letter-spacing: -0.3px;
-}
-
-.wm-teacher-brand-role {
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 3px 8px;
-  border-radius: var(--wm-r-pill);
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--wm-cream);
-}
-
-.wm-teacher-exit {
-  font-family: var(--wm-font-sans);
-  font-size: var(--wm-fs-ui);
-  font-weight: 600;
-  color: var(--wm-cream);
-  background: rgba(255, 255, 255, 0.12);
-  border: none;
-  border-radius: var(--wm-r-pill);
-  padding: 7px 16px;
-  cursor: pointer;
-  transition: background var(--wm-motion-press) ease;
-}
-.wm-teacher-exit:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-/* ── Main ── */
-
-.wm-teacher-main {
-  max-width: 880px;
+.wm-teacher-content {
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 32px 24px 80px;
 }
 
 .wm-teacher-headline {
@@ -317,10 +248,152 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wm-teacher-row,
-  .wm-teacher-exit {
+  .wm-teacher-triage-btn {
     transition: none;
   }
   .wm-teacher-row:hover {
     transform: none;
+  }
+}
+
+/* ── Split: ranked list + class-triage rail ── */
+
+.wm-teacher-split {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.wm-teacher-list {
+  min-width: 0;
+}
+.wm-teacher-rail {
+  position: sticky;
+  top: 78px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* The triage spotlight (warm card — attention, not failure: it pairs with the urgent icon + words). */
+.wm-teacher-triage {
+  background: linear-gradient(180deg, var(--wm-card-warm), #fff);
+  border-radius: var(--wm-r-lg);
+  padding: 20px 22px;
+  box-shadow:
+    0 2px 0 rgba(20, 30, 70, 0.08),
+    inset 0 0 0 1.5px rgba(20, 30, 70, 0.06),
+    0 18px 40px -22px rgba(217, 102, 63, 0.3);
+}
+.wm-teacher-triage-eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--wm-ink-soft);
+}
+.wm-teacher-triage-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+.wm-teacher-triage-ico {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  color: var(--wm-mean-wrong);
+}
+.wm-teacher-triage-ico svg {
+  width: 100%;
+  height: 100%;
+}
+.wm-teacher-triage-detail {
+  margin: 10px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--wm-mean-wrong-ink);
+  font-weight: 600;
+}
+.wm-teacher-triage-where {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  color: var(--wm-ink-soft);
+}
+.wm-teacher-triage-btn {
+  margin-top: 18px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: var(--wm-navy);
+  color: #fff;
+  border: none;
+  border-radius: var(--wm-r-pill);
+  padding: 11px 20px;
+  font-family: var(--wm-font-sans);
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--wm-motion-press) ease;
+}
+.wm-teacher-triage-btn:hover {
+  background: var(--wm-blue);
+}
+.wm-teacher-triage-btn:active {
+  background: var(--wm-blue-press);
+}
+
+/* The all-clear rail (mint — earned calm). */
+.wm-teacher-allclear {
+  background: linear-gradient(180deg, var(--wm-card-mint), #fff);
+  border-radius: var(--wm-r-xl);
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow:
+    0 2px 0 rgba(20, 30, 70, 0.08),
+    inset 0 0 0 1.5px rgba(20, 30, 70, 0.06);
+}
+.wm-teacher-allclear-ring {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: rgba(154, 209, 124, 0.3);
+  color: var(--wm-mean-correct-ink);
+}
+.wm-teacher-allclear-ring svg {
+  width: 28px;
+  height: 28px;
+}
+.wm-teacher-allclear-head {
+  margin: 0 0 6px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 22px;
+}
+.wm-teacher-allclear-detail {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--wm-ink-soft);
+}
+
+@media (max-width: 1080px) {
+  .wm-teacher-split {
+    grid-template-columns: 1fr;
+  }
+  .wm-teacher-rail {
+    position: static;
+    order: -1;
   }
 }

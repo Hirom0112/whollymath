@@ -13,7 +13,7 @@ describe('TeacherDashboard', () => {
     render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
 
     // Wait for the class to load (the demo client resolves on the next microtask).
-    await screen.findByText('Period 3 · Grade 6 Math');
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
 
     // Each category renders as an aria-labelled <section> (implicit role "region"). Their DOM
     // order IS the ranking the teacher reads top-to-bottom.
@@ -35,7 +35,7 @@ describe('TeacherDashboard', () => {
 
   it('filters the roster by name search', async () => {
     render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
-    await screen.findByText('Period 3 · Grade 6 Math');
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
 
     // Before filtering, an on-track student is present.
     expect(screen.getByRole('button', { name: /Grace L\./ })).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('TeacherDashboard', () => {
 
   it('shows an empty message when no student matches', async () => {
     render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
-    await screen.findByText('Period 3 · Grade 6 Math');
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
 
     fireEvent.change(screen.getByLabelText(/search students by name/i), {
       target: { value: 'zzzz' },
@@ -61,7 +61,7 @@ describe('TeacherDashboard', () => {
 
   it('every struggling row carries an alert badge (the urgent-first promise)', async () => {
     render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
-    await screen.findByText('Period 3 · Grade 6 Math');
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
 
     const struggling = screen.getByRole('region', { name: 'struggling' });
     // Each struggling student shows at least one alert label (e.g. "Repeated misconception").
@@ -72,7 +72,7 @@ describe('TeacherDashboard', () => {
 
   it('uses no em dash in rendered copy (impeccable copy law)', async () => {
     const { container } = render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
-    await screen.findByText('Period 3 · Grade 6 Math');
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
     expect(container.textContent ?? '').not.toContain('—');
   });
 });

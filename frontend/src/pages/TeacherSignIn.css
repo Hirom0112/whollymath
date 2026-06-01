@@ -267,9 +267,18 @@
   padding: 36px 0;
 }
 
+/* Sized to its widest child (the headline) and left-anchored; inner content is centered, so
+   "See your class" defines the left edge and "at a glance." + bullets + subtitle centre under it. */
+.wm-tsignin-lead {
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  margin-left: -10px;
+  text-align: center;
+}
+
 .wm-tsignin-headline {
-  /* nudged a touch left of the column so the display caps optically sit further left */
-  margin: 0 0 14px -8px;
+  margin: 0 0 14px;
   font-family: var(--wm-font-serif);
   font-weight: 600;
   font-size: var(--wm-fs-display);
@@ -280,7 +289,10 @@
 /* The three value props as bullets — serif, navy, each with a coral dot + soft halo. */
 .wm-tsignin-points {
   list-style: none;
-  margin: 0 0 18px;
+  /* the list is a block centered under the headline, but items inside stay left-aligned so the
+     dots and text line up in a clean column. */
+  width: fit-content;
+  margin: 0 auto 18px;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -307,12 +319,9 @@
 }
 
 .wm-tsignin-sub {
-  /* shrink to the longer line + center so "No guesswork" sits centered under the statement,
-     while the block itself stays left-aligned with the bullets above. */
-  align-self: flex-start;
-  width: fit-content;
-  text-align: center;
+  /* centered within the lead block (so "No guesswork" sits centered under the statement). */
   margin: 0 0 30px;
+  text-align: center;
   font-size: var(--wm-fs-body);
   line-height: 1.5;
   color: var(--wm-ink-soft);

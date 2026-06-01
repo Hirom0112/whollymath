@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { demoLogin, setTeacherToken } from '../api/teacher';
+import { demoLogin, fetchRoster, setTeacherToken } from '../api/teacher';
 
 import { TeacherDashboard } from './TeacherDashboard';
 import { TeacherSignIn } from './TeacherSignIn';
@@ -26,6 +26,9 @@ export function TeacherApp(): React.JSX.Element {
   const [signingIn, setSigningIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [view, setView] = useState<TeacherView>({ kind: 'roster' });
+  // Class header (teacher + class name) for the shell side-nav. The dashboard fetches its own
+  // roster; this fetch makes the same header available to the student drill-in's shell too.
+  const [header, setHeader] = useState<{ teacher: string; klass: string } | null>(null);
 
   async function handleSignIn(): Promise<void> {
     if (signingIn) return;
@@ -35,11 +38,25 @@ export function TeacherApp(): React.JSX.Element {
       const handle = await demoLogin();
       setTeacherToken(handle.token);
       setSignedIn(true);
+      fetchRoster()
+        .then((roster) => {
+          setHeader({ teacher: roster.teacher_name, klass: roster.class_name });
+        })
+        .catch(() => {
+          // Non-fatal: the shell falls back to a generic class label.
+        });
     } catch {
       setAuthError('We could not start the teacher demo. Please make sure the server is running.');
     } finally {
       setSigningIn(false);
     }
+  }
+
+  function handleSignOut(): void {
+    setTeacherToken(null);
+    setHeader(null);
+    setSignedIn(false);
+    setView({ kind: 'roster' });
   }
 
   if (!signedIn) {
@@ -56,17 +73,20 @@ export function TeacherApp(): React.JSX.Element {
 
   if (view.kind === 'student') {
     return (
-      <TeacherStudentView studentId={view.studentId} onBack={() => setView({ kind: 'roster' })} />
+      <TeacherStudentView
+        studentId={view.studentId}
+        onBack={() => setView({ kind: 'roster' })}
+        onExit={handleSignOut}
+        teacherName={header?.teacher ?? null}
+        klassName={header?.klass ?? null}
+      />
     );
   }
 
   return (
     <TeacherDashboard
       onOpenStudent={(studentId) => setView({ kind: 'student', studentId })}
-      onExit={() => {
-        setTeacherToken(null);
-        setSignedIn(false);
-      }}
+      onExit={handleSignOut}
     />
   );
 }

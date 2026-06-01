@@ -2,19 +2,16 @@
    stacked cards in the spec order; the ALERTS banner leads and is the only loud element. Unique
    classes app-wide (.wm-tstudent-*). */
 
-.wm-tstudent {
-  min-height: 100vh;
-  background: var(--wm-page-bg);
-  color: var(--wm-ink);
-  font-family: var(--wm-font-sans);
+/* The top bar + side-nav now live in the shared TeacherShell (.wm-tshell-*); this file styles only
+   the drill-in content that renders inside the shell's <main>. */
+
+.wm-tstudent-content {
+  max-width: 820px;
+  margin: 0 auto;
 }
 
-/* ── Top bar ── */
-
-.wm-tstudent-topbar {
-  padding: 14px 24px;
-  background: var(--wm-navy-deep);
-}
+/* Back-to-class: a quiet text button on the light working surface (the shell side-nav "Home" is
+   the other way back; this keeps the in-content affordance the spec + tests expect). */
 .wm-tstudent-back {
   display: inline-flex;
   align-items: center;
@@ -22,16 +19,17 @@
   font-family: var(--wm-font-sans);
   font-size: var(--wm-fs-ui);
   font-weight: 600;
-  color: var(--wm-cream);
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--wm-navy);
+  background: transparent;
   border: none;
   border-radius: var(--wm-r-pill);
-  padding: 7px 16px 7px 12px;
+  padding: 6px 8px 6px 4px;
+  margin-bottom: 12px;
   cursor: pointer;
-  transition: background var(--wm-motion-press) ease;
+  transition: color var(--wm-motion-press) ease;
 }
 .wm-tstudent-back:hover {
-  background: rgba(255, 255, 255, 0.22);
+  color: var(--wm-blue);
 }
 .wm-tstudent-back-ico {
   display: inline-flex;
@@ -46,9 +44,7 @@
 /* ── Main ── */
 
 .wm-tstudent-main {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 28px 24px 80px;
+  margin: 0;
 }
 
 .wm-tstudent-identity {

@@ -1,0 +1,217 @@
+/* Teacher-surface shell (TODO TCH.F4). A calm, professional working frame: a deep-navy top bar
+   and a continuous navy/blue left side-nav, so the chrome reads as one cohesive "L". The meaning
+   layer is reserved for the content; the shell is structural navy/blue only. Unique classes. */
+
+.wm-tshell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--wm-page-bg);
+  color: var(--wm-ink);
+  font-family: var(--wm-font-sans);
+}
+
+/* ── Top bar (banner landmark) ── */
+.wm-tshell-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 26px;
+  background: var(--wm-navy-deep);
+  color: #fff;
+}
+.wm-tshell-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.wm-tshell-brand-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 21px;
+  letter-spacing: -0.3px;
+}
+.wm-tshell-pie {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--wm-yellow) 0 25%,
+    var(--wm-coral) 25% 50%,
+    var(--wm-blue-bright) 50% 75%,
+    var(--wm-teal) 75% 100%
+  );
+  box-shadow:
+    inset 0 0 0 4px var(--wm-navy-deep),
+    0 0 0 1.5px rgba(255, 255, 255, 0.25);
+}
+.wm-tshell-role {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.14);
+  padding: 3px 9px;
+  border-radius: var(--wm-r-pill);
+}
+.wm-tshell-spacer {
+  flex: 1;
+}
+.wm-tshell-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--wm-mean-operation);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #fff;
+  flex: none;
+}
+
+/* ── Body grid: side-nav + main ── */
+.wm-tshell-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  align-items: start;
+}
+
+/* ── Side-nav (complementary): deep-navy → blue gradient, light text ── */
+.wm-tshell-side {
+  align-self: stretch;
+  position: sticky;
+  top: 60px;
+  height: calc(100vh - 60px);
+  color: #cdd6f5;
+  background: linear-gradient(185deg, var(--wm-navy-deep) 0%, #18244e 60%, #16204a 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 24px 14px;
+  display: flex;
+  flex-direction: column;
+}
+.wm-tshell-class {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 22px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--wm-r-md);
+}
+.wm-tshell-class-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--wm-mean-operation);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.wm-tshell-class-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.wm-tshell-class-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wm-tshell-class-meta {
+  font-size: 12px;
+  color: rgba(205, 214, 245, 0.7);
+}
+.wm-tshell-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.wm-tshell-nav--footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.wm-tshell-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #c2cdf0;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 14.5px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+.wm-tshell-link:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+.wm-tshell-link:disabled {
+  cursor: default;
+}
+.wm-tshell-link--active {
+  background: var(--wm-blue-bright);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 18px -8px rgba(74, 108, 240, 0.85);
+}
+.wm-tshell-link svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  opacity: 0.78;
+}
+.wm-tshell-link--active svg {
+  opacity: 1;
+}
+.wm-tshell-link:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+
+/* ── Main content region ── */
+.wm-tshell-main {
+  min-width: 0;
+  padding: 30px 40px 80px;
+}
+
+@media (max-width: 1024px) {
+  .wm-tshell-body {
+    grid-template-columns: 1fr;
+  }
+  .wm-tshell-side {
+    display: none;
+  }
+}
+@media (max-width: 680px) {
+  .wm-tshell-main {
+    padding: 24px 18px 60px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wm-tshell-link {
+    transition: none;
+  }
+}

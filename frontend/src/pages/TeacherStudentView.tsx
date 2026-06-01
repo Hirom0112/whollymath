@@ -9,6 +9,7 @@ import {
   type KcMasteryView,
   type TeacherStudentView as StudentDetail,
 } from '../api/teacher';
+import { TeacherShell } from '../components/TeacherShell';
 import { AlertBadge, CategoryChip, ProgressBar } from '../components/TeacherSignals';
 import './TeacherStudentView.css';
 
@@ -32,9 +33,17 @@ const TREND_LABEL: Record<HelpNeedTrend, string> = {
 export function TeacherStudentView({
   studentId,
   onBack,
+  onExit,
+  teacherName = null,
+  klassName = null,
 }: {
   studentId: string;
   onBack: () => void;
+  // Optional sign-out, surfaced in the shell side-nav when the container can end the session.
+  onExit?: () => void;
+  // Optional shell header context (the class this student belongs to), passed by the container.
+  teacherName?: string | null;
+  klassName?: string | null;
 }): React.JSX.Element {
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,8 +78,13 @@ export function TeacherStudentView({
   }
 
   return (
-    <div className="wm-tstudent">
-      <header className="wm-tstudent-topbar">
+    <TeacherShell
+      teacherName={teacherName}
+      klassName={klassName}
+      onHome={onBack}
+      onSignOut={onExit}
+    >
+      <div className="wm-tstudent-content">
         <button type="button" className="wm-tstudent-back" onClick={onBack}>
           <span aria-hidden="true" className="wm-tstudent-back-ico">
             <svg viewBox="0 0 24 24" focusable="false">
@@ -84,81 +98,83 @@ export function TeacherStudentView({
               />
             </svg>
           </span>
-          Class
+          Back to class
         </button>
-      </header>
 
-      {error !== null ? (
-        <p className="wm-tstudent-error" role="alert">
-          {error}
-        </p>
-      ) : null}
+        {error !== null ? (
+          <p className="wm-tstudent-error" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-      {student === null && error === null ? <p className="wm-tstudent-loading">Loading…</p> : null}
+        {student === null && error === null ? (
+          <p className="wm-tstudent-loading">Loading…</p>
+        ) : null}
 
-      {student !== null ? (
-        <main className="wm-tstudent-main">
-          <div className="wm-tstudent-identity">
-            <h1 className="wm-tstudent-name">{student.name}</h1>
-            <CategoryChip category={student.category} />
-          </div>
-          <p className="wm-tstudent-reason">{student.category_reason}</p>
+        {student !== null ? (
+          <div className="wm-tstudent-main">
+            <div className="wm-tstudent-identity">
+              <h1 className="wm-tstudent-name">{student.name}</h1>
+              <CategoryChip category={student.category} />
+            </div>
+            <p className="wm-tstudent-reason">{student.category_reason}</p>
 
-          {/* (1) ALERTS — first, and announced. aria-live so a screen reader reads new alerts. */}
-          <section className="wm-tstudent-alerts" aria-label="Alerts" aria-live="polite">
-            {(student.alerts ?? []).length > 0 ? (
-              (student.alerts ?? []).map((a) => (
-                <AlertBadge key={a.kind} alert={a} variant="full" />
-              ))
-            ) : (
-              <p className="wm-tstudent-noalerts">No alerts. This student is moving along.</p>
-            )}
-          </section>
+            {/* (1) ALERTS — first, and announced. aria-live so a screen reader reads new alerts. */}
+            <section className="wm-tstudent-alerts" aria-label="Alerts" aria-live="polite">
+              {(student.alerts ?? []).length > 0 ? (
+                (student.alerts ?? []).map((a) => (
+                  <AlertBadge key={a.kind} alert={a} variant="full" />
+                ))
+              ) : (
+                <p className="wm-tstudent-noalerts">No alerts. This student is moving along.</p>
+              )}
+            </section>
 
-          {/* (2) What + WHY struggling — the diagnostic teachers asked for. */}
-          <WhySection student={student} />
+            {/* (2) What + WHY struggling — the diagnostic teachers asked for. */}
+            <WhySection student={student} />
 
-          {/* (3) Current unit/lesson + course progress. */}
-          <section className="wm-tstudent-card" aria-label="Current work">
-            <h2 className="wm-tstudent-h2">Working on</h2>
-            <div className="wm-tstudent-current">
-              <div>
-                <p className="wm-tstudent-current-lesson">
-                  {student.current_lesson_title ?? 'Not started yet'}
-                </p>
-                {student.current_unit_title != null ? (
-                  <p className="wm-tstudent-current-unit">{student.current_unit_title}</p>
-                ) : null}
+            {/* (3) Current unit/lesson + course progress. */}
+            <section className="wm-tstudent-card" aria-label="Current work">
+              <h2 className="wm-tstudent-h2">Working on</h2>
+              <div className="wm-tstudent-current">
+                <div>
+                  <p className="wm-tstudent-current-lesson">
+                    {student.current_lesson_title ?? 'Not started yet'}
+                  </p>
+                  {student.current_unit_title != null ? (
+                    <p className="wm-tstudent-current-unit">{student.current_unit_title}</p>
+                  ) : null}
+                </div>
+                <ProgressBar value={student.percent_complete} tone={student.category} />
               </div>
-              <ProgressBar value={student.percent_complete} tone={student.category} />
-            </div>
-          </section>
+            </section>
 
-          {/* (4) Strengths / weaknesses by BKT. */}
-          <section className="wm-tstudent-card" aria-label="Strengths and weaknesses">
-            <h2 className="wm-tstudent-h2">Skills</h2>
-            <div className="wm-tstudent-skills">
-              <SkillColumn title="Strengths" tone="strong" skills={student.strengths ?? []} />
-              <SkillColumn title="Needs work" tone="weak" skills={student.weaknesses ?? []} />
-            </div>
-          </section>
+            {/* (4) Strengths / weaknesses by BKT. */}
+            <section className="wm-tstudent-card" aria-label="Strengths and weaknesses">
+              <h2 className="wm-tstudent-h2">Skills</h2>
+              <div className="wm-tstudent-skills">
+                <SkillColumn title="Strengths" tone="strong" skills={student.strengths ?? []} />
+                <SkillColumn title="Needs work" tone="weak" skills={student.weaknesses ?? []} />
+              </div>
+            </section>
 
-          {/* (5) Recent-activity timeline. */}
-          <section className="wm-tstudent-card" aria-label="Recent activity">
-            <h2 className="wm-tstudent-h2">Recent activity</h2>
-            <Timeline events={student.activity ?? []} />
-          </section>
+            {/* (5) Recent-activity timeline. */}
+            <section className="wm-tstudent-card" aria-label="Recent activity">
+              <h2 className="wm-tstudent-h2">Recent activity</h2>
+              <Timeline events={student.activity ?? []} />
+            </section>
 
-          {/* (6) Assign next unit. */}
-          <AssignSection
-            units={student.assignable_units ?? []}
-            assignedUnitId={student.assigned_unit_id ?? null}
-            busy={assigning}
-            onAssign={(unitId) => void handleAssign(unitId)}
-          />
-        </main>
-      ) : null}
-    </div>
+            {/* (6) Assign next unit. */}
+            <AssignSection
+              units={student.assignable_units ?? []}
+              assignedUnitId={student.assigned_unit_id ?? null}
+              busy={assigning}
+              onAssign={(unitId) => void handleAssign(unitId)}
+            />
+          </div>
+        ) : null}
+      </div>
+    </TeacherShell>
   );
 }
 

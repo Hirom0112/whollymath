@@ -128,21 +128,25 @@ export function TeacherSignIn({
           </div>
 
           <div className="wm-tsignin-body">
-            <h1 className="wm-tsignin-headline">
-              See your class
-              <br />
-              at a glance.
-            </h1>
-            <ul className="wm-tsignin-points">
-              <li>Who needs help first</li>
-              <li>Why they’re stuck</li>
-              <li>What to assign next</li>
-            </ul>
-            <p className="wm-tsignin-sub">
-              Straight from your students’ real work
-              <br />
-              No guesswork
-            </p>
+            {/* The lead block is sized to the headline and left-anchored; its contents centre, so
+                "See your class" sits furthest left and everything below it centres underneath. */}
+            <div className="wm-tsignin-lead">
+              <h1 className="wm-tsignin-headline">
+                See your class
+                <br />
+                at a glance.
+              </h1>
+              <ul className="wm-tsignin-points">
+                <li>Who needs help first</li>
+                <li>Why they’re stuck</li>
+                <li>What to assign next</li>
+              </ul>
+              <p className="wm-tsignin-sub">
+                Straight from your students’ real work
+                <br />
+                No guesswork
+              </p>
+            </div>
 
             <div className="wm-tsignin-actions">
               <button
