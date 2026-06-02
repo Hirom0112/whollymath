@@ -294,6 +294,156 @@ class SetModelStimulusView(BaseModel):
     )
 
 
+# ─── Display-only "scene" views (the wire form of app.domain.scene; CLAUDE.md §8.2) ───
+# Each mirrors a domain scene dataclass 1:1; the union is discriminated on ``kind`` so the surface
+# switches on it and the generated TS is a tagged union. All carry the QUESTION INPUT, never the
+# answer. Null on a ProblemView whose KC has no picture.
+
+
+class PercentGridView(BaseModel):
+    """A 10×10 hundred-grid with ``shaded`` of 100 cells filled (6.RP.A.3c)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["percent_grid"] = "percent_grid"
+    percent: int = Field(description="The percent the prompt names (the caption).")
+    shaded: int = Field(ge=0, le=100, description="How many of the 100 cells to fill.")
+
+
+class RatioTableColumnView(BaseModel):
+    """One column of a ratio table; either cell may be null (the asked/blank cell)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    top: int | None = Field(description="Top-row value, or null for the asked cell.")
+    bottom: int | None = Field(description="Bottom-row value, or null for the asked cell.")
+
+
+class RatioTableView(BaseModel):
+    """A ratio table: two labeled rows of equivalent ratios with a scale step (6.RP.A.2/.3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["ratio_table"] = "ratio_table"
+    top_label: str = Field(min_length=1, description="Top-row header.")
+    bottom_label: str = Field(min_length=1, description="Bottom-row header.")
+    columns: list[RatioTableColumnView] = Field(description="Columns in order; one cell is blank.")
+    scale_label: str = Field(min_length=1, description="The scaffold step, e.g. '×3'.")
+
+
+class IntegerJumpView(BaseModel):
+    """A number-line jump from ``start`` by ``delta`` (the motion, not the labeled landing)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["integer_jump"] = "integer_jump"
+    axis_min: int
+    axis_max: int
+    start: int = Field(description="Where the arrow begins.")
+    delta: int = Field(description="Signed length of the jump.")
+
+
+class AbsoluteValueView(BaseModel):
+    """A number-line point and its span to 0 (the distance value, the answer, is not labeled)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["absolute_value"] = "absolute_value"
+    axis_min: int
+    axis_max: int
+    point: int = Field(description="The signed input value marked on the line.")
+
+
+class SignedPointView(BaseModel):
+    """One or more signed integers marked on a number line."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["signed_point"] = "signed_point"
+    axis_min: int
+    axis_max: int
+    points: list[int] = Field(description="The signed integer(s) marked.")
+
+
+class FractionOperandView(BaseModel):
+    """One operand fraction for an area model: ``numerator`` of ``denominator`` shaded."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    numerator: int
+    denominator: int = Field(ge=1)
+
+
+class FractionAreaView(BaseModel):
+    """An area model of the two OPERAND fractions for a fraction operation (never the result)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["fraction_area"] = "fraction_area"
+    op: Literal["add", "subtract", "multiply", "divide"] = Field(description="Layout hint only.")
+    first: FractionOperandView
+    second: FractionOperandView
+
+
+class DecimalPlaceValueRowView(BaseModel):
+    """One operand laid out across the place-value columns (parallel to ``columns``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    decimal_text: str = Field(min_length=1, description="The operand as written, e.g. '0.50'.")
+    digits: list[str] = Field(description="One digit per column, in column order.")
+
+
+class DecimalPlaceValueView(BaseModel):
+    """A place-value chart aligning decimal operands on the point (6.NS.B.3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["decimal_place_value"] = "decimal_place_value"
+    columns: list[str] = Field(description="Place labels, highest magnitude first.")
+    point_after: int = Field(ge=0, description="0-based index of the ones column.")
+    rows: list[DecimalPlaceValueRowView] = Field(description="One row per operand.")
+
+
+class GcfFactorsView(BaseModel):
+    """The two given numbers and their factor lists (6.NS.B.4)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["gcf_factors"] = "gcf_factors"
+    mode: Literal["gcf", "lcm"] = Field(description="Which the prompt asks (frames the view).")
+    first: int
+    second: int
+    first_factors: list[int] = Field(description="Ascending divisors of the first number.")
+    second_factors: list[int] = Field(description="Ascending divisors of the second number.")
+
+
+class ExponentProductView(BaseModel):
+    """``base^exponent`` shown as the expanded repeated product (6.EE.A.1)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["exponent_product"] = "exponent_product"
+    base: int
+    exponent: int
+    factors: list[int] = Field(description="The base repeated ``exponent`` times.")
+
+
+# A problem carries at most ONE display-only scene (or none). Discriminated on ``kind``.
+SceneView = Annotated[
+    PercentGridView
+    | RatioTableView
+    | IntegerJumpView
+    | AbsoluteValueView
+    | SignedPointView
+    | FractionAreaView
+    | DecimalPlaceValueView
+    | GcfFactorsView
+    | ExponentProductView,
+    Field(discriminator="kind"),
+]
+
+
 class ProblemView(BaseModel):
     """The learner-facing view of one presented problem (ARCHITECTURE.md §10 step 12).
 
@@ -407,6 +557,15 @@ class ProblemView(BaseModel):
             "Structured form of ``statement`` (setup / ask / clarifying rule) for the clean card; "
             "``statement`` is composed from these parts and stays the fallback. Null when the KC "
             "has no structured form — the surface then renders the flat statement."
+        ),
+    )
+    scene: SceneView | None = Field(
+        default=None,
+        description=(
+            "DISPLAY-ONLY picture for this problem (percent grid, ratio table, integer number "
+            "line, fraction area model, decimal place-value chart, factor list, or exponent "
+            "product), drawn as the visual anchor. The question input, never the answer (§8.2); "
+            "the prompt text is the accessible fallback. Null when the KC has no picture."
         ),
     )
 

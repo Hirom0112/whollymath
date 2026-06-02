@@ -237,6 +237,18 @@ export type UnitStatus = "locked" | "available" | "in_progress" | "mastered";
 export type UnitStatus1 = "locked" | "available" | "in_progress" | "mastered";
 
 /**
+ * A number-line point and its span to 0 (the distance value, the answer, is not labeled).
+ */
+export interface AbsoluteValueView {
+  kind?: "absolute_value";
+  axis_min: number;
+  axis_max: number;
+  /**
+   * The signed input value marked on the line.
+   */
+  point: number;
+}
+/**
  * One entry in the recent-activity timeline (TCH.F3 §5).
  */
 export interface ActivityEventView {
@@ -662,6 +674,37 @@ export interface CourseView {
   nodes?: CourseNodeView[];
 }
 /**
+ * One operand laid out across the place-value columns (parallel to ``columns``).
+ */
+export interface DecimalPlaceValueRowView {
+  /**
+   * The operand as written, e.g. '0.50'.
+   */
+  decimal_text: string;
+  /**
+   * One digit per column, in column order.
+   */
+  digits: string[];
+}
+/**
+ * A place-value chart aligning decimal operands on the point (6.NS.B.3).
+ */
+export interface DecimalPlaceValueView {
+  kind?: "decimal_place_value";
+  /**
+   * Place labels, highest magnitude first.
+   */
+  columns: string[];
+  /**
+   * 0-based index of the ones column.
+   */
+  point_after: number;
+  /**
+   * One row per operand.
+   */
+  rows: DecimalPlaceValueRowView[];
+}
+/**
  * The one-click demo-teacher handle returned by ``POST /teacher/demo-login`` (Slice TCH.B2).
  *
  * Extends ``TeacherHandle`` with the NON-secret ``token`` the frontend echoes back as
@@ -796,6 +839,37 @@ export interface InterventionView {
   text: string;
 }
 /**
+ * ``base^exponent`` shown as the expanded repeated product (6.EE.A.1).
+ */
+export interface ExponentProductView {
+  kind?: "exponent_product";
+  base: number;
+  exponent: number;
+  /**
+   * The base repeated ``exponent`` times.
+   */
+  factors: number[];
+}
+/**
+ * An area model of the two OPERAND fractions for a fraction operation (never the result).
+ */
+export interface FractionAreaView {
+  kind?: "fraction_area";
+  /**
+   * Layout hint only.
+   */
+  op: "add" | "subtract" | "multiply" | "divide";
+  first: FractionOperandView;
+  second: FractionOperandView;
+}
+/**
+ * One operand fraction for an area model: ``numerator`` of ``denominator`` shaded.
+ */
+export interface FractionOperandView {
+  numerator: number;
+  denominator: number;
+}
+/**
  * One row of a frequency/data table: a category label and its count.
  *
  * A named model (not a bare tuple) so the generated TS type is precise — pydantic2ts loses the
@@ -832,6 +906,26 @@ export interface FrequencyTableStimulusView {
    * Header for the count column.
    */
   count_label: string;
+}
+/**
+ * The two given numbers and their factor lists (6.NS.B.4).
+ */
+export interface GcfFactorsView {
+  kind?: "gcf_factors";
+  /**
+   * Which the prompt asks (frames the view).
+   */
+  mode: "gcf" | "lcm";
+  first: number;
+  second: number;
+  /**
+   * Ascending divisors of the first number.
+   */
+  first_factors: number[];
+  /**
+   * Ascending divisors of the second number.
+   */
+  second_factors: number[];
 }
 /**
  * One bar of a histogram: an inclusive ``[lo, hi]`` value range and the count of points in it.
@@ -1019,6 +1113,22 @@ export interface HwSubmitResponse {
   question_count: number;
 }
 /**
+ * A number-line jump from ``start`` by ``delta`` (the motion, not the labeled landing).
+ */
+export interface IntegerJumpView {
+  kind?: "integer_jump";
+  axis_min: number;
+  axis_max: number;
+  /**
+   * Where the arrow begins.
+   */
+  start: number;
+  /**
+   * Signed length of the jump.
+   */
+  delta: number;
+}
+/**
  * One lesson within a unit, with the learner's status on its KC (Slice DAT.9).
  *
  * The renderable subset of a catalog ``CatalogLesson`` joined to its rolled-up
@@ -1184,6 +1294,20 @@ export interface MetricComparisonView {
   static: MetricArmVerdictView;
 }
 /**
+ * A 10×10 hundred-grid with ``shaded`` of 100 cells filled (6.RP.A.3c).
+ */
+export interface PercentGridView {
+  kind?: "percent_grid";
+  /**
+   * The percent the prompt names (the caption).
+   */
+  percent: number;
+  /**
+   * How many of the 100 cells to fill.
+   */
+  shaded: number;
+}
+/**
  * One persona's row in the three-arm comparison: who, what it attacks, the problems it
  * saw, and each arm's verdict.
  */
@@ -1262,6 +1386,22 @@ export interface ProblemView {
    * Structured form of ``statement`` (setup / ask / clarifying rule) for the clean card; ``statement`` is composed from these parts and stays the fallback. Null when the KC has no structured form — the surface then renders the flat statement.
    */
   prompt_parts?: PromptPartsView | null;
+  /**
+   * DISPLAY-ONLY picture for this problem (percent grid, ratio table, integer number line, fraction area model, decimal place-value chart, factor list, or exponent product), drawn as the visual anchor. The question input, never the answer (§8.2); the prompt text is the accessible fallback. Null when the KC has no picture.
+   */
+  scene?:
+    | (
+        | PercentGridView
+        | RatioTableView
+        | IntegerJumpView
+        | AbsoluteValueView
+        | SignedPointView
+        | FractionAreaView
+        | DecimalPlaceValueView
+        | GcfFactorsView
+        | ExponentProductView
+      )
+    | null;
 }
 /**
  * A display-only set model: a jar of discrete coloured counters for a ratio-language item.
@@ -1319,6 +1459,53 @@ export interface PromptPartsView {
    * The rule that steers away from the trap.
    */
   guiding_rule: string;
+}
+/**
+ * A ratio table: two labeled rows of equivalent ratios with a scale step (6.RP.A.2/.3).
+ */
+export interface RatioTableView {
+  kind?: "ratio_table";
+  /**
+   * Top-row header.
+   */
+  top_label: string;
+  /**
+   * Bottom-row header.
+   */
+  bottom_label: string;
+  /**
+   * Columns in order; one cell is blank.
+   */
+  columns: RatioTableColumnView[];
+  /**
+   * The scaffold step, e.g. '×3'.
+   */
+  scale_label: string;
+}
+/**
+ * One column of a ratio table; either cell may be null (the asked/blank cell).
+ */
+export interface RatioTableColumnView {
+  /**
+   * Top-row value, or null for the asked cell.
+   */
+  top: number | null;
+  /**
+   * Bottom-row value, or null for the asked cell.
+   */
+  bottom: number | null;
+}
+/**
+ * One or more signed integers marked on a number line.
+ */
+export interface SignedPointView {
+  kind?: "signed_point";
+  axis_min: number;
+  axis_max: number;
+  /**
+   * The signed integer(s) marked.
+   */
+  points: number[];
 }
 /**
  * The read-back of a snapped handwritten answer, for the learner to confirm (Slice HR.C2).
@@ -1519,6 +1706,22 @@ export interface ProblemView1 {
    * Structured form of ``statement`` (setup / ask / clarifying rule) for the clean card; ``statement`` is composed from these parts and stays the fallback. Null when the KC has no structured form — the surface then renders the flat statement.
    */
   prompt_parts?: PromptPartsView | null;
+  /**
+   * DISPLAY-ONLY picture for this problem (percent grid, ratio table, integer number line, fraction area model, decimal place-value chart, factor list, or exponent product), drawn as the visual anchor. The question input, never the answer (§8.2); the prompt text is the accessible fallback. Null when the KC has no picture.
+   */
+  scene?:
+    | (
+        | PercentGridView
+        | RatioTableView
+        | IntegerJumpView
+        | AbsoluteValueView
+        | SignedPointView
+        | FractionAreaView
+        | DecimalPlaceValueView
+        | GcfFactorsView
+        | ExponentProductView
+      )
+    | null;
 }
 /**
  * What a returning learner should do next (Slice 6.x — spaced repetition).

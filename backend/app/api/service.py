@@ -37,26 +37,39 @@ from sqlalchemy.orm import sessionmaker
 from app.api.live_adaptation import propose_adaptation_view
 from app.api.remediation_view import build_remediation_view
 from app.api.schemas import (
+    AbsoluteValueView,
     ActionType,
     CourseNodeView,
     CourseView,
+    DecimalPlaceValueRowView,
+    DecimalPlaceValueView,
     DotPlotStimulusView,
     ErrorType,
     EventBatchRequest,
+    ExponentProductView,
+    FractionAreaView,
+    FractionOperandView,
     FrequencyRowView,
     FrequencyTableStimulusView,
+    GcfFactorsView,
     HistogramBinView,
     HistogramStimulusView,
+    IntegerJumpView,
     InteractionEventIn,
     InterventionKind,
     InterventionView,
     LessonView,
     MasterySnapshot,
+    PercentGridView,
     ProblemView,
     PromptPartsView,
+    RatioTableColumnView,
+    RatioTableView,
     RouteOptionView,
+    SceneView,
     SetModelGroupView,
     SetModelStimulusView,
+    SignedPointView,
     StartSessionResponse,
     StatsStimulusView,
     StudyPlanView,
@@ -72,6 +85,15 @@ from app.db import repositories as repo
 from app.db.models import Unit
 from app.db.repositories import EventRow
 from app.domain.curriculum import CatalogUnit, all_units, get_unit
+from app.domain.decimal_place_value_stimulus import DecimalPlaceValueStimulus
+from app.domain.exponent_product_stimulus import ExponentProductStimulus
+from app.domain.fraction_area_stimulus import FractionAreaStimulus
+from app.domain.gcf_factors_stimulus import GcfFactorsStimulus
+from app.domain.integer_line_stimulus import (
+    AbsoluteValueStimulus,
+    IntegerJumpStimulus,
+    SignedPointStimulus,
+)
 from app.domain.knowledge_components import (
     FOUNDATION_KCS,
     KnowledgeComponentId,
@@ -79,7 +101,10 @@ from app.domain.knowledge_components import (
     get_kc,
 )
 from app.domain.lesson_spec import widget_for_representation
+from app.domain.percent_grid_stimulus import PercentGridStimulus
 from app.domain.problem_generators import Problem
+from app.domain.ratio_table_stimulus import RatioTableStimulus
+from app.domain.scene import Scene, scene_for
 from app.domain.set_model_stimulus import SetModelStimulus, set_model_for
 from app.domain.stats_stimulus import (
     DotPlotStimulus,
@@ -199,6 +224,69 @@ def _set_model_view(stimulus: SetModelStimulus | None) -> SetModelStimulusView |
     )
 
 
+def _scene_view(scene: Scene | None) -> SceneView | None:
+    """Project a domain ``Scene`` to its answer-free wire view, or ``None``.
+
+    A pure shape projection of already-decided operand data (no SymPy, no answer — §8.2). One arm
+    per scene kind, mirroring the domain dataclass field-for-field.
+    """
+    if scene is None:
+        return None
+    if isinstance(scene, PercentGridStimulus):
+        return PercentGridView(percent=scene.percent, shaded=scene.shaded)
+    if isinstance(scene, RatioTableStimulus):
+        return RatioTableView(
+            top_label=scene.top_label,
+            bottom_label=scene.bottom_label,
+            columns=[RatioTableColumnView(top=c.top, bottom=c.bottom) for c in scene.columns],
+            scale_label=scene.scale_label,
+        )
+    if isinstance(scene, IntegerJumpStimulus):
+        return IntegerJumpView(
+            axis_min=scene.axis_min, axis_max=scene.axis_max, start=scene.start, delta=scene.delta
+        )
+    if isinstance(scene, AbsoluteValueStimulus):
+        return AbsoluteValueView(
+            axis_min=scene.axis_min, axis_max=scene.axis_max, point=scene.point
+        )
+    if isinstance(scene, SignedPointStimulus):
+        return SignedPointView(
+            axis_min=scene.axis_min, axis_max=scene.axis_max, points=list(scene.points)
+        )
+    if isinstance(scene, FractionAreaStimulus):
+        return FractionAreaView(
+            op=scene.op,
+            first=FractionOperandView(
+                numerator=scene.first.numerator, denominator=scene.first.denominator
+            ),
+            second=FractionOperandView(
+                numerator=scene.second.numerator, denominator=scene.second.denominator
+            ),
+        )
+    if isinstance(scene, DecimalPlaceValueStimulus):
+        return DecimalPlaceValueView(
+            columns=list(scene.columns),
+            point_after=scene.point_after,
+            rows=[
+                DecimalPlaceValueRowView(decimal_text=r.decimal_text, digits=list(r.digits))
+                for r in scene.rows
+            ],
+        )
+    if isinstance(scene, GcfFactorsStimulus):
+        return GcfFactorsView(
+            mode=scene.mode,
+            first=scene.first,
+            second=scene.second,
+            first_factors=list(scene.first_factors),
+            second_factors=list(scene.second_factors),
+        )
+    if isinstance(scene, ExponentProductStimulus):
+        return ExponentProductView(
+            base=scene.base, exponent=scene.exponent, factors=list(scene.factors)
+        )
+    return None  # pragma: no cover — the union above is exhaustive
+
+
 def _problem_view(problem: Problem) -> ProblemView:
     """Project a domain ``Problem`` to the answer-free ``ProblemView`` the wire ships.
 
@@ -247,6 +335,7 @@ def _problem_view(problem: Problem) -> ProblemView:
             if problem.prompt_parts is not None
             else None
         ),
+        scene=_scene_view(scene_for(problem.kc, problem.operands)),
     )
 
 
