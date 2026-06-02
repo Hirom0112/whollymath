@@ -53,7 +53,10 @@ from app.api.schemas import (
     LessonView,
     MasterySnapshot,
     ProblemView,
+    PromptPartsView,
     RouteOptionView,
+    SetModelGroupView,
+    SetModelStimulusView,
     StartSessionResponse,
     StatsStimulusView,
     StudyPlanView,
@@ -77,6 +80,7 @@ from app.domain.knowledge_components import (
 )
 from app.domain.lesson_spec import widget_for_representation
 from app.domain.problem_generators import Problem
+from app.domain.set_model_stimulus import SetModelStimulus, set_model_for
 from app.domain.stats_stimulus import (
     DotPlotStimulus,
     FrequencyTableStimulus,
@@ -97,6 +101,7 @@ from app.mastery.progression import plan_study
 from app.mastery.retention import ReviewableSkill
 from app.mastery.unit_progress import UnitProgress, build_unit_progress
 from app.persona_surface.tutor_voice import voice_help
+from app.policy.emotion import MomentType, select_emotion
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.policy.mid_problem_help import should_offer_mid_problem_help
 from app.policy.remediation_flow import (
@@ -180,6 +185,20 @@ def _stats_stimulus_view(stimulus: StatsStimulus | None) -> StatsStimulusView | 
     return None  # pragma: no cover — the union above is exhaustive
 
 
+def _set_model_view(stimulus: SetModelStimulus | None) -> SetModelStimulusView | None:
+    """Project a domain ``SetModelStimulus`` to its answer-free wire view, or ``None``.
+
+    A pure shape projection of already-decided data (no SymPy, no answer — §8.2): the counter
+    collection the prompt already names, nothing more.
+    """
+    if stimulus is None:
+        return None
+    return SetModelStimulusView(
+        groups=[SetModelGroupView(colour=colour, count=count) for colour, count in stimulus.groups],
+        asked_colour=stimulus.asked_colour,
+    )
+
+
 def _problem_view(problem: Problem) -> ProblemView:
     """Project a domain ``Problem`` to the answer-free ``ProblemView`` the wire ships.
 
@@ -218,6 +237,16 @@ def _problem_view(problem: Problem) -> ProblemView:
         axis_max=axis_max,
         given_denominator=problem.given_denominator,
         stimulus=_stats_stimulus_view(stimulus_for(problem.kc, problem.operands)),
+        set_model=_set_model_view(set_model_for(problem.kc, problem.operands)),
+        prompt_parts=(
+            PromptPartsView(
+                situation=problem.prompt_parts.situation,
+                question=problem.prompt_parts.question,
+                guiding_rule=problem.prompt_parts.guiding_rule,
+            )
+            if problem.prompt_parts is not None
+            else None
+        ),
     )
 
 
@@ -410,9 +439,12 @@ def _maybe_intervene(
     # return it verbatim if voicing is disabled/fails (invariant 4). The LLM only rephrases
     # an already-decided nudge — it never decides whether to intervene (§8.1).
     nudge_text = select_nudge(next_problem.kc).text
+    voiced = voice_help(nudge_text, moment=MomentType.STUCK_NUDGE, provider=voice_provider)
     return InterventionView(
         kind=InterventionKind.INLINE_ASSERTION,
-        text=voice_help(nudge_text, provider=voice_provider),
+        text=voiced.text,
+        emotion=voiced.emotion,
+        intensity=voiced.intensity,
     )
 
 
@@ -824,8 +856,14 @@ def _hint_response(
     """
     problem = live.tutor.current_problem
     requests_so_far = live.hints_this_problem
+    # A hint is a STUCK_NUDGE moment: the avatar encourages forward, never celebrates (Slice 1.3).
+    # The emotion is chosen deterministically from the moment, independent of which hint level
+    # the escalation lands on and independent of the (optional) LLM voicing of the text.
+    hint_cue = select_emotion(MomentType.STUCK_NUDGE)
     if requests_so_far == 0:
-        hint_text = voice_help(select_nudge(problem.kc).text, provider=voice_provider)
+        hint_text = voice_help(
+            select_nudge(problem.kc).text, moment=MomentType.STUCK_NUDGE, provider=voice_provider
+        ).text
     else:
         level = HintLevel.PARTIAL_STEP if requests_so_far == 1 else HintLevel.WORKED_STEP
         hint_text = build_validated_hint(problem, level, provider=hint_provider).natural_language
@@ -836,6 +874,8 @@ def _hint_response(
         next_surface_state=live.tutor.surface_state,
         feedback="Here's something to think about.",
         hint=hint_text,
+        hint_emotion=hint_cue.emotion,
+        hint_intensity=hint_cue.intensity,
         mastery=[],
         next_problem=_problem_view(problem),
     )
@@ -1332,9 +1372,12 @@ class SessionStore:
         # Offer once per problem: record it so subsequent batches on this problem stay quiet.
         live.mid_problem_nudged_problem_id = current.problem_id
         nudge_text = select_nudge(current.kc).text
+        voiced = voice_help(nudge_text, moment=MomentType.STUCK_NUDGE, provider=self.voice_provider)
         return InterventionView(
             kind=InterventionKind.INLINE_ASSERTION,
-            text=voice_help(nudge_text, provider=self.voice_provider),
+            text=voiced.text,
+            emotion=voiced.emotion,
+            intensity=voiced.intensity,
         )
 
     def _with_live_adaptation(self, live: _LiveSession, response: TurnResponse) -> TurnResponse:
@@ -1834,6 +1877,7 @@ class SessionStore:
             LessonView(
                 lesson_slug=lp.lesson_slug,
                 title=catalog_lessons[lp.lesson_slug].title,
+                description=catalog_lessons[lp.lesson_slug].description,
                 kc_id=lp.kc_id,
                 ccss_code=catalog_lessons[lp.lesson_slug].ccss_code,
                 teks_code=catalog_lessons[lp.lesson_slug].teks_code,

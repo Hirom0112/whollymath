@@ -242,6 +242,58 @@ StatsStimulusView = Annotated[
 ]
 
 
+class PromptPartsView(BaseModel):
+    """The structured form of a problem statement: setup, ask, and the clarifying rule.
+
+    Lets the surface render the clean 'The Situation / The Question / Guiding Rule' card instead of
+    one run-on sentence. The flat ``ProblemView.statement`` is composed from these same parts and
+    stays the accessible fallback, so the two can never disagree (§8.4). Null when the KC supplies
+    no structured form (the surface then shows the flat statement).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    situation: str = Field(min_length=1, description="The setup — what the scenario is.")
+    question: str = Field(min_length=1, description="The ask — what to find.")
+    guiding_rule: str = Field(min_length=1, description="The rule that steers away from the trap.")
+
+
+class SetModelGroupView(BaseModel):
+    """One colour group of a set-model stimulus: a colour name and how many counters it has.
+
+    A named model (not a bare tuple) for the same precise-regen reason as ``FrequencyRowView`` —
+    pydantic2ts loses tuple element types. ``colour`` is a plain CSS colour keyword the surface
+    fills the dots with.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    colour: str = Field(
+        min_length=1, description="CSS colour keyword for the counters, e.g. 'green'."
+    )
+    count: int = Field(ge=0, description="How many counters of this colour are in the collection.")
+
+
+class SetModelStimulusView(BaseModel):
+    """A display-only set model: a jar of discrete coloured counters for a ratio-language item.
+
+    The collection the prompt names (e.g. 3 green + 6 yellow), as coloured dots the surface draws
+    beside the answer box — the QUESTION INPUT, never the answer (§8.2). Derived from the problem's
+    operands (``domain/set_model_stimulus``); the prompt text stays the accessible fallback.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["set_model"] = "set_model"
+    groups: list[SetModelGroupView] = Field(
+        description="One colour group per colour, in the order the prompt names them (asked first)."
+    )
+    asked_colour: str = Field(
+        min_length=1,
+        description="The colour the question is about (the first group); lets the surface mark it.",
+    )
+
+
 class ProblemView(BaseModel):
     """The learner-facing view of one presented problem (ARCHITECTURE.md §10 step 12).
 
@@ -338,6 +390,23 @@ class ProblemView(BaseModel):
             "histogram) — the question input, never the answer (§8.2). The surface draws it in the "
             "problem statement; the prompt text stays as the accessible fallback. Null for every "
             "non-stats problem."
+        ),
+    )
+    set_model: SetModelStimulusView | None = Field(
+        default=None,
+        description=(
+            "DISPLAY-ONLY collection of coloured counters for a ratio-language item — the jar the "
+            "prompt names, drawn as the visual anchor to make the part-vs-whole comparison "
+            "concrete. The question input, never the answer (§8.2); prompt text is the accessible "
+            "fallback. Null for every non-ratio-language problem."
+        ),
+    )
+    prompt_parts: PromptPartsView | None = Field(
+        default=None,
+        description=(
+            "Structured form of ``statement`` (setup / ask / clarifying rule) for the clean card; "
+            "``statement`` is composed from these parts and stays the fallback. Null when the KC "
+            "has no structured form — the surface then renders the flat statement."
         ),
     )
 

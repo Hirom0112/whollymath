@@ -1254,6 +1254,71 @@ export interface ProblemView {
    * DISPLAY-ONLY visual of a stats problem's data set (a dot plot, frequency table, or histogram) — the question input, never the answer (§8.2). The surface draws it in the problem statement; the prompt text stays as the accessible fallback. Null for every non-stats problem.
    */
   stimulus?: (DotPlotStimulusView | FrequencyTableStimulusView | HistogramStimulusView) | null;
+  /**
+   * DISPLAY-ONLY collection of coloured counters for a ratio-language item — the jar the prompt names, drawn as the visual anchor to make the part-vs-whole comparison concrete. The question input, never the answer (§8.2); prompt text is the accessible fallback. Null for every non-ratio-language problem.
+   */
+  set_model?: SetModelStimulusView | null;
+  /**
+   * Structured form of ``statement`` (setup / ask / clarifying rule) for the clean card; ``statement`` is composed from these parts and stays the fallback. Null when the KC has no structured form — the surface then renders the flat statement.
+   */
+  prompt_parts?: PromptPartsView | null;
+}
+/**
+ * A display-only set model: a jar of discrete coloured counters for a ratio-language item.
+ *
+ * The collection the prompt names (e.g. 3 green + 6 yellow), as coloured dots the surface draws
+ * beside the answer box — the QUESTION INPUT, never the answer (§8.2). Derived from the problem's
+ * operands (``domain/set_model_stimulus``); the prompt text stays the accessible fallback.
+ */
+export interface SetModelStimulusView {
+  kind?: "set_model";
+  /**
+   * One colour group per colour, in the order the prompt names them (asked first).
+   */
+  groups: SetModelGroupView[];
+  /**
+   * The colour the question is about (the first group); lets the surface mark it.
+   */
+  asked_colour: string;
+}
+/**
+ * One colour group of a set-model stimulus: a colour name and how many counters it has.
+ *
+ * A named model (not a bare tuple) for the same precise-regen reason as ``FrequencyRowView`` —
+ * pydantic2ts loses tuple element types. ``colour`` is a plain CSS colour keyword the surface
+ * fills the dots with.
+ */
+export interface SetModelGroupView {
+  /**
+   * CSS colour keyword for the counters, e.g. 'green'.
+   */
+  colour: string;
+  /**
+   * How many counters of this colour are in the collection.
+   */
+  count: number;
+}
+/**
+ * The structured form of a problem statement: setup, ask, and the clarifying rule.
+ *
+ * Lets the surface render the clean 'The Situation / The Question / Guiding Rule' card instead of
+ * one run-on sentence. The flat ``ProblemView.statement`` is composed from these same parts and
+ * stays the accessible fallback, so the two can never disagree (§8.4). Null when the KC supplies
+ * no structured form (the surface then shows the flat statement).
+ */
+export interface PromptPartsView {
+  /**
+   * The setup — what the scenario is.
+   */
+  situation: string;
+  /**
+   * The ask — what to find.
+   */
+  question: string;
+  /**
+   * The rule that steers away from the trap.
+   */
+  guiding_rule: string;
 }
 /**
  * The read-back of a snapped handwritten answer, for the learner to confirm (Slice HR.C2).
@@ -1446,6 +1511,14 @@ export interface ProblemView1 {
    * DISPLAY-ONLY visual of a stats problem's data set (a dot plot, frequency table, or histogram) — the question input, never the answer (§8.2). The surface draws it in the problem statement; the prompt text stays as the accessible fallback. Null for every non-stats problem.
    */
   stimulus?: (DotPlotStimulusView | FrequencyTableStimulusView | HistogramStimulusView) | null;
+  /**
+   * DISPLAY-ONLY collection of coloured counters for a ratio-language item — the jar the prompt names, drawn as the visual anchor to make the part-vs-whole comparison concrete. The question input, never the answer (§8.2); prompt text is the accessible fallback. Null for every non-ratio-language problem.
+   */
+  set_model?: SetModelStimulusView | null;
+  /**
+   * Structured form of ``statement`` (setup / ask / clarifying rule) for the clean card; ``statement`` is composed from these parts and stays the fallback. Null when the KC has no structured form — the surface then renders the flat statement.
+   */
+  prompt_parts?: PromptPartsView | null;
 }
 /**
  * What a returning learner should do next (Slice 6.x — spaced repetition).
