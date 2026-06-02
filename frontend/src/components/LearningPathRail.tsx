@@ -27,6 +27,12 @@ export interface PathNode<TId extends string = string> {
   title: string;
   /** One-line description under the title. */
   description: string;
+  /**
+   * Optional curriculum standards code (e.g. "6.RP.1 · 6.4A"). When present it renders as a tiny
+   * muted pill tucked under the status badge in the corner — a quiet curriculum detail, matching
+   * the unit cards. Omit it (or pass empty) to hide the pill.
+   */
+  code?: string;
   status: PathNodeStatus;
   /** Identity tint for the dot + card. */
   tint: PathNodeTint;
@@ -124,7 +130,20 @@ function PathRow<TId extends string>({
             {node.title}
             {!conceptOnly && node.status === 'mastered' ? <MasteryStar /> : null}
           </span>
-          {conceptOnly ? <ConceptBadge /> : <StatusBadge status={node.status} />}
+          <span className="wm-pathrail-topright">
+            {conceptOnly ? <ConceptBadge /> : <StatusBadge status={node.status} />}
+            {/* The standards code is a quiet curriculum detail — a tiny tag under the status
+                badge in the corner, matching the unit cards. */}
+            {node.code != null && node.code !== '' ? (
+              <span
+                className="wm-pathrail-code"
+                title="Curriculum standards covered"
+                aria-label={`Standards: ${node.code}`}
+              >
+                {node.code}
+              </span>
+            ) : null}
+          </span>
         </span>
         <span className="wm-pathrail-desc">{node.description}</span>
         {!conceptOnly && pct != null ? (

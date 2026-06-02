@@ -34,7 +34,7 @@
 
 .wm-units-panel {
   width: 100%;
-  max-width: 640px;
+  max-width: 524px;
   opacity: 0;
   transform: translateY(12px);
   animation: wm-units-rise 420ms ease-out 80ms forwards;
@@ -344,9 +344,18 @@
 
 .wm-units-card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+/* The top-right corner of the card: the tiny standards tag sits above the progress-status
+   badge, both right-aligned, so the curriculum codes read as a quiet corner detail. */
+.wm-units-topright {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
 }
 .wm-units-title {
   display: inline-flex;
@@ -410,15 +419,28 @@
 .wm-units-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   font-family: var(--wm-font-sans);
   font-size: 12px;
   font-weight: 600;
   color: var(--wm-ink-soft);
 }
+/* Tiny corner tag for the curriculum standards (top-right of the card, above the status
+   badge). Muted and small so it never competes with the title or the kid-facing copy. */
 .wm-units-codes {
+  padding: 0.5px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--wm-navy-deep);
+  background: var(--wm-cream-2);
+  font-family: var(--wm-font-sans);
+  font-size: 9px;
+  font-weight: 700;
   letter-spacing: 0.2px;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--wm-navy-deep);
+  opacity: 0.66;
 }
 .wm-units-lessoncount {
   flex: 0 0 auto;

@@ -27,8 +27,8 @@ import './Unit.css';
 // CourseMap palette spirit). Tint is decoration, not status (the badge carries that).
 const TINTS: readonly PathNodeTint[] = ['sky', 'mint', 'butter', 'warm', 'lavender'];
 
-// Show the lesson's standard codes as its one-line description — informative, and it surfaces the
-// dual CCSS+TEKS tags in the learner view (the cross-cutting "standard codes in the surface" item).
+// The dual CCSS+TEKS tags for a lesson, joined for the tiny corner pill (the cross-cutting
+// "standard codes in the surface" item) — a quiet curriculum detail, matching the unit cards.
 function lessonCodes(lesson: LessonView): string {
   return [lesson.ccss_code, lesson.teks_code].filter(Boolean).join(' · ');
 }
@@ -37,7 +37,10 @@ function toPathNode(lesson: LessonView, index: number): PathNode<string> {
   return {
     id: lesson.lesson_slug,
     title: lesson.title,
-    description: lessonCodes(lesson),
+    // The learner-facing one-liner is the lesson's own description; the standard codes move to
+    // the corner pill (`code`) so they read as a quiet tag, not the lesson's summary.
+    description: lesson.description,
+    code: lessonCodes(lesson),
     status: lesson.status,
     tint: TINTS[index % TINTS.length],
     progressPct: lesson.probability != null ? lesson.probability * 100 : null,

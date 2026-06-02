@@ -37,6 +37,7 @@ const DETAIL: UnitDetailView = {
     {
       lesson_slug: 'u1_l1',
       title: 'Ratio language',
+      description: 'Describe how two amounts compare.',
       kc_id: 'KC_equivalence', // backend reports playable → launches the Tutor
       ccss_code: '6.RP.1',
       teks_code: '6.4A',
@@ -47,6 +48,7 @@ const DETAIL: UnitDetailView = {
     {
       lesson_slug: 'u1_l2',
       title: 'Unit conversion',
+      description: 'Change between units using proportions.',
       kc_id: 'KC_unbuilt', // backend reports playable=false (unbuilt KC) → "coming soon"
       ccss_code: '6.RP.3d',
       teks_code: '6.4H',
@@ -57,6 +59,7 @@ const DETAIL: UnitDetailView = {
     {
       lesson_slug: 'u1_l3',
       title: 'Percent',
+      description: 'Find a percent of an amount.',
       kc_id: 'KC_percent',
       ccss_code: '6.RP.3c',
       teks_code: '6.4E',
@@ -69,6 +72,7 @@ const DETAIL: UnitDetailView = {
       // "Concept lesson" state — NOT "coming soon" — and never start a session.
       lesson_slug: 'u1_l4',
       title: 'Paying for college',
+      description: 'Explore grants, scholarships, and loans.',
       kc_id: 'KC_college_pay',
       ccss_code: null,
       teks_code: '6.14G',

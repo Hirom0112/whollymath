@@ -106,15 +106,24 @@ function UnitCard({
               </span>
             ) : null}
           </span>
-          <span className={`wm-units-badge wm-units-badge--${unit.status}`}>{meta.label}</span>
+          <span className="wm-units-topright">
+            <span className={`wm-units-badge wm-units-badge--${unit.status}`}>{meta.label}</span>
+            {/* Standards alignment is a quiet curriculum detail — a tiny tag tucked under the
+                status badge in the corner, kept out of the learner-facing meta row (CCSS/TEKS,
+                per the dual coverage in TEKS_CCSS_COMPARISON.md). */}
+            {(unit.ccss_cluster ?? unit.teks_cluster) != null ? (
+              <span
+                className="wm-units-codes"
+                title="Curriculum standards covered"
+                aria-label={`Standards: ${[unit.ccss_cluster, unit.teks_cluster].filter(Boolean).join(', ')}`}
+              >
+                {[unit.ccss_cluster, unit.teks_cluster].filter(Boolean).join(' · ')}
+              </span>
+            ) : null}
+          </span>
         </span>
         <span className="wm-units-desc">{unit.description}</span>
         <span className="wm-units-meta">
-          {(unit.ccss_cluster ?? unit.teks_cluster) != null ? (
-            <span className="wm-units-codes">
-              {[unit.ccss_cluster, unit.teks_cluster].filter(Boolean).join(' · ')}
-            </span>
-          ) : null}
           <span className="wm-units-lessoncount">
             {unit.lesson_count} {unit.lesson_count === 1 ? 'lesson' : 'lessons'}
           </span>

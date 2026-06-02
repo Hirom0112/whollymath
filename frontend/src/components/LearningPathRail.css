@@ -142,9 +142,35 @@
 
 .wm-pathrail-card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+/* Top-right corner of the row: status badge, with the tiny standards code tucked under it —
+   both right-aligned, so the curriculum codes read as a quiet corner detail (matches the unit
+   cards' top-right stack). */
+.wm-pathrail-topright {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+/* Tiny muted standards pill (e.g. "6.RP.1 · 6.4A"). Small and low-contrast so it never competes
+   with the lesson title or its kid-facing summary. */
+.wm-pathrail-code {
+  padding: 0.5px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--wm-navy-deep);
+  background: var(--wm-cream-2);
+  font-family: var(--wm-font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--wm-navy-deep);
+  opacity: 0.66;
 }
 
 .wm-pathrail-skill {
