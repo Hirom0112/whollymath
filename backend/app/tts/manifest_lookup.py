@@ -114,10 +114,32 @@ def reset_manifest_cache() -> None:
     _load_manifest.cache_clear()
 
 
+def override_cache_dir(cache_dir: Path) -> None:
+    """Point the default lookup at ``cache_dir`` and clear the memoised manifest (test seam only).
+
+    Used by tests to make audio lookups deterministic against a controlled (e.g. empty) temp cache
+    instead of the real, gitignored on-disk cache. Pair with ``reset_default_cache_dir`` to restore.
+    The manifest LRU is keyed on the dir string, so we clear it here to force a re-read of the new
+    dir's manifest (and again on restore). Production code never calls this.
+    """
+    global _active_cache_dir
+    _active_cache_dir = cache_dir
+    _load_manifest.cache_clear()
+
+
+def reset_default_cache_dir() -> None:
+    """Restore the real build-time cache dir as the lookup default and clear the memoised manifest."""
+    global _active_cache_dir
+    _active_cache_dir = DEFAULT_CACHE_DIR
+    _load_manifest.cache_clear()
+
+
 __all__ = [
     "AUDIO_URL_PREFIX",
     "DEFAULT_LOCALE",
     "audio_url_for",
     "lookup_audio",
+    "override_cache_dir",
+    "reset_default_cache_dir",
     "reset_manifest_cache",
 ]

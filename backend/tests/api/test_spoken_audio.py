@@ -14,14 +14,37 @@ ElevenLabs, no LLM: the audio is pre-rendered; the lookup is a cached dict read.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from pathlib import Path
+
 import pytest
 from app.api.app import create_app
 from app.api.schemas import ActionType, SurfaceState, TurnRequest
 from app.api.service import SessionStore
-from app.tts.manifest_lookup import lookup_audio, reset_manifest_cache
+from app.tts.manifest_lookup import (
+    lookup_audio,
+    override_cache_dir,
+    reset_default_cache_dir,
+    reset_manifest_cache,
+)
 from app.tts.spoken_bank import nudge_string_id
 
 from tests.api.asgi_client import get_raw, post_json
+
+
+@pytest.fixture
+def empty_cache(tmp_path: Path) -> Iterator[None]:
+    """Point the audio lookup at an empty temp cache so "no cached audio" is deterministic.
+
+    The real on-disk cache (``app/tts/cache/``) may hold the fully-rendered bank, which would give
+    EVERY banked line audio and break the silent-path assertion. This isolates the test from it: an
+    empty dir has no ``manifest.json``, so every line resolves to ``None`` (captions-only, silent).
+    """
+    override_cache_dir(tmp_path)
+    try:
+        yield
+    finally:
+        reset_default_cache_dir()
 
 # same_amount → KC_equivalence (the one KC with rendered cache audio); a number-line route lands on
 # a KC whose nudge has no cached audio, exercising the null/silent path.
@@ -66,8 +89,12 @@ def test_first_hint_on_equivalence_carries_canonical_audio_ref() -> None:
     assert result.hint == " ".join(result.hint_audio.words)
 
 
-def test_first_hint_without_cached_audio_is_silent_captions_only() -> None:
-    """A nudge with no cached audio → hint present, hint_audio null (today's silent behavior)."""
+def test_first_hint_without_cached_audio_is_silent_captions_only(empty_cache: None) -> None:
+    """A nudge with no cached audio → hint present, hint_audio null (today's silent behavior).
+
+    Runs against an empty temp cache (``empty_cache`` fixture) so the silent path is exercised
+    regardless of what the real on-disk cache holds.
+    """
     store = SessionStore()
     started = store.start(_NUMBER_LINE_ROUTE)
     sid, pid = started.session_id, started.problem.problem_id
