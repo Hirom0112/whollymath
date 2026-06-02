@@ -1,0 +1,44 @@
+/* Display-only set-model stimulus for KC_ratio_language: a storybook glass jar of coloured counters,
+   drawn at the top of the problem card as the visual anchor. Reusable SVG jar frame; counters laid
+   from data. Static (no animation) → reduced-motion safe. Class names unique app-wide (wm-setmodel-).
+   Warm ink outline (#3a2c1c) on the glass/cork matches the painted storybook aesthetic. */
+
+.wm-setmodel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0 auto;
+}
+
+.wm-setmodel-svg {
+  display: block;
+  width: 168px;
+  height: auto;
+  overflow: visible;
+}
+
+/* The glass body — faint cool-blue fill behind the counters, warm ink outline. */
+.wm-setmodel-glass {
+  fill: rgba(231, 243, 250, 0.45);
+  stroke: #3a2c1c;
+  stroke-width: 3.4;
+  stroke-linejoin: round;
+}
+
+/* Shared warm ink outline for the rim and cork lid (fills come inline from gradients). */
+.wm-setmodel-ink {
+  stroke: #3a2c1c;
+  stroke-linejoin: round;
+}
+
+/* Counters carry an inline per-colour gradient fill + stroke; nothing more needed here. */
+
+/* Caption echoing the counts in words — italic navy, matching the stimulus caption idiom. */
+.wm-setmodel-caption {
+  font-family: var(--wm-font-serif);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--wm-ink-soft);
+  text-transform: capitalize;
+}

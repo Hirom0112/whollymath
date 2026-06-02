@@ -13,5 +13,8 @@ export { FigureStimulus, describeFigure, type FigureSpec } from './FigureStimulu
 // Display-only stats stimulus (dot plot / frequency table / histogram) for the Unit-7 stats problem
 // statements; stats answers stay numeric/yes-no — this only visualizes the data set.
 export { StatsStimulus } from './StatsStimulus';
+// Display-only set-model stimulus (a jar of coloured counters) for the Unit-1 ratio-language
+// statements; the answer stays a fraction via SymbolicEditor — this only visualizes the collection.
+export { SetModelStimulus } from './SetModelStimulus';
 export { CoordinatePlane, pointsToAnswer, answerToPoints, type GridPoint } from './CoordinatePlane';
 export { selectWidget, type WidgetKind, type WorkspaceWidgetProps } from './WidgetContract';

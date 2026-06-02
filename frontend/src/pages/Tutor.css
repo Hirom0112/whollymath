@@ -462,6 +462,43 @@
   gap: 10px;
 }
 
+/* The counter jar is the card's visual anchor — centered at the top, above the prompt. */
+.wm-tutor-statement-card .wm-setmodel,
+.wm-setmodel {
+  margin: 0 auto 14px;
+}
+
+/* Structured prompt: 'The Situation / The Question' lines + a 'Guiding Rule' callout, matching the
+   clean ratio-language card. Serif navy to sit with the statement type. */
+.wm-tutor-prompt {
+  margin: 0 0 22px;
+}
+
+.wm-tutor-prompt-line {
+  margin: 0 0 8px;
+  font-family: var(--wm-font-serif);
+  font-size: 25px;
+  line-height: 1.25;
+  color: var(--wm-navy-deep);
+}
+
+.wm-tutor-prompt-label {
+  font-weight: 700;
+}
+
+/* The guiding rule — a calm green callout that steers away from the trap (the reference's box). */
+.wm-tutor-guiding-rule {
+  margin: 14px 0 0;
+  padding: 12px 16px;
+  border: 2px solid var(--wm-green);
+  border-radius: 14px;
+  background: rgba(154, 209, 124, 0.16); /* a faint wash of --wm-green (#9ad17c) on the cream card */
+  font-family: var(--wm-font-serif);
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--wm-navy-deep);
+}
+
 .wm-tutor-label {
   font-family: var(--wm-font-sans);
   font-size: 14px;

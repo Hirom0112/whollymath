@@ -177,23 +177,6 @@ function jsonResponse(data: unknown): Response {
   return { ok: true, status: 200, json: () => Promise.resolve(data) } as Response;
 }
 
-// jsdom's FileReader is flaky under vitest (onload timing varies), which makes the camera-beat tests
-// nondeterministic. Stub it to resolve readAsDataURL synchronously with a fixed data URL — the test
-// only cares about the transcribe→read-back→confirm flow, not the actual bytes. Restored by
-// vi.unstubAllGlobals in afterEach.
-function stubFileReader(): void {
-  class FakeFileReader {
-    result: string | null = null;
-    onload: (() => void) | null = null;
-    onerror: (() => void) | null = null;
-    readAsDataURL(): void {
-      this.result = 'data:image/png;base64,AAAA';
-      this.onload?.();
-    }
-  }
-  vi.stubGlobal('FileReader', FakeFileReader);
-}
-
 function mockFetch(): void {
   vi.stubGlobal(
     'fetch',
@@ -483,60 +466,5 @@ describe('Tutor', () => {
     expect(await screen.findByLabelText(/why that works/i)).toBeInTheDocument();
     expect(screen.getByText(/here.s why that works/i)).toBeInTheDocument();
     expect(screen.getByText(/same-size twelfths let us add the tops/i)).toBeInTheDocument();
-  });
-
-  it('reads back a snapped answer, then submits it on confirm (camera beat HR.C1/C3)', async () => {
-    const fetchMock = vi.fn((url: string) =>
-      Promise.resolve(
-        jsonResponse(
-          url === '/transcribe-answer'
-            ? { transcribed_answer: '7/12', readable: true }
-            : CORRECT_TURN,
-        ),
-      ),
-    );
-    vi.stubGlobal('fetch', fetchMock);
-    stubFileReader();
-    const { container } = render(<Tutor session={SESSION} />);
-
-    const snapInput = container.querySelector<HTMLInputElement>('.wm-tutor-snap-input');
-    if (snapInput === null) throw new Error('snap input not found');
-    fireEvent.change(snapInput, {
-      target: { files: [new File(['work'], 'work.png', { type: 'image/png' })] },
-    });
-
-    // The read-back appears for confirmation BEFORE grading.
-    expect(await screen.findByText(/does this look right/i)).toBeInTheDocument();
-    expect(screen.getByText('7/12')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith('/transcribe-answer', expect.anything());
-
-    // Confirm -> the transcribed answer is graded through /turn -> the verdict shows.
-    fireEvent.click(screen.getByRole('button', { name: /yes, use it/i }));
-    expect(await screen.findByText(/correct/i)).toBeInTheDocument();
-    const calls = fetchMock.mock.calls as unknown as [string, RequestInit?][];
-    const turnCall = calls.find((c) => c[0] === '/turn');
-    expect(turnCall).toBeDefined();
-    const turnBody = JSON.parse(String(turnCall?.[1]?.body)) as Record<string, unknown>;
-    expect(turnBody).toMatchObject({ submitted_answer: '7/12', action: 'submit_answer' });
-  });
-
-  it('asks for a retake when the scan is unreadable, without grading (HR.C3 fail-safe)', async () => {
-    const fetchMock = vi.fn(() =>
-      Promise.resolve(jsonResponse({ transcribed_answer: null, readable: false })),
-    );
-    vi.stubGlobal('fetch', fetchMock);
-    stubFileReader();
-    const { container } = render(<Tutor session={SESSION} />);
-
-    const snapInput = container.querySelector<HTMLInputElement>('.wm-tutor-snap-input');
-    if (snapInput === null) throw new Error('snap input not found');
-    fireEvent.change(snapInput, {
-      target: { files: [new File(['x'], 'x.png', { type: 'image/png' })] },
-    });
-
-    expect(await screen.findByText(/couldn't read that one/i)).toBeInTheDocument();
-    // No grading happened - /turn was never called.
-    const calls = fetchMock.mock.calls as unknown as [string][];
-    expect(calls.some((c) => c[0] === '/turn')).toBe(false);
   });
 });
