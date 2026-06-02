@@ -7,15 +7,37 @@ WITHOUT one they carry the pre-written nudge verbatim (invariant 4 — voicing i
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from pathlib import Path
+
+import pytest
 from app.api.schemas import ActionType, SurfaceState, TurnRequest
 from app.api.service import SessionStore
 from app.helpneed.artifact import load_predictor
 from app.llm.provider import Message, Tier
 from app.policy.emotion import Emotion
 from app.policy.intervention_gate import SustainedHelpNeedGate
+from app.tts.manifest_lookup import override_cache_dir, reset_default_cache_dir
 from app.tutor.hints import select_nudge
 
 from tests.api._artifact_skip import stale_artifact
+
+
+@pytest.fixture
+def empty_cache(tmp_path: Path) -> Iterator[None]:
+    """Isolate the audio lookup to an empty temp cache so voiced (LLM-rephrased) text is observable.
+
+    When a banked nudge HAS cached audio (the real cache now ships the full bank), the response
+    captions the CANONICAL line verbatim instead of the voiced rephrase (the SpokenAudio
+    canonical-line invariant, Slice AR.3). To assert that voicing RAN we must keep the line silent,
+    so it carries the voiced caption — an empty cache (no manifest) makes every line silent.
+    """
+    override_cache_dir(tmp_path)
+    try:
+        yield
+    finally:
+        reset_default_cache_dir()
+
 
 _ROUTE = "combine"
 _WRONG = "1/2"
@@ -48,8 +70,12 @@ def _hint_req(session_id: str, problem_id: str) -> TurnRequest:
     )
 
 
-def test_hint_is_voiced_when_a_voice_provider_is_present() -> None:
-    """A REQUEST_HINT turn returns the mascot-voiced line when voicing is enabled."""
+def test_hint_is_voiced_when_a_voice_provider_is_present(empty_cache: None) -> None:
+    """A REQUEST_HINT turn returns the mascot-voiced line when voicing is enabled.
+
+    Isolated to an empty cache so the line stays silent and ships the voiced caption (otherwise a
+    cached canonical line would be captioned verbatim — see ``empty_cache``).
+    """
     store = SessionStore(voice_provider=_FakeVoice())
     started = store.start(_ROUTE)
     resp = store.process_turn(_hint_req(started.session_id, started.problem.problem_id))
@@ -100,8 +126,12 @@ def test_non_hint_turn_has_no_hint_emotion() -> None:
 
 
 @stale_artifact
-def test_proactive_intervention_text_is_voiced() -> None:
-    """When the gate fires, the proactive nudge is delivered in the mascot's voice."""
+def test_proactive_intervention_text_is_voiced(empty_cache: None) -> None:
+    """When the gate fires, the proactive nudge is delivered in the mascot's voice.
+
+    Isolated to an empty cache so the proactive line stays silent and carries the voiced text
+    (a cached canonical line would otherwise be captioned verbatim — see ``empty_cache``).
+    """
     store = SessionStore(
         predictor=load_predictor(),
         gate=SustainedHelpNeedGate(k=2, threshold=0.5),

@@ -46,6 +46,7 @@ def empty_cache(tmp_path: Path) -> Iterator[None]:
     finally:
         reset_default_cache_dir()
 
+
 # same_amount → KC_equivalence (the one KC with rendered cache audio); a number-line route lands on
 # a KC whose nudge has no cached audio, exercising the null/silent path.
 _EQUIVALENCE_ROUTE = "same_amount"

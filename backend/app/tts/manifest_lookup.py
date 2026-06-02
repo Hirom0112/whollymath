@@ -128,7 +128,7 @@ def override_cache_dir(cache_dir: Path) -> None:
 
 
 def reset_default_cache_dir() -> None:
-    """Restore the real build-time cache dir as the lookup default and clear the memoised manifest."""
+    """Restore the real build-time cache dir as the default and drop the memoised manifest."""
     global _active_cache_dir
     _active_cache_dir = DEFAULT_CACHE_DIR
     _load_manifest.cache_clear()
