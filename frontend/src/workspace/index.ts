@@ -16,5 +16,15 @@ export { StatsStimulus } from './StatsStimulus';
 // Display-only set-model stimulus (a jar of coloured counters) for the Unit-1 ratio-language
 // statements; the answer stays a fraction via SymbolicEditor — this only visualizes the collection.
 export { SetModelStimulus } from './SetModelStimulus';
+// Display-only "scene" pictures, one per KC family, behind a single dispatcher (SceneStimulus reads
+// ProblemView.scene). Each shows the question input only, never the answer — not answer widgets.
+export { SceneStimulus } from './SceneStimulus';
+export { PercentGrid } from './PercentGrid';
+export { RatioTable } from './RatioTable';
+export { IntegerLine } from './IntegerLine';
+export { FractionArea } from './FractionArea';
+export { DecimalPlaceValue } from './DecimalPlaceValue';
+export { GcfFactors } from './GcfFactors';
+export { ExponentProduct } from './ExponentProduct';
 export { CoordinatePlane, pointsToAnswer, answerToPoints, type GridPoint } from './CoordinatePlane';
 export { selectWidget, type WidgetKind, type WorkspaceWidgetProps } from './WidgetContract';

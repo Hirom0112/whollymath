@@ -1,0 +1,101 @@
+/* Display-only place-value chart for KC_decimal_operations: the operand decimals laid into aligned,
+   labelled place columns (ones · tenths · hundredths …) with the decimal points lined up. Real
+   <table> for accessibility. Static (no animation) → reduced-motion safe. Class names unique
+   app-wide (prefix wm-placeval-). Cream/navy/serif aesthetic via design tokens. */
+
+.wm-placeval {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 auto;
+  font-family: var(--wm-font-serif);
+  color: var(--wm-navy-deep);
+}
+
+.wm-placeval-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--wm-cream);
+  border: 2.5px solid var(--wm-navy-deep);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* The caption reads the chart for screen readers; visually hidden but present. */
+.wm-placeval-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Place-label header row — navy band, cream ink, small-caps feel. */
+.wm-placeval-place {
+  background: var(--wm-navy-deep);
+  color: var(--wm-cream);
+  font-weight: 600;
+  font-size: 12px;
+  text-align: center;
+  padding: 8px 12px;
+  letter-spacing: 0.03em;
+  text-transform: lowercase;
+  border-left: 1.5px solid var(--wm-navy-deep);
+}
+
+/* The empty corner cell above the decimal-label column. */
+.wm-placeval-corner {
+  background: var(--wm-navy-deep);
+  padding: 8px 14px;
+}
+
+/* The thin decimal-point marker columns (header + body), aligned across every row. */
+.wm-placeval-place-point {
+  background: var(--wm-navy-deep);
+  width: 6px;
+  padding: 0;
+}
+
+.wm-placeval-point {
+  width: 6px;
+  padding: 0;
+  text-align: center;
+  vertical-align: bottom;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--wm-navy-deep);
+  background: color-mix(in srgb, var(--wm-green) 22%, var(--wm-cream));
+}
+
+/* Row header: the decimal literal for that operand. */
+.wm-placeval-rowhead {
+  background: var(--wm-cream-2);
+  color: var(--wm-navy-deep);
+  font-weight: 700;
+  font-size: 18px;
+  text-align: right;
+  padding: 10px 14px;
+  font-variant-numeric: tabular-nums;
+  border-top: 1.5px solid var(--wm-navy-deep);
+  border-right: 2px solid var(--wm-navy-deep);
+}
+
+/* Each digit cell — tabular numerals keep the columns visually aligned. */
+.wm-placeval-cell {
+  min-width: 36px;
+  height: 44px;
+  padding: 8px 12px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--wm-cream-2);
+  border-left: 1.5px solid color-mix(in srgb, var(--wm-navy-deep) 35%, transparent);
+  border-top: 1.5px solid var(--wm-navy-deep);
+}

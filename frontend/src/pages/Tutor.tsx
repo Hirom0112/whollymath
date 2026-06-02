@@ -21,6 +21,7 @@ import {
   isCompleteInequality,
   NumberEntry,
   NumberLine,
+  SceneStimulus,
   selectWidget,
   SetModelStimulus,
   StatsStimulus,
@@ -724,6 +725,10 @@ export function Tutor({
           {/* Display-only counter jar (ratio-language) — the visual anchor, centered above the
               prompt; renders nothing for problems without a set model. */}
           <SetModelStimulus problem={problem} />
+          {/* Every other display-only scene (percent grid, ratio table, integer line, fraction
+              area, decimal place-value, factors, exponent product), behind one dispatcher; renders
+              nothing for problems with no scene. */}
+          <SceneStimulus problem={problem} />
           {/* The prompt: a clean 'Situation / Question / Guiding Rule' card when the KC supplies
               structured parts, else the flat statement. `statement` is composed from the same parts
               server-side, so the two never disagree (it stays the accessible fallback). */}

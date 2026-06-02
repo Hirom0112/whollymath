@@ -1,0 +1,48 @@
+/* Display-only percent hundred-grid for KC_percent: a 10x10 grid of 100 cells with the named percent
+   shaded in the green accent, on cream with clean navy gridlines. Shows the QUESTION INPUT (the
+   percent), never the answer. Static (no animation) -> reduced-motion safe. Class names unique
+   app-wide (prefix wm-pctgrid-). */
+
+.wm-pctgrid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto;
+}
+
+.wm-pctgrid-svg {
+  display: block;
+  width: 196px;
+  height: auto;
+  overflow: visible;
+}
+
+/* Each of the 100 cells: cream fill, thin navy gridline. */
+.wm-pctgrid-cell {
+  fill: var(--wm-cream);
+  stroke: var(--wm-navy-deep);
+  stroke-width: 1;
+  stroke-opacity: 0.45;
+}
+
+/* A shaded cell — the green accent marks one part of the rate-per-100. */
+.wm-pctgrid-cell--on {
+  fill: var(--wm-green);
+}
+
+/* Heavy outer frame: clean navy border around the whole grid. */
+.wm-pctgrid-frame {
+  fill: none;
+  stroke: var(--wm-navy-deep);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+}
+
+/* Caption echoing the percent as a rate per 100 — italic soft ink, matching the stimulus idiom. */
+.wm-pctgrid-caption {
+  font-family: var(--wm-font-serif);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--wm-ink-soft);
+}

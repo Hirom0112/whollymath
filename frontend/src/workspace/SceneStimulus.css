@@ -1,0 +1,9 @@
+/* Wrapper that centers any display-only problem "scene" as the visual anchor above the prompt.
+   The individual scenes bring their own styles (unique prefixes per scene). */
+
+.wm-scene {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 0 auto 14px;
+}

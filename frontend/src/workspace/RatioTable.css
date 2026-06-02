@@ -1,0 +1,97 @@
+/* Display-only ratio table for KC_unit_rate / KC_equivalent_ratios: two labelled rows of equivalent
+   ratios with a scale-step badge. Real <table> for accessibility. Static (no animation) →
+   reduced-motion safe. Class names unique app-wide (prefix wm-ratiotbl-). Cream/navy/serif. */
+
+.wm-ratiotbl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto;
+  font-family: var(--wm-font-serif);
+  color: var(--wm-navy-deep);
+}
+
+.wm-ratiotbl-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--wm-cream);
+  border: 2.5px solid var(--wm-navy-deep);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* The caption reads the table for screen readers; visually hidden but present. */
+.wm-ratiotbl-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Row header (the labelled row name) — navy band, cream ink, small caps feel. */
+.wm-ratiotbl-rowhead {
+  background: var(--wm-navy-deep);
+  color: var(--wm-cream);
+  font-weight: 600;
+  font-size: 14px;
+  text-align: left;
+  padding: 10px 14px;
+  letter-spacing: 0.02em;
+}
+
+.wm-ratiotbl-row-top .wm-ratiotbl-cell {
+  border-bottom: 1.5px solid var(--wm-navy-deep);
+}
+
+/* Each value cell <td>; left border separates columns, tabular numerals keep digits aligned. */
+.wm-ratiotbl-cell {
+  min-width: 58px;
+  height: 44px;
+  padding: 10px 16px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--wm-cream-2);
+  border-left: 1.5px solid var(--wm-navy-deep);
+}
+
+/* The blank (asked) cell: a soft green-tinted slot with a faint "?" so the student sees what to fill. */
+.wm-ratiotbl-cell-blank {
+  background: color-mix(in srgb, var(--wm-green) 28%, var(--wm-cream));
+  border: 1.5px dashed var(--wm-navy-deep);
+  border-radius: 6px;
+  margin: 4px;
+}
+
+.wm-ratiotbl-q {
+  color: var(--wm-navy-deep);
+  opacity: 0.55;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* The scale-step badge between the columns — the ×k / ÷count scaffold structure. */
+.wm-ratiotbl-scale {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wm-ratiotbl-scale-label {
+  display: inline-block;
+  padding: 3px 12px;
+  background: var(--wm-navy-deep);
+  color: var(--wm-cream);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

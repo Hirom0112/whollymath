@@ -1,0 +1,90 @@
+/* Display-only integer number line for the integer-arithmetic family (KC_integer_add_subtract,
+   KC_absolute_value, KC_signed_numbers). A horizontal navy line with integer ticks and a heavy 0,
+   plus the INPUTS drawn as positions / jumps / spans — never the answer (§8.2). Static (no
+   animation) → reduced-motion safe. Class names unique app-wide (prefix wm-intline-). */
+
+.wm-intline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 560px;
+}
+
+.wm-intline-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* The axis line — a clean navy stroke. */
+.wm-intline-track {
+  stroke: var(--wm-navy-deep, #1f2c5c);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+/* Integer ticks — navy; the 0 tick is drawn heavier. */
+.wm-intline-tick {
+  stroke: var(--wm-navy-deep, #1f2c5c);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.wm-intline-tick-zero {
+  stroke-width: 4.5;
+}
+
+/* Tick labels — navy serif; 0 is emphasized. */
+.wm-intline-label {
+  fill: var(--wm-navy-deep, #1f2c5c);
+  font-family: var(--wm-font-serif, Georgia, serif);
+  font-size: 18px;
+  font-weight: 600;
+}
+.wm-intline-label-zero {
+  font-weight: 800;
+}
+
+/* A marked point — a green dot on the line, with its value above. */
+.wm-intline-dot {
+  fill: var(--wm-green, #9ad17c);
+  stroke: var(--wm-navy-deep, #1f2c5c);
+  stroke-width: 2.5;
+}
+.wm-intline-point-label {
+  fill: var(--wm-navy-deep, #1f2c5c);
+  font-family: var(--wm-font-serif, Georgia, serif);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* The add/subtract jump arrow — navy, with a filled arrowhead at the (unlabelled) landing. */
+.wm-intline-arrow {
+  stroke: var(--wm-navy-deep, #1f2c5c);
+  stroke-width: 3;
+  stroke-linecap: round;
+  fill: none;
+}
+.wm-intline-arrow-tip {
+  fill: var(--wm-navy-deep, #1f2c5c);
+}
+.wm-intline-tie {
+  stroke: var(--wm-navy-deep, #1f2c5c);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
+}
+
+/* The absolute-value distance span — green bracket over [point, 0], with end ties to the line. */
+.wm-intline-span {
+  stroke: var(--wm-green, #9ad17c);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.wm-intline-span-tie {
+  stroke: var(--wm-green, #9ad17c);
+  stroke-width: 2;
+  opacity: 0.7;
+}

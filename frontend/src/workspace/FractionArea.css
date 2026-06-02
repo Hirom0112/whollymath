@@ -1,0 +1,67 @@
+/* Display-only fraction AREA-MODEL stimulus for the four two-operand fraction-arithmetic KCs:
+   the two OPERAND fractions drawn as partitioned bars (add/subtract: stacked) or an area grid
+   (multiply/divide). Shows the GIVENS only, never the result (§8.2). Static (no animation) ->
+   reduced-motion safe. Class names unique app-wide (prefix wm-fracarea-). Aesthetic tokens. */
+
+.wm-fracarea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0 auto;
+}
+
+.wm-fracarea-svg {
+  display: block;
+  width: 240px;
+  height: auto;
+  overflow: visible;
+}
+
+/* Bar / grid cells: cream-2 backing with a navy partition outline, so the equal parts read. */
+.wm-fracarea-cell {
+  fill: var(--wm-cream-2);
+  stroke: var(--wm-navy-deep);
+  stroke-width: 1.4;
+}
+
+/* First operand shading (green). Second operand shading (pink) — a clear second colour so the two
+   amounts are distinct in the stacked bars and along the two axes of the grid. */
+.wm-fracarea-cell--a {
+  fill: var(--wm-green);
+}
+
+.wm-fracarea-cell--b {
+  fill: var(--wm-pink);
+}
+
+/* Grid overlap (column AND row): left as a hatch-free blend of the two operand bands, NOT a third
+   highlight colour — the overlap is the product (the answer), which we never reveal (§8.2). */
+.wm-fracarea-grid-overlap {
+  fill: var(--wm-green);
+  fill-opacity: 0.85;
+}
+
+/* Operand label above each bar, and the centred operator sign between the stacked bars. */
+.wm-fracarea-label {
+  font-family: var(--wm-font-serif);
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--wm-navy-deep);
+}
+
+.wm-fracarea-op {
+  font-family: var(--wm-font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  fill: var(--wm-navy-deep);
+  text-anchor: middle;
+}
+
+/* Caption echoing the operands + operator in words — italic navy, matching the stimulus idiom. */
+.wm-fracarea-caption {
+  font-family: var(--wm-font-serif);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--wm-navy-deep);
+}
