@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { Mascot } from '../components/Mascot';
 import './Landing.css';
@@ -21,15 +21,21 @@ const Sparkle = (): React.JSX.Element => (
 /**
  * The WhollyMath landing / hero (brand register). A faithful React port of the
  * approved hero mock: the brand pie turns slowly, the pie mascot idle-bobs, and
- * pressing "Start learning" makes the mascot crouch, jump, and roll off-screen
- * before handing off to {@link onStart} (the seam into the tutor). Honors
- * prefers-reduced-motion.
+ * either entry — the "Start learning" student CTA or the quiet "For teachers &
+ * families" link — makes the mascot crouch, jump, and roll off-screen before
+ * handing off ({@link onStart} into the tutor, or /welcome for the role-select).
+ * Honors prefers-reduced-motion.
  */
 export function Landing({ onStart }: { onStart: () => void }): React.JSX.Element {
   const [starting, setStarting] = useState(false);
   const firedRef = useRef(false);
+  const navigate = useNavigate();
 
-  function handleStart(): void {
+  // Roll the mascot off-screen, then run `action` (the hand-off). Shared by BOTH entries — the
+  // student "Start learning" CTA and the quiet "For teachers & families" link — so either one
+  // gets the same crouch-jump-roll send-off before navigating. `starting`/`firedRef` guard against
+  // a double trigger, so whichever entry is pressed first wins and the other is inert.
+  function rollOffThen(action: () => void): void {
     if (starting) {
       return;
     }
@@ -40,7 +46,7 @@ export function Landing({ onStart }: { onStart: () => void }): React.JSX.Element
         return;
       }
       firedRef.current = true;
-      onStart();
+      action();
     }, delay);
   }
 
@@ -78,7 +84,13 @@ export function Landing({ onStart }: { onStart: () => void }): React.JSX.Element
               <br />
               starts here.
             </div>
-            <button type="button" className="wm-cta-btn" onClick={handleStart}>
+            <button
+              type="button"
+              className="wm-cta-btn"
+              onClick={() => {
+                rollOffThen(onStart);
+              }}
+            >
               Start learning as a student
             </button>
           </div>
@@ -86,7 +98,18 @@ export function Landing({ onStart }: { onStart: () => void }): React.JSX.Element
           {/* Secondary entry for adults — a quiet link (not a second CTA), so the student path
               stays the hero. Points at the /welcome role-select; the label names BOTH audiences
               the role-select splits into (teacher vs parent) so neither feels excluded. */}
-          <Link className="wm-teacher-link" to="/welcome">
+          <Link
+            className="wm-teacher-link"
+            to="/welcome"
+            onClick={(e) => {
+              // Keep the href for middle-click / open-in-new-tab, but on a normal click roll the
+              // mascot off first (matching the student CTA) before navigating to the role-select.
+              e.preventDefault();
+              rollOffThen(() => {
+                navigate('/welcome');
+              });
+            }}
+          >
             For teachers &amp; families
             <span aria-hidden="true"> →</span>
           </Link>

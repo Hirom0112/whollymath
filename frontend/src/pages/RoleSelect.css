@@ -1,19 +1,62 @@
-/* Role-select gate at /welcome. Cream/navy brand register matching the landing + sign-in: a warm
-   cream page, the spinning brand mark, a serif headline, and two big choice cards with a hover lift.
-   Unique classes app-wide (.wm-role-*); reuses the shared brand tokens. */
+/* Role-select desk scene (/welcome). A rendered cream wall + compass watermark (backdrop.png) that
+   fills the full viewport width, a wooden shelf with a brass abacus prop, and two FRONT-FACING
+   ornate portal plaques. Assets live in /public/welcome (Gemini-rendered, trimmed to content).
+   Unique classes app-wide (.wm-role-*). */
 
 .wm-role {
+  position: relative;
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 24px;
-  background: var(--wm-cream);
-  font-family: var(--wm-font-sans);
-}
-.wm-role-inner {
   width: 100%;
-  max-width: 720px;
+  overflow: hidden;
+  /* The tan wall + faded compass, stretched edge-to-edge of the screen. */
+  background:
+    url('/welcome/backdrop.png') center 38% / cover no-repeat,
+    var(--wm-cream, #f3ecd9);
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Desk staging (decorative, behind the UI) ─────────────────────────────── */
+.wm-role-shelf {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  /* A thin wooden desk edge at the very bottom (not a half-page slab) — crop the tabletop to its
+     front band so it reads as a small shelf the props + Pi stand on. */
+  height: clamp(96px, 15vh, 168px);
+  object-fit: cover;
+  object-position: center bottom;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
+/* Pi rolls in from off the right edge and STANDS on top of the shelf surface, then idle-bobs. */
+.wm-role-pi {
+  position: absolute;
+  right: 7vw;
+  /* Lifted so his feet rest ON the shelf surface (a bit below the shelf's top edge), not on the
+     page floor — he reads as standing on the shelf. */
+  bottom: clamp(64px, 9vh, 104px);
+  width: clamp(84px, 9.5vw, 128px);
+  z-index: 3;
+  transform-origin: center bottom;
+  pointer-events: none;
+  animation:
+    wm-role-rollin 1.5s cubic-bezier(0.3, 0.8, 0.4, 1) 0.25s both,
+    wm-role-bob 3.4s ease-in-out 1.9s infinite;
+}
+.wm-role-pi .wm-mascot-figure {
+  width: 100%;
+  height: auto;
+}
+
+/* ── Foreground UI ────────────────────────────────────────────────────────── */
+.wm-role-stage {
+  position: relative;
+  z-index: 4;
+  width: min(1240px, 95vw);
+  padding: clamp(24px, 4vh, 48px) 16px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -21,16 +64,14 @@
 }
 
 .wm-role-brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 30px;
 }
 .wm-role-mark {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  /* Identical to the home-page brand mark: same conic palette, navy border + bottom-shadow, spin. */
   background: conic-gradient(
     from 0deg,
     var(--wm-coral) 0 25%,
@@ -46,123 +87,156 @@
   font-family: var(--wm-font-serif);
   font-weight: 600;
   font-size: 22px;
+  color: var(--wm-navy-deep);
   letter-spacing: -0.3px;
-  color: var(--wm-ink);
 }
 
 .wm-role-headline {
-  margin: 0 0 32px;
+  margin: clamp(10px, 2vh, 22px) 0 clamp(18px, 3vh, 34px);
   font-family: var(--wm-font-serif);
-  font-weight: 600;
-  font-size: var(--wm-fs-display);
-  line-height: 1.05;
-  letter-spacing: -1px;
+  font-weight: 700;
+  font-size: clamp(30px, 4.6vw, 52px);
+  line-height: 1.04;
   color: var(--wm-navy-deep);
 }
 
+/* Two plaques pushed to the edges so the full compass watermark shows between them. */
 .wm-role-choices {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
   width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: clamp(40px, 18vw, 460px);
+  max-width: 1180px;
 }
 
+/* The card box IS the ornate metal frame (front-facing, no slant). The white window sits inside. */
 .wm-role-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(240px, 30vw, 340px);
+  aspect-ratio: 506 / 632;
+  padding: 0;
+  border: none;
+  background: center / contain no-repeat;
+  cursor: pointer;
+  font: inherit;
+  transform-origin: center 70%;
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.5, 1),
+    filter 0.28s ease;
+  filter: drop-shadow(0 18px 26px rgba(40, 30, 12, 0.32));
+}
+.wm-role-card--teacher {
+  background-image: url('/welcome/frame-teacher.png');
+}
+.wm-role-card--parent {
+  background-image: url('/welcome/frame-parent.png');
+}
+/* Hover/focus = "picking it up": the whole plaque lifts toward you, grows, and tips up slightly,
+   with a deeper shadow so it visibly leaves the wall. A gentle wobble sells the "choosing it" feel. */
+.wm-role-card:hover,
+.wm-role-card:focus-visible {
+  transform: translateY(-16px) scale(1.05) rotate(-1deg);
+  filter: drop-shadow(0 34px 40px rgba(40, 30, 12, 0.42));
+}
+.wm-role-card--parent:hover,
+.wm-role-card--parent:focus-visible {
+  transform: translateY(-16px) scale(1.05) rotate(1deg);
+}
+.wm-role-card:active {
+  transform: translateY(-7px) scale(1.02);
+  transition-duration: 0.1s;
+}
+.wm-role-card:focus-visible {
+  outline: 3px solid var(--wm-blue);
+  outline-offset: 6px;
+  border-radius: 14px;
+}
+
+/* The live content window inside the frame's inner cutout (insets tuned to the trimmed frames). */
+.wm-role-window {
+  position: absolute;
+  top: 17.5%;
+  left: 11%;
+  right: 11%;
+  bottom: 8.5%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 34px 24px 30px;
-  background: #fffdf7;
-  border: 2px solid var(--wm-navy-deep);
-  border-radius: var(--wm-r-xl);
-  cursor: pointer;
-  text-align: center;
-  box-shadow: 0 4px 0 var(--wm-navy-deep);
-  transition:
-    transform var(--wm-motion-press) ease,
-    box-shadow var(--wm-motion-press) ease;
+  justify-content: space-between;
+  gap: 4%;
+  padding: 7% 9% 8%;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f1e4 100%);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 4px rgba(60, 44, 20, 0.12);
 }
-.wm-role-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 7px 0 var(--wm-navy-deep);
+.wm-role-illo {
+  width: 62%;
+  max-height: 42%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 8px rgba(60, 44, 20, 0.22));
 }
-.wm-role-card:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 0 var(--wm-navy-deep);
-}
-.wm-role-card:focus-visible {
-  outline: 3px solid var(--wm-blue-bright);
-  outline-offset: 3px;
-}
-.wm-role-card-ico {
-  display: grid;
-  place-items: center;
-  width: 60px;
-  height: 60px;
-  margin-bottom: 6px;
-  border-radius: 50%;
-  background: var(--wm-page-bg);
-  color: var(--wm-navy);
-}
-.wm-role-card-ico svg {
-  width: 30px;
-  height: 30px;
-}
-.wm-role-card-title {
-  font-family: var(--wm-font-serif);
-  font-weight: 600;
-  font-size: var(--wm-fs-lead);
-  letter-spacing: -0.3px;
-  color: var(--wm-navy-deep);
-}
-.wm-role-card-sub {
-  font-size: var(--wm-fs-body);
-  color: var(--wm-ink-soft);
-}
-
-.wm-role-back {
-  margin-top: 30px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
+.wm-role-cta {
+  display: inline-block;
+  width: 100%;
+  padding: 7% 6%;
+  border-radius: 999px;
+  background: var(--wm-navy);
+  color: #fff;
+  border: 1.5px solid var(--wm-navy-deep);
   font-family: var(--wm-font-sans);
-  font-size: var(--wm-fs-ui);
-  font-weight: 600;
-  color: var(--wm-ink-soft);
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: var(--wm-r-pill);
-  transition: color var(--wm-motion-press) ease;
+  font-weight: 700;
+  font-size: clamp(11px, 1.15vw, 14px);
+  line-height: 1.1;
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
 }
-.wm-role-back:hover {
-  color: var(--wm-navy);
+.wm-role-card:hover .wm-role-cta {
+  filter: brightness(1.08);
 }
-.wm-role-back:focus-visible {
-  outline: 3px solid var(--wm-navy-deep);
-  outline-offset: 2px;
+.wm-role-desc {
+  font-family: var(--wm-font-sans);
+  font-size: clamp(10px, 1.05vw, 12.5px);
+  line-height: 1.32;
+  color: var(--wm-ink-soft, #6b6450);
 }
 
-@media (max-width: 560px) {
-  .wm-role-choices {
-    grid-template-columns: 1fr;
+/* ── Motion ───────────────────────────────────────────────────────────────── */
+@keyframes wm-role-rollin {
+  0% {
+    transform: translateX(60vw) rotate(540deg);
   }
-  .wm-role-headline {
-    font-size: var(--wm-fs-h1);
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+@keyframes wm-role-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-3deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wm-role-mark {
+  .wm-role-mark,
+  .wm-role-pi {
     animation: none;
   }
-  .wm-role-card,
-  .wm-role-back {
-    transition: none;
+}
+
+@media (max-width: 620px) {
+  .wm-role-choices {
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
   }
-  .wm-role-card:hover {
-    transform: none;
+  .wm-role-card {
+    width: clamp(220px, 70vw, 300px);
+  }
+  .wm-role-pi {
+    display: none;
   }
 }
