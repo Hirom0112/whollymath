@@ -11,6 +11,7 @@ from app.api.schemas import ActionType, SurfaceState, TurnRequest
 from app.api.service import SessionStore
 from app.helpneed.artifact import load_predictor
 from app.llm.provider import Message, Tier
+from app.policy.emotion import Emotion
 from app.policy.intervention_gate import SustainedHelpNeedGate
 from app.tutor.hints import select_nudge
 
@@ -64,6 +65,40 @@ def test_hint_is_prewritten_without_a_voice_provider() -> None:
     assert resp.hint != _VOICED
 
 
+def test_hint_turn_carries_a_deterministic_encourage_emotion() -> None:
+    """A hint is a help moment: the response carries an ENCOURAGE cue, never a celebrate (1.3).
+
+    The emotion is chosen deterministically in policy from the moment type, so it is present
+    and correct whether or not voicing is enabled (here: enabled).
+    """
+    store = SessionStore(voice_provider=_FakeVoice())
+    started = store.start(_ROUTE)
+    resp = store.process_turn(_hint_req(started.session_id, started.problem.problem_id))
+    # ENCOURAGE (not CELEBRATE) is the load-bearing point — a help moment never celebrates (1.3).
+    assert resp.hint_emotion == Emotion.ENCOURAGE
+    assert resp.hint_intensity is not None and 0.0 <= resp.hint_intensity <= 1.0
+
+
+def test_non_hint_turn_has_no_hint_emotion() -> None:
+    """When no hint is shown, the avatar-hint cue is absent (null), not a stray default."""
+    store = SessionStore()
+    started = store.start(_ROUTE)
+    resp = store.process_turn(
+        TurnRequest(
+            session_id=started.session_id,
+            problem_id=started.problem.problem_id,
+            action=ActionType.SUBMIT_ANSWER,
+            submitted_answer=_WRONG,
+            surface_state=SurfaceState.SYMBOLIC_FOCUS,
+            latency_ms=3000,
+            hint_used=False,
+        )
+    )
+    assert resp.hint is None
+    assert resp.hint_emotion is None
+    assert resp.hint_intensity is None
+
+
 @stale_artifact
 def test_proactive_intervention_text_is_voiced() -> None:
     """When the gate fires, the proactive nudge is delivered in the mascot's voice."""
@@ -95,3 +130,6 @@ def test_proactive_intervention_text_is_voiced() -> None:
             break
     assert fired is not None, "expected the gate to fire within 4 wrong turns"
     assert fired.text == _VOICED
+    # The proactive nudge is a help moment: encourage, deterministically, never celebrate (1.3).
+    assert fired.emotion == Emotion.ENCOURAGE
+    assert 0.0 <= fired.intensity <= 1.0

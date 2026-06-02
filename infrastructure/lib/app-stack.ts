@@ -40,6 +40,10 @@ const API_PATH_PATTERNS: readonly string[] = [
   '/unit/*',
   '/me',
   '/events',
+  // Cached mascot-voice mp3s (Slice AR.3): the backend serves them as static files under
+  // /tts/audio/*; a SpokenAudio.audio_url resolves here. Routed to the ALB like the rest (the
+  // backend StaticFiles mount serves them) so the avatar can play a banked line in production.
+  '/tts/*',
   '/hw/*',
   '/course',
   '/course/*',

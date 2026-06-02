@@ -217,22 +217,6 @@ export function SetModelStimulus({ problem }: { problem: ProblemView }): React.J
           ))}
         </g>
 
-        {/* front vertical sheen streaks over the counters, to sell the glass */}
-        <path
-          d="M 80 124 q -6 70 4 130"
-          fill="none"
-          stroke="rgba(255,255,255,0.55)"
-          strokeWidth={5}
-          strokeLinecap="round"
-        />
-        <path
-          d="M 92 130 q -3 60 2 110"
-          fill="none"
-          stroke="rgba(255,255,255,0.30)"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-        />
-
         {/* neck rim + cork lid on top of everything */}
         <rect
           x={78}

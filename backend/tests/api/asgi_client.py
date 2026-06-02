@@ -98,6 +98,60 @@ def post_json(
     return _request(app, "POST", path, body, headers)
 
 
+def patch_json(
+    app: FastAPI, path: str, body: Any, headers: dict[str, str] | None = None
+) -> tuple[int, Any]:
+    """PATCH ``body`` as JSON to ``path``; return (status_code, parsed_json)."""
+    return _request(app, "PATCH", path, body, headers)
+
+
 def get(app: FastAPI, path: str, headers: dict[str, str] | None = None) -> tuple[int, Any]:
     """GET ``path``; return (status_code, parsed_json)."""
     return _request(app, "GET", path, None, headers)
+
+
+def get_raw(app: FastAPI, path: str, headers: dict[str, str] | None = None) -> tuple[int, bytes]:
+    """GET ``path`` returning the RAW response bytes (for non-JSON, e.g. a static mp3 asset).
+
+    The cached mascot audio is served by ``StaticFiles`` as ``audio/mpeg``, so the JSON-parsing
+    ``get`` would choke on the binary body. This variant returns the status and the raw bytes so a
+    contract test can assert the static mount resolves an audio path (Slice AR.3).
+    """
+    body_bytes = b""
+    captured: dict[str, Any] = {}
+    chunks: list[bytes] = []
+
+    async def receive() -> AsgiMessage:
+        return {"type": "http.request", "body": body_bytes, "more_body": False}
+
+    async def send(message: AsgiMessage) -> None:
+        if message["type"] == "http.response.start":
+            captured["status"] = message["status"]
+        elif message["type"] == "http.response.body":
+            chunks.append(message.get("body", b""))
+
+    raw_headers: list[tuple[bytes, bytes]] = []
+    for name, value in (headers or {}).items():
+        raw_headers.append((name.lower().encode("latin-1"), value.encode("latin-1")))
+
+    path_only, _, query = path.partition("?")
+    scope: dict[str, Any] = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "method": "GET",
+        "path": path_only,
+        "raw_path": path.encode("utf-8"),
+        "query_string": query.encode("utf-8"),
+        "headers": raw_headers,
+        "scheme": "http",
+        "server": ("testserver", 80),
+        "client": ("testclient", 12345),
+        "root_path": "",
+    }
+
+    async def _run() -> None:
+        await app(scope, receive, send)
+
+    anyio.run(_run)
+    return captured["status"], b"".join(chunks)

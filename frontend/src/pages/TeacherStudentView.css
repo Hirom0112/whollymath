@@ -19,7 +19,7 @@
   font-family: var(--wm-font-sans);
   font-size: var(--wm-fs-ui);
   font-weight: 600;
-  color: var(--wm-navy);
+  color: var(--wm-tcard-link);
   background: transparent;
   border: none;
   border-radius: var(--wm-r-pill);
@@ -63,19 +63,19 @@
 .wm-tstudent-reason {
   margin: 6px 0 20px;
   font-size: var(--wm-fs-body);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 
 /* ── Cards ── */
 
 .wm-tstudent-card {
-  background: #fff;
+  background: var(--wm-tcard-bg);
   border-radius: var(--wm-r-lg);
   padding: 20px 22px;
   margin-bottom: 16px;
   box-shadow:
-    0 2px 0 rgba(20, 30, 70, 0.08),
-    inset 0 0 0 1.5px rgba(20, 30, 70, 0.06);
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
 }
 .wm-tstudent-h2 {
   margin: 0 0 12px;
@@ -116,7 +116,7 @@
   margin: 0 0 14px;
   font-size: var(--wm-fs-body);
   line-height: 1.55;
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 .wm-tstudent-why-tags {
   display: flex;
@@ -148,8 +148,8 @@
   background: #f8e9c8;
 }
 .wm-tstudent-tag--rate {
-  color: var(--wm-ink-soft);
-  background: rgba(20, 30, 70, 0.08);
+  color: var(--wm-tcard-ink-soft);
+  background: var(--wm-tcard-hairline);
 }
 
 /* ── (3) Current ── */
@@ -165,12 +165,12 @@
   margin: 0;
   font-weight: 700;
   font-size: var(--wm-fs-lead);
-  color: var(--wm-navy);
+  color: var(--wm-tcard-link);
 }
 .wm-tstudent-current-unit {
   margin: 2px 0 0;
   font-size: var(--wm-fs-meta);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 
 /* ── (4) Skills ── */
@@ -191,12 +191,12 @@
   color: var(--wm-mean-correct-ink);
 }
 .wm-tstudent-skillcol--weak .wm-tstudent-skillcol-title {
-  color: #8f3a22;
+  color: var(--wm-mean-wrong);
 }
 .wm-tstudent-skillcol-empty {
   margin: 0;
   font-size: var(--wm-fs-meta);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 .wm-tstudent-skilllist {
   list-style: none;
@@ -221,7 +221,7 @@
   position: relative;
   height: 7px;
   border-radius: var(--wm-r-pill);
-  background: rgba(20, 30, 70, 0.1);
+  background: var(--wm-tcard-hairline);
   overflow: hidden;
 }
 .wm-tstudent-skill-fill {
@@ -238,7 +238,7 @@
 .wm-tstudent-skill-pct {
   font-size: var(--wm-fs-meta);
   font-weight: 700;
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
   min-width: 34px;
   text-align: right;
 }
@@ -263,7 +263,7 @@
   top: 14px;
   bottom: 0;
   width: 2px;
-  background: rgba(20, 30, 70, 0.12);
+  background: var(--wm-tcard-hairline);
 }
 .wm-tstudent-tl-dot {
   flex: 0 0 auto;
@@ -272,7 +272,7 @@
   margin-top: 3px;
   border-radius: 50%;
   z-index: 1;
-  box-shadow: 0 0 0 3px #fff;
+  box-shadow: 0 0 0 3px var(--wm-tcard-bg);
 }
 .wm-tstudent-tl-dot--correct {
   background: var(--wm-mean-correct);
@@ -296,7 +296,7 @@
 }
 .wm-tstudent-tl-time {
   font-size: var(--wm-fs-meta);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 
 /* ── (6) Assign ── */
@@ -304,7 +304,7 @@
 .wm-tstudent-assign-hint {
   margin: -4px 0 14px;
   font-size: var(--wm-fs-meta);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 .wm-tstudent-assign-list {
   list-style: none;
@@ -321,8 +321,8 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: var(--wm-r-md);
-  background: var(--wm-cream);
-  box-shadow: inset 0 0 0 1.5px rgba(20, 30, 70, 0.06);
+  background: var(--wm-tcard-inset);
+  box-shadow: inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
 }
 .wm-tstudent-assign-info {
   display: flex;
@@ -336,7 +336,7 @@
 }
 .wm-tstudent-assign-lock {
   font-size: var(--wm-fs-meta);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 .wm-tstudent-assign-btn {
   font-family: var(--wm-font-sans);
@@ -386,7 +386,7 @@
   margin: 0 auto;
   padding: 40px 24px;
   font-size: var(--wm-fs-body);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 .wm-tstudent-error {
   max-width: 760px;

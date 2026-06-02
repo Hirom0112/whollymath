@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from tests.api.asgi_client import get, post_json
+from tests.api.asgi_client import get, patch_json, post_json
 
 _EQ = KnowledgeComponentId.EQUIVALENCE
 _A_UNIT_SLUG = all_units()[0].slug  # a real, catalog-seeded unit a teacher can assign
@@ -199,3 +199,100 @@ def test_assign_requires_teacher_auth(app: FastAPI) -> None:
     _seed(app)
     code, _ = _assign(app, None, "stu-maya", _A_UNIT_SLUG)
     assert code == 401
+
+
+# ── Dashboard-upgrade additions: roster trend fields, student fields, aggregate, reminders ──
+
+
+def test_roster_carries_as_of_and_bucket_trends(app: FastAPI) -> None:
+    _, token = _seed(app)
+    code, body = get(app, "/teacher/roster", headers=_auth(token))
+    assert code == 200, body
+    # as_of is an ISO date (YYYY-MM-DD) the header shows.
+    assert len(body["as_of"]) == 10 and body["as_of"].count("-") == 2
+    bt = body["bucket_trends"]
+    assert set(bt) == {"struggling", "needs_attention", "on_track"}
+    for series in bt.values():
+        assert len(series) == 12
+        assert all(isinstance(v, int) for v in series)
+    # One struggling (Maya) and one on-track (Sam) → those buckets end on 1, attention on 0.
+    assert bt["struggling"][-1] == 1
+    assert bt["on_track"][-1] == 1
+    assert bt["needs_attention"] == [0] * 12
+
+
+def test_roster_row_has_length_10_trend_sparkline(app: FastAPI) -> None:
+    _, token = _seed(app)
+    _, body = get(app, "/teacher/roster", headers=_auth(token))
+    by_id = {s["student_id"]: s for s in body["students"]}
+    maya_trend = by_id["stu-maya"]["trend"]
+    assert len(maya_trend) == 10
+    assert all(0 <= v <= 100 for v in maya_trend)
+
+
+def test_student_drill_in_carries_upgrade_fields(app: FastAPI) -> None:
+    _, token = _seed(app)
+    code, body = get(app, "/teacher/student/stu-maya", headers=_auth(token))
+    assert code == 200, body
+    assert len(body["accuracy_history"]) == 10
+    assert all(0 <= v <= 100 for v in body["accuracy_history"])
+    # Maya is weak on equivalence (a KC with seeded lessons) → a concrete minutes estimate.
+    assert isinstance(body["remediation_estimate_minutes"], int)
+    assert body["remediation_estimate_minutes"] > 0
+    # A struggling student gets a note line.
+    assert body["notes"] is not None
+
+
+def test_on_track_student_has_null_remediation_and_notes(app: FastAPI) -> None:
+    _, token = _seed(app)
+    _, body = get(app, "/teacher/student/stu-sam", headers=_auth(token))
+    # Sam has mastered the only touched KC → no weakest KC → no estimate, no note.
+    assert body["remediation_estimate_minutes"] is None
+    assert body["notes"] is None
+
+
+def test_aggregate_trends_requires_teacher_auth(app: FastAPI) -> None:
+    assert get(app, "/teacher/aggregate-trends")[0] == 401
+
+
+def test_aggregate_trends_returns_length_14_skill_gap(app: FastAPI) -> None:
+    _, token = _seed(app)
+    code, body = get(app, "/teacher/aggregate-trends", headers=_auth(token))
+    assert code == 200, body
+    series = body["skill_gap_series"]
+    assert len(series) == 14
+    assert all(0 <= v <= 100 for v in series)
+
+
+def test_reminders_requires_teacher_auth(app: FastAPI) -> None:
+    assert get(app, "/teacher/reminders")[0] == 401
+
+
+def test_reminders_crud_round_trip_is_scoped(app: FastAPI) -> None:
+    _, token = _seed(app)
+    # Empty to start.
+    code, body = get(app, "/teacher/reminders", headers=_auth(token))
+    assert code == 200 and body == []
+
+    # Create two.
+    code, r1 = post_json(app, "/teacher/reminders", {"text": "Call Maya's parent"}, _auth(token))
+    assert code == 200, r1
+    assert r1["text"] == "Call Maya's parent" and r1["done"] is False
+    _, r2 = post_json(app, "/teacher/reminders", {"text": "Re-teach denominators"}, _auth(token))
+
+    # Listed newest-first.
+    _, listing = get(app, "/teacher/reminders", headers=_auth(token))
+    assert [r["id"] for r in listing] == [r2["id"], r1["id"]]
+
+    # Toggle one done.
+    code, updated = patch_json(app, f"/teacher/reminders/{r1['id']}", {"done": True}, _auth(token))
+    assert code == 200 and updated["done"] is True
+
+    # Patching an unknown reminder is a 404.
+    assert patch_json(app, "/teacher/reminders/999999", {"done": True}, _auth(token))[0] == 404
+
+
+def test_reminder_text_validation_rejects_empty(app: FastAPI) -> None:
+    _, token = _seed(app)
+    code, _ = post_json(app, "/teacher/reminders", {"text": ""}, _auth(token))
+    assert code == 422  # Pydantic min_length=1

@@ -122,6 +122,24 @@ class Learner(Base):
     # request may use (a teacher's dashboard vs. a student's tutor) and who may read whose
     # state. No turn-loop decision branches on it.
     role: Mapped[str] = mapped_column(String(16), default="student", nullable=False)
+    # The learner's HELP-LANGUAGE preference — a RENDERING preference, not identity (Slice 0.3).
+    # Under the bilingual-scaffold design (V2_TODO §0.3 / §3.6 + owner clarification 2026-06-02),
+    # on-screen lesson/problem content stays ENGLISH; only the avatar's voice + hint text localize.
+    # This column is the single sticky flag that toggle writes and the surface/help layer reads to
+    # choose which language to SPEAK — it changes nothing the learner reads on the page.
+    #
+    # A PLAIN STRING TAG, not a DB ENUM — same rationale as ``role``/``kc_id``: adding a
+    # help-language is a code change (a validated set in the surface layer), not a Postgres
+    # migration, and SQLite and Postgres agree on the column type (the §4 portability rule). Allowed
+    # values: ``"en"`` (default) and ``"es-MX"`` (the LOCKED Spanish target — es-US/es-MX, owner
+    # decision 2026-06-02). NOT NULL with a Python-side default so every row has a concrete locale.
+    #
+    # CRITICAL BOUNDARY: locale is NOT identity and is NOT consumed by the mastery model / policy /
+    # tutor / turn loop. It would only ever be read by the surface/help layer to pick a language, so
+    # no turn-loop decision branches on it. This is ADJACENT to ARCHITECTURE.md §14 invariant 8
+    # (which keeps IDENTITY off the mastery path) but DISTINCT from it: locale is a rendering
+    # preference, not identity. Source: V2_TODO §0.3 + owner clarification 2026-06-02.
+    locale: Mapped[str] = mapped_column(String(8), default="en", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
@@ -504,4 +522,34 @@ class Assignment(Base):
     # "last touched" and so an upsert reflects when it last ran.
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+
+class TeacherReminder(Base):
+    """A teacher's private to-do reminder on the dashboard (dashboard upgrade).
+
+    A lightweight checklist item a teacher jots for themselves ("call Maya's parent",
+    "re-teach common denominators Friday"). Scoped to ONE teacher via ``teacher_id`` (a
+    ``Learner.id`` with ``role="teacher"``) — a teacher only ever reads/writes their own
+    reminders, mirroring the owns-roster isolation of the rest of the teacher surface
+    (TEACHER_NEEDS.md). CASCADE on the FK so deleting a teacher removes their reminders.
+
+    ``done`` is a plain boolean toggle (default False). This is teacher-private UI state,
+    NOT learner state and NOT on any turn-loop path — identity/role gates this surface only
+    (ARCHITECTURE.md §14 invariant 8). Thin model: no queries/logic here (CLAUDE.md §7);
+    the repository owns the reads/writes. Portable column types only (String/Boolean/
+    DateTime), so the same definition works on the SQLite test DB and prod Postgres (the §4
+    portability rule the other models follow).
+    """
+
+    __tablename__ = "teacher_reminder"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    teacher_id: Mapped[int] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    text: Mapped[str] = mapped_column(String(512), nullable=False)
+    done: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
     )

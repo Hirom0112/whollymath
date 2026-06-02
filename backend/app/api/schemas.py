@@ -54,6 +54,7 @@ from app.mastery.unit_progress import UnitStatus
 # SurfaceState is owned by policy/ (the adaptation policy's vocabulary — it routes
 # between the five states, ARCHITECTURE.md §7); the API imports it forward so the
 # wire speaks the same enum the policy and tutor do (single source of truth, §4).
+from app.policy.emotion import Emotion
 from app.policy.surface_states import SurfaceState
 
 
@@ -90,6 +91,38 @@ class InterventionKind(StrEnum):
     CONCEPTUAL_PROMPT = "conceptual_prompt"
 
 
+class SpokenAudio(BaseModel):
+    """A reference to the CACHED audio for a banked spoken line, plus its lip-sync timing (AR.3).
+
+    Present on a help line ONLY when that line is a BANKED nudge with pre-rendered audio in the tts
+    manifest (``app/tts/manifest_lookup.py``); ``null`` for any dynamic/LLM-rephrased line (those
+    stay captions-only — no audio is synthesised on the turn loop, §8.1). When present, the surface
+    plays ``audio_url`` (served as a static asset off the cache, never the turn loop) and animates
+    the avatar's mouth from the word-timing triple.
+
+    Design choice (the canonical-line invariant): the cached audio voices the EXACT canonical nudge
+    text, so when audio is attached the surface shows the CANONICAL caption with it — audio and
+    caption are the same words. The line's text may be LLM-rephrased for warmth, but that rephrase
+    has no audio; the API only attaches audio when it can ship the canonical caption alongside, so
+    the mouth never lip-syncs words the bubble does not show.
+
+    ``words`` / ``wtimes`` / ``wdurations`` are parallel arrays (one entry per word): the word, its
+    start time in seconds, and its duration. They are the lip-sync data TalkingHead's
+    ``speakAudio(audio, {words, wtimes, wdurations})`` consumes; the 2D mascot derives a
+    current-word index from ``wtimes`` to drive a talking-mouth animation.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    audio_url: str = Field(
+        min_length=1,
+        description="URL of the cached mp3, served as a static asset off the turn loop (§8.1).",
+    )
+    words: list[str] = Field(description="The spoken words, in order (one per lip-sync entry).")
+    wtimes: list[float] = Field(description="Per-word start time in seconds (parallel to words).")
+    wdurations: list[float] = Field(description="Per-word duration in seconds (parallel to words).")
+
+
 class InterventionView(BaseModel):
     """A proactively-offered help nudge (Slice 4.5), or absent when none is offered.
 
@@ -104,6 +137,29 @@ class InterventionView(BaseModel):
 
     kind: InterventionKind = Field(description="Which intervention form was offered (§3.7).")
     text: str = Field(min_length=1, description="The pre-written nudge text (no LLM, §8.1).")
+    emotion: Emotion = Field(
+        default=Emotion.ENCOURAGE,
+        description=(
+            "The avatar emotion to PLAY with this nudge (Slice 1.3). Chosen deterministically "
+            "in policy.emotion from the moment type — NEVER by the LLM (§8.3). A nudge is a "
+            "help moment, so this is 'encourage'."
+        ),
+    )
+    intensity: float = Field(
+        default=0.6,
+        ge=0.0,
+        le=1.0,
+        description="How strongly to play the emotion, a bounded [0,1] scalar (Slice 1.3).",
+    )
+    audio: SpokenAudio | None = Field(
+        default=None,
+        description=(
+            "Cached audio + lip-sync timing for this nudge, present ONLY when it is the canonical "
+            "banked line with pre-rendered audio (AR.3); null when the line is dynamic/rephrased "
+            "(captions-only, silent). When set, ``text`` is the canonical caption that matches the "
+            "audio word-for-word (the canonical-line invariant — see SpokenAudio)."
+        ),
+    )
 
 
 class AdaptationView(BaseModel):
@@ -763,6 +819,33 @@ class TurnResponse(BaseModel):
         default=None,
         description="Optional natural-language hint, shown only when help is offered (§10).",
     )
+    hint_emotion: Emotion | None = Field(
+        default=None,
+        description=(
+            "The avatar emotion to PLAY while speaking ``hint`` (Slice 1.3). Chosen "
+            "deterministically in policy.emotion from the moment type — NEVER by the LLM "
+            "(§8.3). Present only on a hint turn (when ``hint`` is set); null otherwise."
+        ),
+    )
+    hint_intensity: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "How strongly to play ``hint_emotion``, a bounded [0,1] scalar (Slice 1.3). "
+            "Present only on a hint turn; null otherwise."
+        ),
+    )
+    hint_audio: SpokenAudio | None = Field(
+        default=None,
+        description=(
+            "Cached audio + lip-sync timing for ``hint`` (AR.3), present ONLY when the hint is the "
+            "canonical banked NUDGE that has pre-rendered audio; null for an escalated worked-step "
+            "hint or any rephrased line (those stay captions-only, silent — no synthesis on the "
+            "turn loop, §8.1). When set, ``hint`` is the canonical caption matching the audio "
+            "word-for-word (the canonical-line invariant — see SpokenAudio)."
+        ),
+    )
     mastery: list[MasterySnapshot] = Field(
         default_factory=list,
         description="Per-KC mastery snapshot for the affected KC(s) (§6).",
@@ -1368,6 +1451,9 @@ class LessonView(BaseModel):
 
     lesson_slug: str = Field(description="Stable lesson slug (unique within the unit).")
     title: str = Field(description="Human-readable lesson title (catalog).")
+    description: str = Field(
+        description="Short, learner-facing one-line summary of the lesson (catalog).",
+    )
     kc_id: str | None = Field(
         default=None,
         description="The lesson's catalog KC string, or null if it maps to no KC yet.",
@@ -1741,6 +1827,27 @@ class RosterStudentView(BaseModel):
     current_lesson_title: str | None = Field(default=None)
     percent_complete: float = Field(description="0..1 across the assigned course.")
     alerts: list[TeacherAlertView] = Field(default_factory=list)
+    trend: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Length-10 recent-accuracy sparkline (0..100) for the per-card chart. "
+            "Deterministically derived from recent_error_rate (no real per-day history yet)."
+        ),
+    )
+
+
+class BucketTrends(BaseModel):
+    """Recent per-day class counts in each ranking bucket, for the dashboard header trend.
+
+    Each list is length 12 (12 most recent days, oldest-first). Deterministically derived from the
+    current bucket counts (no per-day snapshot store yet) — see ``app.teacher.trends.bucket_trend``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    struggling: list[int] = Field(default_factory=list)
+    needs_attention: list[int] = Field(default_factory=list)
+    on_track: list[int] = Field(default_factory=list)
 
 
 class TeacherRosterView(BaseModel):
@@ -1751,6 +1858,11 @@ class TeacherRosterView(BaseModel):
     teacher_name: str
     class_name: str
     students: list[RosterStudentView] = Field(default_factory=list)
+    as_of: str = Field(
+        default="",
+        description="ISO date (YYYY-MM-DD) the dashboard header shows as 'as of' (server clock).",
+    )
+    bucket_trends: BucketTrends = Field(default_factory=BucketTrends)
 
 
 class TeacherStudentView(BaseModel):
@@ -1772,6 +1884,64 @@ class TeacherStudentView(BaseModel):
     activity: list[ActivityEventView] = Field(default_factory=list)
     assignable_units: list[AssignableUnitView] = Field(default_factory=list)
     assigned_unit_id: str | None = Field(default=None)
+    remediation_estimate_minutes: int | None = Field(
+        default=None,
+        description=(
+            "Estimated minutes to remediate the weakest KC, from lessons-to-recover × a "
+            "per-lesson budget (proxy — no per-lesson timing stored). null when nothing to "
+            "remediate."
+        ),
+    )
+    accuracy_history: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Length-10 recent-accuracy history (0..100). Deterministically derived from "
+            "recent_error_rate (no real per-day history yet)."
+        ),
+    )
+    notes: str | None = Field(
+        default=None,
+        description="Short teacher-facing note line from the struggle summary; may be null.",
+    )
+
+
+class TeacherAggregateTrends(BaseModel):
+    """``GET /teacher/aggregate-trends`` response — class-wide trend series for the dashboard.
+
+    ``skill_gap_series`` is the class-wide skill-gap percentage (0..100) over the recent window,
+    length 14, for the aggregate area chart. Deterministically derived from current class mastery
+    (no per-day snapshot store yet) — see ``app.teacher.trends.skill_gap_series``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    skill_gap_series: list[int] = Field(default_factory=list)
+
+
+class TeacherReminderView(BaseModel):
+    """One teacher to-do reminder (dashboard upgrade). Scoped to the authenticated teacher."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="The reminder's stable id (string form of the DB id).")
+    text: str
+    done: bool
+
+
+class CreateReminderRequest(BaseModel):
+    """``POST /teacher/reminders`` body."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=512, description="The reminder text.")
+
+
+class UpdateReminderRequest(BaseModel):
+    """``PATCH /teacher/reminders/{id}`` body — toggle done."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    done: bool
 
 
 class AssignUnitRequest(BaseModel):
@@ -1799,6 +1969,8 @@ __all__ = [
     "AssignUnitRequest",
     "AssignUnitResult",
     "AssignableUnitView",
+    "BucketTrends",
+    "CreateReminderRequest",
     "HelpNeedTrend",
     "KcMasteryView",
     "KcStatus",
@@ -1806,10 +1978,13 @@ __all__ = [
     "RosterStudentView",
     "StruggleSummaryView",
     "StudentCategory",
+    "TeacherAggregateTrends",
     "TeacherAlertView",
+    "TeacherReminderView",
     "RemediationView",
     "TeacherRosterView",
     "TeacherStudentView",
+    "UpdateReminderRequest",
     "TranscribeAnswerRequest",
     "AdaptiveTurnView",
     "AnswerKind",

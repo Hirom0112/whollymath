@@ -27,6 +27,10 @@ export default defineConfig({
       '/unit': API_TARGET,
       '/me': API_TARGET,
       '/events': API_TARGET,
+      // Cached mascot-voice mp3s, served as static files off the backend (Slice AR.3). A
+      // SpokenAudio.audio_url ('/tts/audio/<sha>.mp3') resolves through this single-origin proxy in
+      // dev; in production CloudFront serves the same path. Off the turn loop (a static GET).
+      '/tts': API_TARGET,
       '/hw': API_TARGET,
       // Teacher dashboard: roster + per-student drill-in + assign-next-unit (TCH.B8).
       '/teacher': API_TARGET,

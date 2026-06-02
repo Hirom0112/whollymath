@@ -54,6 +54,12 @@ extend-exclude = ["migrations"]
 # pyupgrade, naming. snake_case / PascalCase enforced via pep8-naming (CLAUDE.md §6).
 select = ["E", "F", "I", "B", "UP", "N", "W"]
 
+[tool.ruff.lint.per-file-ignores]
+# The TTS Rhubarb stub is deliberately named `*.stub.py` (Slice A) so its inert, not-yet-built
+# status is obvious from the filename. The `.stub` segment trips N999 (invalid module name);
+# that is intentional — the file is loaded by path in tests, never imported as a dotted module.
+"app/tts/rhubarb_visemes.stub.py" = ["N999"]
+
 [tool.ruff.format]
 # ruff format replaces black (CLAUDE.md §6).
 quote-style = "double"

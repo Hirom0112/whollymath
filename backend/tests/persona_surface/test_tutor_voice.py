@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from app.llm.provider import Message, Tier
 from app.persona_surface.tutor_voice import MASCOT_SYSTEM_PROMPT, voice_help
+from app.policy.emotion import Emotion, MomentType
 
 
 class _RecordingProvider:
@@ -37,8 +38,10 @@ class _FailingProvider:
 def test_voices_help_via_cheap_tier_with_the_mascot_prompt() -> None:
     """A wired provider rephrases the base text; call uses cheap tier + the mascot prompt."""
     provider = _RecordingProvider(reply="Picture the pieces first!")
-    out = voice_help("Are the pieces the same size?", provider=provider)
-    assert out == "Picture the pieces first!"
+    out = voice_help(
+        "Are the pieces the same size?", moment=MomentType.STUCK_NUDGE, provider=provider
+    )
+    assert out.text == "Picture the pieces first!"
     assert len(provider.calls) == 1
     call = provider.calls[0]
     assert call["tier"] == "cheap"
@@ -51,19 +54,66 @@ def test_voices_help_via_cheap_tier_with_the_mascot_prompt() -> None:
 
 def test_disabled_layer4_returns_prewritten_text() -> None:
     """No provider → the pre-written help text is returned unchanged, no call (invariant 4)."""
-    assert voice_help("Find a common denominator first.") == "Find a common denominator first."
+    out = voice_help("Find a common denominator first.", moment=MomentType.STUCK_NUDGE)
+    assert out.text == "Find a common denominator first."
 
 
 def test_provider_failure_falls_back_to_prewritten_text() -> None:
     """A model/network failure costs naturalness, never the help itself (invariant 4)."""
-    out = voice_help("Are the pieces the same size?", provider=_FailingProvider())
-    assert out == "Are the pieces the same size?"
+    out = voice_help(
+        "Are the pieces the same size?",
+        moment=MomentType.STUCK_NUDGE,
+        provider=_FailingProvider(),
+    )
+    assert out.text == "Are the pieces the same size?"
 
 
 def test_blank_completion_falls_back_to_prewritten_text() -> None:
     """An empty/whitespace completion is a soft failure — keep the dependable text."""
-    out = voice_help("Try the number line.", provider=_RecordingProvider(reply="   "))
-    assert out == "Try the number line."
+    out = voice_help(
+        "Try the number line.",
+        moment=MomentType.STUCK_NUDGE,
+        provider=_RecordingProvider(reply="   "),
+    )
+    assert out.text == "Try the number line."
+
+
+def test_emotion_is_deterministic_and_independent_of_the_llm_text() -> None:
+    """The avatar affect comes from the MOMENT, not the model: emotion is identical whether the
+    provider rephrases, fails, or is absent (Slice 1.3 — the LLM only influences ``text``)."""
+    voiced = voice_help(
+        "Find a common denominator first.",
+        moment=MomentType.STUCK_NUDGE,
+        provider=_RecordingProvider(reply="You've got this — same-size pieces first!"),
+    )
+    failed = voice_help(
+        "Find a common denominator first.",
+        moment=MomentType.STUCK_NUDGE,
+        provider=_FailingProvider(),
+    )
+    disabled = voice_help("Find a common denominator first.", moment=MomentType.STUCK_NUDGE)
+    assert voiced.emotion == failed.emotion == disabled.emotion == Emotion.ENCOURAGE
+    assert voiced.intensity == failed.intensity == disabled.intensity
+
+
+def test_llm_never_receives_the_moment_or_knowledge_state() -> None:
+    """The model sees ONLY the base help text — never the moment type or any state (§8.3).
+
+    The moment drives emotion deterministically, but it must not reach the prompt: a stuck
+    moment and a correct-verdict moment hand the SAME content to the model.
+    """
+    stuck_provider = _RecordingProvider()
+    correct_provider = _RecordingProvider()
+    voice_help("Same-size pieces?", moment=MomentType.STUCK_NUDGE, provider=stuck_provider)
+    voice_help("Same-size pieces?", moment=MomentType.CORRECT_VERDICT, provider=correct_provider)
+    stuck_msgs = stuck_provider.calls[0]["messages"]
+    correct_msgs = correct_provider.calls[0]["messages"]
+    assert isinstance(stuck_msgs, list)
+    assert isinstance(correct_msgs, list)
+    # Identical prompt content regardless of moment — the moment never leaks into the LLM call.
+    assert stuck_msgs[0].content == correct_msgs[0].content
+    assert "stuck" not in stuck_msgs[0].content.lower()
+    assert "correct" not in stuck_msgs[0].content.lower()
 
 
 def test_mascot_prompt_forbids_revealing_the_answer() -> None:

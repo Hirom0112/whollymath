@@ -171,3 +171,140 @@
 .wm-mascot-mute:hover {
   color: var(--wm-ink);
 }
+
+/* ───────────────── emotion (Avatar Phase 0) ─────────────────
+   The figure visibly reflects the live backend emotion. Classes are namespaced `.wm-guide-emotion-*`
+   (NOT `.wm-mascot-*`) because they belong to the shared guide contract that the future 3D surface
+   also reads — and because reused global class names collide app-wide. `--wm-guide-weight` is the
+   [0,1] intensity the contract clamps; it scales each animation's amplitude so a faint signal stays
+   subtle and a strong one reads. Subtle and tasteful by design. All animation is OFF under
+   prefers-reduced-motion (the class still applies, so non-motion cues like the celebrate hue
+   remain). neutral is intentionally inert (idle). */
+.wm-guide-emotion-encourage,
+.wm-guide-emotion-celebrate,
+.wm-guide-emotion-think,
+.wm-guide-emotion-reassure {
+  /* Amplitude factor: 0.4 floor so even weight 0 reads as a gentle motion, up to 1.0 at full. */
+  --wm-guide-amp: calc(0.4 + 0.6 * var(--wm-guide-weight, 0));
+  transform-origin: center bottom;
+}
+
+/* encourage — a small forward lean ("you've got this"). */
+.wm-guide-emotion-encourage {
+  animation: wm-guide-encourage 1.6s ease-in-out infinite;
+}
+@keyframes wm-guide-encourage {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(calc(3deg * var(--wm-guide-amp)));
+  }
+}
+
+/* celebrate — a happy bob, plus a brighter pie ring at higher intensity. */
+.wm-guide-emotion-celebrate {
+  animation: wm-guide-celebrate 0.7s ease-in-out infinite;
+}
+.wm-guide-emotion-celebrate .wm-mascot-pie {
+  box-shadow:
+    0 6px 0 var(--wm-navy-deep),
+    0 0 calc(10px * var(--wm-guide-weight, 0)) var(--wm-yellow);
+}
+@keyframes wm-guide-celebrate {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(-8px * var(--wm-guide-amp)));
+  }
+}
+
+/* think — a slow, contemplative head tilt ("let me ponder this"). */
+.wm-guide-emotion-think {
+  animation: wm-guide-think 2.8s ease-in-out infinite;
+}
+@keyframes wm-guide-think {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(calc(-5deg * var(--wm-guide-amp)));
+  }
+}
+
+/* reassure — a gentle, slow nod ("it's okay, we'll get there"). */
+.wm-guide-emotion-reassure {
+  animation: wm-guide-reassure 2.2s ease-in-out infinite;
+}
+@keyframes wm-guide-reassure {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(3px * var(--wm-guide-amp)));
+  }
+}
+
+/* neutral — deliberately no animation (idle). The class is present for the contract/3D path. */
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-guide-emotion-encourage,
+  .wm-guide-emotion-celebrate,
+  .wm-guide-emotion-think,
+  .wm-guide-emotion-reassure {
+    animation: none;
+  }
+}
+
+/* Talking mouth (Slice AR.3) — a subtle open/close while the mascot SPEAKS cached audio.
+   Namespaced `.wm-guide-*` to avoid the global-CSS class-collision footgun. The mouth element is
+   always in the DOM but INVISIBLE at idle (scaleY 0); only when the figure carries
+   `.wm-guide-speaking` does it become visible and animate. It sits over the static smile (same
+   anchor), so a speaking mascot reads as "mouth moving", an idle one as the usual smile. */
+.wm-guide-mouth {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  transform: translateX(-50%) scaleY(0);
+  width: 22px;
+  height: 16px;
+  background: var(--wm-navy-deep);
+  border-radius: 0 0 22px 22px;
+  opacity: 0;
+}
+.wm-guide-speaking .wm-guide-mouth {
+  opacity: 1;
+  animation: wm-guide-talk 0.34s ease-in-out infinite;
+}
+/* While speaking, tuck the static smile away so the moving mouth reads cleanly (one mouth at a
+   time). The smile returns the instant `.wm-guide-speaking` is removed (idle). */
+.wm-guide-speaking .wm-mascot-smile {
+  opacity: 0;
+}
+@keyframes wm-guide-talk {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleY(0.25);
+  }
+  50% {
+    transform: translateX(-50%) scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Reduced-motion users get no audio from the hook anyway, but defend the animation here too:
+     the mouth holds a gentle static shape instead of pulsing, and the smile stays. */
+  .wm-guide-speaking .wm-guide-mouth {
+    animation: none;
+    transform: translateX(-50%) scaleY(0);
+    opacity: 0;
+  }
+  .wm-guide-speaking .wm-mascot-smile {
+    opacity: 1;
+  }
+}

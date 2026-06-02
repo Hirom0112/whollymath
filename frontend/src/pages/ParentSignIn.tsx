@@ -1,12 +1,13 @@
 import './ParentSignIn.css';
 
 /**
- * Parent sign-in gate (mirrors TeacherSignIn). The warm adult counterpart to the kid landing, in
- * the same split-panel register: a navy "world" panel on the left (a single warm child-progress
- * preview, recreated in pure CSS so it ships no raster asset) beside a cream sign-in panel on the
- * right. Two ways in: a real Google/OIDC path (wired once parent auth lands) and a demo path that
- * drops straight into the seeded household. Both call `onSignIn`; the container sets the demo token.
- * Unique classes app-wide (`.wm-psignin-*`); reuses the shared brand tokens.
+ * Parent sign-in gate (mirrors TeacherSignIn). The warm adult counterpart to the kid landing, in a
+ * split-panel register: a cosmic "world" panel on the left — our starfield (public/parent-cosmos.jpg)
+ * carrying three floating preview cards (today's focus, skill mastery, practice suggestions),
+ * recreated in pure CSS/SVG so they ship no live data — beside a cream sign-in panel on the right.
+ * Two ways in: a real Google/OIDC path (wired once parent auth lands) and a demo path that drops
+ * straight into the seeded household. Both call `onSignIn`; the container sets the demo token. The
+ * brand mark is our own WhollyMath pie, rotating. Unique classes app-wide (`.wm-psignin-*`).
  */
 
 const GoogleG = (): React.JSX.Element => (
@@ -30,51 +31,119 @@ const GoogleG = (): React.JSX.Element => (
   </svg>
 );
 
-/** The floating child-progress preview that anchors the navy panel — a stylized, non-interactive
- *  abstraction of one child's card (name + accuracy trend + a "doing great" / "needs help" split).
- *  Decorative chrome only, so it carries no live data and is hidden from assistive tech. */
-const ChildPreview = (): React.JSX.Element => (
-  <div className="wm-psignin-preview" aria-hidden="true">
-    <div className="wm-psignin-pv-head">
-      <span className="wm-psignin-pv-avatar" />
-      <span className="wm-psignin-pv-headtext">
-        <span className="wm-psignin-pv-name" />
-        <span className="wm-psignin-pv-grade" />
-      </span>
-      <span className="wm-psignin-pv-badge" />
-    </div>
-    <svg className="wm-psignin-pv-chart" viewBox="0 0 200 64" preserveAspectRatio="none">
+/** Card 1: a today's-focus snapshot — an upward accuracy trend with a "doing great" tag + a bar. */
+const FocusCard = (): React.JSX.Element => (
+  <div className="wm-psignin-card wm-psignin-card-focus" aria-hidden="true">
+    <p className="wm-psignin-card-title">Today&rsquo;s Focus</p>
+    <svg className="wm-psignin-spark" viewBox="0 0 200 70" preserveAspectRatio="none">
       <defs>
         <linearGradient id="wm-ppv-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--wm-mean-correct)" stopOpacity="0.34" />
+          <stop offset="0%" stopColor="var(--wm-mean-correct)" stopOpacity="0.32" />
           <stop offset="100%" stopColor="var(--wm-mean-correct)" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path
-        d="M0 48 L28 44 L56 38 L84 40 L112 30 L140 24 L168 18 L200 10 L200 64 L0 64 Z"
+        d="M0 54 L26 46 L52 50 L78 30 L104 40 L130 22 L156 26 L200 8 L200 70 L0 70 Z"
         fill="url(#wm-ppv-fill)"
       />
       <path
-        d="M0 48 L28 44 L56 38 L84 40 L112 30 L140 24 L168 18 L200 10"
+        d="M0 54 L26 46 L52 50 L78 30 L104 40 L130 22 L156 26 L200 8"
         fill="none"
         stroke="var(--wm-mean-correct)"
-        strokeWidth="2.5"
+        strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
-    <ul className="wm-psignin-pv-rows">
-      <li className="wm-psignin-pv-row">
-        <span className="wm-psignin-pv-pip wm-psignin-pv-pip-good" />
-        <span className="wm-psignin-pv-bar" style={{ width: '70%' }} />
-      </li>
-      <li className="wm-psignin-pv-row">
-        <span className="wm-psignin-pv-pip wm-psignin-pv-pip-help" />
-        <span className="wm-psignin-pv-bar" style={{ width: '46%' }} />
-      </li>
+    <p className="wm-psignin-tag">
+      <span className="wm-psignin-pip wm-psignin-pip-good" />
+      doing great
+    </p>
+    <span className="wm-psignin-progress">
+      <span className="wm-psignin-progress-fill" />
+    </span>
+  </div>
+);
+
+/** Card 2: a skill-mastery donut with a small legend — mastered / on track / needs help. */
+const MasteryCard = (): React.JSX.Element => (
+  <div className="wm-psignin-card wm-psignin-card-mastery" aria-hidden="true">
+    <p className="wm-psignin-card-title">Skill Mastery</p>
+    <div className="wm-psignin-mastery-row">
+      <span className="wm-psignin-donut" />
+      <ul className="wm-psignin-legend">
+        <li>
+          <span className="wm-psignin-pip wm-psignin-pip-good" />
+          Mastered
+        </li>
+        <li>
+          <span className="wm-psignin-pip wm-psignin-pip-mid" />
+          On track
+        </li>
+        <li>
+          <span className="wm-psignin-pip wm-psignin-pip-help" />
+          Needs help
+        </li>
+      </ul>
+    </div>
+  </div>
+);
+
+const VideoIcon = (): React.JSX.Element => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="wm-psignin-chip-icon">
+    <rect x="2.5" y="6" width="13" height="12" rx="2.5" fill="currentColor" />
+    <path d="M16.5 10 L21.5 7 V17 L16.5 14 Z" fill="currentColor" />
+  </svg>
+);
+
+/** Card 3: a few practice suggestions, with a quick-video chip. */
+const SuggestCard = (): React.JSX.Element => (
+  <div className="wm-psignin-card wm-psignin-card-suggest" aria-hidden="true">
+    <div className="wm-psignin-suggest-head">
+      <p className="wm-psignin-card-title">Practice Suggestions</p>
+      <span className="wm-psignin-chip">
+        <VideoIcon />
+        Quick video
+      </span>
+    </div>
+    <ul className="wm-psignin-suggest-list">
+      <li>Fraction-bar warm-up</li>
+      <li>Number-line practice</li>
+      <li>Ratio jars together</li>
     </ul>
   </div>
 );
+
+const ClockIcon = (): React.JSX.Element => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="wm-psignin-feat-svg">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7.5 V12 L15 14" strokeLinecap="round" />
+  </svg>
+);
+
+const ProgressIcon = (): React.JSX.Element => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="wm-psignin-feat-svg">
+    <path d="M4 20 V4" strokeLinecap="round" />
+    <path d="M4 20 H20" strokeLinecap="round" />
+    <path d="M7 16 L11 12 L14 14 L19 8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M16 8 H19 V11" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const ConnectIcon = (): React.JSX.Element => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="wm-psignin-feat-svg">
+    <circle cx="8.5" cy="8" r="3" />
+    <circle cx="16" cy="9.5" r="2.5" />
+    <path d="M3.5 19 c0-3 2.2-5 5-5 s5 2 5 5" strokeLinecap="round" />
+    <path d="M14.5 19 c0-2.4 1.4-4 3.5-4 s3.5 1.6 3.5 4" strokeLinecap="round" />
+  </svg>
+);
+
+const FEATURES: { icon: () => React.JSX.Element; title: string; sub: string }[] = [
+  { icon: ClockIcon, title: 'Daily Activity Summary', sub: 'What they focused on today' },
+  { icon: ProgressIcon, title: 'Progress & Challenges', sub: 'Strengths and areas for practice' },
+  { icon: ConnectIcon, title: 'Connect and Practice', sub: 'Fun, curated home exercises' },
+];
 
 export function ParentSignIn({
   onSignIn,
@@ -88,7 +157,11 @@ export function ParentSignIn({
   return (
     <div className="wm-psignin">
       <aside className="wm-psignin-art" aria-hidden="true">
-        <ChildPreview />
+        <div className="wm-psignin-stage">
+          <FocusCard />
+          <MasteryCard />
+          <SuggestCard />
+        </div>
       </aside>
 
       <main className="wm-psignin-panel">
@@ -100,18 +173,25 @@ export function ParentSignIn({
           </div>
 
           <div className="wm-psignin-body">
-            <div className="wm-psignin-lead">
-              <h1 className="wm-psignin-headline">
-                See your child&rsquo;s
-                <br />
-                <span className="wm-psignin-accent">progress</span> at a glance.
-              </h1>
-              <ul className="wm-psignin-points">
-                <li>What they worked on today</li>
-                <li>Where they&rsquo;re doing great &mdash; and where they need help</li>
-                <li>Simple ideas to practice together at home</li>
-              </ul>
-            </div>
+            <h1 className="wm-psignin-headline">
+              Unlock Your
+              <br />
+              Child&rsquo;s <span className="wm-psignin-underline">Success</span>
+            </h1>
+
+            <ul className="wm-psignin-features">
+              {FEATURES.map(({ icon: Icon, title, sub }) => (
+                <li key={title} className="wm-psignin-feature">
+                  <span className="wm-psignin-feat-icon">
+                    <Icon />
+                  </span>
+                  <span className="wm-psignin-feat-text">
+                    <span className="wm-psignin-feat-title">{title}</span>
+                    <span className="wm-psignin-feat-sub">{sub}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
 
             <div className="wm-psignin-actions">
               <button
@@ -133,9 +213,9 @@ export function ParentSignIn({
                 {error}
               </p>
             ) : null}
-          </div>
 
-          <p className="wm-psignin-note">The demo uses sample children. No real student data.</p>
+            <p className="wm-psignin-note">The demo uses sample children. No real student data.</p>
+          </div>
         </div>
       </main>
     </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { demoLogin, fetchRoster, setTeacherToken } from '../api/teacher';
+import { ThemeProvider } from '../state/ThemeContext';
 
 import { TeacherDashboard } from './TeacherDashboard';
 import { TeacherSignIn } from './TeacherSignIn';
@@ -22,6 +23,17 @@ import { TeacherStudentView } from './TeacherStudentView';
 type TeacherView = { kind: 'roster' } | { kind: 'student'; studentId: string };
 
 export function TeacherApp(): React.JSX.Element {
+  // The whole teacher surface is wrapped in ThemeProvider so dark mode is set on <html> the
+  // entire time the teacher is on screen (sign-in, roster, and drill-in) and cleared the
+  // moment the surface unmounts — guaranteeing it never leaks to learner pages.
+  return (
+    <ThemeProvider>
+      <TeacherSurface />
+    </ThemeProvider>
+  );
+}
+
+function TeacherSurface(): React.JSX.Element {
   const [signedIn, setSignedIn] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);

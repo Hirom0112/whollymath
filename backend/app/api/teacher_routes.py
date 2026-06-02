@@ -25,10 +25,14 @@ from app.api.routes import StoreDep
 from app.api.schemas import (
     AssignUnitRequest,
     AssignUnitResult,
+    CreateReminderRequest,
     DemoLoginResponse,
+    TeacherAggregateTrends,
     TeacherHandle,
+    TeacherReminderView,
     TeacherRosterView,
     TeacherStudentView,
+    UpdateReminderRequest,
 )
 from app.api.teacher_service import TeacherService
 from app.db.repositories import DEMO_TEACHER_SESSION_ID
@@ -82,6 +86,56 @@ def teacher_roster(teacher: CurrentTeacherDep, store: StoreDep) -> TeacherRoster
     """
     service = TeacherService(store.session_factory)
     return service.roster(teacher.learner_id, datetime.now(UTC))
+
+
+@teacher_router.get("/aggregate-trends", response_model=TeacherAggregateTrends)
+def teacher_aggregate_trends(teacher: CurrentTeacherDep, store: StoreDep) -> TeacherAggregateTrends:
+    """Class-wide trend series for the dashboard (the aggregate skill-gap area chart).
+
+    ``current_teacher`` has already authorized the caller; the series is computed only over THIS
+    teacher's roster. Declared BEFORE ``/student/{student_id}`` so the literal path is matched
+    ahead of the parameterized one.
+    """
+    service = TeacherService(store.session_factory)
+    return service.aggregate_trends(teacher.learner_id, datetime.now(UTC))
+
+
+@teacher_router.get("/reminders", response_model=list[TeacherReminderView])
+def teacher_list_reminders(
+    teacher: CurrentTeacherDep, store: StoreDep
+) -> list[TeacherReminderView]:
+    """The authenticated teacher's to-do reminders, newest-first. Scoped to this teacher."""
+    return TeacherService(store.session_factory).list_reminders(teacher.learner_id)
+
+
+@teacher_router.post("/reminders", response_model=TeacherReminderView)
+def teacher_create_reminder(
+    body: CreateReminderRequest, teacher: CurrentTeacherDep, store: StoreDep
+) -> TeacherReminderView:
+    """Create a reminder for the authenticated teacher. 503 when persistence is unavailable."""
+    view = TeacherService(store.session_factory).create_reminder(teacher.learner_id, body.text)
+    if view is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="account persistence is unavailable",
+        )
+    return view
+
+
+@teacher_router.patch("/reminders/{reminder_id}", response_model=TeacherReminderView)
+def teacher_update_reminder(
+    reminder_id: str,
+    body: UpdateReminderRequest,
+    teacher: CurrentTeacherDep,
+    store: StoreDep,
+) -> TeacherReminderView:
+    """Toggle a reminder's done flag. 404 if it is unknown or not this teacher's."""
+    view = TeacherService(store.session_factory).set_reminder_done(
+        teacher.learner_id, reminder_id, body.done
+    )
+    if view is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="reminder not found")
+    return view
 
 
 @teacher_router.get("/student/{student_id}", response_model=TeacherStudentView)

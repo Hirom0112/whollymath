@@ -462,6 +462,17 @@
   gap: 10px;
 }
 
+/* On a picture card (jar / scene), center the answer input and actions under the centered visual,
+   so the boxes sit in the middle rather than hugging the left edge. Plain text-only lessons keep
+   the default left-aligned layout. */
+.wm-tutor-form--centered {
+  align-items: center;
+}
+
+.wm-tutor-form--centered .wm-tutor-actions {
+  justify-content: center;
+}
+
 /* The counter jar is the card's visual anchor — centered at the top, above the prompt. */
 .wm-tutor-statement-card .wm-setmodel,
 .wm-setmodel {

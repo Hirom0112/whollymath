@@ -23,7 +23,10 @@ and the ``llm`` provider — the only place an LLM is reached (§8.1).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from app.llm.provider import AnthropicProvider, LLMProvider, Message, Tier
+from app.policy.emotion import Emotion, MomentType, select_emotion
 
 # The mascot's character + the hard guardrails. It rephrases; it never solves or reveals.
 MASCOT_SYSTEM_PROMPT = (
@@ -35,19 +38,61 @@ MASCOT_SYSTEM_PROMPT = (
 )
 
 
+@dataclass(frozen=True)
+class VoicedHelp:
+    """A line of tutor help: the (LLM-voiced) ``text`` plus its deterministic avatar affect.
+
+    Slice 1.3: the avatar (Slice 2.2) both SPEAKS ``text`` and plays the ``emotion`` animation
+    at ``intensity``. The split is the load-bearing invariant — the LLM produces ONLY ``text``
+    (below); ``emotion`` and ``intensity`` come from ``policy.emotion.select_emotion`` keyed to
+    the MOMENT TYPE the deterministic caller is in, never from the model and never from the
+    learner's knowledge state (§8.3). Frozen/value-only so it is trivially comparable in tests.
+    """
+
+    text: str
+    emotion: Emotion
+    intensity: float
+
+
 def voice_help(
     base_text: str,
     *,
+    moment: MomentType,
     provider: LLMProvider | None = None,
     tier: Tier = "cheap",
-) -> str:
-    """Rephrase an already-decided help line in the mascot's voice; fall back to it verbatim.
+) -> VoicedHelp:
+    """Voice an already-decided help line and pair it with its deterministic avatar affect.
 
-    ``base_text`` is the deterministic help text (a §3.8 nudge / the proactive intervention
-    line) — the only content the model sees. With no ``provider`` the text is returned
-    unchanged (Layer 4 disabled, invariant 4); ``create_app`` injects the Anthropic provider
-    to enable voicing live. Any provider failure also returns ``base_text`` — voicing is a
-    polish that must never break a help moment.
+    Two halves, kept strictly separate (Slice 1.3):
+
+      - ``text`` — the LLM rephrases ``base_text`` (the deterministic §3.8 nudge / proactive
+        line) in the mascot's voice. ``base_text`` is the ONLY content the model sees. With no
+        ``provider`` the text is returned unchanged (Layer 4 disabled, invariant 4); any
+        provider failure or blank completion also falls back to ``base_text`` — voicing is a
+        polish that must never break a help moment. The model NEVER sees ``moment`` or any
+        knowledge state.
+      - ``emotion`` / ``intensity`` — chosen deterministically from ``moment`` by the policy
+        layer (``select_emotion``), so the avatar's affect can never contradict the verdict
+        (no celebrating a wrong answer) and never leaks knowledge state (§8.3).
+    """
+    cue = select_emotion(moment)
+    return VoicedHelp(
+        text=_voice_text(base_text, provider=provider, tier=tier),
+        emotion=cue.emotion,
+        intensity=cue.intensity,
+    )
+
+
+def _voice_text(
+    base_text: str,
+    *,
+    provider: LLMProvider | None,
+    tier: Tier,
+) -> str:
+    """Rephrase ``base_text`` in the mascot's voice, or return it verbatim (invariant 4).
+
+    The LLM half of ``voice_help`` in isolation: it sees only ``base_text`` — never the moment,
+    never the learner's knowledge state. Disabled/failing/blank all fall back to ``base_text``.
     """
     if provider is None:
         return base_text
@@ -66,4 +111,4 @@ def default_voice_provider() -> LLMProvider:
     return AnthropicProvider()
 
 
-__all__ = ["MASCOT_SYSTEM_PROMPT", "default_voice_provider", "voice_help"]
+__all__ = ["MASCOT_SYSTEM_PROMPT", "VoicedHelp", "default_voice_provider", "voice_help"]

@@ -11,6 +11,8 @@
 import type {
   AssignableUnitView,
   RosterStudentView,
+  TeacherAggregateTrends,
+  TeacherReminder,
   TeacherRosterView,
   TeacherStudentView,
 } from './teacher';
@@ -37,8 +39,80 @@ const ALL_UNITS: AssignableUnitView[] = [
 // drill-in within a session (TODO TCH.B7 is idempotent; this mirrors that for the demo).
 const assignedOverrides = new Map<string, string>();
 
+// ── Synthetic trend series (dashboard upgrade) ──────────────────────────────
+// Hand-authored, deterministic (no Math.random) so the dashboard renders the same
+// pictures every time and is honest to screenshot. Per the mockup: struggling
+// students decline (red, down), needs-attention waver, on-track rise (green, up).
+// `trend` is a 10-point per-student series; `accuracy_history` is 10 session
+// accuracies (0..1). Keyed by student_id and merged into the seed below.
+interface StudentTrendDetail {
+  trend: number[];
+  accuracy_history: number[];
+  remediation_estimate_minutes: number | null;
+  notes: string | null;
+}
+
+const TREND_DETAIL: Record<string, StudentTrendDetail> = {
+  // Struggling — declining lines.
+  'stu-maya': {
+    trend: [70, 66, 61, 58, 54, 49, 47, 43, 40, 38],
+    accuracy_history: [0.7, 0.66, 0.61, 0.58, 0.54, 0.49, 0.47, 0.43, 0.4, 0.38],
+    remediation_estimate_minutes: 25,
+    notes: 'Pull for small-group number-line work; natural-number bias is repeating.',
+  },
+  'stu-dev': {
+    trend: [44, 42, 41, 38, 37, 35, 34, 31, 30, 29],
+    accuracy_history: [0.44, 0.42, 0.41, 0.38, 0.37, 0.35, 0.34, 0.31, 0.3, 0.29],
+    remediation_estimate_minutes: 30,
+    notes: 'Stuck in remediation 3 sessions; try varied partitions so ticks cannot be counted.',
+  },
+  // Needs attention — wavering / sideways.
+  'stu-liam': {
+    trend: [62, 64, 61, 63, 60, 62, 59, 61, 58, 60],
+    accuracy_history: [0.62, 0.64, 0.61, 0.63, 0.6, 0.62, 0.59, 0.61, 0.58, 0.6],
+    remediation_estimate_minutes: 15,
+    notes: 'Accuracy fine but help-need rising; a quick check-in before it slides.',
+  },
+  'stu-sofia': {
+    trend: [68, 66, 67, 63, 62, 60, 61, 58, 59, 57],
+    accuracy_history: [0.68, 0.66, 0.67, 0.63, 0.62, 0.6, 0.61, 0.58, 0.59, 0.57],
+    remediation_estimate_minutes: 20,
+    notes: 'Add-across pattern on common denominators; fraction bars target it directly.',
+  },
+  'stu-aiden': {
+    trend: [78, 79, 77, 78, 76, 77, 75, 76, 74, 75],
+    accuracy_history: [0.78, 0.79, 0.77, 0.78, 0.76, 0.77, 0.75, 0.76, 0.74, 0.75],
+    remediation_estimate_minutes: null,
+    notes: 'Idle 5 days mid-lesson; engagement nudge, not a learning gap.',
+  },
+  // On track — rising lines.
+  'stu-grace': {
+    trend: [72, 75, 77, 80, 82, 85, 87, 89, 91, 93],
+    accuracy_history: [0.72, 0.75, 0.77, 0.8, 0.82, 0.85, 0.87, 0.89, 0.91, 0.93],
+    remediation_estimate_minutes: null,
+    notes: 'Steady unscaffolded gains; queue the next unit so she does not stall.',
+  },
+  'stu-noah': {
+    trend: [70, 72, 74, 76, 79, 81, 82, 84, 86, 88],
+    accuracy_history: [0.7, 0.72, 0.74, 0.76, 0.79, 0.81, 0.82, 0.84, 0.86, 0.88],
+    remediation_estimate_minutes: null,
+    notes: 'Three skills mastered cleanly; on pace to finish the unit this week.',
+  },
+  'stu-emma': {
+    trend: [80, 82, 83, 85, 87, 89, 90, 92, 93, 95],
+    accuracy_history: [0.8, 0.82, 0.83, 0.85, 0.87, 0.89, 0.9, 0.92, 0.93, 0.95],
+    remediation_estimate_minutes: null,
+    notes: 'Four of five skills mastered across representations; strong next-unit candidate.',
+  },
+};
+
+// The seed authors everything EXCEPT the trend fields, which come from TREND_DETAIL
+// (merged in `fullStudent` below). This keeps the per-student rows readable and the
+// trend series in one place where the rise/decline shapes are easy to eyeball.
+type SeedStudent = Omit<TeacherStudentView, keyof StudentTrendDetail>;
+
 interface DemoSeed {
-  student: TeacherStudentView;
+  student: SeedStudent;
 }
 
 const SEED: DemoSeed[] = [
@@ -377,7 +451,22 @@ const SEED: DemoSeed[] = [
   },
 ];
 
-function rosterRow(s: TeacherStudentView): RosterStudentView {
+// Fallback trend detail for any seed student not listed in TREND_DETAIL (all eight
+// are, but this keeps the merge total and the types honest). Flat = "steady".
+const FALLBACK_DETAIL: StudentTrendDetail = {
+  trend: [50, 50, 50, 50, 50, 50, 50, 50, 50, 50],
+  accuracy_history: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+  remediation_estimate_minutes: null,
+  notes: null,
+};
+
+/** Merge a seed student with its trend detail into the full wire shape. */
+function fullStudent(s: SeedStudent): TeacherStudentView {
+  return { ...s, ...(TREND_DETAIL[s.student_id] ?? FALLBACK_DETAIL) };
+}
+
+function rosterRow(s: SeedStudent): RosterStudentView {
+  const detail = TREND_DETAIL[s.student_id] ?? FALLBACK_DETAIL;
   return {
     student_id: s.student_id,
     name: s.name,
@@ -387,22 +476,47 @@ function rosterRow(s: TeacherStudentView): RosterStudentView {
     current_lesson_title: s.current_lesson_title,
     percent_complete: s.percent_complete,
     alerts: s.alerts,
+    trend: detail.trend,
   };
 }
 
-/** The demo roster (TODO TCH.B8 `GET /teacher/roster` shape). */
+// Per-bucket 12-point trend series for the status-strip sparklines: struggling
+// declines (red, down), needs-attention wavers sideways, on-track rises (green, up).
+const BUCKET_TRENDS = {
+  struggling: [58, 55, 53, 50, 48, 45, 43, 41, 39, 37, 35, 33],
+  needs_attention: [60, 61, 59, 62, 58, 60, 59, 61, 58, 60, 57, 59],
+  on_track: [70, 72, 74, 75, 77, 79, 81, 83, 85, 87, 89, 91],
+};
+
+/** The demo roster (TODO TCH.B8 `GET /teacher/roster` shape) + dashboard-upgrade trends. */
 export const DEMO_ROSTER: TeacherRosterView = {
   teacher_name: 'Ms. Alvarez',
   class_name: 'Period 3 · Grade 6 Math',
   students: SEED.map((seed) => rosterRow(seed.student)),
+  as_of: '2026-06-01T09:15:00Z',
+  bucket_trends: BUCKET_TRENDS,
 };
+
+/** Class-level aggregate series for the "Student Insights" AreaChart (14 points, oldest → newest). */
+export const DEMO_AGGREGATE_TRENDS: TeacherAggregateTrends = {
+  // Class skill-gap shrinking overall, with a mid-unit bump where new content landed.
+  skill_gap_series: [42, 41, 43, 40, 38, 39, 36, 34, 35, 32, 30, 29, 27, 25],
+};
+
+/** A short demo to-do list for the dashboard's reminders strip. */
+export const DEMO_REMINDERS: TeacherReminder[] = [
+  { id: 'rem-1', text: 'Pull Maya & Dev for small-group number-line work', done: false },
+  { id: 'rem-2', text: 'Check in with Liam about pacing before Friday', done: false },
+  { id: 'rem-3', text: 'Assign the next unit to Grace and Emma', done: true },
+];
 
 /** One student's full drill-in, with any in-session assigned-unit override applied. */
 export function demoStudent(studentId: string): TeacherStudentView | null {
   const seed = SEED.find((s) => s.student.student_id === studentId);
   if (seed === undefined) return null;
+  const student = fullStudent(seed.student);
   const override = assignedOverrides.get(studentId);
-  return override === undefined ? seed.student : { ...seed.student, assigned_unit_id: override };
+  return override === undefined ? student : { ...student, assigned_unit_id: override };
 }
 
 /** Record an assign-next-unit in the demo (idempotent), returning the updated student. */
@@ -410,5 +524,5 @@ export function assignUnitInDemo(studentId: string, unitId: string): TeacherStud
   const seed = SEED.find((s) => s.student.student_id === studentId);
   if (seed === undefined) return null;
   assignedOverrides.set(studentId, unitId);
-  return { ...seed.student, assigned_unit_id: unitId };
+  return { ...fullStudent(seed.student), assigned_unit_id: unitId };
 }

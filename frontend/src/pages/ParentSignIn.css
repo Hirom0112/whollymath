@@ -1,6 +1,6 @@
-/* Parent sign-in gate (mirrors TeacherSignIn.css). Split-panel register: a navy "world" panel (a
-   warm single-child progress preview, pure CSS/SVG) beside a cream sign-in panel. The demo pill is
-   YELLOW (the parent accent), not the teacher blue. Unique classes app-wide (.wm-psignin-*). */
+/* Parent sign-in gate (mirrors TeacherSignIn.css). Split-panel register: a COSMIC "world" panel
+   (our starfield, public/parent-cosmos.jpg) carrying three floating preview cards, beside a cream
+   sign-in panel. The demo pill is YELLOW (the parent accent). Unique classes app-wide (.wm-psignin-*). */
 
 .wm-psignin {
   min-height: 100vh;
@@ -14,81 +14,162 @@
   min-width: 0;
 }
 
-/* ── Left: the navy "world" panel with a floating child-progress preview ── */
+/* ── Left: the cosmic "world" panel with floating preview cards ── */
 
 .wm-psignin-art {
   position: relative;
   overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(15, 20, 48, 0.18), rgba(15, 20, 48, 0.4)),
+    url('/parent-cosmos.jpg') center / cover no-repeat;
   background-color: var(--wm-navy-deep);
 }
-.wm-psignin-art::before {
-  content: '';
+
+.wm-psignin-stage {
   position: absolute;
   inset: 0;
-  /* A soft brand-tinted wash so the panel reads as the warm navy "world", with no raster asset. */
-  background:
-    radial-gradient(120% 90% at 20% 15%, rgba(74, 108, 240, 0.34), transparent 60%),
-    radial-gradient(120% 90% at 85% 90%, rgba(217, 102, 63, 0.26), transparent 62%);
 }
 
-.wm-psignin-preview {
+/* Shared card chrome — a clean white card, soft deep shadow, faint inner hairline. */
+.wm-psignin-card {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(360px, 80%);
-  transform: translate(-50%, -50%) rotate(-3deg);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
   background: #fff;
   border-radius: var(--wm-r-md);
-  padding: 18px 18px 16px;
+  padding: 14px 16px;
   box-shadow:
-    0 30px 70px rgba(0, 0, 0, 0.4),
+    0 24px 60px rgba(0, 0, 0, 0.42),
     inset 0 0 0 1px rgba(20, 30, 70, 0.06);
 }
-.wm-psignin-pv-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.wm-psignin-card-title {
+  margin: 0 0 10px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.2px;
+  color: var(--wm-navy-deep);
 }
-.wm-psignin-pv-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  flex: none;
-  background: var(--wm-blue-soft);
+
+/* Card 1 — Today's Focus (top-left, tilted left) */
+.wm-psignin-card-focus {
+  top: 13%;
+  left: 8%;
+  width: min(216px, 42%);
+  transform: rotate(-5deg);
 }
-.wm-psignin-pv-headtext {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  flex: 1;
-}
-.wm-psignin-pv-name {
-  width: 70px;
-  height: 9px;
-  border-radius: 3px;
-  background: var(--wm-navy);
-}
-.wm-psignin-pv-grade {
-  width: 44px;
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(20, 30, 70, 0.18);
-}
-.wm-psignin-pv-badge {
-  width: 50px;
-  height: 18px;
-  border-radius: var(--wm-r-pill);
-  background: rgba(95, 209, 126, 0.3);
-}
-.wm-psignin-pv-chart {
+.wm-psignin-spark {
   width: 100%;
-  height: 50px;
+  height: 56px;
   display: block;
 }
-.wm-psignin-pv-rows {
+.wm-psignin-tag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 8px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--wm-navy-deep);
+}
+.wm-psignin-progress {
+  display: block;
+  height: 8px;
+  border-radius: var(--wm-r-pill);
+  background: rgba(20, 30, 70, 0.1);
+  overflow: hidden;
+}
+.wm-psignin-progress-fill {
+  display: block;
+  height: 100%;
+  width: 72%;
+  border-radius: var(--wm-r-pill);
+  background: var(--wm-mean-correct);
+}
+
+/* Card 2 — Skill Mastery (center-right, tilted right, on top) */
+.wm-psignin-card-mastery {
+  top: 30%;
+  left: 44%;
+  width: min(218px, 44%);
+  transform: rotate(4deg);
+  z-index: 2;
+}
+.wm-psignin-mastery-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.wm-psignin-donut {
+  position: relative;
+  flex: 0 0 auto;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--wm-mean-correct) 0 55%,
+    var(--wm-mean-attention) 55% 78%,
+    var(--wm-coral) 78% 100%
+  );
+}
+.wm-psignin-donut::after {
+  content: '';
+  position: absolute;
+  inset: 26%;
+  background: #fff;
+  border-radius: 50%;
+}
+.wm-psignin-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.wm-psignin-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wm-navy-deep);
+}
+
+/* Card 3 — Practice Suggestions (lower-center, tilted left) */
+.wm-psignin-card-suggest {
+  bottom: 14%;
+  left: 22%;
+  width: min(240px, 50%);
+  transform: rotate(-2deg);
+  z-index: 3;
+}
+.wm-psignin-suggest-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.wm-psignin-suggest-head .wm-psignin-card-title {
+  margin: 0;
+}
+.wm-psignin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--wm-navy);
+  border-radius: var(--wm-r-pill);
+  padding: 4px 9px;
+}
+.wm-psignin-chip-icon {
+  width: 14px;
+  height: 14px;
+}
+.wm-psignin-suggest-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -96,27 +177,39 @@
   flex-direction: column;
   gap: 8px;
 }
-.wm-psignin-pv-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.wm-psignin-suggest-list li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wm-navy-deep);
 }
-.wm-psignin-pv-pip {
+.wm-psignin-suggest-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--wm-blue-bright);
+}
+
+/* Shared status pips used in the cards. */
+.wm-psignin-pip {
   flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
 }
-.wm-psignin-pv-pip-good {
+.wm-psignin-pip-good {
   background: var(--wm-mean-correct);
 }
-.wm-psignin-pv-pip-help {
+.wm-psignin-pip-mid {
   background: var(--wm-mean-attention);
 }
-.wm-psignin-pv-bar {
-  height: 7px;
-  border-radius: 3px;
-  background: rgba(20, 30, 70, 0.12);
+.wm-psignin-pip-help {
+  background: var(--wm-coral);
 }
 
 /* ── Right: the cream sign-in panel ── */
@@ -129,7 +222,7 @@
 }
 .wm-psignin-inner {
   width: 100%;
-  max-width: 420px;
+  max-width: 430px;
   display: flex;
   flex-direction: column;
 }
@@ -140,8 +233,8 @@
   gap: 10px;
 }
 .wm-psignin-mark {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
@@ -179,69 +272,80 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 36px 0;
-}
-
-.wm-psignin-lead {
-  align-self: flex-start;
-  width: fit-content;
-  max-width: 100%;
-  text-align: left;
-  margin-bottom: 30px;
+  padding: 32px 0;
 }
 
 .wm-psignin-headline {
-  margin: 0 0 18px;
+  margin: 0 0 28px;
   font-family: var(--wm-font-serif);
   font-weight: 600;
   font-size: var(--wm-fs-display);
-  line-height: 1.05;
+  line-height: 1.04;
   letter-spacing: -1px;
   color: var(--wm-navy-deep);
 }
-/* The emphasized word — a clearly-yellow accent, drawn as a soft highlight under the text. */
-.wm-psignin-accent {
-  color: var(--wm-navy-deep);
-  background: linear-gradient(180deg, transparent 58%, var(--wm-yellow) 58%);
-  padding: 0 4px;
-  border-radius: 4px;
+/* The emphasized word — a hand-set gold underline stroke at the baseline. */
+.wm-psignin-underline {
+  background-image: linear-gradient(var(--wm-gold), var(--wm-gold));
+  background-repeat: no-repeat;
+  background-position: 0 96%;
+  background-size: 100% 7px;
+  padding-bottom: 1px;
 }
 
-.wm-psignin-points {
+/* The three feature rows — a round icon badge + title/subtitle. */
+.wm-psignin-features {
   list-style: none;
-  width: fit-content;
-  margin: 0;
+  margin: 0 0 32px;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 20px;
 }
-.wm-psignin-points li {
+.wm-psignin-feature {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+}
+.wm-psignin-feat-icon {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wm-page-bg);
+  border: 1.5px solid rgba(31, 44, 92, 0.14);
+}
+.wm-psignin-feat-svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--wm-navy-deep);
+  stroke-width: 1.9;
+}
+.wm-psignin-feat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wm-psignin-feat-title {
   font-family: var(--wm-font-serif);
-  font-size: var(--wm-fs-lead);
   font-weight: 600;
-  letter-spacing: -0.2px;
-  line-height: 1.25;
+  font-size: 19px;
+  letter-spacing: -0.3px;
   color: var(--wm-navy-deep);
 }
-.wm-psignin-points li::before {
-  content: '';
-  flex: 0 0 auto;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--wm-coral);
-  box-shadow: 0 0 0 4px rgba(217, 102, 63, 0.16);
+.wm-psignin-feat-sub {
+  font-size: 14px;
+  color: var(--wm-ink-soft);
 }
 
 .wm-psignin-actions {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 16px;
+  gap: 14px;
 }
 
 .wm-psignin-google {
@@ -319,7 +423,7 @@
 }
 
 .wm-psignin-error {
-  margin: 20px 0 0;
+  margin: 18px 0 0;
   padding: 12px 14px;
   font-size: var(--wm-fs-meta);
   color: #8f3a22;
@@ -329,11 +433,12 @@
 }
 
 .wm-psignin-note {
-  margin: 0;
-  padding-top: 20px;
+  margin: 22px 0 0;
+  padding-top: 18px;
   border-top: 1px solid rgba(20, 30, 70, 0.1);
   font-size: var(--wm-fs-meta);
   color: var(--wm-ink-soft);
+  text-align: center;
 }
 
 /* ── Responsive: drop the art panel; center the form ── */
@@ -349,7 +454,7 @@
   }
   .wm-psignin-body {
     justify-content: flex-start;
-    padding-top: 28px;
+    padding-top: 24px;
   }
   .wm-psignin-headline {
     font-size: var(--wm-fs-h1);

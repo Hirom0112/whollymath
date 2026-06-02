@@ -1,3 +1,4 @@
+import type { Emotion } from '@whollymath/shared-types';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { Mascot } from './Mascot';
@@ -75,6 +76,9 @@ export function PiMenu({
   items,
   label = 'Open the menu',
   onOpenChange,
+  emotion,
+  intensity,
+  speaking = false,
 }: {
   /** The nav choices to fan out, in display order. An empty list renders no trigger. */
   items: PiMenuItem[];
@@ -85,6 +89,12 @@ export function PiMenu({
    * help-speech bubble and this nav menu mutually exclusive (they share the mascot).
    */
   onOpenChange?: (open: boolean) => void;
+  /** Live emotion to reflect on the shared mascot figure (Avatar Phase 0); omit for none. */
+  emotion?: Emotion;
+  /** How strongly to play `emotion`, a [0,1] scalar. */
+  intensity?: number;
+  /** True while the shared mascot is SPEAKING cached audio (Slice AR.3); drives the talking mouth. */
+  speaking?: boolean;
 }): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -149,7 +159,7 @@ export function PiMenu({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="wm-pimenu-fig" aria-hidden="true">
-          <Mascot />
+          <Mascot emotion={emotion} intensity={intensity} speaking={speaking} />
         </span>
       </button>
 

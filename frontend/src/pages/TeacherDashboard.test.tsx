@@ -75,4 +75,36 @@ describe('TeacherDashboard', () => {
     await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
     expect(container.textContent ?? '').not.toContain('—');
   });
+
+  it('renders the class date from the roster as_of (timezone-stable)', async () => {
+    render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
+    // Demo as_of is "2026-06-01T09:15:00Z"; the date is parsed by parts, so it never shifts a day.
+    expect(screen.getByText('June 1, 2026')).toBeInTheDocument();
+  });
+
+  it('shows the status strip with one pill per bucket', async () => {
+    const { container } = render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
+    const strip = container.querySelector('.wm-teacher-statusstrip');
+    expect(strip).not.toBeNull();
+    expect(strip?.querySelectorAll('.wm-teacher-statuspill')).toHaveLength(3);
+  });
+
+  it('flags struggling rows with an "Urgent action" corner tag', async () => {
+    render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
+    const struggling = screen.getByRole('region', { name: 'struggling' });
+    // Both demo struggling students (Maya, Dev) carry the tag.
+    expect(within(struggling).getAllByText(/urgent action/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('toggles a reminder when its checkbox is clicked', async () => {
+    render(<TeacherDashboard onOpenStudent={vi.fn()} onExit={vi.fn()} />);
+    await screen.findByRole('heading', { level: 1, name: 'Period 3 · Grade 6 Math' });
+    const reminder = await screen.findByRole('checkbox', { name: /Pull Maya/i });
+    expect(reminder).not.toBeChecked();
+    fireEvent.click(reminder);
+    expect(reminder).toBeChecked();
+  });
 });

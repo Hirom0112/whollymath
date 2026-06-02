@@ -155,3 +155,60 @@ def test_seed_migration_upgrade_head_seeds_catalog(
     teks_only = [u.slug for u in _CATALOG_UNITS if u.ccss_cluster is None]
     assert teks_only  # the catalog really has single-framework units
     assert _scalar(url, "SELECT COUNT(*) FROM unit WHERE ccss_cluster IS NULL") == len(teks_only)
+
+
+# The dashboard-upgrade reminders migration (reversible) and the revision just before it (the
+# DAT.4 seed head it builds on).
+_REMINDER_REVISION = "d5e8a1c63f72"
+_PRE_REMINDER_REVISION = "b4f7c9a2e1d8"
+
+
+def test_reminder_migration_upgrade_then_downgrade_round_trips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Dashboard upgrade: upgrade to head adds teacher_reminder; downgrade removes it."""
+    db_path = tmp_path / "reminder_round_trip.sqlite"
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = _alembic_config()
+
+    # Apply the whole chain to the reminders revision (head): the table appears.
+    command.upgrade(config, _REMINDER_REVISION)
+    assert "teacher_reminder" in _table_names(url)
+
+    # Step back one revision (undo only the reminders migration): the table is gone, the
+    # prior tables survive.
+    command.downgrade(config, _PRE_REMINDER_REVISION)
+    tables_after_downgrade = _table_names(url)
+    assert "teacher_reminder" not in tables_after_downgrade
+    assert {"unit", "lesson", "roster", "assignment", "learner"} <= tables_after_downgrade
+
+
+# The Slice-0.3 help-language migration (reversible) and the revision just before it (the
+# dashboard-upgrade reminders head it builds on).
+_LOCALE_REVISION = "e7c2a9f4b108"
+_PRE_LOCALE_REVISION = "d5e8a1c63f72"
+
+
+def test_locale_migration_upgrade_then_downgrade_round_trips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Slice 0.3: upgrade to head adds learner.locale; downgrade removes it (Learner.locale)."""
+    db_path = tmp_path / "locale_round_trip.sqlite"
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = _alembic_config()
+
+    # Apply the whole chain to the locale revision (head): the column appears on learner.
+    command.upgrade(config, _LOCALE_REVISION)
+    assert "locale" in _learner_columns(url)
+
+    # Step back one revision (undo only the locale migration): the column is gone, the prior
+    # learner columns survive.
+    command.downgrade(config, _PRE_LOCALE_REVISION)
+    learner_cols_after_downgrade = _learner_columns(url)
+    assert "locale" not in learner_cols_after_downgrade
+    # The prior learner columns (incl. the role column the curriculum migration added) survive.
+    assert {"id", "session_id", "role"} <= learner_cols_after_downgrade

@@ -104,6 +104,10 @@ export type CourseNodeStatus = "locked" | "available" | "in_progress" | "mastere
  */
 export type InterventionKind = "inline_assertion" | "conceptual_prompt";
 /**
+ * The avatar emotion to PLAY with this nudge (Slice 1.3). Chosen deterministically in policy.emotion from the moment type — NEVER by the LLM (§8.3). A nudge is a help moment, so this is 'encourage'.
+ */
+export type Emotion = "encourage" | "celebrate" | "think" | "reassure" | "neutral";
+/**
  * Stable KC identifiers — the full Grade-6 ontology AND the HelpNeed model's label space.
  *
  * Two tiers (see the member groups below):
@@ -227,6 +231,20 @@ export type SurfaceState2 =
   | "S3_fraction_bars_primary"
   | "S4_worked_example"
   | "S5_transfer_probe";
+/**
+ * The CLOSED set of avatar emotions (Slice 1.3).
+ *
+ * A ``StrEnum`` so each member serializes as its stable string for the API and the
+ * generated TS union (the Avatar component, Slice 2.2, switches on these). Changing a
+ * VALUE is a breaking change to the wire contract and the generated TS union.
+ *
+ *   - ``encourage`` — gentle forward push (a hint, "you're close, keep going").
+ *   - ``celebrate`` — a win: a correct verdict or a passed transfer probe.
+ *   - ``think``     — a pondering beat (a conceptual nudge, "let's picture this").
+ *   - ``reassure``  — a soft, low-pressure beat after a wrong answer or a stuck moment.
+ *   - ``neutral``   — the resting default; no special affect to play.
+ */
+export type Emotion1 = "encourage" | "celebrate" | "think" | "reassure" | "neutral";
 /**
  * The learner's aggregated status on this unit.
  */
@@ -394,6 +412,18 @@ export interface TeacherStudentView {
   activity?: ActivityEventView[];
   assignable_units?: AssignableUnitView[];
   assigned_unit_id?: string | null;
+  /**
+   * Estimated minutes to remediate the weakest KC, from lessons-to-recover × a per-lesson budget (proxy — no per-lesson timing stored). null when nothing to remediate.
+   */
+  remediation_estimate_minutes?: number | null;
+  /**
+   * Length-10 recent-accuracy history (0..100). Deterministically derived from recent_error_rate (no real per-day history yet).
+   */
+  accuracy_history?: number[];
+  /**
+   * Short teacher-facing note line from the struggle summary; may be null.
+   */
+  notes?: string | null;
 }
 /**
  * One alert on a student (TCH.B5). ``message`` is plain-language, templated, NO LLM.
@@ -626,6 +656,17 @@ export interface StaticTurnView {
   student_answer: string;
 }
 /**
+ * Recent per-day class counts in each ranking bucket, for the dashboard header trend.
+ *
+ * Each list is length 12 (12 most recent days, oldest-first). Deterministically derived from the
+ * current bucket counts (no per-day snapshot store yet) — see ``app.teacher.trends.bucket_trend``.
+ */
+export interface BucketTrends {
+  struggling?: number[];
+  needs_attention?: number[];
+  on_track?: number[];
+}
+/**
  * One KC's place on the course map (Slice CP.A.1 — the course-product home screen).
  *
  * Each node carries enough to render a learning-path stop: its KC id + human-readable
@@ -672,6 +713,15 @@ export interface CourseView {
    * Every KC as a path node, in teaching order, with its status.
    */
   nodes?: CourseNodeView[];
+}
+/**
+ * ``POST /teacher/reminders`` body.
+ */
+export interface CreateReminderRequest {
+  /**
+   * The reminder text.
+   */
+  text: string;
 }
 /**
  * One operand laid out across the place-value columns (parallel to ``columns``).
@@ -837,6 +887,53 @@ export interface InterventionView {
    * The pre-written nudge text (no LLM, §8.1).
    */
   text: string;
+  emotion?: Emotion;
+  /**
+   * How strongly to play the emotion, a bounded [0,1] scalar (Slice 1.3).
+   */
+  intensity?: number;
+  /**
+   * Cached audio + lip-sync timing for this nudge, present ONLY when it is the canonical banked line with pre-rendered audio (AR.3); null when the line is dynamic/rephrased (captions-only, silent). When set, ``text`` is the canonical caption that matches the audio word-for-word (the canonical-line invariant — see SpokenAudio).
+   */
+  audio?: SpokenAudio | null;
+}
+/**
+ * A reference to the CACHED audio for a banked spoken line, plus its lip-sync timing (AR.3).
+ *
+ * Present on a help line ONLY when that line is a BANKED nudge with pre-rendered audio in the tts
+ * manifest (``app/tts/manifest_lookup.py``); ``null`` for any dynamic/LLM-rephrased line (those
+ * stay captions-only — no audio is synthesised on the turn loop, §8.1). When present, the surface
+ * plays ``audio_url`` (served as a static asset off the cache, never the turn loop) and animates
+ * the avatar's mouth from the word-timing triple.
+ *
+ * Design choice (the canonical-line invariant): the cached audio voices the EXACT canonical nudge
+ * text, so when audio is attached the surface shows the CANONICAL caption with it — audio and
+ * caption are the same words. The line's text may be LLM-rephrased for warmth, but that rephrase
+ * has no audio; the API only attaches audio when it can ship the canonical caption alongside, so
+ * the mouth never lip-syncs words the bubble does not show.
+ *
+ * ``words`` / ``wtimes`` / ``wdurations`` are parallel arrays (one entry per word): the word, its
+ * start time in seconds, and its duration. They are the lip-sync data TalkingHead's
+ * ``speakAudio(audio, {words, wtimes, wdurations})`` consumes; the 2D mascot derives a
+ * current-word index from ``wtimes`` to drive a talking-mouth animation.
+ */
+export interface SpokenAudio {
+  /**
+   * URL of the cached mp3, served as a static asset off the turn loop (§8.1).
+   */
+  audio_url: string;
+  /**
+   * The spoken words, in order (one per lip-sync entry).
+   */
+  words: string[];
+  /**
+   * Per-word start time in seconds (parallel to words).
+   */
+  wtimes: number[];
+  /**
+   * Per-word duration in seconds (parallel to words).
+   */
+  wdurations: number[];
 }
 /**
  * ``base^exponent`` shown as the expanded repeated product (6.EE.A.1).
@@ -1149,6 +1246,10 @@ export interface LessonView {
    * Human-readable lesson title (catalog).
    */
   title: string;
+  /**
+   * Short, learner-facing one-line summary of the lesson (catalog).
+   */
+  description: string;
   /**
    * The lesson's catalog KC string, or null if it maps to no KC yet.
    */
@@ -1588,6 +1689,10 @@ export interface RosterStudentView {
    */
   percent_complete: number;
   alerts?: TeacherAlertView[];
+  /**
+   * Length-10 recent-accuracy sparkline (0..100) for the per-card chart. Deterministically derived from recent_error_rate (no real per-day history yet).
+   */
+  trend?: number[];
 }
 /**
  * One Turn-0 routing option for the cold-start menu (decision 0.D.2).
@@ -1748,6 +1853,16 @@ export interface StudyPlanView1 {
   recommended?: string | null;
 }
 /**
+ * ``GET /teacher/aggregate-trends`` response — class-wide trend series for the dashboard.
+ *
+ * ``skill_gap_series`` is the class-wide skill-gap percentage (0..100) over the recent window,
+ * length 14, for the aggregate area chart. Deterministically derived from current class mastery
+ * (no per-day snapshot store yet) — see ``app.teacher.trends.skill_gap_series``.
+ */
+export interface TeacherAggregateTrends {
+  skill_gap_series?: number[];
+}
+/**
  * The authenticated teacher's identity handle (Slice TCH.B2).
  *
  * Returned by ``GET /teacher/me`` once ``current_teacher`` has authorized the request (a Google
@@ -1770,12 +1885,28 @@ export interface TeacherHandle {
   role: string;
 }
 /**
+ * One teacher to-do reminder (dashboard upgrade). Scoped to the authenticated teacher.
+ */
+export interface TeacherReminderView {
+  /**
+   * The reminder's stable id (string form of the DB id).
+   */
+  id: string;
+  text: string;
+  done: boolean;
+}
+/**
  * ``GET /teacher/roster`` response (TCH.B8).
  */
 export interface TeacherRosterView {
   teacher_name: string;
   class_name: string;
   students?: RosterStudentView[];
+  /**
+   * ISO date (YYYY-MM-DD) the dashboard header shows as 'as of' (server clock).
+   */
+  as_of?: string;
+  bucket_trends?: BucketTrends;
 }
 /**
  * The full three-arm comparison for display (Slice 5.3, PROJECT.md §3.11).
@@ -1894,6 +2025,18 @@ export interface TurnResponse {
    * Optional natural-language hint, shown only when help is offered (§10).
    */
   hint?: string | null;
+  /**
+   * The avatar emotion to PLAY while speaking ``hint`` (Slice 1.3). Chosen deterministically in policy.emotion from the moment type — NEVER by the LLM (§8.3). Present only on a hint turn (when ``hint`` is set); null otherwise.
+   */
+  hint_emotion?: Emotion1 | null;
+  /**
+   * How strongly to play ``hint_emotion``, a bounded [0,1] scalar (Slice 1.3). Present only on a hint turn; null otherwise.
+   */
+  hint_intensity?: number | null;
+  /**
+   * Cached audio + lip-sync timing for ``hint`` (AR.3), present ONLY when the hint is the canonical banked NUDGE that has pre-rendered audio; null for an escalated worked-step hint or any rephrased line (those stay captions-only, silent — no synthesis on the turn loop, §8.1). When set, ``hint`` is the canonical caption matching the audio word-for-word (the canonical-line invariant — see SpokenAudio).
+   */
+  hint_audio?: SpokenAudio | null;
   /**
    * Per-KC mastery snapshot for the affected KC(s) (§6).
    */
@@ -2071,4 +2214,10 @@ export interface UnitView {
    * True only for the signed-in learner's teacher-assigned unit (DAT.10).
    */
   assigned: boolean;
+}
+/**
+ * ``PATCH /teacher/reminders/{id}`` body — toggle done.
+ */
+export interface UpdateReminderRequest {
+  done: boolean;
 }

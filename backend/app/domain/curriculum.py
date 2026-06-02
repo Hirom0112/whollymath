@@ -127,10 +127,7 @@ _U1 = CatalogUnit(
     order=1,
     ccss_cluster="6.RP.A",
     teks_cluster="6.4 / 6.5",
-    description=(
-        "Ratio language, equivalent ratios and tables, unit rate, rate problems, "
-        "percent as a rate per 100, and (TEKS) unit conversion by proportion."
-    ),
+    description="Write ratios, find unit rates, and use percents to compare amounts.",
     lessons=(
         CatalogLesson(
             slug="u1_l1",
@@ -139,60 +136,51 @@ _U1 = CatalogUnit(
             # ``KC_ratio_meaning``, which matched no KnowledgeComponentId member and so could
             # never resolve or be built — Grade-6 build, 2026-05-30).
             order=1,
-            title="Ratio language",
+            title="What is a ratio?",
             kc_id="KC_ratio_language",
             ccss_code="6.RP.1",
             teks_code="6.4A",
-            description=(
-                "Describe a relationship two ways and distinguish a ratio from a "
-                "single count (part-to-part vs part-to-whole)."
-            ),
+            description="Describe how two amounts compare, and tell a ratio from a count.",
         ),
         CatalogLesson(
             slug="u1_l2",
             unit_slug="u1",
             order=2,
-            title="Equivalent ratios & tables",
+            title="Equivalent ratios",
             kc_id="KC_equivalent_ratios",
             ccss_code="6.RP.3a",
             teks_code="6.5A",
-            description=(
-                "Fill a ratio table and find missing equivalent ratios; "
-                "multiplicative (not additive) thinking."
-            ),
+            description="Fill in ratio tables and find ratios equal to a given one.",
         ),
         CatalogLesson(
             slug="u1_l3",
             unit_slug="u1",
             order=3,
-            title="Unit rate",
+            title="Unit rates",
             kc_id="KC_unit_rate",
             ccss_code="6.RP.2",
             teks_code="6.4D",
-            description="Find the unit rate for a ratio; 'which is the better buy?'.",
+            description="Find the rate for one — like the better buy at the store.",
         ),
         CatalogLesson(
             slug="u1_l4",
             unit_slug="u1",
             order=4,
-            title="Rate & ratio problems",
+            title="Rate problems",
             kc_id="KC_unit_rate",  # reuses KC_unit_rate (CURRICULUM_STANDARD.md §3)
             ccss_code="6.RP.3b",
             teks_code="6.4B",
-            description="Constant speed, unit pricing, rate reasoning (double number line).",
+            description="Use rates to solve speed, price, and other real-world problems.",
         ),
         CatalogLesson(
             slug="u1_l5",
             unit_slug="u1",
             order=5,
-            title="Percent as rate per 100",
+            title="Percents",
             kc_id="KC_percent",
             ccss_code="6.RP.3c",
             teks_code="6.4E",
-            description=(
-                "Find a percent of a quantity and the whole given a part and "
-                "percent (all three unknowns); 10x10 grid."
-            ),
+            description="Find a percent of an amount, and the whole from a part.",
         ),
         # TEKS-only: unit conversion via proportions (6.4H). CCSS has only a
         # partial 6.RP.3d analogue, so this is encoded CCSS-None.
@@ -200,14 +188,11 @@ _U1 = CatalogUnit(
             slug="u1_l6",
             unit_slug="u1",
             order=6,
-            title="Unit conversion via proportions",
+            title="Converting units",
             kc_id="KC_unit_conversion",
             ccss_code=None,
             teks_code="6.4H",
-            description=(
-                "Convert customary and metric units by setting up a proportion / "
-                "unit rate (TEKS-only)."
-            ),
+            description="Change between units like feet and inches using proportions.",
         ),
     ),
 )
@@ -220,25 +205,18 @@ _U2 = CatalogUnit(
     order=2,
     ccss_cluster="6.NS.1-4",
     teks_cluster="6.2E / 6.3",
-    description=(
-        "The Number System pt.1: the folded foundations skills (equivalence, "
-        "add/subtract, LCM upgraded from common-denominator), fraction "
-        "division/multiplication, long division, decimals, and an interleave gate."
-    ),
+    description="Add, subtract, multiply, and divide fractions and decimals fluently.",
     lessons=(
         # Foundations warm-up — folds the existing KC_equivalence (built).
         CatalogLesson(
             slug="u2_l0",
             unit_slug="u2",
             order=1,
-            title="Fraction foundations (warm-up)",
+            title="Equivalent fractions",
             kc_id="KC_equivalence",
             ccss_code="3.NF",  # below-grade prereq the spec tags 3.NF/4.NF
             teks_code="6.2E",
-            description=(
-                "Equivalent fractions, fast — folds the existing KC_equivalence "
-                "skill; conceptual basis for 6.NS.1 division and 6.NS.4 LCM."
-            ),
+            description="Warm up by finding fractions that name the same amount.",
         ),
         # Add/subtract fractions — below-grade foundations review the spec tags
         # "5.NF.A (prereq) / (prereq)" with no Grade-6 code on EITHER framework.
@@ -253,11 +231,7 @@ _U2 = CatalogUnit(
             kc_id="KC_addition_unlike",
             ccss_code="5.NF.A",
             teks_code=None,
-            description=(
-                "Unlike-denominator add/subtract — folds the existing "
-                "KC_addition_unlike + KC_subtraction_unlike review lesson; "
-                "prerequisite for fraction division (below-grade foundations)."
-            ),
+            description="Add and subtract fractions with different denominators.",
         ),
         # GCF & LCM — upgrades the existing KC_common_denominator to its true
         # Grade-6 home (6.NS.4); TEKS folds factors into 6.7A.
@@ -269,26 +243,20 @@ _U2 = CatalogUnit(
             kc_id="KC_gcf_lcm",
             ccss_code="6.NS.4",
             teks_code="6.7A",
-            description=(
-                "Greatest common factor and least common multiple; distributive "
-                "with GCF. Upgrades KC_common_denominator to 'find the LCM'."
-            ),
+            description="Find the greatest common factor and least common multiple.",
         ),
         CatalogLesson(
             slug="u2_l3",
             unit_slug="u2",
             order=4,
-            title="Divide a fraction by a fraction",
+            title="Divide fractions",
             # Aligned to the enum/model label-space id ``KC_divide_fractions`` (was the stray
             # ``KC_fraction_division``, which matched no KnowledgeComponentId member and so could
             # never resolve or be built — Grade-6 build, 2026-05-30).
             kc_id="KC_divide_fractions",
             ccss_code="6.NS.1",
             teks_code="6.3A",
-            description=(
-                "Interpret and compute a/b div c/d; the headline Grade-6 fraction "
-                "standard (invert-wrong / multiply-across misconception)."
-            ),
+            description="Divide one fraction by another and see what it means.",
         ),
         CatalogLesson(
             slug="u2_l4",
@@ -298,23 +266,20 @@ _U2 = CatalogUnit(
             kc_id="KC_multiply_fractions",  # built KC id (knowledge_components.py LIVE_KCS)
             ccss_code="6.NS.1",  # spec: "6.NS.1-adj"
             teks_code="6.3B",
-            description=(
-                "Multiply fraction x fraction / x whole; reason whether the "
-                "product grows or shrinks ('x always bigger' misconception)."
-            ),
+            description="Multiply fractions and decide if the answer grows or shrinks.",
         ),
         CatalogLesson(
             slug="u2_l5",
             unit_slug="u2",
             order=6,
-            title="Divide multi-digit numbers",
+            title="Long division",
             # Aligned to the enum/model id ``KC_multi_digit_division`` (was the stray
             # ``KC_long_division``, which matched no KnowledgeComponentId member and so could
             # never resolve or be built — Grade-6 build, 2026-05-30).
             kc_id="KC_multi_digit_division",
             ccss_code="6.NS.2",
             teks_code=None,  # spec tags TEKS side "(computation)" — no own code
-            description="Fluent standard-algorithm long division (CCSS 6.NS.2).",
+            description="Divide large whole numbers using long division.",
         ),
         CatalogLesson(
             slug="u2_l6",
@@ -327,17 +292,17 @@ _U2 = CatalogUnit(
             kc_id="KC_decimal_operations",
             ccss_code="6.NS.3",
             teks_code="6.3E",
-            description="Add/subtract/multiply/divide multi-digit decimals fluently.",
+            description="Add, subtract, multiply, and divide decimals.",
         ),
         CatalogLesson(
             slug="u2_l7",
             unit_slug="u2",
             order=8,
-            title="Mixed fraction/decimal fluency gate",
+            title="Mixed practice",
             kc_id=None,  # interleave gate — no single KC
             ccss_code="6.NS.1",  # spec: "6.NS.1-4"
             teks_code="6.3",
-            description="Interleaved set across the unit ending in a transfer probe.",
+            description="Mix every skill from this unit and finish with a challenge.",
         ),
     ),
 )
@@ -350,11 +315,7 @@ _U3 = CatalogUnit(
     order=3,
     ccss_cluster="6.NS.5-8",
     teks_cluster="6.2 / 6.11",
-    description=(
-        "Home of the kept/expanded number-line skill: signed numbers, rationals "
-        "on the line, ordering, absolute value, (TEKS) classify sets, the "
-        "coordinate plane, and an interleave gate."
-    ),
+    description="Place positive and negative numbers on the number line and order them.",
     lessons=(
         CatalogLesson(
             slug="u3_l1",
@@ -364,32 +325,27 @@ _U3 = CatalogUnit(
             kc_id="KC_signed_numbers",
             ccss_code="6.NS.5",
             teks_code="6.2B",
-            description="Signed numbers as opposite quantities (temperature, elevation, debt).",
+            description="Use signed numbers for opposites like up and down or hot and cold.",
         ),
         CatalogLesson(
             slug="u3_l2",
             unit_slug="u3",
             order=2,
-            title="Rationals on the number line",
+            title="Numbers on the number line",
             kc_id="KC_number_line_placement",  # reuses the existing built KC
             ccss_code="6.NS.6",
             teks_code="6.2C",
-            description=(
-                "Place positives/negatives and opposites on a line; direct "
-                "expansion of the existing KC_number_line_placement."
-            ),
+            description="Place positive and negative numbers and their opposites on a line.",
         ),
         CatalogLesson(
             slug="u3_l3",
             unit_slug="u3",
             order=3,
-            title="Ordering & comparing rationals",
+            title="Ordering numbers",
             kc_id="KC_number_line_placement",  # reuses number-line compare
             ccss_code="6.NS.7a",
             teks_code="6.2C",
-            description=(
-                "Order rationals; write/interpret -3 > -7 (negative-magnitude-bias misconception)."
-            ),
+            description="Compare and order positive and negative numbers.",
         ),
         CatalogLesson(
             slug="u3_l4",
@@ -399,21 +355,18 @@ _U3 = CatalogUnit(
             kc_id="KC_absolute_value",
             ccss_code="6.NS.7c",
             teks_code="6.2B",
-            description=("Absolute value as distance from 0; distinguish |x| from order."),
+            description="Measure how far a number is from zero.",
         ),
         # TEKS-only: classify number sets / Venn (6.2A). CCSS is only implicit.
         CatalogLesson(
             slug="u3_l5",
             unit_slug="u3",
             order=5,
-            title="Classify number sets (Venn)",
+            title="Sorting number types",
             kc_id="KC_classify_number_sets",
             ccss_code=None,
             teks_code="6.2A",
-            description=(
-                "Sort numbers into whole subset integer subset rational; place a "
-                "value in the right region (TEKS-only)."
-            ),
+            description="Sort numbers into whole numbers, integers, and rationals.",
         ),
         CatalogLesson(
             slug="u3_l6",
@@ -423,20 +376,17 @@ _U3 = CatalogUnit(
             kc_id="KC_coordinate_plane",
             ccss_code="6.NS.8",
             teks_code="6.11A",
-            description=(
-                "Plot/identify points in four quadrants; reflections across axes; "
-                "distance with a shared coordinate."
-            ),
+            description="Plot points in all four quadrants and reflect them across the axes.",
         ),
         CatalogLesson(
             slug="u3_l7",
             unit_slug="u3",
             order=7,
-            title="Rational numbers gate",
+            title="Mixed practice",
             kc_id=None,  # interleave gate
             ccss_code="6.NS.5",  # spec: "6.NS.5-8"
             teks_code="6.2",
-            description="Interleaved set across the unit ending in a transfer probe.",
+            description="Mix every skill from this unit and finish with a challenge.",
         ),
     ),
 )
@@ -451,59 +401,53 @@ _UINT = CatalogUnit(
     order=4,
     ccss_cluster=None,  # CCSS = 7.NS (Grade 7) — TEKS-only at Grade 6
     teks_cluster="6.3C / 6.3D",
-    description=(
-        "TEKS-only (CCSS holds to Grade 7/7.NS): add, subtract, multiply, divide "
-        "integers with models then fluently; rides the built signed number line."
-    ),
+    description="Work all four operations with positive and negative numbers.",
     lessons=(
         CatalogLesson(
             slug="uint_l1",
             unit_slug="uint",
             order=1,
-            title="Integer add & subtract (models)",
+            title="Adding & subtracting integers",
             # Aligned to the enum/model label-space id ``KC_integer_add_subtract`` (was the stray
             # ``KC_integer_add_sub``, which matched no KnowledgeComponentId member and so could
             # never resolve or be built — Grade-6 build, 2026-05-30).
             kc_id="KC_integer_add_subtract",
             ccss_code=None,
             teks_code="6.3C",
-            description=(
-                "Add/subtract integers with two-color counters and number-line "
-                "jumps; build the rule from the model (sign-handling misconception)."
-            ),
+            description="Add and subtract positive and negative numbers using models.",
         ),
         CatalogLesson(
             slug="uint_l2",
             unit_slug="uint",
             order=2,
-            title="Integer add/subtract fluency",
+            title="Integer fluency",
             kc_id="KC_integer_add_subtract",  # reuses the models lesson's KC (uint_l1)
             ccss_code=None,
             teks_code="6.3D",
-            description="Fluent signed add/subtract without the manipulative.",
+            description="Add and subtract integers quickly, without the models.",
         ),
         CatalogLesson(
             slug="uint_l3",
             unit_slug="uint",
             order=3,
-            title="Integer multiply & divide",
+            title="Multiplying & dividing integers",
             # Aligned to the enum/model label-space id ``KC_integer_multiply_divide`` (was the
             # stray ``KC_integer_mul_div``, which matched no KnowledgeComponentId member and so
             # could never resolve or be built — Grade-6 build, 2026-05-30, mirrors the uint_l1 fix).
             kc_id="KC_integer_multiply_divide",
             ccss_code=None,
             teks_code="6.3C",  # spec: 6.3C/6.3D
-            description="Sign rules for x and div; products/quotients of integers.",
+            description="Use the sign rules to multiply and divide integers.",
         ),
         CatalogLesson(
             slug="uint_l4",
             unit_slug="uint",
             order=4,
-            title="Integer operations gate",
+            title="Mixed practice",
             kc_id=None,  # interleave gate
             ccss_code=None,
             teks_code="6.3D",  # spec: 6.3C/6.3D
-            description="Interleaved set across the unit ending in a transfer probe.",
+            description="Mix every skill from this unit and finish with a challenge.",
         ),
     ),
 )
@@ -516,10 +460,7 @@ _U4 = CatalogUnit(
     order=5,
     ccss_cluster="6.EE.1-4",
     teks_cluster="6.6 / 6.7",
-    description=(
-        "Best SymPy fit: exponents/order of ops, variables, parts of an "
-        "expression, evaluation, equivalent expressions, and dependent variables."
-    ),
+    description="Use exponents and variables to write and build expressions.",
     lessons=(
         CatalogLesson(
             slug="u4_l1",
@@ -529,7 +470,7 @@ _U4 = CatalogUnit(
             kc_id="KC_exponents",
             ccss_code="6.EE.1",
             teks_code="6.7A",
-            description="Write/evaluate numerical expressions with whole-number exponents.",
+            description="Use exponents and follow the order of operations.",
         ),
         CatalogLesson(
             slug="u4_l2",
@@ -539,9 +480,7 @@ _U4 = CatalogUnit(
             kc_id="KC_write_expressions",
             ccss_code="6.EE.2a",
             teks_code="6.7B",
-            description=(
-                "Write expressions with variables from words; use a variable for an unknown."
-            ),
+            description="Use letters for unknown numbers and write expressions from words.",
         ),
         CatalogLesson(
             slug="u4_l3",
@@ -551,7 +490,7 @@ _U4 = CatalogUnit(
             kc_id="KC_expression_parts",
             ccss_code="6.EE.2b",
             teks_code="6.7B",
-            description="Identify term, coefficient, factor, sum/product (vocabulary).",
+            description="Name the terms, coefficients, and factors in an expression.",
         ),
         CatalogLesson(
             slug="u4_l4",
@@ -561,7 +500,7 @@ _U4 = CatalogUnit(
             kc_id="KC_evaluate_expressions",
             ccss_code="6.EE.2c",
             teks_code="6.7A",
-            description="Evaluate at given values (order of operations, formulas like V=s^3).",
+            description="Plug in values to find what an expression equals.",
         ),
         CatalogLesson(
             slug="u4_l5",
@@ -571,10 +510,7 @@ _U4 = CatalogUnit(
             kc_id="KC_equivalent_expressions",
             ccss_code="6.EE.3",
             teks_code="6.7C",
-            description=(
-                "Apply distributive/commutative properties; identify equivalent "
-                "expressions (distributive-error misconception)."
-            ),
+            description="Use properties to write expressions that mean the same thing.",
         ),
         CatalogLesson(
             slug="u4_l6",
@@ -584,9 +520,7 @@ _U4 = CatalogUnit(
             kc_id="KC_dependent_vars",
             ccss_code="6.EE.9",
             teks_code="6.6A",
-            description=(
-                "Relate two quantities as y=kx or y=x+b across verbal/table/graph/equation."
-            ),
+            description="See how one quantity changes as another one changes.",
         ),
     ),
 )
@@ -599,10 +533,7 @@ _U5 = CatalogUnit(
     order=6,
     ccss_cluster="6.EE.5-9",
     teks_cluster="6.9 / 6.10",
-    description=(
-        "SymPy-native one-step solving: test a solution, one-step +/- and x/div "
-        "equations, inequalities on a line, and two-variable relationships."
-    ),
+    description="Solve one-step equations and graph inequalities on a number line.",
     lessons=(
         CatalogLesson(
             slug="u5_l1",
@@ -615,13 +546,13 @@ _U5 = CatalogUnit(
             kc_id="KC_equation_solutions",
             ccss_code="6.EE.5",
             teks_code="6.10B",
-            description="Test which value makes an equation/inequality true.",
+            description="Test which value makes an equation or inequality true.",
         ),
         CatalogLesson(
             slug="u5_l2",
             unit_slug="u5",
             order=2,
-            title="One-step equations (+/-)",
+            title="One-step equations: + and −",
             # Reconciled 2026-05-30: the stale split ids KC_one_step_add / KC_one_step_mul are now
             # ONE built KC (KC_one_step_equations) covering BOTH additive (x + b = c) and
             # multiplicative (a*x = c) equations behind an operand-mode flag (6.EE.7). Both U5
@@ -629,27 +560,27 @@ _U5 = CatalogUnit(
             kc_id="KC_one_step_equations",
             ccss_code="6.EE.7",
             teks_code="6.9A",
-            description="Solve x + p = q over nonnegative rationals.",
+            description="Solve equations like x + 7 = 12.",
         ),
         CatalogLesson(
             slug="u5_l3",
             unit_slug="u5",
             order=3,
-            title="One-step equations (x/div)",
+            title="One-step equations: × and ÷",
             kc_id="KC_one_step_equations",  # reconciled: same KC as u5_l2 (see u5_l2 note)
             ccss_code="6.EE.7",
             teks_code="6.9A",
-            description="Solve px = q.",
+            description="Solve equations like 4x = 20.",
         ),
         CatalogLesson(
             slug="u5_l4",
             unit_slug="u5",
             order=4,
-            title="Inequalities (write/solve/graph)",
+            title="Inequalities",
             kc_id="KC_inequalities",
             ccss_code="6.EE.8",
             teks_code="6.9A",
-            description="Write x > c / x < c and graph on a number line (reuses signed line).",
+            description="Write, solve, and graph inequalities on a number line.",
         ),
         CatalogLesson(
             slug="u5_l5",
@@ -659,7 +590,7 @@ _U5 = CatalogUnit(
             kc_id="KC_dependent_vars",  # reuses from U4 L6
             ccss_code="6.EE.9",
             teks_code="6.6B",
-            description="Relate equation, table, and graph.",
+            description="Connect an equation, a table, and a graph.",
         ),
     ),
 )
@@ -672,11 +603,7 @@ _U6 = CatalogUnit(
     order=7,
     ccss_cluster="6.G.1-4",
     teks_cluster="6.8",
-    description=(
-        "Largest new build: (TEKS) triangle properties, area of triangles and "
-        "quadrilaterals, volume with fractional edges, (CCSS) polygons on the "
-        "plane and surface area from nets."
-    ),
+    description="Find the area, surface area, and volume of triangles, polygons, and solids.",
     lessons=(
         # TEKS-only: triangle properties (6.8A — angle sum / inequality, NOT
         # area; verified verbatim, Cornell LII §111.26). Not in CCSS Grade 6.
@@ -688,10 +615,7 @@ _U6 = CatalogUnit(
             kc_id="KC_triangle_properties",
             ccss_code=None,
             teks_code="6.8A",
-            description=(
-                "Angle sum = 180; side-length to angle relationship; the triangle "
-                "inequality (TEKS-only)."
-            ),
+            description="Explore the angles and side lengths of triangles.",
         ),
         CatalogLesson(
             slug="u6_l2",
@@ -701,38 +625,38 @@ _U6 = CatalogUnit(
             kc_id="KC_area_polygons",
             ccss_code="6.G.1",
             teks_code="6.8B",
-            description="Area via decomposing/composing; A = 1/2 b h.",
+            description="Find a triangle's area with A = 1/2 x base x height.",
         ),
         CatalogLesson(
             slug="u6_l3",
             unit_slug="u6",
             order=3,
-            title="Area of quadrilaterals & polygons",
+            title="Area of polygons",
             kc_id="KC_area_polygons",
             ccss_code="6.G.1",
             teks_code="6.8B",
-            description="Parallelograms, trapezoids, composite figures.",
+            description="Find the area of parallelograms, trapezoids, and combined shapes.",
         ),
         CatalogLesson(
             slug="u6_l4",
             unit_slug="u6",
             order=4,
-            title="Volume with fractional edges",
+            title="Volume",
             kc_id="KC_volume_fractional_edges",
             ccss_code="6.G.2",
             teks_code="6.8C",
-            description="V = lwh and V = Bh with fractional edge lengths.",
+            description="Find volume with whole and fractional edge lengths.",
         ),
         # CCSS-only: polygons on the coordinate plane (6.G.3). TEKS not explicit.
         CatalogLesson(
             slug="u6_l5",
             unit_slug="u6",
             order=5,
-            title="Polygons on the coordinate plane",
+            title="Polygons on the grid",
             kc_id="KC_polygons_coordinate_plane",
             ccss_code="6.G.3",
             teks_code=None,
-            description="Vertices and side lengths from coordinates (CCSS-only).",
+            description="Find side lengths of shapes drawn on the coordinate plane.",
         ),
         # CCSS-only: surface area from nets (6.G.4). Not in TEKS 6.8.
         CatalogLesson(
@@ -743,7 +667,7 @@ _U6 = CatalogUnit(
             kc_id="KC_surface_area_nets",
             ccss_code="6.G.4",
             teks_code=None,
-            description="Nets of prisms/pyramids; total surface area (CCSS-only).",
+            description="Unfold solids into nets to find total surface area.",
         ),
     ),
 )
@@ -756,20 +680,17 @@ _U7 = CatalogUnit(
     order=8,
     ccss_cluster="6.SP.1-5",
     teks_cluster="6.12 / 6.13",
-    description=(
-        "Statistical questions, data displays, center/spread/shape, numeric "
-        "summaries, (CCSS) MAD, and (TEKS) categorical data / percent bar graph."
-    ),
+    description="Collect data, make graphs, and describe its center, spread, and shape.",
     lessons=(
         CatalogLesson(
             slug="u7_l1",
             unit_slug="u7",
             order=1,
-            title="Statistical questions & variability",
+            title="Statistical questions",
             kc_id="KC_statistical_questions",
             ccss_code="6.SP.1",
             teks_code="6.13B",
-            description="Recognize questions that have variability; data with vs without it.",
+            description="Spot questions whose answers vary from person to person.",
         ),
         CatalogLesson(
             slug="u7_l2",
@@ -779,38 +700,38 @@ _U7 = CatalogUnit(
             kc_id="KC_data_displays",
             ccss_code="6.SP.4",
             teks_code="6.12A",
-            description="Dot plots, histograms, box plots, stem-and-leaf.",
+            description="Read and make dot plots, histograms, and box plots.",
         ),
         CatalogLesson(
             slug="u7_l3",
             unit_slug="u7",
             order=3,
-            title="Center, spread, shape",
+            title="Center, spread & shape",
             kc_id="KC_center_spread_shape",
             ccss_code="6.SP.2",
             teks_code="6.12B",
-            description="Describe a distribution's overall shape from the graph.",
+            description="Describe the overall shape of a data set from its graph.",
         ),
         CatalogLesson(
             slug="u7_l4",
             unit_slug="u7",
             order=4,
-            title="Mean, median, range, IQR",
+            title="Mean, median & range",
             kc_id="KC_summary_statistics",
             ccss_code="6.SP.3",
             teks_code="6.12C",
-            description="Compute and choose center (mean/median) and spread (range/IQR).",
+            description="Find the center and spread of a data set.",
         ),
         # CCSS-only: mean absolute deviation (6.SP.5c). Not emphasized in TEKS.
         CatalogLesson(
             slug="u7_l5",
             unit_slug="u7",
             order=5,
-            title="Mean absolute deviation (MAD)",
+            title="Mean absolute deviation",
             kc_id="KC_mean_absolute_deviation",
             ccss_code="6.SP.5c",
             teks_code=None,
-            description="Compute MAD; relate spread to center (CCSS-only).",
+            description="Measure how far data spreads from the mean.",
         ),
         # TEKS-only: categorical data / percent bar graph (6.12D). Not in 6.SP.
         CatalogLesson(
@@ -821,7 +742,7 @@ _U7 = CatalogUnit(
             kc_id="KC_categorical_data",
             ccss_code=None,
             teks_code="6.12D",
-            description="Mode, relative-frequency table, percent bar graph (TEKS-only).",
+            description="Summarize categories with tables and percent bar graphs.",
         ),
     ),
 )
@@ -836,20 +757,17 @@ _U8 = CatalogUnit(
     order=9,
     ccss_cluster=None,  # no CCSS equivalent strand
     teks_cluster="6.14A-H",
-    description=(
-        "TEKS-only (DEC.FINLIT caveat): mostly curated-bank concept items; SymPy "
-        "grades the two arithmetic lessons (check register, lifetime income)."
-    ),
+    description="Build real money skills, from check registers to planning lifetime income.",
     lessons=(
         CatalogLesson(
             slug="u8_l1",
             unit_slug="u8",
             order=1,
-            title="Checking accounts & debit cards",
+            title="Checking accounts",
             kc_id="KC_banking",
             ccss_code=None,
             teks_code="6.14A",
-            description="Features/costs of a checking account vs a debit card.",
+            description="Learn how checking accounts and debit cards work.",
             # Pure-concept TEKS item, no SymPy/tutor mechanism — DEC.FINLIT
             # decision to stub (not build) this as a concept lesson.
             concept_only=True,
@@ -858,32 +776,32 @@ _U8 = CatalogUnit(
             slug="u8_l2",
             unit_slug="u8",
             order=2,
-            title="Debit vs credit cards",
+            title="Debit vs. credit",
             kc_id="KC_banking",  # reuses
             ccss_code=None,
             teks_code="6.14B",
-            description="Compare debit and credit card use.",
+            description="Compare paying with a debit card and a credit card.",
             concept_only=True,  # DEC.FINLIT concept lesson (no tutor mechanism)
         ),
         CatalogLesson(
             slug="u8_l3",
             unit_slug="u8",
             order=3,
-            title="Balance a check register",
+            title="Balancing a check register",
             kc_id="KC_check_register",
             ccss_code=None,
             teks_code="6.14C",
-            description="Keep a running balance across deposits/withdrawals (SymPy-graded).",
+            description="Keep a running balance as money comes in and goes out.",
         ),
         CatalogLesson(
             slug="u8_l4",
             unit_slug="u8",
             order=4,
-            title="Credit history & reports",
+            title="Credit history",
             kc_id="KC_credit",
             ccss_code=None,
             teks_code="6.14D",
-            description="Why credit history matters; what is in a credit report.",
+            description="See why credit history matters and what a credit report shows.",
             concept_only=True,  # DEC.FINLIT concept lesson (no tutor mechanism)
         ),
         CatalogLesson(
@@ -894,7 +812,7 @@ _U8 = CatalogUnit(
             kc_id="KC_college_pay",
             ccss_code=None,
             teks_code="6.14G",
-            description="Grants/scholarships/loans/work-study.",
+            description="Explore grants, scholarships, loans, and work-study.",
             concept_only=True,  # DEC.FINLIT concept lesson (no tutor mechanism)
         ),
         CatalogLesson(
@@ -905,9 +823,7 @@ _U8 = CatalogUnit(
             kc_id="KC_lifetime_income",
             ccss_code=None,
             teks_code="6.14H",
-            description=(
-                "Compare salaries by education level; lifetime-income effect (SymPy-graded)."
-            ),
+            description="Compare how your education level affects pay over a lifetime.",
         ),
     ),
 )

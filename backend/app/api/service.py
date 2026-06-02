@@ -70,6 +70,7 @@ from app.api.schemas import (
     SetModelGroupView,
     SetModelStimulusView,
     SignedPointView,
+    SpokenAudio,
     StartSessionResponse,
     StatsStimulusView,
     StudyPlanView,
@@ -148,6 +149,8 @@ from app.policy.scheduler import (
     next_spec_after_outcome,
 )
 from app.policy.state_classifier import classify_state
+from app.tts.manifest_lookup import audio_url_for, lookup_audio
+from app.tts.spoken_bank import nudge_string_id
 from app.tutor.hints import HintLevel, build_validated_hint, select_nudge
 from app.tutor.live_transfer_probe import build_live_probe_steps
 from app.tutor.session import (
@@ -494,6 +497,42 @@ def _help_need(
     return predictor.predict_proba(features)
 
 
+def _nudge_audio(kc_value: str, index: int = 0) -> SpokenAudio | None:
+    """Cached audio + lip-sync timing for the canonical nudge at ``index`` of ``kc_value``, or None.
+
+    The canonical-line bridge (Slice AR.3): a help moment selects a banked nudge (``select_nudge``,
+    default index 0), and IF that exact canonical line was pre-rendered (``manifest_lookup``), the
+    surface can speak it. Returns a ``SpokenAudio`` referencing the served mp3 + word timings, or
+    ``None`` when no audio exists for the line (the common case — only a few lines are rendered).
+
+    A caller that attaches this MUST also ship the CANONICAL caption (the banked nudge text), not an
+    LLM rephrase, so the spoken words and the on-screen words match (the SpokenAudio invariant). Off
+    the turn-loop decision path: a single cached-manifest dict lookup, no LLM/SymPy/network (§8.1).
+    """
+    entry = lookup_audio(nudge_string_id(kc_value, index))
+    if entry is None:
+        return None
+    audio_file = entry.get("audio_file")
+    words = entry.get("words")
+    wtimes = entry.get("wtimes")
+    wdurations = entry.get("wdurations")
+    # A well-formed manifest row carries all four; a malformed/partial row degrades to silent
+    # rather than shipping a broken ref (invariant 4 — voicing never breaks a help moment).
+    if (
+        not isinstance(audio_file, str)
+        or not isinstance(words, list)
+        or not isinstance(wtimes, list)
+        or not isinstance(wdurations, list)
+    ):
+        return None
+    return SpokenAudio(
+        audio_url=audio_url_for(audio_file),
+        words=[str(w) for w in words],
+        wtimes=[float(t) for t in wtimes],
+        wdurations=[float(d) for d in wdurations],
+    )
+
+
 def _maybe_intervene(
     live: _LiveSession,
     gate: SustainedHelpNeedGate,
@@ -529,11 +568,15 @@ def _maybe_intervene(
     # an already-decided nudge — it never decides whether to intervene (§8.1).
     nudge_text = select_nudge(next_problem.kc).text
     voiced = voice_help(nudge_text, moment=MomentType.STUCK_NUDGE, provider=voice_provider)
+    # If the canonical nudge has cached audio, speak it — and show the CANONICAL caption (not the
+    # LLM rephrase) so the spoken words match the bubble (SpokenAudio canonical-line invariant).
+    audio = _nudge_audio(next_problem.kc.value)
     return InterventionView(
         kind=InterventionKind.INLINE_ASSERTION,
-        text=voiced.text,
+        text=nudge_text if audio is not None else voiced.text,
         emotion=voiced.emotion,
         intensity=voiced.intensity,
+        audio=audio,
     )
 
 
@@ -949,10 +992,20 @@ def _hint_response(
     # The emotion is chosen deterministically from the moment, independent of which hint level
     # the escalation lands on and independent of the (optional) LLM voicing of the text.
     hint_cue = select_emotion(MomentType.STUCK_NUDGE)
+    # Only the first (NUDGE) hint is a banked canonical line that can have cached audio; the
+    # escalated partial_step / worked_step hints are number-templated and stay captions-only.
+    hint_audio: SpokenAudio | None = None
     if requests_so_far == 0:
-        hint_text = voice_help(
-            select_nudge(problem.kc).text, moment=MomentType.STUCK_NUDGE, provider=voice_provider
-        ).text
+        canonical_nudge = select_nudge(problem.kc).text
+        hint_audio = _nudge_audio(problem.kc.value)
+        if hint_audio is not None:
+            # Speak the cached canonical line and caption it verbatim (canonical-line invariant) —
+            # the mouth lip-syncs the same words the bubble shows.
+            hint_text = canonical_nudge
+        else:
+            hint_text = voice_help(
+                canonical_nudge, moment=MomentType.STUCK_NUDGE, provider=voice_provider
+            ).text
     else:
         level = HintLevel.PARTIAL_STEP if requests_so_far == 1 else HintLevel.WORKED_STEP
         hint_text = build_validated_hint(problem, level, provider=hint_provider).natural_language
@@ -965,6 +1018,7 @@ def _hint_response(
         hint=hint_text,
         hint_emotion=hint_cue.emotion,
         hint_intensity=hint_cue.intensity,
+        hint_audio=hint_audio,
         mastery=[],
         next_problem=_problem_view(problem),
     )
@@ -1462,11 +1516,14 @@ class SessionStore:
         live.mid_problem_nudged_problem_id = current.problem_id
         nudge_text = select_nudge(current.kc).text
         voiced = voice_help(nudge_text, moment=MomentType.STUCK_NUDGE, provider=self.voice_provider)
+        # Speak the canonical cached line if it exists, captioned verbatim (canonical-line rule).
+        audio = _nudge_audio(current.kc.value)
         return InterventionView(
             kind=InterventionKind.INLINE_ASSERTION,
-            text=voiced.text,
+            text=nudge_text if audio is not None else voiced.text,
             emotion=voiced.emotion,
             intensity=voiced.intensity,
+            audio=audio,
         )
 
     def _with_live_adaptation(self, live: _LiveSession, response: TurnResponse) -> TurnResponse:

@@ -1,0 +1,40 @@
+/* Larger filled area chart for the teacher "Student Insights" aggregate card.
+   The SVG scales to its container width; height is set by the `height` prop.
+   All color flows from the wrapper's `color` (a --wm-* tone token), so the
+   chart follows the theme — no hardcoded hex. */
+
+.wm-areachart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.wm-areachart-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.wm-areachart-area {
+  stroke: none;
+}
+
+/* Gradient fading from the tone color down to transparent. Both stops use
+   currentColor; only the opacity changes, so the hue tracks the theme token. */
+.wm-areachart-stop-top {
+  stop-color: currentColor;
+  stop-opacity: 0.28;
+}
+.wm-areachart-stop-bottom {
+  stop-color: currentColor;
+  stop-opacity: 0;
+}
+
+.wm-areachart-dot {
+  fill: currentColor;
+  stroke: none;
+}

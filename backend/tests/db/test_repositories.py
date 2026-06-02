@@ -440,3 +440,112 @@ def test_get_assigned_unit_none_present_and_most_recent_wins(
         got = repo.get_assigned_unit(db, student_id)
         assert got is not None
         assert got.unit_id == u1_id  # the just-updated one is most recent
+
+
+# ── Teacher reminders (dashboard upgrade) ──
+
+
+def test_create_and_list_reminders_newest_first_and_scoped(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """Reminders list newest-first and a teacher only sees their own."""
+    with session_factory() as db:
+        t1 = _seed_learner(db, "teacher-1", role="teacher")
+        t2 = _seed_learner(db, "teacher-2", role="teacher")
+        db.flush()
+        repo.create_reminder(db, teacher_id=t1.id, text="first")
+        repo.create_reminder(db, teacher_id=t1.id, text="second")
+        repo.create_reminder(db, teacher_id=t2.id, text="other-teacher")
+        db.commit()
+        t1_id, t2_id = t1.id, t2.id
+
+    with session_factory() as db:
+        t1_reminders = repo.list_reminders_for_teacher(db, t1_id)
+        assert [r.text for r in t1_reminders] == ["second", "first"]  # newest-first
+        assert all(r.teacher_id == t1_id for r in t1_reminders)
+        assert [r.text for r in repo.list_reminders_for_teacher(db, t2_id)] == ["other-teacher"]
+
+
+def test_set_reminder_done_is_owner_scoped(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """A teacher can toggle their own reminder; another teacher's resolves to None."""
+    with session_factory() as db:
+        owner = _seed_learner(db, "owner", role="teacher")
+        intruder = _seed_learner(db, "intruder", role="teacher")
+        db.flush()
+        reminder = repo.create_reminder(db, teacher_id=owner.id, text="todo")
+        db.commit()
+        owner_id, intruder_id, reminder_id = owner.id, intruder.id, reminder.id
+
+    # The intruder cannot toggle it (None — indistinguishable from missing).
+    with session_factory() as db:
+        assert (
+            repo.set_reminder_done(db, teacher_id=intruder_id, reminder_id=reminder_id, done=True)
+            is None
+        )
+        db.commit()
+
+    # The owner can.
+    with session_factory() as db:
+        updated = repo.set_reminder_done(
+            db, teacher_id=owner_id, reminder_id=reminder_id, done=True
+        )
+        assert updated is not None and updated.done is True
+        db.commit()
+
+    with session_factory() as db:
+        assert repo.list_reminders_for_teacher(db, owner_id)[0].done is True
+
+
+def test_locale_defaults_to_en_and_persists(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """A new learner's help-language defaults to 'en' and survives a re-read (Slice 0.3)."""
+    with session_factory() as db:
+        learner = repo.get_or_create_learner(db, "sess-locale")
+        db.commit()
+        learner_id = learner.id
+        # The Python-side default applies the moment the row is persisted.
+        assert learner.locale == "en"
+
+    # A fresh session re-reads the same default off the row.
+    with session_factory() as db:
+        assert repo.get_learner_locale(db, learner_id) == "en"
+
+
+def test_get_learner_locale_unknown_learner_is_none(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """An unknown learner_id resolves to None (distinct from an English-help learner)."""
+    with session_factory() as db:
+        assert repo.get_learner_locale(db, 9999) is None
+
+
+def test_set_learner_locale_round_trips_es_mx(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """set_learner_locale updates the flag and the new value re-reads (en -> es-MX)."""
+    with session_factory() as db:
+        learner = repo.get_or_create_learner(db, "sess-set-locale")
+        db.commit()
+        learner_id = learner.id
+
+    # Flip the locked Spanish target on; the writer returns the mutated row.
+    with session_factory() as db:
+        updated = repo.set_learner_locale(db, learner_id, "es-MX")
+        assert updated is not None and updated.locale == "es-MX"
+        db.commit()
+
+    # The change is durable across a fresh read.
+    with session_factory() as db:
+        assert repo.get_learner_locale(db, learner_id) == "es-MX"
+
+
+def test_set_learner_locale_unknown_learner_is_none(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """Setting the locale of an unknown learner_id returns None (caller 404s, no raise)."""
+    with session_factory() as db:
+        assert repo.set_learner_locale(db, 9999, "es-MX") is None
+        db.commit()

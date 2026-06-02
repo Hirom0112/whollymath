@@ -3,14 +3,17 @@ import { useEffect, useRef, useState } from 'react';
 import {
   submitTurn,
   type AdaptationView,
+  type Emotion,
   type InterventionView,
   type MasterySnapshot,
   type ProblemView,
+  type SpokenAudio,
   type StartSessionResponse,
   type SurfaceState,
   type TurnResponse,
 } from '../api';
 import { Mascot, PiMenu, SparkCount, WoodBanner, type PiMenuItem } from '../components';
+import { useGuideSpeech } from '../components/avatar/useGuideSpeech';
 import { useTelemetry } from '../telemetry';
 import {
   ClassifySets,
@@ -38,10 +41,19 @@ const EMPTY_FRACTION: FractionValue = { numerator: '', denominator: '' };
 // The pool of storybook-world backdrops a lesson can wear (frontend/public/tutor-bg-*.jpg).
 // Each is pre-toned: edge-cropped (no generator watermark), softened, and faintly blue so it
 // stays a calm backdrop behind the problem card (a further blur + blue wash is added in CSS).
-export const TUTOR_BACKGROUNDS: readonly string[] = Array.from(
-  { length: 11 },
-  (_, i) => `/tutor-bg-${String(i + 1)}.jpg`,
-);
+// Listed explicitly (not 1..N) so the pool only ever names files that actually exist on disk —
+// removing a backdrop file means removing its entry here, and no lesson can pick a missing image.
+export const TUTOR_BACKGROUNDS: readonly string[] = [
+  '/tutor-bg-1.jpg',
+  '/tutor-bg-4.jpg',
+  '/tutor-bg-5.jpg',
+  '/tutor-bg-6.jpg',
+  '/tutor-bg-7.jpg',
+  '/tutor-bg-8.jpg',
+  '/tutor-bg-9.jpg',
+  '/tutor-bg-10.jpg',
+  '/tutor-bg-11.jpg',
+];
 
 // A tiny deterministic string hash (djb2) so a lesson's backdrop is STABLE for the whole lesson
 // (no reshuffle between problems) yet VARIES across lessons. Seeded by the lesson's KC.
@@ -627,6 +639,46 @@ export function Tutor({
             ? { text: verdictSpeech.text, kind: verdictSpeech.kind }
             : null;
 
+  // The live emotion the mascot PLAYS, kept in lock-step with the line it is speaking (helpSpeech).
+  // The backend already chooses the emotion deterministically in policy (slice 1.3, §8.3 — never
+  // the LLM): a requested hint carries `hint_emotion`/`hint_intensity` on the turn result; a
+  // proactive nudge/offer carries `emotion`/`intensity` on its InterventionView. The number-line
+  // verdict line has no backend emotion, so we map it tastefully (correct → celebrate, otherwise →
+  // reassure). When nothing is being said the figure rests at no emotion (undefined).
+  const guideEmotion: { emotion: Emotion; intensity: number } | null =
+    hint !== null
+      ? result?.hint_emotion != null
+        ? { emotion: result.hint_emotion, intensity: result.hint_intensity ?? 0 }
+        : null
+      : midNudge !== null && phase === 'answering'
+        ? midNudge.emotion != null
+          ? { emotion: midNudge.emotion, intensity: midNudge.intensity ?? 0 }
+          : null
+        : intervention !== null
+          ? intervention.emotion != null
+            ? { emotion: intervention.emotion, intensity: intervention.intensity ?? 0 }
+            : null
+          : verdictSpeech !== null && mascotIsPiMenu
+            ? verdictSpeech.kind === 'correct'
+              ? { emotion: 'celebrate', intensity: 0.8 }
+              : { emotion: 'reassure', intensity: 0.5 }
+            : null;
+
+  // The cached audio for the line currently being spoken (Slice AR.3), in LOCK-STEP with helpSpeech:
+  // a requested hint carries `hint_audio`; a mid-problem nudge / proactive offer carries `audio` on
+  // its InterventionView. Present ONLY for a banked line with pre-rendered audio — every other line
+  // (a rephrased hint, the verdict narration, an unrendered nudge) is null, so the mascot stays
+  // silent + captions-only (today's behavior). The hook honors the persisted mute and reduced-motion.
+  const helpAudio: SpokenAudio | null =
+    hint !== null
+      ? (result?.hint_audio ?? null)
+      : midNudge !== null && phase === 'answering'
+        ? (midNudge.audio ?? null)
+        : intervention !== null
+          ? (intervention.audio ?? null)
+          : null;
+  const { speaking } = useGuideSpeech(helpAudio);
+
   return (
     <main className="wm-tutor">
       {/* The ← Course-path plaque and the sparks plaque are carved-wood plaques (the "wood behind
@@ -755,7 +807,14 @@ export function Tutor({
           <StatsStimulus problem={problem} />
 
           {phase !== 'feedback' ? (
-            <form className="wm-tutor-form" onSubmit={handleSubmit}>
+            <form
+              className={`wm-tutor-form${
+                problem.scene != null || problem.set_model != null
+                  ? ' wm-tutor-form--centered'
+                  : ''
+              }`}
+              onSubmit={handleSubmit}
+            >
               {isYesNo ? (
                 <YesNo
                   value={yesNo}
@@ -996,14 +1055,27 @@ export function Tutor({
           ) : null}
           {navItems.length > 0 ? (
             <div className="wm-tutor-pi-fig">
-              <PiMenu items={navItems} label="Open the menu" onOpenChange={setNavOpen} />
+              <PiMenu
+                items={navItems}
+                label="Open the menu"
+                onOpenChange={setNavOpen}
+                emotion={guideEmotion?.emotion}
+                intensity={guideEmotion?.intensity}
+                speaking={speaking}
+              />
             </div>
           ) : (
             // No nav handlers (e.g. an embedded preview): the bare mascot carries the verdict
             // line itself via its own `speech` bubble (Slice AR.1). With nav handlers present the
             // PiMenu owns the figure and the line shows in the wm-tutor-speech bubble above.
             <div className="wm-tutor-pi-fig">
-              <Mascot speech={verdictSpeech?.text} speechKind={verdictSpeech?.kind ?? 'say'} />
+              <Mascot
+                speech={verdictSpeech?.text}
+                speechKind={verdictSpeech?.kind ?? 'say'}
+                emotion={guideEmotion?.emotion}
+                intensity={guideEmotion?.intensity}
+                speaking={speaking}
+              />
             </div>
           )}
         </div>

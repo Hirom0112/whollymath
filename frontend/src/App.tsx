@@ -30,6 +30,7 @@ import { TeacherApp } from './pages/TeacherApp';
 import { Tutor } from './pages/Tutor';
 import { Unit } from './pages/Unit';
 import { Units } from './pages/Units';
+import { GuideProvider } from './state/GuideContext';
 import { SessionProvider, useSession } from './state/SessionContext';
 
 // The skill the homework screen anchors to when entered from the home. Homework starts at
@@ -51,9 +52,11 @@ const PROACTIVE = new URLSearchParams(window.location.search).get('proactive') =
 export function App(): React.JSX.Element {
   return (
     <SessionProvider proactive={PROACTIVE}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <GuideProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </GuideProvider>
     </SessionProvider>
   );
 }

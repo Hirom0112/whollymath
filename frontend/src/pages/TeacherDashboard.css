@@ -32,24 +32,72 @@
 .wm-teacher-subtitle {
   margin: 4px 0 0;
   font-size: var(--wm-fs-body);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-teacher-date {
+  margin: 4px 0 0;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-tcard-ink-soft);
+  white-space: nowrap;
 }
 
-.wm-teacher-summary {
-  display: flex;
+/* ── Status strip: one pill per bucket (dot + label + count + trend sparkline) ── */
+
+.wm-teacher-statusstrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
-  flex-wrap: wrap;
+  margin-bottom: 26px;
 }
-.wm-teacher-summary-item {
-  display: inline-flex;
+.wm-teacher-statuspill {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--wm-tcard-bg);
+  border-radius: var(--wm-r-lg);
+  padding: 14px 16px;
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+.wm-teacher-statuspill-head {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
-.wm-teacher-summary-count {
+.wm-teacher-statuspill-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.wm-teacher-statuspill-dot--struggling {
+  background: var(--wm-mean-wrong);
+}
+.wm-teacher-statuspill-dot--needs_attention {
+  background: var(--wm-mean-attention);
+}
+.wm-teacher-statuspill-dot--on_track {
+  background: var(--wm-mean-correct);
+}
+.wm-teacher-statuspill-label {
+  font-weight: 600;
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-tcard-ink);
+}
+.wm-teacher-statuspill-count {
+  margin-left: auto;
   font-family: var(--wm-font-serif);
   font-weight: 600;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: -0.5px;
+  color: var(--wm-tcard-ink);
+}
+
+@media (max-width: 720px) {
+  .wm-teacher-statusstrip {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Search ── */
@@ -58,19 +106,19 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #fff;
+  background: var(--wm-tcard-bg);
   border-radius: var(--wm-r-lg);
   padding: 0 16px;
   margin-bottom: 28px;
   box-shadow:
-    0 2px 0 rgba(20, 30, 70, 0.08),
-    inset 0 0 0 1.5px rgba(20, 30, 70, 0.08);
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline);
 }
 .wm-teacher-search-ico {
   display: inline-flex;
   width: 18px;
   height: 18px;
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
   flex: 0 0 auto;
 }
 .wm-teacher-search-ico svg {
@@ -84,7 +132,7 @@
   background: transparent;
   font-family: var(--wm-font-sans);
   font-size: var(--wm-fs-body);
-  color: var(--wm-ink);
+  color: var(--wm-tcard-ink);
   padding: 13px 0;
 }
 
@@ -109,7 +157,7 @@
 }
 .wm-teacher-section-blurb {
   font-size: var(--wm-fs-meta);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 
 .wm-teacher-roster {
@@ -124,19 +172,20 @@
 /* ── Student row ── */
 
 .wm-teacher-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
   width: 100%;
   text-align: left;
-  background: #fff;
+  background: var(--wm-tcard-bg);
   border: none;
   border-radius: var(--wm-r-lg);
   padding: 16px 18px;
   cursor: pointer;
   box-shadow:
-    0 2px 0 rgba(20, 30, 70, 0.08),
-    inset 0 0 0 1.5px rgba(20, 30, 70, 0.06);
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
   transition:
     transform var(--wm-motion-press) ease,
     box-shadow var(--wm-motion-press) ease;
@@ -144,8 +193,27 @@
 .wm-teacher-row:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 6px 0 rgba(20, 30, 70, 0.1),
-    inset 0 0 0 1.5px rgba(20, 30, 70, 0.1);
+    0 6px 0 var(--wm-tcard-shadow-strong),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline);
+}
+/* The struggling-bucket "Urgent action" corner tag. */
+.wm-teacher-row--urgent {
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-mean-wrong);
+}
+.wm-teacher-row-urgenttag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--wm-mean-wrong);
+  padding: 3px 9px;
+  border-radius: 0 var(--wm-r-lg) 0 var(--wm-r-md);
 }
 .wm-teacher-row:focus-visible {
   outline: 3px solid var(--wm-blue-bright);
@@ -164,10 +232,11 @@
   font-weight: 600;
   font-size: var(--wm-fs-lead);
   letter-spacing: -0.3px;
+  color: var(--wm-tcard-ink);
 }
 .wm-teacher-row-reason {
   font-size: var(--wm-fs-meta);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
   line-height: 1.4;
 }
 .wm-teacher-row-where {
@@ -176,10 +245,10 @@
 }
 .wm-teacher-row-lesson {
   font-weight: 700;
-  color: var(--wm-navy);
+  color: var(--wm-tcard-link);
 }
 .wm-teacher-row-unit {
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 
 .wm-teacher-row-signals {
@@ -201,7 +270,7 @@
   display: inline-flex;
   width: 20px;
   height: 20px;
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
   flex: 0 0 auto;
 }
 .wm-teacher-row-chev svg {
@@ -214,7 +283,7 @@
 .wm-teacher-loading,
 .wm-teacher-empty {
   font-size: var(--wm-fs-body);
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
   padding: 24px 4px;
 }
 .wm-teacher-error {
@@ -277,12 +346,12 @@
 
 /* The triage spotlight (warm card — attention, not failure: it pairs with the urgent icon + words). */
 .wm-teacher-triage {
-  background: linear-gradient(180deg, var(--wm-card-warm), #fff);
+  background: var(--wm-tcard-warm-grad);
   border-radius: var(--wm-r-lg);
   padding: 20px 22px;
   box-shadow:
-    0 2px 0 rgba(20, 30, 70, 0.08),
-    inset 0 0 0 1.5px rgba(20, 30, 70, 0.06),
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft),
     0 18px 40px -22px rgba(217, 102, 63, 0.3);
 }
 .wm-teacher-triage-eyebrow {
@@ -291,7 +360,7 @@
   font-weight: 700;
   letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 .wm-teacher-triage-head {
   display: flex;
@@ -325,7 +394,23 @@
 .wm-teacher-triage-where {
   margin: 4px 0 0;
   font-size: 13.5px;
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-teacher-triage-notes {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-teacher-triage-notes-label {
+  font-weight: 700;
+  color: var(--wm-tcard-ink);
+}
+.wm-teacher-triage-remed {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--wm-tcard-ink);
 }
 .wm-teacher-triage-btn {
   margin-top: 18px;
@@ -354,13 +439,13 @@
 
 /* The all-clear rail (mint — earned calm). */
 .wm-teacher-allclear {
-  background: linear-gradient(180deg, var(--wm-card-mint), #fff);
+  background: var(--wm-tcard-mint-grad);
   border-radius: var(--wm-r-xl);
   padding: 32px 24px;
   text-align: center;
   box-shadow:
-    0 2px 0 rgba(20, 30, 70, 0.08),
-    inset 0 0 0 1.5px rgba(20, 30, 70, 0.06);
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
 }
 .wm-teacher-allclear-ring {
   display: grid;
@@ -385,7 +470,7 @@
 .wm-teacher-allclear-detail {
   margin: 0;
   font-size: 14.5px;
-  color: var(--wm-ink-soft);
+  color: var(--wm-tcard-ink-soft);
 }
 
 @media (max-width: 1080px) {
@@ -396,4 +481,91 @@
     position: static;
     order: -1;
   }
+}
+
+/* ── Rail card: Student Insights (aggregate skill-gap area chart) ── */
+.wm-teacher-insights {
+  background: var(--wm-tcard-bg);
+  border-radius: var(--wm-r-lg);
+  padding: 18px 20px;
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+.wm-teacher-insights-head {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+  color: var(--wm-tcard-ink);
+}
+.wm-teacher-insights-sub {
+  margin: 4px 0 12px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── Rail card: Reminders (a simple checklist) ── */
+.wm-teacher-reminders {
+  background: var(--wm-tcard-bg);
+  border-radius: var(--wm-r-lg);
+  padding: 18px 20px;
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+.wm-teacher-reminders-head {
+  margin: 0 0 12px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+  color: var(--wm-tcard-ink);
+}
+.wm-teacher-reminders-empty {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-teacher-reminders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wm-teacher-reminder {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+.wm-teacher-reminder input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: var(--wm-mean-correct);
+  cursor: pointer;
+}
+.wm-teacher-reminder-text {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--wm-tcard-ink);
+}
+.wm-teacher-reminder-text--done {
+  text-decoration: line-through;
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── Dark theme: the class title takes the amber/gold sweep from the mockup ── */
+[data-theme='dark'] .wm-teacher-title {
+  background: linear-gradient(95deg, var(--wm-title-grad-from), var(--wm-title-grad-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }

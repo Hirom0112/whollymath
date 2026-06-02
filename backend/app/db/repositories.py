@@ -40,6 +40,7 @@ from app.db.models import (
     MasteryState,
     Roster,
     Session,
+    TeacherReminder,
     Turn,
     Unit,
 )
@@ -151,6 +152,39 @@ def get_or_create_demo_teacher(db: OrmSession) -> Learner:
     teacher = Learner(session_id=DEMO_TEACHER_SESSION_ID, email=_DEMO_TEACHER_EMAIL, role="teacher")
     db.add(teacher)
     return teacher
+
+
+def get_learner_locale(db: OrmSession, learner_id: int) -> str | None:
+    """Return a learner's help-language ``locale``, or ``None`` if the learner is unknown (0.3).
+
+    A pure read of the single sticky help-language flag (``Learner.locale``) the bilingual-scaffold
+    toggle writes and the surface/help layer reads to choose which language to SPEAK (V2_TODO §0.3).
+    Returns ``None`` (not ``"en"``) for an unknown ``learner_id`` so the caller can distinguish "no
+    such learner" from "learner whose help-language is English" — a stored learner always has a
+    concrete locale (the column is NOT NULL with an ``"en"`` default). This is a rendering
+    preference, NOT identity, and is never on the turn loop (see ``Learner.locale``; CLAUDE.md §7).
+    """
+    learner = db.get(Learner, learner_id)
+    if learner is None:
+        return None
+    return learner.locale
+
+
+def set_learner_locale(db: OrmSession, learner_id: int, locale: str) -> Learner | None:
+    """Set a learner's help-language ``locale`` and return the row, or ``None`` if unknown (0.3).
+
+    Mutates the sticky help-language flag the toggle persists (V2_TODO §0.3). ``None`` for an
+    unknown ``learner_id`` so the caller can 404 rather than this raising. The ALLOWED-VALUE check
+    (``"en"`` / ``"es-MX"``) is the surface/help layer's, not the repository's — this writer stores
+    the chosen tag the same way ``role`` is stored (CLAUDE.md §7: validation is the service's,
+    persistence is here). Mutate only, NOT committed — the caller owns the unit of work (the same
+    contract as the other writers here).
+    """
+    learner = db.get(Learner, learner_id)
+    if learner is None:
+        return None
+    learner.locale = locale
+    return learner
 
 
 def create_session(db: OrmSession, *, learner_id: int, route_key: str | None = None) -> Session:
@@ -576,21 +610,85 @@ def assign_unit(
     return row
 
 
+def list_reminders_for_teacher(db: OrmSession, teacher_id: int) -> list[TeacherReminder]:
+    """List a teacher's reminders, newest-first (dashboard upgrade).
+
+    Scoped to ``teacher_id`` so a teacher only ever sees their own reminders (the owns-surface
+    isolation the rest of the teacher reads use). Ordered by ``id`` descending — newest first —
+    which is a stable, deterministic order (ids are monotonic). ``[]`` for a teacher with none.
+    Pure read off the turn loop (CLAUDE.md §7; ARCHITECTURE.md §14 invariant 8).
+    """
+    return list(
+        db.scalars(
+            select(TeacherReminder)
+            .where(TeacherReminder.teacher_id == teacher_id)
+            .order_by(TeacherReminder.id.desc())
+        ).all()
+    )
+
+
+def create_reminder(db: OrmSession, *, teacher_id: int, text: str) -> TeacherReminder:
+    """Create a reminder for a teacher and return it (dashboard upgrade).
+
+    ``done`` defaults to False (a fresh reminder is open). ``add``-ed, NOT committed — the caller
+    owns the unit of work (same contract as the other writers here).
+    """
+    reminder = TeacherReminder(teacher_id=teacher_id, text=text)
+    db.add(reminder)
+    return reminder
+
+
+def get_reminder_for_teacher(
+    db: OrmSession, *, teacher_id: int, reminder_id: int
+) -> TeacherReminder | None:
+    """Return a teacher's reminder by id, or ``None`` if it is missing OR another teacher's.
+
+    The authorization primitive for reminder writes: a reminder belonging to a different teacher
+    is INDISTINGUISHABLE from a missing one (both ``None``), so a teacher can never read or mutate
+    another teacher's reminder (mirrors ``get_student_if_on_roster``). Pure read (no commit).
+    """
+    return db.scalars(
+        select(TeacherReminder).where(
+            TeacherReminder.id == reminder_id, TeacherReminder.teacher_id == teacher_id
+        )
+    ).first()
+
+
+def set_reminder_done(
+    db: OrmSession, *, teacher_id: int, reminder_id: int, done: bool
+) -> TeacherReminder | None:
+    """Toggle a teacher's reminder ``done`` flag, returning the row, or ``None`` if not theirs.
+
+    Looks the reminder up via ``get_reminder_for_teacher`` (so a foreign/unknown id is ``None``),
+    sets ``done``, and returns the mutated row. ``None`` lets the route 404. Mutate only — the
+    caller commits (caller's unit-of-work boundary).
+    """
+    reminder = get_reminder_for_teacher(db, teacher_id=teacher_id, reminder_id=reminder_id)
+    if reminder is None:
+        return None
+    reminder.done = done
+    return reminder
+
+
 __all__ = [
     "DEMO_TEACHER_SESSION_ID",
     "EventRow",
     "add_student_to_roster",
     "assign_unit",
+    "create_reminder",
     "create_session",
     "end_session",
     "get_assigned_unit",
     "get_learner",
+    "get_learner_locale",
     "get_or_create_demo_teacher",
     "get_or_create_learner",
     "get_or_create_learner_by_google_sub",
+    "get_reminder_for_teacher",
     "get_student_if_on_roster",
     "get_unit",
     "list_lessons_for_unit",
+    "list_reminders_for_teacher",
     "list_students_for_teacher",
     "list_units",
     "load_events_for_learner",
@@ -602,5 +700,7 @@ __all__ = [
     "persist_event",
     "persist_events",
     "persist_turn",
+    "set_learner_locale",
+    "set_reminder_done",
     "upsert_mastery_state",
 ]

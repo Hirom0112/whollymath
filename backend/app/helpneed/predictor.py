@@ -25,7 +25,7 @@ from typing import Protocol
 
 import numpy as np
 
-from app.helpneed.features import FEATURE_NAMES, HelpNeedFeatures, TrainingExample
+from app.helpneed.features import FEATURE_NAMES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,7 +52,30 @@ class _ProbaEstimator(Protocol):
     def predict_proba(self, x: np.ndarray) -> np.ndarray: ...
 
 
-def examples_to_matrix(examples: Sequence[TrainingExample]) -> tuple[np.ndarray, np.ndarray]:
+class _VectorFeatures(Protocol):
+    """The minimal feature-row shape this predictor scores — anything that flattens to a vector.
+
+    Declared structurally so the SAME XGBoost can score BOTH the v1 ``HelpNeedFeatures`` and the
+    proxy-free v2 ``HelpNeedV2Features`` (``events_features.py``) without coupling the predictor to
+    either concrete dataclass. The v1 caller is unchanged (``HelpNeedFeatures`` satisfies this); the
+    experimental v2 path (``train_synthetic.py``) feeds v2 rows through the same interface. The
+    width-guard keeps a model from scoring a row of the wrong width (see ``predict_proba``).
+    """
+
+    def to_vector(self) -> tuple[float, ...]: ...
+
+
+class _LabeledExample(Protocol):
+    """A (feature-row, label) training unit — structural so v1 ``TrainingExample`` and the v2
+    experimental example both satisfy it. ``fit`` reads only these two attributes."""
+
+    @property
+    def features(self) -> _VectorFeatures: ...
+    @property
+    def label(self) -> bool: ...
+
+
+def examples_to_matrix(examples: Sequence[_LabeledExample]) -> tuple[np.ndarray, np.ndarray]:
     """Stack training examples into the (X feature matrix, y label vector) arrays."""
     x = np.asarray([ex.features.to_vector() for ex in examples], dtype=float)
     y = np.asarray([1 if ex.label else 0 for ex in examples], dtype=int)
@@ -123,12 +146,18 @@ class HelpNeedPredictor:
     @classmethod
     def fit(
         cls,
-        examples: Sequence[TrainingExample],
+        examples: Sequence[_LabeledExample],
         *,
         kind: ModelKind = "xgboost",
         random_state: int = 0,
     ) -> HelpNeedPredictor:
-        """Train on labeled examples (Slice 3.3 features + 3.4 labels)."""
+        """Train on labeled examples (Slice 3.3 features + 3.4 labels).
+
+        Accepts any structural (features, label) example (``_LabeledExample``), so the v1
+        ``TrainingExample`` and the experimental v2 example (``train_synthetic.py``) both fit
+        through this one path. Stamps the v1 ``FEATURE_NAMES``; a v2 fit clears them afterward so
+        its width-guard falls back to the model's own (wider) width — see ``train_synthetic``.
+        """
         x, y = examples_to_matrix(examples)
         model = _build_model(kind, random_state)
         model.fit(x, y)
@@ -157,7 +186,7 @@ class HelpNeedPredictor:
         expected = getattr(self.model, "n_features_in_", None)
         return expected is None or int(expected) == live_len
 
-    def predict_proba(self, features: HelpNeedFeatures) -> float:
+    def predict_proba(self, features: _VectorFeatures) -> float:
         """P(unproductive) for one turn — the single-row, sub-100ms inference path.
 
         Width-guarded: if the artifact was trained on a different feature width than the live

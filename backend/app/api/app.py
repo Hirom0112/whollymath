@@ -21,6 +21,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 
@@ -44,6 +45,8 @@ from app.llm.tracing import traced
 from app.persona_surface.hint_renderer import default_hint_provider
 from app.persona_surface.tutor_voice import default_voice_provider
 from app.policy.intervention_gate import SustainedHelpNeedGate
+from app.tts.batch import DEFAULT_CACHE_DIR
+from app.tts.manifest_lookup import AUDIO_URL_PREFIX
 
 _log = logging.getLogger(__name__)
 
@@ -185,6 +188,18 @@ def create_app() -> FastAPI:
     # teacher; /teacher/me is the teacher-surface guard. Role gates the surface only, never the
     # turn loop (invariant 8).
     app.include_router(teacher_router)
+    # Serve the cached mascot-voice mp3s as STATIC files (Slice AR.3). The avatar plays a banked
+    # nudge's audio from a SpokenAudio.audio_url that resolves under this mount; serving a static
+    # file is OFF the turn loop entirely (no LLM, no SymPy, no per-request synthesis, §8.1). The
+    # cache dir is gitignored and may be empty/absent on a fresh checkout, so we ensure it exists
+    # before mounting (StaticFiles requires a real directory); an empty mount simply 404s every
+    # audio request and the surface stays captions-only — the silent-captions default (invariant 4).
+    DEFAULT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        AUDIO_URL_PREFIX,
+        StaticFiles(directory=DEFAULT_CACHE_DIR),
+        name="tts-audio",
+    )
     return app
 
 

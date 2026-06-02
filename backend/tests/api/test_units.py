@@ -35,6 +35,7 @@ _UNIT_KEYS = {
 _LESSON_KEYS = {
     "lesson_slug",
     "title",
+    "description",
     "kc_id",
     "ccss_code",
     "teks_code",
