@@ -29,14 +29,11 @@
   z-index: 0;
 }
 
-/* While leaving: let the pie roll past the edge and quiet everything else. */
-.wm-signin--leaving .wm-signin-stage {
-  overflow: visible;
-}
+/* While leaving: keep the page VISIBLE (no fade to a blank screen) and just lock input —
+   the mascot rolls away over the content and we hand off, exactly like the landing's
+   roll-off. The stage's overflow:hidden clips the pie cleanly at the edge. */
 .wm-signin--leaving .wm-signin-stage > *:not(.wm-signin-mascot) {
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.45s ease;
 }
 
 /* brand */
@@ -299,7 +296,7 @@
   will-change: transform;
 }
 .wm-signin-mascot--leaving {
-  animation: wm-signin-rollout 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: wm-signin-rollout 1.2s linear forwards;
   z-index: 50;
   will-change: transform;
 }
@@ -376,6 +373,9 @@
     transform: translate(0, 0) rotate(0deg);
   }
 }
+/* Mirrors the landing page's wm-roll exactly (linear timing + rotation matched to travel) so
+   the pie reads as a real wheel rolling off, not a slide. The squash → hop → roll arc and the
+   40vw / 900deg finish are the landing's; overflow:hidden on the stage clips it at the edge. */
 @keyframes wm-signin-rollout {
   0% {
     transform: translate(0, 0) scale(1) rotate(0deg);
@@ -390,7 +390,7 @@
     transform: translate(40px, 0) scale(1) rotate(120deg);
   }
   100% {
-    transform: translate(135vw, -6px) rotate(2880deg);
+    transform: translate(40vw, -6px) rotate(900deg);
   }
 }
 

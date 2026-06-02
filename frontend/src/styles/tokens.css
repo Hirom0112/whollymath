@@ -46,6 +46,125 @@
   --wm-font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
   --wm-font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --wm-font-hand: 'Caveat', 'Comic Sans MS', cursive;
+
+  /* ── Theme-able surface tokens (teacher dark mode, 2026-06-01) ──────────────────
+     These are the ONLY tokens the teacher dark theme flips. They are extracted so the
+     teacher shell never hardcodes a color that would break under [data-theme="dark"].
+     The light values below reproduce the current (light) teacher chrome exactly. The
+     dark overrides live in the [data-theme="dark"] block further down. */
+
+  /* Teacher shell chrome — page ground, top bar, and the navy → blue side-nav "L". */
+  --wm-tshell-page-bg: var(--wm-page-bg);
+  --wm-tshell-ink: var(--wm-ink);
+  --wm-tshell-topbar-bg: var(--wm-navy-deep);
+  --wm-tshell-topbar-ink: #ffffff;
+  --wm-tshell-side-grad: linear-gradient(185deg, var(--wm-navy-deep) 0%, #18244e 60%, #16204a 100%);
+  --wm-tshell-side-border: rgba(255, 255, 255, 0.06);
+  --wm-tshell-side-ink: #cdd6f5;
+  --wm-tshell-side-ink-soft: rgba(205, 214, 245, 0.7);
+  --wm-tshell-link-ink: #c2cdf0;
+  --wm-tshell-link-ink-strong: #ffffff;
+  --wm-tshell-surface-1: rgba(255, 255, 255, 0.06); /* class card / panel fill on the side-nav */
+  --wm-tshell-surface-2: rgba(255, 255, 255, 0.09); /* link hover fill */
+  --wm-tshell-hairline: rgba(255, 255, 255, 0.12); /* panel/footer borders on dark chrome */
+  --wm-tshell-hairline-soft: rgba(255, 255, 255, 0.08);
+  --wm-tshell-link-active-bg: var(--wm-blue-bright); /* highlighted card / active link accent */
+  --wm-tshell-link-active-glow: rgba(74, 108, 240, 0.85);
+  --wm-tshell-avatar-bg: var(--wm-mean-operation);
+  --wm-tshell-avatar-ring: #ffffff;
+  --wm-tshell-focus-ring: var(--wm-blue-bright);
+
+  /* Title gradient — the teacher brand/title sweep. The brand text sits on the navy top
+     bar, so the LIGHT value is a clean off-white (reads on navy); the DARK override
+     (below) is the amber/gold sweep from the mockup. */
+  --wm-title-grad-from: #ffffff;
+  --wm-title-grad-to: #e6ecff;
+
+  /* Theme toggle (sun/moon) control colors. */
+  --wm-tshell-toggle-bg: rgba(255, 255, 255, 0.12);
+  --wm-tshell-toggle-bg-hover: rgba(255, 255, 255, 0.2);
+  --wm-tshell-toggle-ink: #ffffff;
+
+  /* Teacher CONTENT surfaces — the roster cards/rows/rail that render INSIDE the shell main.
+     The shell chrome (above) flips in dark mode; these flip the content so the cards do not
+     stay white-on-dark. Light values reproduce the current white-on-cream content exactly. */
+  --wm-tcard-bg: #ffffff;
+  --wm-tcard-ink: var(--wm-ink);
+  --wm-tcard-ink-soft: var(--wm-ink-soft);
+  --wm-tcard-hairline: rgba(20, 30, 70, 0.08);
+  --wm-tcard-hairline-soft: rgba(20, 30, 70, 0.06);
+  --wm-tcard-shadow: rgba(20, 30, 70, 0.08);
+  --wm-tcard-shadow-strong: rgba(20, 30, 70, 0.1);
+  --wm-tcard-link: var(--wm-navy); /* the lesson link tint in a row */
+  --wm-tcard-warm-grad: linear-gradient(180deg, var(--wm-card-warm), #fff); /* triage hero */
+  --wm-tcard-mint-grad: linear-gradient(180deg, var(--wm-card-mint), #fff); /* all-clear hero */
+  --wm-tcard-inset: var(--wm-cream); /* nested panel inside a card (e.g. assign rows) */
+}
+
+/* ───────────────────────── Teacher dark theme (2026-06-01) ─────────────────────────
+   Scoped to [data-theme="dark"], which the ThemeProvider sets on <html> ONLY while the
+   teacher surface is mounted and clears on unmount — so dark mode is teacher-only and
+   never leaks to learner pages (see frontend/src/state/ThemeContext.tsx).
+
+   Design target (teacher dashboard mockup): deep navy-black page, light text, an
+   amber/gold title gradient, blue-accent highlighted cards. CRITICAL: the MEANING layer
+   (correct/attention/wrong) is re-pitched to BRIGHTER hues — not inverted grays — so each
+   stays AA-readable on the dark ground. Only the theme-able tokens above are overridden;
+   the meaning hues get dark-specific values too. */
+[data-theme='dark'] {
+  /* Teacher shell chrome. */
+  --wm-tshell-page-bg: #0b1020; /* deep navy-black page ground */
+  --wm-tshell-ink: #e8ecf8; /* light body text */
+  --wm-tshell-topbar-bg: #0e1530; /* slightly lifted top bar */
+  --wm-tshell-topbar-ink: #f3f6ff;
+  --wm-tshell-side-grad: linear-gradient(185deg, #121a3a 0%, #0d1430 60%, #0a1029 100%);
+  --wm-tshell-side-border: rgba(120, 150, 230, 0.16);
+  --wm-tshell-side-ink: #c3cdf0;
+  --wm-tshell-side-ink-soft: rgba(195, 205, 240, 0.65);
+  --wm-tshell-link-ink: #c3cdf0;
+  --wm-tshell-link-ink-strong: #ffffff;
+  --wm-tshell-surface-1: rgba(120, 150, 230, 0.1);
+  --wm-tshell-surface-2: rgba(120, 150, 230, 0.18);
+  --wm-tshell-hairline: rgba(120, 150, 230, 0.2);
+  --wm-tshell-hairline-soft: rgba(120, 150, 230, 0.12);
+  --wm-tshell-link-active-bg: #4a6cf0; /* blue accent for the highlighted/active item */
+  --wm-tshell-link-active-glow: rgba(74, 108, 240, 0.6);
+  --wm-tshell-avatar-bg: #5b73ff;
+  --wm-tshell-avatar-ring: rgba(255, 255, 255, 0.5);
+  --wm-tshell-focus-ring: #6f8bff;
+
+  /* Title gradient → amber/gold sweep. */
+  --wm-title-grad-from: #ffd36a;
+  --wm-title-grad-to: #f2a93c;
+
+  /* Theme toggle. */
+  --wm-tshell-toggle-bg: rgba(255, 255, 255, 0.1);
+  --wm-tshell-toggle-bg-hover: rgba(255, 255, 255, 0.18);
+  --wm-tshell-toggle-ink: #ffd36a;
+
+  /* ── MEANING LAYER re-pitched for dark (brighter hues, AA on #0b1020 ground) ──
+     Still load-bearing; still always paired with a shape/word/icon. Values chosen so
+     text/marks stay legible on the deep navy ground rather than washing out. */
+  --wm-mean-correct: #5fd17e; /* brighter green */
+  --wm-mean-correct-ink: #7ee29a; /* AA-contrast text weight on dark */
+  --wm-mean-attention: #f2b53d; /* brighter amber */
+  --wm-mean-attention-ink: #ffce6b;
+  --wm-mean-wrong: #ff6f56; /* brighter coral/red */
+
+  /* Teacher CONTENT surfaces (dark) — lifted navy cards on the #0b1020 ground. The card fill is
+     pulled well clear of the page ground and the hairline brightened so cards read as distinct
+     panels, not a flat dark wash (2026-06-02: cards-don't-stand-out fix). */
+  --wm-tcard-bg: #1e2c58;
+  --wm-tcard-ink: #e8ecf8;
+  --wm-tcard-ink-soft: rgba(200, 210, 245, 0.72);
+  --wm-tcard-hairline: rgba(140, 168, 245, 0.38);
+  --wm-tcard-hairline-soft: rgba(140, 168, 245, 0.2);
+  --wm-tcard-shadow: rgba(0, 0, 0, 0.5);
+  --wm-tcard-shadow-strong: rgba(0, 0, 0, 0.6);
+  --wm-tcard-link: #8fb0ff; /* lighter blue lesson link, AA on the dark card */
+  --wm-tcard-warm-grad: linear-gradient(180deg, #34273f, #1e2c58); /* dark warm triage hero */
+  --wm-tcard-mint-grad: linear-gradient(180deg, #1a3537, #1e2c58); /* dark mint all-clear hero */
+  --wm-tcard-inset: #0f1730; /* nested panel inside a dark card */
 }
 
 /* ───────────────────────── Phase RD additions (Session #5) ─────────────────────────

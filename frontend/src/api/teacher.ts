@@ -14,20 +14,26 @@ import type {
   AlertKind,
   AlertSeverity,
   AssignableUnitView,
-  AssignUnitResult,
+  AssignUnitResult as GeneratedAssignUnitResult,
   DemoLoginResponse,
   HelpNeedTrend,
   KcMasteryView,
   KcStatus,
-  RosterStudentView,
+  RosterStudentView as GeneratedRosterStudentView,
   StruggleSummaryView,
   StudentCategory,
   TeacherAlertView,
-  TeacherRosterView,
-  TeacherStudentView,
+  TeacherRosterView as GeneratedTeacherRosterView,
+  TeacherStudentView as GeneratedTeacherStudentView,
 } from '@whollymath/shared-types';
 
-import { DEMO_ROSTER, demoStudent, assignUnitInDemo } from './teacherDemo';
+import {
+  DEMO_ROSTER,
+  DEMO_AGGREGATE_TRENDS,
+  DEMO_REMINDERS,
+  demoStudent,
+  assignUnitInDemo,
+} from './teacherDemo';
 
 import { ApiError } from './index';
 
@@ -37,18 +43,71 @@ export type {
   AlertKind,
   AlertSeverity,
   AssignableUnitView,
-  AssignUnitResult,
   DemoLoginResponse,
   HelpNeedTrend,
   KcMasteryView,
   KcStatus,
-  RosterStudentView,
   StruggleSummaryView,
   StudentCategory,
   TeacherAlertView,
-  TeacherRosterView,
-  TeacherStudentView,
 };
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Trend / insight fields (dashboard-upgrade lane). These extend the generated
+   wire types with the trend series + insight fields the upgraded dashboard
+   renders. They MIRROR a backend contract being built in parallel — when the
+   Pydantic schemas regenerate `shared-types`, these extensions become no-ops
+   (the generated types will already carry the fields) and can be removed. Names
+   and types here are the contract: keep them exact.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** Per-bucket 12-point trend series for the status-strip sparklines (TCH dashboard upgrade). */
+export interface BucketTrends {
+  struggling: number[];
+  needs_attention: number[];
+  on_track: number[];
+}
+
+/** Roster row + its per-student sparkline series (oldest → newest). */
+export type RosterStudentView = GeneratedRosterStudentView & {
+  trend: number[];
+};
+
+/** Roster view + the dashboard-upgrade trend header. `students` carries the extended row. */
+export type TeacherRosterView = Omit<GeneratedTeacherRosterView, 'students'> & {
+  students?: RosterStudentView[];
+  /** ISO-8601 timestamp the roster + trends were computed. */
+  as_of: string;
+  bucket_trends: BucketTrends;
+};
+
+/** Student drill-in + the insight fields the upgraded detail panel renders. */
+export type TeacherStudentView = GeneratedTeacherStudentView & {
+  /** Estimated minutes to clear the current gap, or null when not estimable. */
+  remediation_estimate_minutes: number | null;
+  /** Per-session accuracy history (0..1), oldest → newest, for the detail sparkline. */
+  accuracy_history: number[];
+  /** Free-text teacher notes, or null. */
+  notes: string | null;
+};
+
+/** `assign-unit` result, carrying the extended student view. */
+export type AssignUnitResult = Omit<GeneratedAssignUnitResult, 'student'> & {
+  student: TeacherStudentView;
+};
+
+/** A single teacher to-do on the dashboard (TCH dashboard upgrade). */
+export interface TeacherReminder {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+/** Class-level aggregate series for the "Student Insights" card. */
+export interface TeacherAggregateTrends {
+  /** 14-point class skill-gap series (oldest → newest) for the AreaChart. */
+  skill_gap_series: number[];
+}
 
 // The real /teacher/* endpoints + types are live and working (TCH.B8). But the student BOTS that
 // seed a real class (T1 data-gen) are DEFERRED to the end — saved to test the lesson plans — so the
@@ -56,6 +115,15 @@ export type {
 // (teacherDemo.ts / DEMO_ROSTER) so the dashboard renders a populated, demoable roster instead of an
 // empty one (owner decision, 2026-05-30). Flip back to true once the bots land. The live code paths
 // stay intact so the flip is a one-line change.
+//
+// TODO(owner, deferred — confirmed 2026-06-02): switch the teacher (and parent) surfaces off the
+// hardcoded fixtures and onto REAL data. This needs two things first, then flip the flag(s):
+//   1. Seed a real demo CLASS in the DB (a teacher + a roster of synthetic Grade-6 learners) —
+//      the never-built TCH.B9 seeder.
+//   2. Create real LOGINS for those synthetic learners so their sessions/mastery are genuine
+//      (username/password student accounts), so the roster/triage/insights reflect real progress.
+// Until then we intentionally keep the polished demo fixtures for the pitch. The parent surface
+// mirrors this exact pattern with its own PARENT_API_READY flag (see api/parent.ts).
 export const TEACHER_API_READY = false;
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -145,4 +213,16 @@ export async function assignUnit(studentId: string, unitId: string): Promise<Tea
     { unit_id: unitId },
   );
   return result.student;
+}
+
+/** Fetch the class-level aggregate trends for the "Student Insights" card (dashboard upgrade). */
+export async function fetchAggregateTrends(): Promise<TeacherAggregateTrends> {
+  if (!TEACHER_API_READY) return Promise.resolve(DEMO_AGGREGATE_TRENDS);
+  return getJson<TeacherAggregateTrends>('/teacher/aggregate-trends');
+}
+
+/** Fetch the signed-in teacher's reminders / to-dos (dashboard upgrade). */
+export async function fetchReminders(): Promise<TeacherReminder[]> {
+  if (!TEACHER_API_READY) return Promise.resolve(DEMO_REMINDERS);
+  return getJson<TeacherReminder[]>('/teacher/reminders');
 }

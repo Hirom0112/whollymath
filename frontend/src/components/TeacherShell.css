@@ -6,8 +6,8 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--wm-page-bg);
-  color: var(--wm-ink);
+  background: var(--wm-tshell-page-bg);
+  color: var(--wm-tshell-ink);
   font-family: var(--wm-font-sans);
 }
 
@@ -20,8 +20,8 @@
   align-items: center;
   gap: 14px;
   padding: 13px 26px;
-  background: var(--wm-navy-deep);
-  color: #fff;
+  background: var(--wm-tshell-topbar-bg);
+  color: var(--wm-tshell-topbar-ink);
 }
 .wm-tshell-brand {
   display: flex;
@@ -33,44 +33,81 @@
   font-weight: 600;
   font-size: 21px;
   letter-spacing: -0.3px;
+  /* Title gradient sweep: navy in light, amber/gold in dark (token-driven). */
+  background: linear-gradient(92deg, var(--wm-title-grad-from), var(--wm-title-grad-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
+/* The brand pie matches the landing's spinning mark (same four-colour conic wheel + slow turn,
+   wm-spin from tokens.css). The landing's navy border + drop shadow read on its cream hero but
+   would vanish on the dark teacher top bar, so a thin light ring keeps the wheel crisp here. */
 .wm-tshell-pie {
   width: 26px;
   height: 26px;
   border-radius: 50%;
   background: conic-gradient(
-    var(--wm-yellow) 0 25%,
-    var(--wm-coral) 25% 50%,
-    var(--wm-blue-bright) 50% 75%,
-    var(--wm-teal) 75% 100%
+    from 0deg,
+    var(--wm-coral) 0 25%,
+    var(--wm-cream) 25% 50%,
+    var(--wm-navy) 50% 75%,
+    var(--wm-blue-tile) 75% 100%
   );
-  box-shadow:
-    inset 0 0 0 4px var(--wm-navy-deep),
-    0 0 0 1.5px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.3);
+  animation: wm-spin 14s linear infinite;
 }
 .wm-tshell-role {
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--wm-tshell-surface-2);
   padding: 3px 9px;
   border-radius: var(--wm-r-pill);
 }
 .wm-tshell-spacer {
   flex: 1;
 }
+
+/* ── Theme toggle (sun/moon) — between the spacer and the avatar in the top bar ── */
+.wm-tshell-theme-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--wm-tshell-toggle-bg);
+  color: var(--wm-tshell-toggle-ink);
+  border: none;
+  cursor: pointer;
+  flex: none;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+.wm-tshell-theme-toggle:hover {
+  background: var(--wm-tshell-toggle-bg-hover);
+}
+.wm-tshell-theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.wm-tshell-theme-toggle:focus-visible {
+  outline: 3px solid var(--wm-tshell-focus-ring);
+  outline-offset: 2px;
+}
+
 .wm-tshell-avatar {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--wm-mean-operation);
+  background: var(--wm-tshell-avatar-bg);
   color: #fff;
   font-weight: 700;
   font-size: 13px;
   display: grid;
   place-items: center;
-  border: 1.5px solid #fff;
+  border: 1.5px solid var(--wm-tshell-avatar-ring);
   flex: none;
 }
 
@@ -88,9 +125,9 @@
   position: sticky;
   top: 60px;
   height: calc(100vh - 60px);
-  color: #cdd6f5;
-  background: linear-gradient(185deg, var(--wm-navy-deep) 0%, #18244e 60%, #16204a 100%);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--wm-tshell-side-ink);
+  background: var(--wm-tshell-side-grad);
+  border-right: 1px solid var(--wm-tshell-side-border);
   padding: 24px 14px;
   display: flex;
   flex-direction: column;
@@ -101,15 +138,15 @@
   gap: 10px;
   padding: 10px;
   margin-bottom: 22px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--wm-tshell-surface-1);
+  border: 1px solid var(--wm-tshell-hairline);
   border-radius: var(--wm-r-md);
 }
 .wm-tshell-class-avatar {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--wm-mean-operation);
+  background: var(--wm-tshell-avatar-bg);
   color: #fff;
   font-weight: 700;
   font-size: 12px;
@@ -126,14 +163,14 @@
   font-family: var(--wm-font-serif);
   font-weight: 600;
   font-size: 15px;
-  color: #fff;
+  color: var(--wm-tshell-link-ink-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .wm-tshell-class-meta {
   font-size: 12px;
-  color: rgba(205, 214, 245, 0.7);
+  color: var(--wm-tshell-side-ink-soft);
 }
 .wm-tshell-nav {
   display: flex;
@@ -143,7 +180,7 @@
 .wm-tshell-nav--footer {
   margin-top: auto;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--wm-tshell-hairline-soft);
 }
 .wm-tshell-link {
   display: flex;
@@ -153,7 +190,7 @@
   text-align: left;
   background: none;
   border: none;
-  color: #c2cdf0;
+  color: var(--wm-tshell-link-ink);
   font-family: inherit;
   font-weight: 500;
   font-size: 14.5px;
@@ -165,17 +202,32 @@
     color 0.14s ease;
 }
 .wm-tshell-link:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.09);
-  color: #fff;
+  background: var(--wm-tshell-surface-2);
+  color: var(--wm-tshell-link-ink-strong);
 }
 .wm-tshell-link:disabled {
   cursor: default;
 }
+/* Scaffolded-but-unbuilt sections: present in the chrome, visibly not yet active. */
+.wm-tshell-link--soon {
+  opacity: 0.5;
+}
+.wm-tshell-link-soon-tag {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--wm-r-pill);
+  background: var(--wm-tshell-surface-1);
+  color: var(--wm-tshell-side-ink-soft);
+}
 .wm-tshell-link--active {
-  background: var(--wm-blue-bright);
+  background: var(--wm-tshell-link-active-bg);
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 8px 18px -8px rgba(74, 108, 240, 0.85);
+  box-shadow: 0 8px 18px -8px var(--wm-tshell-link-active-glow);
 }
 .wm-tshell-link svg {
   width: 20px;
@@ -187,7 +239,7 @@
   opacity: 1;
 }
 .wm-tshell-link:focus-visible {
-  outline: 3px solid var(--wm-blue-bright);
+  outline: 3px solid var(--wm-tshell-focus-ring);
   outline-offset: 2px;
 }
 
@@ -211,7 +263,11 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wm-tshell-link {
+  .wm-tshell-link,
+  .wm-tshell-theme-toggle {
     transition: none;
+  }
+  .wm-tshell-pie {
+    animation: none;
   }
 }

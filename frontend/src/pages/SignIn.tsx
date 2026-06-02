@@ -12,7 +12,10 @@ import './SignIn.css';
 export type SignInMethod = 'google' | 'demo';
 
 const ROLL_IN_MS = 2200;
-const ROLL_OUT_MS = 2000;
+// Matches the landing page's roll-off (1.2s linear wheel roll, hand off at 900ms). The page
+// stays visible while the pie rolls away over it, so there is never a blank stage — the same
+// feel as the landing's "Start learning" transition.
+const ROLL_OUT_MS = 900;
 const REDUCED_MS = 280;
 
 function prefersReducedMotion(): boolean {
