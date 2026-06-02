@@ -81,6 +81,7 @@ from app.domain.misconceptions import (
     omit_rational_for_integer,
     parse_points,
     part_part_ratio,
+    part_whole_ratio,
     place_value_slip,
     reversed_operands,
     signed_not_magnitude,
@@ -641,15 +642,22 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         misconception=MisconceptionId.NATURAL_NUMBER_BIAS,
         predict=lambda ops: natural_number_bias_number_line(ops[0].p, ops[0].q).biased_position,
     ),
-    # ratio-language part-part-whole confusion: answered the part-TO-part ratio (part/other)
-    # when the part-TO-whole ratio (part/(part+other)) was asked. A wrong OPERATION (compared
-    # against the wrong reference — the other part, not the whole). Operands are (part, other).
+    # ratio-language part-part-whole confusion: compared against the WRONG reference. Operands are
+    # (mode, colour_idx, part, other) — the confusion is the OTHER ratio, so which value is the
+    # mistake depends on which question was asked (mode). A part-WHOLE question (mode 0) is missed
+    # by answering the part-TO-part ratio (part/other); a part-PART question (mode 1) is missed by
+    # answering the part-of-the-whole fraction (part/(part+other)). Either way a wrong OPERATION
+    # (wrong reference), and either way always distinct from the correct value since part >= 1.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.RATIO_LANGUAGE,
-        operand_count=2,
+        operand_count=4,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.PART_PART_WHOLE_CONFUSION,
-        predict=lambda ops: part_part_ratio(int(ops[0]), int(ops[1])),
+        predict=lambda ops: (
+            part_part_ratio(int(ops[2]), int(ops[3]))
+            if int(ops[0]) == 0
+            else part_whole_ratio(int(ops[2]), int(ops[3]))
+        ),
     ),
     # unit-rate inversion: total/count formed upside-down as count/total — a wrong OPERATION
     # setup (operands are (total, count), both whole-number Rationals).

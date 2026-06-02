@@ -376,33 +376,56 @@ def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _ratio_language_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'count the whole, then the part' steps for a part-to-whole ratio (Grade-6 Unit 1).
+    """The steps for a ratio-language item — part-WHOLE or part-PART, by the operand mode.
 
-    ``operands = (part, other)``; the part-whole fraction is ``part / (part + other)``, which
-    equals ``problem.correct_value`` by construction (the last step lands on it). Raises if the
-    operands are missing (CLAUDE.md §8.5 — a hollow example would mislead).
+    ``operands = (mode, colour_idx, part, other)`` (problem_generators._generate_ratio_language).
+    For a part-WHOLE question (mode 0) the steps count the whole then the part, landing on
+    ``part / (part + other)``; for a part-PART question (mode 1) they compare the two colours
+    directly, landing on ``part / other``. Either way the last step equals ``correct_value`` by
+    construction. Raises if the operands are missing (CLAUDE.md §8.5 — a hollow example would
+    mislead).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"ratio-language problem {problem.problem_id} needs (part, other)")
-    part, other = int(operands[0]), int(operands[1])
-    total = part + other
+    if operands is None or len(operands) != 4:
+        raise ValueError(
+            f"ratio-language problem {problem.problem_id} needs (mode, colour_idx, part, other)"
+        )
+    mode, part, other = int(operands[0]), int(operands[2]), int(operands[3])
     answer = problem.correct_value
     each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
+    if mode == 0:
+        total = part + other
+        return (
+            WorkedStep(
+                shown=f"Count ALL the counters first: {part} and {other} make {total} in all.",
+                why_prompt="Why is the whole the total of both colours, not just the other colour?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"The asked colour is {part} of those {total}.",
+                why_prompt="Why does 'fraction of the whole' put the total on the bottom?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"So the fraction of the whole is {each}.",
+                why_prompt="Why is this less than one whole when only some counters are that hue?",
+                revealed_value=answer,
+            ),
+        )
     return (
         WorkedStep(
-            shown=f"Count ALL the counters first: {part} and {other} make {total} in all.",
-            why_prompt="Why is the whole the total of both colours, not just the other colour?",
+            shown=f"A ratio compares the two colours to EACH OTHER: {part} to {other}.",
+            why_prompt="Why does a part-to-part ratio ignore the total and use the other colour?",
             revealed_value=None,
         ),
         WorkedStep(
-            shown=f"The asked colour is {part} of those {total}.",
-            why_prompt="Why does 'fraction of the whole' put the total on the bottom?",
+            shown=f"Write that comparison as a fraction — first colour on top: {part}/{other}.",
+            why_prompt="Why is the second colour the bottom of a part-to-part ratio?",
             revealed_value=None,
         ),
         WorkedStep(
-            shown=f"So the fraction of the whole is {each}.",
-            why_prompt="Why is this less than one whole when only some counters are that colour?",
+            shown=f"So the ratio as a fraction is {each}.",
+            why_prompt="Why can this be different from the fraction OF the whole?",
             revealed_value=answer,
         ),
     )

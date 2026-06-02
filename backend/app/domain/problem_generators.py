@@ -123,6 +123,23 @@ class AnswerKind(StrEnum):
 
 
 @dataclass(frozen=True)
+class PromptParts:
+    """A prompt split into the parts a structured problem card renders separately.
+
+    The same text ``Problem.statement`` carries as one string, broken into the setup, the ask, and
+    the clarifying rule — so the surface can show 'The Situation / The Question / Guiding Rule' (the
+    clean ratio-language layout) instead of one run-on sentence. ``statement`` stays the single
+    accessible fallback and is composed from these parts, so the two can never drift (§8.4). A
+    problem with ``prompt_parts is None`` renders the flat statement. Frozen/hashable to keep
+    ``Problem`` hashable.
+    """
+
+    situation: str
+    question: str
+    guiding_rule: str
+
+
+@dataclass(frozen=True)
 class Problem:
     """One problem, from EITHER the procedural generator OR the gem bank.
 
@@ -205,6 +222,11 @@ class Problem:
     # read on the NUMBER_SETS path). The classified VALUE itself rides in ``operands`` so the
     # misconception (drop ``rational``) is replayable.
     correct_sets: str | None = None
+    # The structured form of ``statement`` (setup / ask / clarifying rule) for the clean problem
+    # card, when this KC supplies one; ``None`` means render the flat ``statement``. The surface
+    # falls back to ``statement`` either way, so this is purely a presentation refinement. See
+    # ``PromptParts``.
+    prompt_parts: PromptParts | None = None
 
 
 # A generator takes a seeded RNG, the seed (for the stable id), the chosen surface
@@ -599,7 +621,7 @@ def _generate_number_line(
 # Two-colour counter contexts for ratio-language items: (this-colour, other-colour). The asked
 # colour is the FIRST entry; the question wants its part-OF-the-whole fraction. Seeded RNG so the
 # same seed yields the same scenario (PROJECT.md §4.1 reproducibility).
-_RATIO_COLOURS: tuple[tuple[str, str], ...] = (
+RATIO_COLOURS: tuple[tuple[str, str], ...] = (
     ("red", "blue"),
     ("green", "yellow"),
     ("black", "white"),
@@ -607,8 +629,9 @@ _RATIO_COLOURS: tuple[tuple[str, str], ...] = (
 )
 
 # The two part-counts by difficulty tier (the easy→hard ramp; CP.B): higher tiers use larger
-# counts so the part-whole fraction is less obvious. Whole-number counts (the answer is the
-# part-WHOLE fraction); the ramp is by count size, not denominator size.
+# counts so neither the part-whole fraction nor the part-part ratio is obvious. Whole-number
+# counts; the ramp is by count size, not denominator size. Every tier has ≥2 distinct values so
+# the generator can always draw ``part != other`` (no trivial 1/2 part-whole, no 1:1 part-part).
 _RATIO_COUNTS_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
     1: (2, 3),
     2: (2, 3, 4),
@@ -617,17 +640,34 @@ _RATIO_COUNTS_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
 }
 _RATIO_COUNT_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7)
 
+# The two question modes KC_ratio_language alternates between (6.RP.1 is precisely telling these
+# apart). Carried as the leading operand sentinel so the verifier and the set-model stimulus can
+# decode which question was asked without re-deriving it. The colour pair is carried as its index
+# into ``RATIO_COLOURS`` (the next operand) so the display-only counter picture (set_model_stimulus)
+# can recover the exact colours the statement names — operands hold Rationals, not strings.
+_RATIO_MODE_PART_WHOLE = 0  # "what FRACTION of all the counters are X?"  -> part/(part+other)
+_RATIO_MODE_PART_PART = 1  # "the ratio of X to Y, written as a fraction" -> part/other
+
 
 def _generate_ratio_language(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
     """KC_ratio_language: tell a part-to-whole ratio from a part-to-part ratio (6.RP.1).
 
-    Builds a two-colour collection (``part`` of one colour, ``other`` of a second) and asks for
-    the asked colour's fraction OF the whole — ``part / (part + other)``, strictly between 0 and 1.
-    ``operands = (part, other)`` so the verifier can replay the part-part-whole confusion (the
-    part-TO-part ratio ``part / other``, which is always a DIFFERENT value since ``part >= 1`` ⇒
-    ``other != part + other``). Rendered symbolically; ``difficulty`` widens the count pool.
+    Builds a two-colour collection (``part`` of one colour, ``other`` of a second, with
+    ``part != other``) and asks ONE of two genuinely-Grade-6 questions, chosen by the seeded RNG so
+    the lesson interleaves both — the distinction 6.RP.A.1 is actually about:
+
+    - PART-WHOLE: the asked colour's fraction OF the whole, ``part / (part + other)`` (in (0, 1));
+      the part-to-part ratio ``part / other`` is the classic wrong answer.
+    - PART-PART: the ratio of the asked colour TO the other, written as a fraction ``part / other``;
+      the part-of-the-whole fraction ``part / (part + other)`` is the wrong answer.
+
+    ``operands = (mode, colour_idx, part, other)``: ``mode`` selects which question (so the verifier
+    replays the RIGHT confusion direction and the worked example takes the right steps), and
+    ``colour_idx`` lets the display-only counter picture recover the colours. ``part != other``
+    keeps both answers non-trivial (no 1/2, no 1:1). Rendered symbolically; ``difficulty`` widens
+    the count pool.
     """
     pool = (
         _RATIO_COUNTS_BY_DIFFICULTY.get(difficulty, _RATIO_COUNT_POOL)
@@ -635,22 +675,42 @@ def _generate_ratio_language(
         else _RATIO_COUNT_POOL
     )
     part = rng.choice(pool)
-    other = rng.choice(pool)
-    this_colour, other_colour = rng.choice(_RATIO_COLOURS)
+    other = rng.choice([n for n in pool if n != part])  # distinct: no 1/2 part-whole, no 1:1
+    colour_idx = rng.randrange(len(RATIO_COLOURS))
+    this_colour, other_colour = RATIO_COLOURS[colour_idx]
+    mode = rng.choice((_RATIO_MODE_PART_WHOLE, _RATIO_MODE_PART_PART))
     total = part + other
-    statement = (
-        f"A jar has {part} {this_colour} and {other} {other_colour} counters. "
-        f"What fraction of the counters are {this_colour}? "
-        f"(Compare the {this_colour} counters to ALL the counters, not to the {other_colour}.)"
-    )
+    situation = f"A jar has {part} {this_colour} and {other} {other_colour} counters."
+    if mode == _RATIO_MODE_PART_WHOLE:
+        question = f"What fraction of the counters are {this_colour}?"
+        guiding_rule = (
+            f"The bottom of your fraction must count ALL the counters, not just the "
+            f"{other_colour} ones. Compare {this_colour} counters to the total counters."
+        )
+        correct_value = Rational(part, total)
+    else:
+        question = (
+            f"What is the ratio of {this_colour} counters to {other_colour} counters, "
+            f"written as a fraction?"
+        )
+        guiding_rule = (
+            f"Compare the two colours to each other, NOT to all the counters. Put "
+            f"{this_colour} on top and {other_colour} on the bottom."
+        )
+        correct_value = Rational(part, other)
+    # statement is composed FROM the parts, so the flat fallback and the structured card can't
+    # disagree (§8.4). prompt_parts lights up the clean 'Situation / Question / Rule' card layout.
+    prompt_parts = PromptParts(situation=situation, question=question, guiding_rule=guiding_rule)
+    statement = f"{situation} {question} ({guiding_rule})"
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.RATIO_LANGUAGE, seed, surface_format),
         kc=KnowledgeComponentId.RATIO_LANGUAGE,
         surface_format=surface_format,
         statement=statement,
-        correct_value=Rational(part, total),
+        prompt_parts=prompt_parts,
+        correct_value=correct_value,
         representations_available=get_kc(KnowledgeComponentId.RATIO_LANGUAGE).representations,
-        operands=(Rational(part), Rational(other)),
+        operands=(Rational(mode), Rational(colour_idx), Rational(part), Rational(other)),
     )
 
 

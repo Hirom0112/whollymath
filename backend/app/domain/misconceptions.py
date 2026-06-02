@@ -377,11 +377,12 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         id=MisconceptionId.PART_PART_WHOLE_CONFUSION,
         name="Part-part vs part-whole confusion",
         description=(
-            "Confuses a part-to-part ratio with a part-to-whole ratio. Asked for the "
-            "part-OF-the-whole (3 red of 8 total = 3/8), the learner reports the "
-            "part-TO-part comparison instead (3 red to 5 blue = 3/5). The two quantities "
-            "are both legitimate ratios, but they answer different questions — the learner "
-            "loses track of whether the comparison is against the other part or the whole."
+            "Confuses a part-to-part ratio with a part-to-whole ratio — in either direction. "
+            "Asked for the part-OF-the-whole (3 red of 8 total = 3/8), the learner reports the "
+            "part-TO-part comparison instead (3 red to 5 blue = 3/5); asked for the part-to-part "
+            "ratio, the learner reports the part-of-the-whole fraction. Both quantities are "
+            "legitimate ratios, but they answer different questions — the learner loses track of "
+            "whether the comparison is against the other part or the whole."
         ),
         applicable_kcs=(KnowledgeComponentId.RATIO_LANGUAGE,),
     ),
@@ -915,6 +916,18 @@ def part_part_ratio(part: int, other: int) -> Rational:
     any ``part >= 1``.
     """
     return Rational(part, other)
+
+
+def part_whole_ratio(part: int, other: int) -> Rational:
+    """part-part-whole confusion (the PART-TO-PART direction): report the part-TO-whole fraction
+
+    ``part/(part+other)`` when the part-TO-part ratio ``part/other`` was asked. The mirror of
+    ``part_part_ratio``: given "6 green, 2 yellow", asked for the ratio of green to yellow (6/2),
+    the learner answers the green-of-all fraction instead (6/8). Returned as a SymPy ``Rational``
+    so the verifier compares values directly; always distinct from the correct part-part value
+    because ``part+other != other`` for any ``part >= 1`` — the same property, the other way round.
+    """
+    return Rational(part, part + other)
 
 
 def invert_rate(total: int, count: int) -> Rational:
