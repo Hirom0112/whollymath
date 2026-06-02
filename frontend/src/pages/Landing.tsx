@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Mascot } from '../components/Mascot';
 import './Landing.css';
@@ -82,12 +83,13 @@ export function Landing({ onStart }: { onStart: () => void }): React.JSX.Element
             </button>
           </div>
 
-          {/* Secondary entry to the teacher dashboard (TODO TCH.F0). A quiet link, not a second
-              CTA — the student path stays the hero. Deep-links to the ?teacher=1 surface. */}
-          <a className="wm-teacher-link" href="?teacher=1">
-            I’m a teacher
+          {/* Secondary entry for adults — a quiet link (not a second CTA), so the student path
+              stays the hero. Points at the /welcome role-select; the label names BOTH audiences
+              the role-select splits into (teacher vs parent) so neither feels excluded. */}
+          <Link className="wm-teacher-link" to="/welcome">
+            For teachers &amp; families
             <span aria-hidden="true"> →</span>
-          </a>
+          </Link>
         </div>
 
         <div className="wm-numberline" aria-hidden="true">

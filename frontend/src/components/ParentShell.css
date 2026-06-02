@@ -1,0 +1,271 @@
+/* Parent-surface shell (mirrors TeacherShell.css). A calm working frame: a deep-navy top bar and a
+   continuous navy/blue left side-nav, reading as one cohesive "L". Unique classes app-wide
+   (.wm-pshell-*); reuses the generic `--wm-tshell-*` chrome tokens so dark mode is free. */
+
+.wm-pshell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--wm-tshell-page-bg);
+  color: var(--wm-tshell-ink);
+  font-family: var(--wm-font-sans);
+}
+
+/* ── Top bar (banner landmark) ── */
+.wm-pshell-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 26px;
+  background: var(--wm-tshell-topbar-bg);
+  color: var(--wm-tshell-topbar-ink);
+}
+.wm-pshell-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.wm-pshell-brand-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 21px;
+  letter-spacing: -0.3px;
+  background: linear-gradient(92deg, var(--wm-title-grad-from), var(--wm-title-grad-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* The brand pie matches the landing's spinning mark (same four-colour conic wheel + slow turn,
+   wm-spin from tokens.css) — it MUST rotate like the landing/teacher mark. */
+.wm-pshell-pie {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--wm-coral) 0 25%,
+    var(--wm-cream) 25% 50%,
+    var(--wm-navy) 50% 75%,
+    var(--wm-blue-tile) 75% 100%
+  );
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.3);
+  animation: wm-spin 14s linear infinite;
+}
+.wm-pshell-role {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: var(--wm-tshell-surface-2);
+  padding: 3px 9px;
+  border-radius: var(--wm-r-pill);
+}
+.wm-pshell-spacer {
+  flex: 1;
+}
+
+/* ── Theme toggle (sun/moon) ── */
+.wm-pshell-theme-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--wm-tshell-toggle-bg);
+  color: var(--wm-tshell-toggle-ink);
+  border: none;
+  cursor: pointer;
+  flex: none;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+.wm-pshell-theme-toggle:hover {
+  background: var(--wm-tshell-toggle-bg-hover);
+}
+.wm-pshell-theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.wm-pshell-theme-toggle:focus-visible {
+  outline: 3px solid var(--wm-tshell-focus-ring);
+  outline-offset: 2px;
+}
+
+.wm-pshell-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--wm-tshell-avatar-bg);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--wm-tshell-avatar-ring);
+  flex: none;
+}
+
+/* ── Body grid: side-nav + main ── */
+.wm-pshell-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  align-items: start;
+}
+
+/* ── Side-nav (complementary): deep-navy → blue gradient, light text ── */
+.wm-pshell-side {
+  align-self: stretch;
+  position: sticky;
+  top: 60px;
+  height: calc(100vh - 60px);
+  color: var(--wm-tshell-side-ink);
+  background: var(--wm-tshell-side-grad);
+  border-right: 1px solid var(--wm-tshell-side-border);
+  padding: 24px 14px;
+  display: flex;
+  flex-direction: column;
+}
+.wm-pshell-household {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 22px;
+  background: var(--wm-tshell-surface-1);
+  border: 1px solid var(--wm-tshell-hairline);
+  border-radius: var(--wm-r-md);
+}
+.wm-pshell-household-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--wm-tshell-avatar-bg);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.wm-pshell-household-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.wm-pshell-household-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--wm-tshell-link-ink-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wm-pshell-household-meta {
+  font-size: 12px;
+  color: var(--wm-tshell-side-ink-soft);
+}
+.wm-pshell-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.wm-pshell-nav--footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--wm-tshell-hairline-soft);
+}
+.wm-pshell-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--wm-tshell-link-ink);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 14.5px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+.wm-pshell-link:hover:not(:disabled) {
+  background: var(--wm-tshell-surface-2);
+  color: var(--wm-tshell-link-ink-strong);
+}
+.wm-pshell-link:disabled {
+  cursor: default;
+}
+/* Scaffolded-but-unbuilt section: present in the chrome, visibly not yet active. */
+.wm-pshell-link--soon {
+  opacity: 0.5;
+}
+.wm-pshell-link-soon-tag {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--wm-r-pill);
+  background: var(--wm-tshell-surface-1);
+  color: var(--wm-tshell-side-ink-soft);
+}
+.wm-pshell-link--active {
+  background: var(--wm-tshell-link-active-bg);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 18px -8px var(--wm-tshell-link-active-glow);
+}
+.wm-pshell-link svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  opacity: 0.78;
+}
+.wm-pshell-link--active svg {
+  opacity: 1;
+}
+.wm-pshell-link:focus-visible {
+  outline: 3px solid var(--wm-tshell-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Main content region ── */
+.wm-pshell-main {
+  min-width: 0;
+  padding: 30px 40px 80px;
+}
+
+@media (max-width: 1024px) {
+  .wm-pshell-body {
+    grid-template-columns: 1fr;
+  }
+  .wm-pshell-side {
+    display: none;
+  }
+}
+@media (max-width: 680px) {
+  .wm-pshell-main {
+    padding: 24px 18px 60px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wm-pshell-link,
+  .wm-pshell-theme-toggle {
+    transition: none;
+  }
+  .wm-pshell-pie {
+    animation: none;
+  }
+}

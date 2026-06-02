@@ -23,6 +23,8 @@ import { EvalComparison } from './pages/EvalComparison';
 import { Homework } from './pages/Homework';
 import { HomeworkUpload } from './pages/HomeworkUpload';
 import { Landing } from './pages/Landing';
+import { ParentApp } from './pages/ParentApp';
+import { RoleSelect } from './pages/RoleSelect';
 import { SignIn } from './pages/SignIn';
 import { TeacherApp } from './pages/TeacherApp';
 import { Tutor } from './pages/Tutor';
@@ -70,6 +72,8 @@ export function AppRoutes(): React.JSX.Element {
       <Route path="/start" element={<ColdStartRoute />} />
       <Route path="/lesson/:kc" element={<LessonRoute />} />
       <Route path="/teacher" element={<TeacherApp />} />
+      <Route path="/welcome" element={<RoleSelect />} />
+      <Route path="/parent" element={<ParentApp />} />
       <Route path="/eval" element={<EvalComparison />} />
       <Route path="/theater" element={<BenchmarkTheater />} />
       <Route path="/hw/upload" element={<HomeworkUploadRoute />} />
@@ -100,6 +104,7 @@ function LandingRoute(): React.JSX.Element {
   const [params] = useSearchParams();
 
   const teacher = params.get('teacher') === '1';
+  const parent = params.get('parent') === '1';
   const evalArm = params.get('eval') === '1';
   const theater = params.get('theater') === '1';
   const hwUpload = params.get('hwupload');
@@ -108,6 +113,7 @@ function LandingRoute(): React.JSX.Element {
   const legacyTarget = ((): string | null => {
     const suffix = proactive ? '?proactive=1' : '';
     if (teacher) return `/teacher${suffix}`;
+    if (parent) return `/parent${suffix}`;
     if (evalArm) return `/eval${suffix}`;
     if (theater) return `/theater${suffix}`;
     if (hwUpload !== null && hwUpload !== '') {

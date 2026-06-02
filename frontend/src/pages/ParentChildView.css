@@ -1,0 +1,380 @@
+/* Parent child drill-in (mirrors TeacherStudentView.css, parent-framed). Same calm working surface;
+   sections are stacked cards in the spec order, with a friendly status hero, a yellow practice-at-
+   home card, and a yellow-accented celebrations card. Unique classes app-wide (.wm-pchild-*). The
+   top bar + side-nav live in ParentShell (.wm-pshell-*). */
+
+.wm-pchild-content {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.wm-pchild-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  color: var(--wm-tcard-link);
+  background: transparent;
+  border: none;
+  border-radius: var(--wm-r-pill);
+  padding: 6px 8px 6px 4px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: color var(--wm-motion-press) ease;
+}
+.wm-pchild-back:hover {
+  color: var(--wm-blue);
+}
+.wm-pchild-back-ico {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+.wm-pchild-back-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Identity ── */
+
+.wm-pchild-main {
+  margin: 0;
+}
+.wm-pchild-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.wm-pchild-name {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-h1);
+  letter-spacing: -0.5px;
+}
+.wm-pchild-reason {
+  margin: 6px 0 20px;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── Cards ── */
+
+.wm-pchild-card {
+  background: var(--wm-tcard-bg);
+  border-radius: var(--wm-r-lg);
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+.wm-pchild-h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 12px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-h2);
+  letter-spacing: -0.3px;
+}
+.wm-pchild-card-sub {
+  margin: -4px 0 12px;
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-pchild-empty {
+  margin: 0;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── (2) Status hero — three tones (great / nudge / help) ── */
+
+.wm-pchild-hero {
+  border-radius: var(--wm-r-lg);
+  padding: 22px 24px;
+  margin-bottom: 16px;
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+.wm-pchild-hero--great {
+  background: var(--wm-tcard-mint-grad);
+}
+.wm-pchild-hero--nudge {
+  background: var(--wm-tcard-bg);
+}
+.wm-pchild-hero--help {
+  background: var(--wm-tcard-warm-grad);
+}
+.wm-pchild-hero-eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-pchild-hero-head {
+  margin: 0 0 8px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 21px;
+  letter-spacing: -0.4px;
+}
+.wm-pchild-hero-headline {
+  margin: 0 0 8px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-lead);
+  line-height: 1.35;
+  letter-spacing: -0.3px;
+}
+.wm-pchild-hero-detail {
+  margin: 0;
+  font-size: var(--wm-fs-body);
+  line-height: 1.55;
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── (4) Skills map ── */
+
+.wm-pchild-skills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.wm-pchild-skillcol-title {
+  margin: 0 0 10px;
+  font-size: var(--wm-fs-ui);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.wm-pchild-skillcol--good .wm-pchild-skillcol-title {
+  color: var(--wm-mean-correct-ink);
+}
+.wm-pchild-skillcol--work .wm-pchild-skillcol-title {
+  color: var(--wm-mean-attention-ink);
+}
+.wm-pchild-skillcol-empty {
+  margin: 0;
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-pchild-skilllist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wm-pchild-skill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.wm-pchild-skill-name {
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  min-width: 0;
+}
+.wm-pchild-skill-tag {
+  flex: 0 0 auto;
+  font-size: var(--wm-fs-meta);
+  font-weight: 700;
+  border-radius: var(--wm-r-pill);
+  padding: 3px 11px;
+}
+.wm-pchild-skill-tag--mastered {
+  color: var(--wm-mean-correct-ink);
+  background: #d9ecdb;
+}
+.wm-pchild-skill-tag--getting {
+  color: var(--wm-mean-attention-ink);
+  background: #f8e9c8;
+}
+.wm-pchild-skill-tag--learning {
+  color: #8f3a22;
+  background: #f6ddd2;
+}
+
+/* ── (5) Timeline ── */
+
+.wm-pchild-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wm-pchild-tl-item {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 14px;
+  position: relative;
+}
+.wm-pchild-tl-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 2px;
+  background: var(--wm-tcard-hairline);
+}
+.wm-pchild-tl-dot {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 50%;
+  z-index: 1;
+  box-shadow: 0 0 0 3px var(--wm-tcard-bg);
+}
+.wm-pchild-tl-dot--correct {
+  background: var(--wm-mean-correct);
+}
+.wm-pchild-tl-dot--incorrect {
+  background: var(--wm-mean-wrong);
+}
+.wm-pchild-tl-dot--neutral {
+  background: var(--wm-blue-soft);
+}
+.wm-pchild-tl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.wm-pchild-tl-label {
+  font-size: var(--wm-fs-ui);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.wm-pchild-tl-time {
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── (6) Practice at home — yellow-accented ── */
+
+.wm-pchild-practice {
+  border-left: 4px solid var(--wm-yellow);
+}
+.wm-pchild-practice-title {
+  margin: 0 0 8px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-lead);
+  letter-spacing: -0.3px;
+}
+.wm-pchild-practice-body {
+  margin: 0;
+  font-size: var(--wm-fs-body);
+  line-height: 1.55;
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── (7) Celebrations — yellow/gold star accent ── */
+
+.wm-pchild-celebrate-ico {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: var(--wm-gold);
+}
+.wm-pchild-celebrate-ico svg {
+  width: 100%;
+  height: 100%;
+}
+.wm-pchild-celebrate-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wm-pchild-celebrate-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.wm-pchild-celebrate-star {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--wm-gold);
+}
+.wm-pchild-celebrate-star svg {
+  width: 100%;
+  height: 100%;
+}
+.wm-pchild-celebrate-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.wm-pchild-celebrate-label {
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.wm-pchild-celebrate-time {
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── (8) What's coming next ── */
+
+.wm-pchild-next-body {
+  margin: 0;
+  font-size: var(--wm-fs-body);
+  line-height: 1.55;
+  color: var(--wm-tcard-ink);
+}
+.wm-pchild-next-body strong {
+  color: var(--wm-tcard-link);
+}
+
+/* ── States ── */
+
+.wm-pchild-loading {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-pchild-error {
+  max-width: 760px;
+  margin: 16px auto;
+  padding: 14px 16px;
+  font-size: var(--wm-fs-body);
+  color: #8f3a22;
+  background: #f7e0d6;
+  border-radius: var(--wm-r-md);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 560px) {
+  .wm-pchild-skills {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-pchild-back {
+    transition: none;
+  }
+}

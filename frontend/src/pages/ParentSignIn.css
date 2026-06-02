@@ -1,0 +1,372 @@
+/* Parent sign-in gate (mirrors TeacherSignIn.css). Split-panel register: a navy "world" panel (a
+   warm single-child progress preview, pure CSS/SVG) beside a cream sign-in panel. The demo pill is
+   YELLOW (the parent accent), not the teacher blue. Unique classes app-wide (.wm-psignin-*). */
+
+.wm-psignin {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1.04fr;
+  font-family: var(--wm-font-sans);
+  background: var(--wm-cream);
+}
+.wm-psignin-art,
+.wm-psignin-panel {
+  min-width: 0;
+}
+
+/* ── Left: the navy "world" panel with a floating child-progress preview ── */
+
+.wm-psignin-art {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--wm-navy-deep);
+}
+.wm-psignin-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* A soft brand-tinted wash so the panel reads as the warm navy "world", with no raster asset. */
+  background:
+    radial-gradient(120% 90% at 20% 15%, rgba(74, 108, 240, 0.34), transparent 60%),
+    radial-gradient(120% 90% at 85% 90%, rgba(217, 102, 63, 0.26), transparent 62%);
+}
+
+.wm-psignin-preview {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(360px, 80%);
+  transform: translate(-50%, -50%) rotate(-3deg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fff;
+  border-radius: var(--wm-r-md);
+  padding: 18px 18px 16px;
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(20, 30, 70, 0.06);
+}
+.wm-psignin-pv-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wm-psignin-pv-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--wm-blue-soft);
+}
+.wm-psignin-pv-headtext {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+.wm-psignin-pv-name {
+  width: 70px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--wm-navy);
+}
+.wm-psignin-pv-grade {
+  width: 44px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(20, 30, 70, 0.18);
+}
+.wm-psignin-pv-badge {
+  width: 50px;
+  height: 18px;
+  border-radius: var(--wm-r-pill);
+  background: rgba(95, 209, 126, 0.3);
+}
+.wm-psignin-pv-chart {
+  width: 100%;
+  height: 50px;
+  display: block;
+}
+.wm-psignin-pv-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wm-psignin-pv-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wm-psignin-pv-pip {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.wm-psignin-pv-pip-good {
+  background: var(--wm-mean-correct);
+}
+.wm-psignin-pv-pip-help {
+  background: var(--wm-mean-attention);
+}
+.wm-psignin-pv-bar {
+  height: 7px;
+  border-radius: 3px;
+  background: rgba(20, 30, 70, 0.12);
+}
+
+/* ── Right: the cream sign-in panel ── */
+
+.wm-psignin-panel {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 40px 48px;
+}
+.wm-psignin-inner {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.wm-psignin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wm-psignin-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--wm-coral) 0 25%,
+    var(--wm-cream) 25% 50%,
+    var(--wm-navy) 50% 75%,
+    var(--wm-blue-tile) 75% 100%
+  );
+  border: 2px solid var(--wm-navy-deep);
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+  animation: wm-spin 14s linear infinite;
+}
+.wm-psignin-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+  color: var(--wm-ink);
+}
+.wm-psignin-role {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 11px;
+  border-radius: var(--wm-r-pill);
+  background: var(--wm-page-bg);
+  color: var(--wm-navy);
+  border: 1.5px solid rgba(47, 67, 166, 0.2);
+}
+
+.wm-psignin-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 36px 0;
+}
+
+.wm-psignin-lead {
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.wm-psignin-headline {
+  margin: 0 0 18px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-display);
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: var(--wm-navy-deep);
+}
+/* The emphasized word — a clearly-yellow accent, drawn as a soft highlight under the text. */
+.wm-psignin-accent {
+  color: var(--wm-navy-deep);
+  background: linear-gradient(180deg, transparent 58%, var(--wm-yellow) 58%);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.wm-psignin-points {
+  list-style: none;
+  width: fit-content;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.wm-psignin-points li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--wm-font-serif);
+  font-size: var(--wm-fs-lead);
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+  color: var(--wm-navy-deep);
+}
+.wm-psignin-points li::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--wm-coral);
+  box-shadow: 0 0 0 4px rgba(217, 102, 63, 0.16);
+}
+
+.wm-psignin-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.wm-psignin-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-body);
+  font-weight: 700;
+  color: var(--wm-ink);
+  background: #fffdf7;
+  border: 1.5px solid var(--wm-navy-deep);
+  border-radius: var(--wm-r-pill);
+  padding: 15px 20px;
+  cursor: pointer;
+  box-shadow:
+    0 2px 0 rgba(20, 30, 70, 0.06),
+    0 8px 18px rgba(31, 44, 92, 0.08);
+  transition:
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease,
+    border-color var(--wm-motion-press) ease;
+}
+.wm-psignin-google:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(20, 30, 70, 0.12);
+}
+.wm-psignin-google:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+.wm-psignin-gicon {
+  width: 20px;
+  height: 20px;
+}
+
+/* The yellow demo pill — yellow fill, navy ink, navy border + chunky bottom shadow, press-down. */
+.wm-psignin-demo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--wm-font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+  background: var(--wm-yellow);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: var(--wm-r-pill);
+  padding: 13px 22px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+  transition:
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease;
+}
+.wm-psignin-demo:hover {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--wm-navy-deep);
+}
+.wm-psignin-demo:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--wm-navy-deep);
+}
+.wm-psignin-demo:focus-visible {
+  outline: 3px solid var(--wm-navy-deep);
+  outline-offset: 3px;
+}
+
+.wm-psignin-google:disabled,
+.wm-psignin-demo:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.wm-psignin-error {
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  font-size: var(--wm-fs-meta);
+  color: #8f3a22;
+  background: #f7e0d6;
+  border-radius: var(--wm-r-md);
+  text-align: center;
+}
+
+.wm-psignin-note {
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(20, 30, 70, 0.1);
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-ink-soft);
+}
+
+/* ── Responsive: drop the art panel; center the form ── */
+@media (max-width: 880px) {
+  .wm-psignin {
+    grid-template-columns: 1fr;
+  }
+  .wm-psignin-art {
+    display: none;
+  }
+  .wm-psignin-panel {
+    padding: 32px 24px;
+  }
+  .wm-psignin-body {
+    justify-content: flex-start;
+    padding-top: 28px;
+  }
+  .wm-psignin-headline {
+    font-size: var(--wm-fs-h1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-psignin-google,
+  .wm-psignin-demo {
+    transition: none;
+  }
+  .wm-psignin-google:hover,
+  .wm-psignin-demo:hover,
+  .wm-psignin-demo:active {
+    transform: none;
+  }
+  .wm-psignin-mark {
+    animation: none;
+  }
+}

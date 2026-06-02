@@ -1,0 +1,345 @@
+/* Household dashboard (mirrors TeacherDashboard.css, reframed for a parent). A calm working surface:
+   per-child cards in a grid instead of a ranked roster, with a right rail for family insights +
+   notes. Reuses the brand + tcard tokens and the shared TeacherSignals primitives. Unique classes
+   app-wide (.wm-parent-*). The top bar + side-nav live in ParentShell (.wm-pshell-*). */
+
+.wm-parent-content {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.wm-parent-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.wm-parent-title {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-h1);
+  letter-spacing: -0.5px;
+}
+.wm-parent-subtitle {
+  margin: 4px 0 0;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-parent-date {
+  margin: 4px 0 0;
+  font-size: var(--wm-fs-body);
+  color: var(--wm-tcard-ink-soft);
+  white-space: nowrap;
+}
+
+.wm-parent-summary {
+  margin: 0 0 26px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-lead);
+  letter-spacing: -0.3px;
+  color: var(--wm-tcard-ink);
+}
+
+/* ── Split: child grid + family rail ── */
+
+.wm-parent-split {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.wm-parent-list {
+  min-width: 0;
+}
+.wm-parent-rail {
+  position: sticky;
+  top: 78px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (max-width: 1080px) {
+  .wm-parent-split {
+    grid-template-columns: 1fr;
+  }
+  .wm-parent-rail {
+    position: static;
+    order: -1;
+  }
+}
+
+/* ── Child cards grid ── */
+
+.wm-parent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (max-width: 620px) {
+  .wm-parent-grid {
+    grid-template-columns: 1fr;
+  }
+  .wm-parent-headline {
+    flex-direction: column;
+  }
+}
+
+.wm-parent-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: var(--wm-tcard-bg);
+  border: none;
+  border-radius: var(--wm-r-lg);
+  padding: 18px 20px;
+  cursor: pointer;
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+  transition:
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease;
+}
+.wm-parent-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 0 var(--wm-tcard-shadow-strong),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline);
+}
+.wm-parent-card:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+/* A thin left-edge tint by category, pairing color with the chip + status words (never color-only). */
+.wm-parent-card--struggling {
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 4px 0 0 var(--wm-mean-wrong),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+.wm-parent-card--needs_attention {
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 4px 0 0 var(--wm-mean-attention),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+.wm-parent-card--on_track {
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 4px 0 0 var(--wm-mean-correct),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+
+.wm-parent-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.wm-parent-card-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.wm-parent-card-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-lead);
+  letter-spacing: -0.3px;
+  color: var(--wm-tcard-ink);
+}
+.wm-parent-card-grade {
+  font-size: var(--wm-fs-meta);
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-parent-card-status {
+  font-size: var(--wm-fs-meta);
+  line-height: 1.45;
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-parent-card-where {
+  font-size: var(--wm-fs-meta);
+}
+.wm-parent-card-lesson {
+  font-weight: 700;
+  color: var(--wm-tcard-link);
+}
+.wm-parent-card-unit {
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-parent-card .wm-spark {
+  width: 100%;
+  height: auto;
+}
+.wm-parent-card-cta {
+  margin-top: 2px;
+  font-size: var(--wm-fs-ui);
+  font-weight: 700;
+  color: var(--wm-tcard-link);
+}
+
+/* ── Add-a-child card (a dashed-outline tile that matches the grid) ── */
+
+.wm-parent-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 180px;
+  text-align: center;
+  background: transparent;
+  border: 2px dashed var(--wm-tcard-hairline);
+  border-radius: var(--wm-r-lg);
+  padding: 20px;
+  cursor: pointer;
+  color: var(--wm-tcard-ink-soft);
+  transition:
+    border-color var(--wm-motion-press) ease,
+    color var(--wm-motion-press) ease,
+    background var(--wm-motion-press) ease;
+}
+.wm-parent-add:hover {
+  border-color: var(--wm-blue-bright);
+  color: var(--wm-tcard-link);
+  background: var(--wm-tcard-inset);
+}
+.wm-parent-add:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+.wm-parent-add-plus {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--wm-tcard-inset);
+  color: var(--wm-tcard-link);
+}
+.wm-parent-add-plus svg {
+  width: 22px;
+  height: 22px;
+}
+.wm-parent-add-label {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-lead);
+  letter-spacing: -0.3px;
+  color: var(--wm-tcard-ink);
+}
+.wm-parent-add-sub {
+  font-size: var(--wm-fs-meta);
+}
+
+/* ── Rail cards ── */
+
+.wm-parent-insights,
+.wm-parent-notes {
+  background: var(--wm-tcard-bg);
+  border-radius: var(--wm-r-lg);
+  padding: 18px 20px;
+  box-shadow:
+    0 2px 0 var(--wm-tcard-shadow),
+    inset 0 0 0 1.5px var(--wm-tcard-hairline-soft);
+}
+.wm-parent-insights-head,
+.wm-parent-notes-head {
+  margin: 0;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+  color: var(--wm-tcard-ink);
+}
+.wm-parent-insights-sub {
+  margin: 4px 0 12px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-parent-notes-head {
+  margin-bottom: 12px;
+}
+.wm-parent-notes-empty {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--wm-tcard-ink-soft);
+}
+.wm-parent-notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wm-parent-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+.wm-parent-note input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: var(--wm-mean-correct);
+  cursor: pointer;
+}
+.wm-parent-note-text {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--wm-tcard-ink);
+}
+.wm-parent-note-text--done {
+  text-decoration: line-through;
+  color: var(--wm-tcard-ink-soft);
+}
+
+/* ── States ── */
+
+.wm-parent-loading {
+  font-size: var(--wm-fs-body);
+  color: var(--wm-tcard-ink-soft);
+  padding: 24px 4px;
+}
+.wm-parent-error {
+  font-size: var(--wm-fs-body);
+  color: #8f3a22;
+  background: #f7e0d6;
+  border-radius: var(--wm-r-md);
+  padding: 14px 16px;
+  margin: 0 0 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-parent-card,
+  .wm-parent-add {
+    transition: none;
+  }
+  .wm-parent-card:hover {
+    transform: none;
+  }
+}
+
+/* ── Dark theme: the greeting title takes the amber/gold sweep (matches the teacher title) ── */
+[data-theme='dark'] .wm-parent-title {
+  background: linear-gradient(95deg, var(--wm-title-grad-from), var(--wm-title-grad-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}

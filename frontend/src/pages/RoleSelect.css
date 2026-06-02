@@ -1,0 +1,168 @@
+/* Role-select gate at /welcome. Cream/navy brand register matching the landing + sign-in: a warm
+   cream page, the spinning brand mark, a serif headline, and two big choice cards with a hover lift.
+   Unique classes app-wide (.wm-role-*); reuses the shared brand tokens. */
+
+.wm-role {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--wm-cream);
+  font-family: var(--wm-font-sans);
+}
+.wm-role-inner {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.wm-role-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+.wm-role-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  /* Identical to the home-page brand mark: same conic palette, navy border + bottom-shadow, spin. */
+  background: conic-gradient(
+    from 0deg,
+    var(--wm-coral) 0 25%,
+    var(--wm-cream) 25% 50%,
+    var(--wm-navy) 50% 75%,
+    var(--wm-blue-tile) 75% 100%
+  );
+  border: 2px solid var(--wm-navy-deep);
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+  animation: wm-spin 14s linear infinite;
+}
+.wm-role-name {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  color: var(--wm-ink);
+}
+
+.wm-role-headline {
+  margin: 0 0 32px;
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-display);
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: var(--wm-navy-deep);
+}
+
+.wm-role-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  width: 100%;
+}
+
+.wm-role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 34px 24px 30px;
+  background: #fffdf7;
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: var(--wm-r-xl);
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 4px 0 var(--wm-navy-deep);
+  transition:
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease;
+}
+.wm-role-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 7px 0 var(--wm-navy-deep);
+}
+.wm-role-card:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 0 var(--wm-navy-deep);
+}
+.wm-role-card:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 3px;
+}
+.wm-role-card-ico {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--wm-page-bg);
+  color: var(--wm-navy);
+}
+.wm-role-card-ico svg {
+  width: 30px;
+  height: 30px;
+}
+.wm-role-card-title {
+  font-family: var(--wm-font-serif);
+  font-weight: 600;
+  font-size: var(--wm-fs-lead);
+  letter-spacing: -0.3px;
+  color: var(--wm-navy-deep);
+}
+.wm-role-card-sub {
+  font-size: var(--wm-fs-body);
+  color: var(--wm-ink-soft);
+}
+
+.wm-role-back {
+  margin-top: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  color: var(--wm-ink-soft);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--wm-r-pill);
+  transition: color var(--wm-motion-press) ease;
+}
+.wm-role-back:hover {
+  color: var(--wm-navy);
+}
+.wm-role-back:focus-visible {
+  outline: 3px solid var(--wm-navy-deep);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .wm-role-choices {
+    grid-template-columns: 1fr;
+  }
+  .wm-role-headline {
+    font-size: var(--wm-fs-h1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-role-mark {
+    animation: none;
+  }
+  .wm-role-card,
+  .wm-role-back {
+    transition: none;
+  }
+  .wm-role-card:hover {
+    transform: none;
+  }
+}
