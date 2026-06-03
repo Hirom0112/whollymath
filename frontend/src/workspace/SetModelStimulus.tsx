@@ -131,7 +131,13 @@ function Marble({ p, idp }: { p: Placement; idp: string }): React.JSX.Element {
   return (
     <g data-colour={p.colour}>
       {/* contact shadow */}
-      <ellipse cx={p.cx} cy={p.cy + p.r * 0.78} rx={p.r * 0.78} ry={p.r * 0.26} fill="rgba(58,44,28,0.16)" />
+      <ellipse
+        cx={p.cx}
+        cy={p.cy + p.r * 0.78}
+        rx={p.r * 0.78}
+        ry={p.r * 0.26}
+        fill="rgba(58,44,28,0.16)"
+      />
       {/* marble body, painted with a per-colour radial gradient */}
       <circle
         className="wm-setmodel-counter"

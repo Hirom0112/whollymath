@@ -44,7 +44,8 @@ export class NetworkStack extends cdk.Stack {
     // nothing, is what lets DatabaseStack reference it without a dependency cycle.
     this.appSecurityGroup = new ec2.SecurityGroup(this, 'AppSecurityGroup', {
       vpc: this.vpc,
-      description: 'Shared SG for WhollyMath Fargate tasks (egress to ECR/Anthropic, ingress to RDS granted in DatabaseStack)',
+      description:
+        'Shared SG for WhollyMath Fargate tasks (egress to ECR/Anthropic, ingress to RDS granted in DatabaseStack)',
       allowAllOutbound: true,
     });
 
@@ -56,7 +57,8 @@ export class NetworkStack extends cdk.Stack {
     // reversing the edge and creating a cross-stack dependency cycle.
     this.albSecurityGroup = new ec2.SecurityGroup(this, 'AlbSecurityGroup', {
       vpc: this.vpc,
-      description: 'WhollyMath public ALB SG (HTTP 80 from the internet; CloudFront is the real client)',
+      description:
+        'WhollyMath public ALB SG (HTTP 80 from the internet; CloudFront is the real client)',
       allowAllOutbound: true,
     });
     this.albSecurityGroup.addIngressRule(

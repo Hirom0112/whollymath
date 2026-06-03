@@ -809,9 +809,7 @@ export function Tutor({
           {phase !== 'feedback' ? (
             <form
               className={`wm-tutor-form${
-                problem.scene != null || problem.set_model != null
-                  ? ' wm-tutor-form--centered'
-                  : ''
+                problem.scene != null || problem.set_model != null ? ' wm-tutor-form--centered' : ''
               }`}
               onSubmit={handleSubmit}
             >
