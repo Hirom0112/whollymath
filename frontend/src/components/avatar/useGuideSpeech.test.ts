@@ -1,12 +1,20 @@
 // Tests for the guide-voice hook (Slice AR.3): it plays a banked line's cached audio and tracks the
-// current spoken word, stays silent when there is no audio or the user has muted / prefers reduced
-// motion, and toggles `speaking` from the clip's clock. Captions are the caller's job and are NEVER
-// gated by this hook — these tests assert only the audio + lip-sync behavior.
+// current spoken word, stays silent when there is no audio or the user has muted, and toggles
+// `speaking` from the clip's clock. Captions are the caller's job and are NEVER gated by this hook
+// — these tests assert only the audio + lip-sync behavior.
+//
+// Reduce-motion is NOT a mute: under reduced motion the clip still PLAYS (voice on) but the per-word
+// lip-sync animation is skipped (`speaking` stays false). That contract is asserted below.
+//
+// The hook now reuses ONE shared <audio> element (blessed once for Safari autoplay — see
+// `audioUnlock`), so we assert a single FakeAudio instance whose `.src` is set per line, and reset
+// the unlock module between tests.
 
 import { act, renderHook } from '@testing-library/react';
 import type { SpokenAudio } from '@whollymath/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetAudioUnlockForTest } from './audioUnlock';
 import { useGuideSpeech } from './useGuideSpeech';
 
 const AUDIO: SpokenAudio = {
@@ -17,15 +25,18 @@ const AUDIO: SpokenAudio = {
 };
 
 // A controllable fake of the browser Audio element: `play()` resolves, and the test drives
-// `currentTime` + the rAF clock by hand so word-index advancement is deterministic.
+// `currentTime` + the rAF clock by hand so word-index advancement is deterministic. The shared
+// element is created with `new Audio()` (no src) and gets its `.src` set per line, so the
+// constructor arg is optional.
 class FakeAudio {
   static instances: FakeAudio[] = [];
   currentTime = 0;
   paused = true;
+  muted = false;
   src: string;
   private listeners: Record<string, Array<() => void>> = {};
 
-  constructor(src: string) {
+  constructor(src = '') {
     this.src = src;
     FakeAudio.instances.push(this);
   }
@@ -72,6 +83,7 @@ function setReducedMotion(reduce: boolean): void {
 }
 
 beforeEach(() => {
+  resetAudioUnlockForTest();
   FakeAudio.instances = [];
   rafCallbacks = [];
   window.localStorage.clear();
@@ -85,14 +97,16 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetAudioUnlockForTest();
   vi.unstubAllGlobals();
 });
 
 describe('useGuideSpeech', () => {
-  it('plays the audio and reports speaking when a ref is present', async () => {
+  it('plays the audio on the shared element and reports speaking when a ref is present', async () => {
     const { result } = renderHook(() => useGuideSpeech(AUDIO));
     // The play() promise resolves on a microtask; flush it, then the first rAF sets speaking.
     await act(async () => {});
+    // One reused element; its src is set to this line's url and it is playing.
     expect(FakeAudio.instances).toHaveLength(1);
     expect(FakeAudio.instances[0].src).toContain('/tts/audio/abc.mp3');
     expect(FakeAudio.instances[0].paused).toBe(false);
@@ -115,11 +129,20 @@ describe('useGuideSpeech', () => {
     expect(FakeAudio.instances).toHaveLength(0);
   });
 
-  it('suppresses audio when the user prefers reduced motion', () => {
+  it('reduce-motion calms animation but keeps the voice (plays audio, no lip-sync)', async () => {
     setReducedMotion(true);
     const { result } = renderHook(() => useGuideSpeech(AUDIO));
+    await act(async () => {});
+
+    // The voice PLAYS: the shared element got the src and is not paused.
+    expect(FakeAudio.instances).toHaveLength(1);
+    expect(FakeAudio.instances[0].src).toContain('/tts/audio/abc.mp3');
+    expect(FakeAudio.instances[0].paused).toBe(false);
+
+    // But lip-sync does NOT run: no rAF tick was scheduled, and `speaking` stays false.
+    stepFrame();
     expect(result.current.speaking).toBe(false);
-    expect(FakeAudio.instances).toHaveLength(0);
+    expect(result.current.wordIndex).toBe(-1);
   });
 
   it('advances the spoken word index from the clip clock (wtimes)', async () => {
