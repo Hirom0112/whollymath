@@ -19,12 +19,21 @@ parental consent**: the parent's own authenticated action *is* the consent event
   **username + 4-digit PIN**.
   - *At home:* the signed-in parent picks a child profile (`start-session`) — no
     child secret needed.
-  - *School / own device:* the child logs in with household email + username + PIN
-    (`/child/login`).
-  - A 4-digit PIN (not a full password) is developmentally right for an 11–12-year-old;
-    its small keyspace is defended by **per-account lockout** + **per-parent username
-    namespacing**, not by the hash alone. No child email is ever collected (data
-    minimization). This mirrors what Khan Academy / Duolingo / Google Family Link do.
+  - *School / own device:* the child logs in with **just username + PIN**
+    (`/child/login`) — **no parent email** (revised 2026-06-04: a kid does not know it).
+    Usernames are therefore **globally unique**.
+  - A 4-digit PIN (not a full password) is developmentally right for an 11–12-year-old.
+    Because usernames are global (enumerable), the PIN is defended by a **common-PIN
+    blocklist** (rejects 1234/0000/runs/popular PINs at setup), a **per-account lockout**
+    (5 tries → 15-min freeze), and **per-IP rate limiting** — not by the hash alone. No
+    child email is ever collected (data minimization).
+  - **Why this is proportionate (threat model):** a compromised child session reaches
+    only *that child's own lessons* — a child cookie gets a flat 403 on every parent
+    endpoint, can't see any other family (BOLA), can't reset its own PIN or reach
+    billing/email/real identity (none collected). The blast radius is one kid's math
+    progress, so the controls are sized to that. If the child surface ever holds
+    something sensitive, escalate to a **family code** or **QR/login-link** (designs on
+    file). Mirrors Khan Academy's global-username model.
 
 ## Security controls (mapped to OWASP / NIST)
 
@@ -33,6 +42,7 @@ parental consent**: the parent's own authenticated action *is* the consent event
 | Argon2id password + PIN hashing, no side-channel verify | `app/auth/passwords.py` |
 | Password policy (length floor/ceiling, common-password blocklist; no composition rules — NIST 800-63B) | `app/auth/passwords.py` |
 | PIN brute-force lockout (5 tries → 15-min lock, per-account) | `app/auth/pin_lockout.py` |
+| Common-PIN blocklist at setup (anti-spraying; usernames are global) | `app/auth/passwords.py` `_common_pins` |
 | Session JWT (HS256), short-lived, deterministic verify | `app/auth/tokens.py` |
 | **Revocable** sessions → real logout + parent "sign out everywhere" kill-switch | `AuthSession` table + repo |
 | HttpOnly + Secure + SameSite session cookie (token unreadable by JS) | `app/api/parent_session.py` |
