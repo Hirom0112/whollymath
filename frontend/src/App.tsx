@@ -31,6 +31,7 @@ import { Tutor } from './pages/Tutor';
 import { Unit } from './pages/Unit';
 import { Units } from './pages/Units';
 import { GuideProvider } from './state/GuideContext';
+import { LocaleProvider, useHelpLocale } from './state/LocaleContext';
 import { SessionProvider, useSession } from './state/SessionContext';
 
 // The skill the homework screen anchors to when entered from the home. Homework starts at
@@ -53,9 +54,11 @@ export function App(): React.JSX.Element {
   return (
     <SessionProvider proactive={PROACTIVE}>
       <GuideProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <LocaleProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </LocaleProvider>
       </GuideProvider>
     </SessionProvider>
   );
@@ -198,6 +201,9 @@ function HomeworkRoute(): React.JSX.Element {
 function ColdStartRoute(): React.JSX.Element {
   const navigate = useNavigate();
   const { proactive, setStarted } = useSession();
+  // The help-language rides session start so the very first hint/nudge is already localized
+  // (Slice 3.6). 'en' default leaves the English start unchanged.
+  const { locale } = useHelpLocale();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -205,7 +211,7 @@ function ColdStartRoute(): React.JSX.Element {
     setStarting(true);
     setError(null);
     try {
-      const resp = await startSession(route, proactive);
+      const resp = await startSession(route, proactive, locale);
       setStarted(resp);
       navigate(`/lesson/${resp.problem.kc}`, { state: { from: '/start' } });
     } catch {
@@ -239,6 +245,12 @@ function LessonRoute(): React.JSX.Element {
   const location = useLocation();
   const { kc = '' } = useParams();
   const { proactive, setStarted, takePending } = useSession();
+  // The help-language at session-start (Slice 3.6). Read through a ref so toggling language
+  // mid-lesson does NOT restart the session — the start uses the locale chosen when the lesson
+  // began, and later turns pick up the live choice (threaded at the /turn call sites in Tutor).
+  const { locale } = useHelpLocale();
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
 
   const [session, setSession] = useState<StartSessionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -260,7 +272,7 @@ function LessonRoute(): React.JSX.Element {
 
     void (async (): Promise<void> => {
       try {
-        const resp = await startLesson(kcId, proactive);
+        const resp = await startLesson(kcId, proactive, localeRef.current);
         // Apply only if this is still the active lesson. `startedForKc` is the single source
         // of truth: it survives StrictMode's mount→unmount→remount (so we neither double-start
         // nor hang waiting on a cancelled request), and it ignores a stale resolution after the

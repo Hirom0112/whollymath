@@ -8,6 +8,7 @@ export {
 export { Mascot } from './Mascot';
 export { AvatarGuide, type AvatarGuideProps } from './avatar/AvatarGuide';
 export { emotionToGuide, type GuidePresentation } from './avatar/emotionToGuide';
+export { HelpLanguageToggle } from './HelpLanguageToggle';
 export { PiMenu, type PiMenuItem } from './PiMenu';
 export { LessonTracker, type LessonPhase } from './LessonTracker';
 export { SparkCount } from './SparkCount';
