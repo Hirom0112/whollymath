@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchMe, setAuthToken } from '../api';
 import { promptGoogleSignIn } from '../auth/google';
 import { Mascot } from '../components/Mascot';
+
+import { ChildSignIn } from './parent/ChildSignIn';
 import './SignIn.css';
 
 /** How the learner chose to enter. Google is the real account path (OIDC, Slice PL.3); "demo"
@@ -92,6 +94,10 @@ export function SignIn({
 }): React.JSX.Element {
   const [entering, setEntering] = useState(true);
   const [leaving, setLeaving] = useState(false);
+  // When true, show the child (username + PIN) sign-in instead of the choice card. A kid with a
+  // parent-made account signs in HERE, on the one student sign-in surface (the parent portal
+  // links here too); on success ChildSignIn drops them straight into the learner app.
+  const [childView, setChildView] = useState(false);
   const firedRef = useRef(false);
 
   useEffect(() => {
@@ -133,6 +139,10 @@ export function SignIn({
       firedRef.current = true;
       onContinue(method);
     }, delay);
+  }
+
+  if (childView) {
+    return <ChildSignIn onBack={() => setChildView(false)} />;
   }
 
   const mascotState = leaving
@@ -180,10 +190,19 @@ export function SignIn({
               type="button"
               className="wm-signin-demo"
               onClick={() => {
+                setChildView(true);
+              }}
+            >
+              Sign in with username &amp; PIN
+            </button>
+            <button
+              type="button"
+              className="wm-signin-demo"
+              onClick={() => {
                 handleChoose('demo');
               }}
             >
-              Student Demo Free
+              Try a free demo
             </button>
           </div>
         </div>

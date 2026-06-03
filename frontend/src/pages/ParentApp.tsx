@@ -6,7 +6,6 @@ import { parentGoogle, parentLogin, parentLogout, parentMe } from '../api/parent
 import { promptGoogleSignIn } from '../auth/google';
 import { ThemeProvider } from '../state/ThemeContext';
 
-import { ChildSignIn } from './parent/ChildSignIn';
 import { ParentChildPicker } from './parent/ParentChildPicker';
 import { ParentSignupWizard } from './parent/ParentSignupWizard';
 import { ParentChildView } from './ParentChildView';
@@ -32,8 +31,9 @@ type ParentView =
   | { kind: 'addChild' }
   | { kind: 'picker' };
 
-// Pre-auth screens shown when there is no parent session.
-type GateView = 'signin' | 'wizard' | 'childSignIn';
+// Pre-auth screens shown when there is no parent session. (Child sign-in is NOT here — a
+// child signs in on the student /signin page; the parent gate just links there.)
+type GateView = 'signin' | 'wizard';
 
 export function ParentApp(): React.JSX.Element {
   // The whole parent surface is wrapped in ThemeProvider so dark mode is set on <html> the entire
@@ -164,9 +164,6 @@ function ParentSurface(): React.JSX.Element {
         />
       );
     }
-    if (gate === 'childSignIn') {
-      return <ChildSignIn onBack={() => setGate('signin')} />;
-    }
     return (
       <ParentSignIn
         busy={signingIn}
@@ -182,8 +179,9 @@ function ParentSurface(): React.JSX.Element {
           void handleEmailLogin(email, password);
         }}
         onChildSignIn={() => {
-          setAuthError(null);
-          setGate('childSignIn');
+          // A child signs in on the student /signin page (their own/school device), not in the
+          // parent portal — loop the link there per the single student sign-in surface.
+          window.location.assign('/signin');
         }}
       />
     );

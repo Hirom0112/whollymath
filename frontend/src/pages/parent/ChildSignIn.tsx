@@ -10,8 +10,9 @@ import './ChildSignIn.css';
  * POST /child/login, which sets a CHILD session cookie. On success we drop them into the learner
  * app (`/units`).
  *
- * Surfaced from the parent sign-in screen as a SECONDARY, toggled view (no App.tsx route). Handles
- * 401 (wrong details) and 423 (locked — too many tries). Unique classes (`.wm-csignin-*`).
+ * Surfaced from the STUDENT /signin page as a toggled view (the single student sign-in surface;
+ * the parent portal links here too). No App.tsx route. Handles 401 (wrong details) and 423
+ * (locked — too many tries). Unique classes (`.wm-csignin-*`).
  */
 
 const PIN_LENGTH = 4;
@@ -19,7 +20,7 @@ const PIN_LENGTH = 4;
 export function ChildSignIn({
   onBack,
 }: {
-  // Return to the parent sign-in screen.
+  // Return to the student sign-in choices.
   onBack: () => void;
 }): React.JSX.Element {
   const [parentEmail, setParentEmail] = useState('');
@@ -116,7 +117,7 @@ export function ChildSignIn({
 
             <p className="wm-csignin-foot">
               <button type="button" className="wm-csignin-link" onClick={onBack}>
-                Back to parent sign-in
+                Back
               </button>
             </p>
           </form>
