@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
 
 from app.api.auth_routes import auth_router
+from app.api.child_account_routes import child_account_router
 from app.api.course_routes import course_router
 from app.api.parent_auth_routes import parent_auth_router
 from app.api.routes import router
@@ -194,6 +195,11 @@ def create_app() -> FastAPI:
     # child accounts a parent manages. Additive and behind their own cookie-session dependency
     # (current_parent); role/identity gate the surface only, never the turn loop (invariant 8).
     app.include_router(parent_auth_router)
+    # The child-account endpoints (Slice auth/parent-child S3): a parent manages their
+    # children (create + COPPA consent, list, BOLA-scoped drill-in, reset-PIN, delete,
+    # profile-pick session, kill-switch) and a child logs in independently (username + PIN
+    # with per-account lockout). Same cookie-session surface as the parent routes.
+    app.include_router(child_account_router)
     # Serve the cached mascot-voice mp3s as STATIC files (Slice AR.3). The avatar plays a banked
     # nudge's audio from a SpokenAudio.audio_url that resolves under this mount; serving a static
     # file is OFF the turn loop entirely (no LLM, no SymPy, no per-request synthesis, §8.1). The

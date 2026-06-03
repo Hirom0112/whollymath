@@ -29,6 +29,7 @@ from app.api.parent_session import (
     clear_session_cookies,
     set_session_cookies,
 )
+from app.api.rate_limit import rate_limit
 from app.api.routes import StoreDep
 from app.auth.passwords import WeakPasswordError
 from app.auth.tokens import decode_session_token, session_signing_key
@@ -74,7 +75,11 @@ def _verify_base_url() -> str:
 
 
 @parent_auth_router.post(
-    "/signup", response_model=ParentMeResponse, status_code=status.HTTP_201_CREATED
+    "/signup",
+    response_model=ParentMeResponse,
+    status_code=status.HTTP_201_CREATED,
+    # Throttle account creation per-IP (anti-abuse); ALB/WAF is the authoritative backstop.
+    dependencies=[Depends(rate_limit(max_hits=5, window_seconds=60.0, scope="parent-signup"))],
 )
 def signup(
     body: ParentSignupRequest,
@@ -114,7 +119,13 @@ def signup(
     return outcome.me
 
 
-@parent_auth_router.post("/login", response_model=ParentMeResponse)
+@parent_auth_router.post(
+    "/login",
+    response_model=ParentMeResponse,
+    # Throttle login per-IP against credential stuffing (defense-in-depth atop the generic
+    # 401 + timing equalization); the WAF rate rule on the true client IP is the real cap.
+    dependencies=[Depends(rate_limit(max_hits=10, window_seconds=60.0, scope="parent-login"))],
+)
 def login(body: ParentLoginRequest, store: StoreDep, response: Response) -> ParentMeResponse:
     """Authenticate an email/password parent and open a session (cookies)."""
     key = _signing_key_or_503()
