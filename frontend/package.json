@@ -13,11 +13,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@whollymath/shared-types": "workspace:*",
     "qrcode.react": "^4.2.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "react-router-dom": "^7.16.0"
+    "react-router-dom": "^7.16.0",
+    "three": "^0.182.0"
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
@@ -27,6 +30,7 @@
     "@types/node": "22.19.19",
     "@types/react": "19.2.15",
     "@types/react-dom": "19.2.3",
+    "@types/three": "^0.182.0",
     "@vitejs/plugin-react": "6.0.2",
     "eslint": "9.39.4",
     "eslint-import-resolver-typescript": "4.4.4",
