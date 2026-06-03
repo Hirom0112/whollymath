@@ -30,6 +30,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy.exc import IntegrityError
@@ -315,6 +316,50 @@ def child_login(
     )
     db.commit()
     return outcome
+
+
+def export_child_data(db: OrmSession, *, parent_id: int, public_id: str) -> dict[str, Any]:
+    """Return everything we store about an owned child (the COPPA review/export right).
+
+    COPPA gives a parent the right to REVIEW the personal information collected from their
+    child (FTC COPPA Rule, RESEARCH.md). This gathers it into one JSON-able payload: the
+    profile, the recorded consent audit trail, the per-KC mastery, and the volume of learning
+    activity. BOLA-scoped via ``_require_owned_child`` → a foreign ``public_id`` raises
+    ``ChildNotFoundError`` (404), so a parent can only export their OWN child's data.
+    Read-only (no commit).
+    """
+    child = _require_owned_child(db, parent_id=parent_id, public_id=public_id)
+    mastery = repo.load_mastery_states(db, child.id)
+    turns = repo.load_turns_for_learner(db, child.id)
+    consents = repo.get_consent_records_for_child(db, child.id)
+    return {
+        "profile": {
+            "public_id": child.public_id,
+            "display_name": child.display_name,
+            "grade_level": child.grade_level,
+            "locale": child.locale,
+            "username": child.child_username,
+            "created_at": child.created_at.isoformat(),
+        },
+        "consent": [
+            {
+                "policy_version": c.policy_version,
+                "method": c.method,
+                "consented_at": c.consented_at.isoformat(),
+            }
+            for c in consents
+        ],
+        "mastery": [
+            {
+                "kc_id": m.kc_id,
+                "p_known": m.bkt_probability,
+                "attempts": m.attempt_count,
+                "confirmed": m.confirmed,
+            }
+            for m in mastery
+        ],
+        "total_turns": len(turns),
+    }
 
 
 def _require_owned_child(db: OrmSession, *, parent_id: int, public_id: str) -> Learner:

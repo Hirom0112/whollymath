@@ -290,3 +290,30 @@ def test_sign_out_everywhere_other_family_is_404(app: FastAPI) -> None:
     assert isinstance(child_b, dict)
     status, _ = parent_a.post(f"/parent/children/{child_b['public_id']}/sign-out-everywhere")
     assert status == 404
+
+
+def test_export_child_data_returns_profile_consent_and_mastery(app: FastAPI) -> None:
+    """COPPA review right: a parent can export everything stored about their own child."""
+    parent = _signed_up_parent(app, "export@example.com")
+    status, child = _create_child(parent, username="exkid", pin=_GOOD_PIN)
+    assert isinstance(child, dict)
+
+    status, data = parent.get(f"/parent/children/{child['public_id']}/export")
+    assert status == 200
+    assert isinstance(data, dict)
+    assert data["profile"]["username"] == "exkid"
+    assert data["profile"]["public_id"] == child["public_id"]
+    # A consent record was stamped at creation (the COPPA audit trail).
+    assert len(data["consent"]) == 1
+    # No practice yet → empty mastery, zero turns.
+    assert data["mastery"] == []
+    assert data["total_turns"] == 0
+
+
+def test_export_other_family_is_404(app: FastAPI) -> None:
+    parent_a = _signed_up_parent(app, "exa@example.com")
+    parent_b = _signed_up_parent(app, "exb@example.com")
+    _, child_b = _create_child(parent_b, username="bexkid")
+    assert isinstance(child_b, dict)
+    status, _ = parent_a.get(f"/parent/children/{child_b['public_id']}/export")
+    assert status == 404

@@ -18,6 +18,7 @@ Two surfaces share this router:
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
@@ -38,6 +39,7 @@ from app.api.child_account_service import (
     child_login,
     create_child_account,
     delete_child,
+    export_child_data,
     get_child_summary,
     list_children,
     open_child_session_for_parent,
@@ -146,6 +148,23 @@ def get_child(public_id: str, parent: CurrentParentDep, store: StoreDep) -> Chil
     with store.session_factory() as db:
         try:
             return get_child_summary(db, parent_id=parent.learner_id, public_id=public_id)
+        except ChildNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="child not found"
+            ) from exc
+
+
+@child_account_router.get("/parent/children/{public_id}/export")
+def export_child(public_id: str, parent: CurrentParentDep, store: StoreDep) -> dict[str, Any]:
+    """Export everything stored about one of the parent's children (COPPA review right).
+
+    A GET (no CSRF — it is a read). 404 if the child is not owned (BOLA).
+    """
+    _require_persistence(store)
+    assert store.session_factory is not None
+    with store.session_factory() as db:
+        try:
+            return export_child_data(db, parent_id=parent.learner_id, public_id=public_id)
         except ChildNotFoundError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="child not found"

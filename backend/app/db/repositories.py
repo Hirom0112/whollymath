@@ -340,6 +340,21 @@ def record_consent(
     return consent
 
 
+def get_consent_records_for_child(db: OrmSession, child_id: int) -> list[ConsentRecord]:
+    """Return every consent row stamped for a child, oldest first (the COPPA audit trail).
+
+    Read-only; backs the parent's data-export/review right (the parent can see the recorded
+    proof of consent for their own child).
+    """
+    return list(
+        db.scalars(
+            select(ConsentRecord)
+            .where(ConsentRecord.child_id == child_id)
+            .order_by(ConsentRecord.id)
+        ).all()
+    )
+
+
 # ── Revocable sessions (the kill-switch backing, Slice auth/parent-child S2) ───
 
 
