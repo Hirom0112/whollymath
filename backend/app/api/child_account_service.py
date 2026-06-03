@@ -258,33 +258,28 @@ def sign_out_child_everywhere(db: OrmSession, *, parent_id: int, public_id: str)
 def child_login(
     db: OrmSession,
     *,
-    parent_email: str,
     username: str,
     pin: str,
     signing_key: str,
     now: datetime,
 ) -> ChildSessionOutcome:
-    """Independent child login (school/shared device): household email + username + PIN.
+    """Independent child login (school/shared device): username + PIN (no parent email).
 
-    Establishes a child session from scratch (no parent session needed). Failure modes:
+    Owner decision 2026-06-04: a kid does not know their parent's email, so login is the
+    globally-unique username + the 4-digit PIN alone. Failure modes:
 
-      - unknown parent email, unknown username under that parent, or wrong PIN all raise
-        ONE ``InvalidChildCredentialsError`` (→ generic 401), so neither a parent account
-        nor a child username can be enumerated. The unknown-parent / unknown-username paths
-        verify a dummy hash so timing does not reveal which it was;
+      - an unknown username or a wrong PIN both raise ONE ``InvalidChildCredentialsError``
+        (→ generic 401), so a username cannot be confirmed by the error. The unknown-username
+        path verifies a dummy hash so timing does not reveal it;
       - a child whose lockout window is open raises ``ChildLockedError`` (→ 423) before any
-        PIN check (online brute-force defense, ``app.auth.pin_lockout``).
+        PIN check (online brute-force defense, ``app.auth.pin_lockout`` — the control that
+        now carries the weight, since usernames are globally enumerable).
 
     On success the lockout counters reset, a child session is minted, and the unit of work
     commits. On a wrong PIN the new failure count / lock instant are persisted and committed
     before the generic 401, so the lockout actually advances across attempts.
     """
-    parent = repo.get_parent_by_email(db, parent_email)
-    if parent is None:
-        verify_pin(_DUMMY_PIN_HASH, pin)  # equalize timing; result ignored
-        raise InvalidChildCredentialsError
-
-    child = repo.get_child_by_parent_and_username(db, parent.id, username)
+    child = repo.get_child_by_username(db, username)
     if child is None or child.pin_hash is None:
         verify_pin(_DUMMY_PIN_HASH, pin)  # equalize timing; result ignored
         raise InvalidChildCredentialsError

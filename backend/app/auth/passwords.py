@@ -60,6 +60,33 @@ MAX_PASSWORD_LENGTH = 128
 # password, is developmentally right for an 11-12-year-old).
 _PIN_RE = re.compile(r"^\d{4}$")
 
+
+def _common_pins() -> frozenset[str]:
+    """The blocked-at-setup PIN set: the ones a credential-sprayer tries first.
+
+    With globally-unique usernames (owner decision 2026-06-04) the realistic attack on a
+    4-digit PIN is SPRAYING — one common PIN against many usernames (per-account lockout
+    does not catch that). Rejecting the popular PINs at creation/reset removes the fruit a
+    sprayer reaches for. Studies of leaked PIN corpora show a small set covers a large share
+    of real choices: every repeated digit (0000, 1111, …), every ascending/descending run
+    (1234, 4321, …), and a handful of famous ones (1212, 6969, 2580, …).
+    """
+    pins: set[str] = set()
+    digits = "0123456789"
+    for d in digits:
+        pins.add(d * 4)  # 0000 … 9999
+    for i in range(10):
+        run = "".join(digits[(i + k) % 10] for k in range(4))
+        pins.add(run)  # ascending run (wraps: 7890, 8901, …)
+        pins.add(run[::-1])  # descending run
+    pins.update(
+        {"1212", "2121", "6969", "2580", "0852", "1004", "1010", "1122", "2001", "1313", "5683"}
+    )
+    return frozenset(pins)
+
+
+_COMMON_PINS = _common_pins()
+
 # A small embedded blocklist of the most common/breached passwords. This is the
 # offline, hermetic floor; the production build SHOULD additionally check a live
 # breached-password corpus (e.g. the HaveIBeenPwned k-anonymity range API) — that
@@ -161,6 +188,13 @@ def validate_password_strength(password: str) -> None:
 
 
 def validate_pin(pin: str) -> None:
-    """Raise :class:`InvalidPinError` unless ``pin`` is exactly four digits."""
+    """Raise :class:`InvalidPinError` unless ``pin`` is four digits AND not a common PIN.
+
+    Enforced at child-create / PIN-reset (not at login). The common-PIN blocklist is the
+    cheap, high-value defense against credential spraying now that usernames are globally
+    enumerable (see :func:`_common_pins`).
+    """
     if not _PIN_RE.match(pin):
         raise InvalidPinError("PIN must be exactly four digits.")
+    if pin in _COMMON_PINS:
+        raise InvalidPinError("That PIN is too easy to guess — please choose a less common one.")

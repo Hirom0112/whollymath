@@ -291,7 +291,6 @@ def child_login_route(
         try:
             outcome = child_login(
                 db,
-                parent_email=body.parent_email,
                 username=body.username,
                 pin=body.pin,
                 signing_key=key,

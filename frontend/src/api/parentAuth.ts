@@ -140,7 +140,6 @@ export interface CreateChildInput {
 }
 
 export interface ChildLoginInput {
-  parent_email: string;
   username: string;
   pin: string;
 }

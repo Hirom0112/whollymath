@@ -10,8 +10,8 @@ HttpOnly session cookies + double-submit CSRF, owner decision 2026-06-03). Mirro
     another family's data;
   - reset-pin → 204; delete → 204 then the list is empty;
   - profile-pick (``start-session``) opens a CHILD session for the parent's own child;
-  - independent ``/child/login``: right email+username+PIN → 200 + cookie, wrong PIN → 401,
-    unknown parent email → 401 (one generic error, no enumeration);
+  - independent ``/child/login``: right username+PIN → 200 + cookie, wrong PIN → 401,
+    unknown username → 401 (one generic error, no enumeration; no parent email needed);
   - **PIN lockout:** 5 wrong PINs lock the account, so a 6th attempt with the RIGHT PIN is
     still refused with 423;
   - sign-out-everywhere → 204.
@@ -38,7 +38,7 @@ from sqlalchemy.pool import StaticPool
 from tests.api.asgi_client import CookieClient
 
 _GOOD_PASSWORD = "a-long-enough-passphrase"
-_GOOD_PIN = "1234"
+_GOOD_PIN = "0427"  # a non-common PIN (the blocklist rejects 1234/0000/runs/etc.)
 
 
 class _CapturingSender:
@@ -173,7 +173,7 @@ def test_reset_pin_is_204(app: FastAPI) -> None:
     parent = _signed_up_parent(app, "reset@example.com")
     _, child = _create_child(parent, username="kiddo")
     assert isinstance(child, dict)
-    status, _ = parent.post(f"/parent/children/{child['public_id']}/reset-pin", {"pin": "5678"})
+    status, _ = parent.post(f"/parent/children/{child['public_id']}/reset-pin", {"pin": "8350"})
     assert status == 204
 
 
@@ -182,7 +182,7 @@ def test_reset_pin_other_family_is_404(app: FastAPI) -> None:
     parent_b = _signed_up_parent(app, "rb@example.com")
     _, child_b = _create_child(parent_b, username="bkid")
     assert isinstance(child_b, dict)
-    status, _ = parent_a.post(f"/parent/children/{child_b['public_id']}/reset-pin", {"pin": "5678"})
+    status, _ = parent_a.post(f"/parent/children/{child_b['public_id']}/reset-pin", {"pin": "8350"})
     assert status == 404
 
 
@@ -222,35 +222,26 @@ def test_start_session_other_family_is_404(app: FastAPI) -> None:
     assert status == 404
 
 
-def test_child_login_success_and_wrong_pin_and_unknown_parent(app: FastAPI) -> None:
+def test_child_login_success_and_wrong_pin_and_unknown_username(app: FastAPI) -> None:
     parent = _signed_up_parent(app, "household@example.com")
     _, child = _create_child(parent, username="kiddo", pin=_GOOD_PIN)
     assert isinstance(child, dict)
 
-    # Right email + username + PIN → 200 + child session cookie.
+    # Right username + PIN (no parent email) → 200 + child session cookie.
     good = CookieClient(app)
-    status, body = good.post(
-        "/child/login",
-        {"parent_email": "household@example.com", "username": "kiddo", "pin": _GOOD_PIN},
-    )
+    status, body = good.post("/child/login", {"username": "kiddo", "pin": _GOOD_PIN})
     assert status == 200
     assert body["public_id"] == child["public_id"]
     assert "wm_session" in good.cookies
 
     # Wrong PIN → generic 401.
     bad = CookieClient(app)
-    status, _ = bad.post(
-        "/child/login",
-        {"parent_email": "household@example.com", "username": "kiddo", "pin": "0000"},
-    )
+    status, _ = bad.post("/child/login", {"username": "kiddo", "pin": "1357"})
     assert status == 401
 
-    # Unknown parent email → generic 401 (no enumeration).
+    # Unknown username → the SAME generic 401 (no enumeration).
     unknown = CookieClient(app)
-    status, _ = unknown.post(
-        "/child/login",
-        {"parent_email": "nobody@example.com", "username": "kiddo", "pin": _GOOD_PIN},
-    )
+    status, _ = unknown.post("/child/login", {"username": "ghost", "pin": _GOOD_PIN})
     assert status == 401
 
 
@@ -261,17 +252,11 @@ def test_child_login_lockout_after_five_wrong_pins(app: FastAPI) -> None:
 
     # Five consecutive wrong PINs trip the lockout (LOCKOUT_THRESHOLD = 5).
     for _ in range(5):
-        status, _ = CookieClient(app).post(
-            "/child/login",
-            {"parent_email": "lock@example.com", "username": "kiddo", "pin": "0000"},
-        )
+        status, _ = CookieClient(app).post("/child/login", {"username": "kiddo", "pin": "1357"})
         assert status == 401
 
     # The 6th attempt — even with the CORRECT PIN — is refused with 423 (locked).
-    status, _ = CookieClient(app).post(
-        "/child/login",
-        {"parent_email": "lock@example.com", "username": "kiddo", "pin": _GOOD_PIN},
-    )
+    status, _ = CookieClient(app).post("/child/login", {"username": "kiddo", "pin": _GOOD_PIN})
     assert status == 423
 
 

@@ -89,6 +89,15 @@ def _learner_columns(url: str) -> set[str]:
         engine.dispose()
 
 
+def _learner_index_names(url: str) -> set[str]:
+    """The index names on the ``learner`` table at ``url``."""
+    engine = create_engine(url)
+    try:
+        return {ix["name"] for ix in inspect(engine).get_indexes("learner") if ix.get("name")}
+    finally:
+        engine.dispose()
+
+
 def _scalar(url: str, sql: str) -> int:
     """Run a one-value query against the database at ``url`` (a COUNT)."""
     engine = create_engine(url)
@@ -285,3 +294,34 @@ def test_auth_session_migration_upgrade_then_downgrade_round_trips(
     tables_after_downgrade = _table_names(url)
     assert "auth_session" not in tables_after_downgrade
     assert {"learner", "consent_record"} <= tables_after_downgrade
+
+
+# The global-username migration (reversible) and the revision just before it.
+_GLOBAL_USERNAME_REVISION = "b2d4f6a8c1e3"
+_PRE_GLOBAL_USERNAME_REVISION = "a3c8e1f5d720"
+
+
+def test_global_username_migration_swaps_the_unique_index(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """2026-06-04: upgrade swaps per-parent username index for a global one; downgrade reverts."""
+    db_path = tmp_path / "global_username_round_trip.sqlite"
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = _alembic_config()
+
+    # Before this migration: the per-household composite index exists.
+    command.upgrade(config, _PRE_GLOBAL_USERNAME_REVISION)
+    assert "uq_learner_parent_username" in _learner_index_names(url)
+    assert "uq_learner_child_username" not in _learner_index_names(url)
+
+    # Upgrade: per-parent index gone, global username index present.
+    command.upgrade(config, _GLOBAL_USERNAME_REVISION)
+    assert "uq_learner_child_username" in _learner_index_names(url)
+    assert "uq_learner_parent_username" not in _learner_index_names(url)
+
+    # Downgrade restores the per-parent index.
+    command.downgrade(config, _PRE_GLOBAL_USERNAME_REVISION)
+    assert "uq_learner_parent_username" in _learner_index_names(url)
+    assert "uq_learner_child_username" not in _learner_index_names(url)

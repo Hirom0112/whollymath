@@ -98,9 +98,9 @@ export function SignIn({
   const firedRef = useRef(false);
 
   // The student (child-account) login, INLINE on this one sign-in surface (the parent portal
-  // links here too). A kid enters the username + PIN their parent set, namespaced by the parent
-  // email; on success POST /child/login sets a child session cookie and we go to the learner app.
-  const [parentEmail, setParentEmail] = useState('');
+  // links here too). A kid signs in with just the username + PIN their parent set (the username
+  // is globally unique, so no parent email is needed); POST /child/login sets a child session
+  // cookie and we go to the learner app.
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [childBusy, setChildBusy] = useState(false);
@@ -110,13 +110,13 @@ export function SignIn({
     e.preventDefault();
     if (childBusy) return;
     setChildError(null);
-    if (parentEmail.trim() === '' || username.trim() === '' || !/^\d{4}$/.test(pin)) {
-      setChildError('Enter the parent email, your username, and your 4-digit PIN.');
+    if (username.trim() === '' || !/^\d{4}$/.test(pin)) {
+      setChildError('Enter your username and your 4-digit PIN.');
       return;
     }
     setChildBusy(true);
     try {
-      await childLogin({ parent_email: parentEmail.trim(), username: username.trim(), pin });
+      await childLogin({ username: username.trim(), pin });
       window.location.assign('/units');
     } catch (err) {
       if (err instanceof ApiError && err.status === 423) {
@@ -203,16 +203,6 @@ export function SignIn({
 
           <div className="wm-signin-card">
             <form className="wm-signin-form" onSubmit={(e) => void handleChildLogin(e)} noValidate>
-              <label className="wm-signin-field">
-                <span className="wm-signin-flabel">Parent&rsquo;s email</span>
-                <input
-                  type="email"
-                  value={parentEmail}
-                  onChange={(e) => setParentEmail(e.target.value)}
-                  autoComplete="off"
-                  disabled={childBusy}
-                />
-              </label>
               <label className="wm-signin-field">
                 <span className="wm-signin-flabel">Username</span>
                 <input

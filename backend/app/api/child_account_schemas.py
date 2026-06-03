@@ -38,11 +38,14 @@ class ResetPinRequest(BaseModel):
 
 
 class ChildLoginRequest(BaseModel):
-    """Independent child login (school/shared device): household email + username + PIN."""
+    """Independent child login (school/shared device): globally-unique username + PIN.
+
+    No parent email (owner decision 2026-06-04): a kid does not know it, so the username
+    identifies the child by itself.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    parent_email: str = Field(min_length=3, max_length=320)
     username: str = Field(min_length=3, max_length=32)
     pin: str = Field(min_length=4, max_length=4)
 

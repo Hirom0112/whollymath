@@ -218,10 +218,10 @@ def test_get_child_for_parent_enforces_ownership(
         assert repo.get_child_for_parent(db, p2_id, "victim-pub") is None
 
 
-def test_child_username_unique_per_parent_but_reusable_across_families(
+def test_child_username_is_globally_unique(
     session_factory: sessionmaker[OrmSession],
 ) -> None:
-    """Two families may both use "mathmia"; one family cannot reuse it twice."""
+    """Owner decision 2026-06-04: usernames are global, so two families CANNOT share one."""
     with session_factory() as db:
         p1 = _make_parent(db, "fam1@ex.com")
         p2 = _make_parent(db, "fam2@ex.com")
@@ -235,27 +235,16 @@ def test_child_username_unique_per_parent_but_reusable_across_families(
             child_username="mathmia",
             pin_hash="h",
         )
-        # Same username under a DIFFERENT parent is allowed (per-household namespace).
-        repo.create_child(
-            db,
-            parent_id=p2.id,
-            public_id="f2c1",
-            display_name="B",
-            grade_level=6,
-            locale="en",
-            child_username="mathmia",
-            pin_hash="h",
-        )
         db.commit()
-        p1_id = p1.id
+        p2_id = p2.id
 
     with session_factory() as db:
-        # Same username under the SAME parent collides on the unique index.
+        # The SAME username under a DIFFERENT family now collides on the global unique index.
         repo.create_child(
             db,
-            parent_id=p1_id,
-            public_id="f1c2",
-            display_name="C",
+            parent_id=p2_id,
+            public_id="f2c1",
+            display_name="B",
             grade_level=6,
             locale="en",
             child_username="mathmia",
@@ -265,13 +254,12 @@ def test_child_username_unique_per_parent_but_reusable_across_families(
             db.commit()
 
 
-def test_get_child_by_parent_and_username_requires_parent(
+def test_get_child_by_username_resolves_globally(
     session_factory: sessionmaker[OrmSession],
 ) -> None:
-    """Child login is namespaced: the lookup needs the parent_id, not a bare username."""
+    """Child login needs only the (globally-unique) username — no parent_id."""
     with session_factory() as db:
         p1 = _make_parent(db, "n1@ex.com")
-        p2 = _make_parent(db, "n2@ex.com")
         repo.create_child(
             db,
             parent_id=p1.id,
@@ -279,16 +267,14 @@ def test_get_child_by_parent_and_username_requires_parent(
             display_name="Nam",
             grade_level=6,
             locale="en",
-            child_username="sameuser",
+            child_username="solouser",
             pin_hash="h",
         )
         db.commit()
-        p1_id, p2_id = p1.id, p2.id
 
     with session_factory() as db:
-        assert repo.get_child_by_parent_and_username(db, p1_id, "sameuser") is not None
-        # The wrong parent never resolves the username.
-        assert repo.get_child_by_parent_and_username(db, p2_id, "sameuser") is None
+        assert repo.get_child_by_username(db, "solouser") is not None
+        assert repo.get_child_by_username(db, "nobody") is None
 
 
 # ── Consent ──────────────────────────────────────────────────────────────────

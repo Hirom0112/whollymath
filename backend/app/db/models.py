@@ -92,18 +92,17 @@ class Learner(Base):
     """
 
     __tablename__ = "learner"
-    # A CHILD's login username is unique only WITHIN its parent's household, not
-    # globally — so child usernames cannot be enumerated across families and two
-    # families may reuse the same name (OWASP enumeration mitigation; owner decision
-    # 2026-06-03, RESEARCH.md COPPA/auth). Modeled as a UNIQUE INDEX (not a table
-    # UNIQUE constraint) so the Alembic migration can add it to the ALREADY-EXISTING
-    # learner table on SQLite, which rejects ALTER TABLE ADD CONSTRAINT (the test-DB
-    # path); ``create_all`` builds the identical unique index. Rows with NULL
-    # parent_id/child_username (every non-child learner) are exempt because SQL
-    # treats NULLs as distinct.
-    __table_args__ = (
-        Index("uq_learner_parent_username", "parent_id", "child_username", unique=True),
-    )
+    # A CHILD's login username is GLOBALLY unique (owner decision 2026-06-03, revised
+    # 2026-06-04): a child logs in with username + PIN ALONE — no parent email — because
+    # a kid does not know their parent's email, so the username must identify the child by
+    # itself. This relaxes the earlier per-household namespacing: the tradeoff is that
+    # usernames are now enumerable across families, defended instead by the per-account PIN
+    # lockout + rate limiting + non-identifying usernames (the standard kids'-product model,
+    # e.g. Khan Academy). Modeled as a UNIQUE INDEX (not a table constraint) so the Alembic
+    # migration can add it to the existing learner table on SQLite (which rejects ALTER ADD
+    # CONSTRAINT); ``create_all`` builds the identical index. Rows with NULL child_username
+    # (every non-child learner) are exempt — SQL treats NULLs as distinct.
+    __table_args__ = (Index("uq_learner_child_username", "child_username", unique=True),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     # The externally-visible session id the frontend sends in place of auth. Unique

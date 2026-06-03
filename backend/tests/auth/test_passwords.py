@@ -95,9 +95,16 @@ def test_validate_pin_requires_exactly_four_digits(bad: str) -> None:
         passwords.validate_pin(bad)
 
 
-@pytest.mark.parametrize("good", ["0000", "0427", "9999"])
-def test_validate_pin_accepts_four_digits(good: str) -> None:
+@pytest.mark.parametrize("good", ["0427", "8350", "1593"])
+def test_validate_pin_accepts_uncommon_four_digits(good: str) -> None:
     passwords.validate_pin(good)  # should not raise
+
+
+@pytest.mark.parametrize("common", ["1234", "0000", "1111", "9999", "4321", "1212", "2580"])
+def test_validate_pin_rejects_common_pins(common: str) -> None:
+    # The credential-spraying defense: the popular PINs are refused at setup.
+    with pytest.raises(passwords.InvalidPinError):
+        passwords.validate_pin(common)
 
 
 # ── Rehash hook ──────────────────────────────────────────────────────────────

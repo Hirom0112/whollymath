@@ -297,22 +297,15 @@ def get_child_for_parent(db: OrmSession, parent_id: int, public_id: str) -> Lear
     ).first()
 
 
-def get_child_by_parent_and_username(
-    db: OrmSession, parent_id: int, child_username: str
-) -> Learner | None:
-    """Return a child by (parent, username) for the independent-login path, or None.
+def get_child_by_username(db: OrmSession, child_username: str) -> Learner | None:
+    """Return the child for a GLOBALLY-unique ``child_username``, or None (independent login).
 
-    Child login is namespaced under the parent (owner decision 2026-06-03): the
-    lookup REQUIRES the ``parent_id``, so a bare child username is never globally
-    resolvable and child usernames cannot be enumerated across families (OWASP
-    enumeration mitigation). PIN verification + lockout happen in the auth layer.
+    Owner decision 2026-06-04: a child logs in with username + PIN alone (no parent email),
+    so the username resolves the child by itself (``uq_learner_child_username``). PIN
+    verification + per-account lockout happen in the auth layer — the defense that replaces
+    the earlier per-household namespacing now that usernames are globally enumerable.
     """
-    return db.scalars(
-        select(Learner).where(
-            Learner.parent_id == parent_id,
-            Learner.child_username == child_username,
-        )
-    ).first()
+    return db.scalars(select(Learner).where(Learner.child_username == child_username)).first()
 
 
 def record_consent(
