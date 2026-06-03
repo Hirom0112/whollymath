@@ -102,6 +102,7 @@ from app.domain.knowledge_components import (
     get_kc,
 )
 from app.domain.lesson_spec import widget_for_representation
+from app.domain.misconceptions import MisconceptionId, get_misconception
 from app.domain.percent_grid_stimulus import PercentGridStimulus
 from app.domain.problem_generators import Problem
 from app.domain.ratio_table_stimulus import RatioTableStimulus
@@ -126,6 +127,7 @@ from app.mastery.mastery_model import Observation
 from app.mastery.progression import plan_study
 from app.mastery.retention import ReviewableSkill
 from app.mastery.unit_progress import UnitProgress, build_unit_progress
+from app.persona_surface.misconception_voice import voice_misconception_nudge
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.emotion import MomentType, select_emotion
 from app.policy.intervention_gate import SustainedHelpNeedGate
@@ -989,6 +991,20 @@ def _answer_response(
     )
 
 
+def _last_matched_misconception(live: _LiveSession) -> MisconceptionId | None:
+    """The named misconception the learner's MOST RECENT answer matched, or ``None``.
+
+    Reads the settled verdict off the session history (``Turn.result.matched_misconception`` — the
+    verifier already decided this off the turn loop, §8.2); it never re-verifies. Returns ``None``
+    when there is no history yet (a hint requested before any answer) or the last answer matched no
+    named misconception, so the error-specific nudge only fires when the verifier actually named the
+    error. This is a READ of an existing fact, never a new correctness decision (§8.2)."""
+    history = live.tutor.history
+    if not history:
+        return None
+    return history[-1].result.matched_misconception
+
+
 def _hint_response(
     live: _LiveSession,
     voice_provider: LLMProvider | None,
@@ -1038,15 +1054,28 @@ def _hint_response(
             hint_text = canonical_nudge
         else:
             # No cached audio: the mascot rephrases the canonical nudge in the learner's locale.
-            # voice_help picks the English or es-MX rephrase prompt deterministically from
-            # ``locale`` (Slice 3.4); with no provider it returns the verbatim canonical nudge
-            # (invariant 4). For es-MX this stays captions-only until the es-MX audio is rendered.
-            hint_text = voice_help(
-                canonical_nudge,
-                moment=MomentType.STUCK_NUDGE,
-                provider=voice_provider,
-                locale=locale,
-            ).text
+            # If the learner's LAST wrong answer matched a NAMED misconception (the verifier already
+            # decided this, off the turn loop), voice an ERROR-SPECIFIC corrective nudge tailored to
+            # that misconception (Slice 1.2) — gated through the SymPy numeric gate + safety filter,
+            # with the canonical nudge as the dependable fallback. Otherwise the generic nudge.
+            # Either path: the LLM only re-voices an already-decided line; it never decides
+            # correctness (§8.2) or sees mastery state (§8.3), and with no provider returns the
+            # verbatim canonical nudge (invariant 4). es-MX stays captions-only until audio renders.
+            matched = _last_matched_misconception(live)
+            if matched is not None:
+                hint_text = voice_misconception_nudge(
+                    get_misconception(matched),
+                    canonical_nudge,
+                    provider=voice_provider,
+                    locale=locale,
+                )
+            else:
+                hint_text = voice_help(
+                    canonical_nudge,
+                    moment=MomentType.STUCK_NUDGE,
+                    provider=voice_provider,
+                    locale=locale,
+                ).text
     else:
         level = HintLevel.PARTIAL_STEP if requests_so_far == 1 else HintLevel.WORKED_STEP
         hint_text = build_validated_hint(problem, level, provider=hint_provider).natural_language
