@@ -212,3 +212,48 @@ def test_locale_migration_upgrade_then_downgrade_round_trips(
     assert "locale" not in learner_cols_after_downgrade
     # The prior learner columns (incl. the role column the curriculum migration added) survive.
     assert {"id", "session_id", "role"} <= learner_cols_after_downgrade
+
+
+# The parent/child auth migration (reversible) and the revision just before it (the
+# Slice-0.3 locale head it builds on).
+_AUTH_REVISION = "f1a9c7d3e2b4"
+_PRE_AUTH_REVISION = "e7c2a9f4b108"
+
+# The learner columns + new table the parent/child auth migration is responsible for.
+_AUTH_LEARNER_COLUMNS = {
+    "parent_id",
+    "password_hash",
+    "email_verified",
+    "display_name",
+    "grade_level",
+    "child_username",
+    "pin_hash",
+    "failed_pin_attempts",
+    "pin_locked_until",
+    "public_id",
+}
+
+
+def test_auth_migration_upgrade_then_downgrade_round_trips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """auth/parent-child: upgrade adds parent/child columns + consent_record; downgrade reverts."""
+    db_path = tmp_path / "auth_round_trip.sqlite"
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = _alembic_config()
+
+    # Apply the whole chain to the auth revision (head): the columns + table appear.
+    command.upgrade(config, _AUTH_REVISION)
+    assert _AUTH_LEARNER_COLUMNS <= _learner_columns(url)
+    assert "consent_record" in _table_names(url)
+
+    # Step back one revision (undo only the auth migration): the columns + table are
+    # gone, the prior schema survives.
+    command.downgrade(config, _PRE_AUTH_REVISION)
+    cols_after_downgrade = _learner_columns(url)
+    assert _AUTH_LEARNER_COLUMNS.isdisjoint(cols_after_downgrade)
+    assert "consent_record" not in _table_names(url)
+    # The prior learner columns survive the downgrade.
+    assert {"id", "session_id", "role", "locale"} <= cols_after_downgrade

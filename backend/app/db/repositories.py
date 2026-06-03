@@ -34,6 +34,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db.models import (
     Assignment,
+    ConsentRecord,
     InteractionEvent,
     Learner,
     Lesson,
@@ -152,6 +153,190 @@ def get_or_create_demo_teacher(db: OrmSession) -> Learner:
     teacher = Learner(session_id=DEMO_TEACHER_SESSION_ID, email=_DEMO_TEACHER_EMAIL, role="teacher")
     db.add(teacher)
     return teacher
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Parent/child accounts (Slice auth/parent-child, owner decision 2026-06-03).
+#
+# Pure data-layer reads/writes for the verifiable-parental-consent model
+# (RESEARCH.md COPPA/auth): a PARENT is a Learner with role="parent" (email/password
+# or Google); a CHILD is a Learner the parent owns via ``parent_id``. Crypto is NOT
+# here — callers pass an ALREADY-Argon2id-hashed ``password_hash``/``pin_hash`` (the
+# hashing lives in app/auth/, Slice S2; CLAUDE.md §8 keeps one home per concern).
+# Every function ``add``-s/mutates but does NOT commit: the caller owns the unit of
+# work (same contract as the helpers above), so creating a child + recording its
+# consent commit atomically.
+# ─────────────────────────────────────────────────────────────────────────────
+
+PARENT_ROLE = "parent"
+
+
+def _normalize_email(email: str) -> str:
+    """Lower-case + strip an email for use as a stable lookup/identity key."""
+    return email.strip().lower()
+
+
+def create_parent_with_password(db: OrmSession, *, email: str, password_hash: str) -> Learner:
+    """Create an email/password PARENT learner (role="parent"), email unverified.
+
+    The parent's ``session_id`` is the namespaced ``parent:<normalized-email>``. That
+    column is UNIQUE, so it doubles as the one-parent-per-email guard: a second
+    signup with the same email collides on the unique constraint rather than minting
+    a duplicate parent. ``email_verified`` starts False — child profiles do not go
+    live until the parent verifies their email (the consent anchor, RESEARCH.md).
+    ``password_hash`` is already Argon2id-hashed by the caller; we store only the
+    hash (OWASP Password Storage). add-only; caller commits.
+    """
+    normalized = _normalize_email(email)
+    learner = Learner(
+        session_id=f"parent:{normalized}",
+        email=normalized,
+        role=PARENT_ROLE,
+        password_hash=password_hash,
+        email_verified=False,
+    )
+    db.add(learner)
+    return learner
+
+
+def get_parent_by_email(db: OrmSession, email: str) -> Learner | None:
+    """Return the email/password PARENT for an email, or ``None``. Read-only.
+
+    Matches on the normalized email AND ``role="parent"`` so it never returns a
+    student/teacher who happens to share the email label. Backs the login lookup and
+    the signup-collision check.
+    """
+    normalized = _normalize_email(email)
+    return db.scalars(
+        select(Learner).where(Learner.email == normalized, Learner.role == PARENT_ROLE)
+    ).first()
+
+
+def get_or_create_parent_by_google_sub(
+    db: OrmSession, sub: str, *, email: str | None = None
+) -> Learner:
+    """Return the PARENT for a Google ``sub``, creating it (role="parent") if new.
+
+    The Google sign-in path for parents. Mirrors
+    ``get_or_create_learner_by_google_sub`` (idempotent on the unique ``google_sub``)
+    but the created row is a PARENT whose email is already verified by Google
+    (``email_verified=True``) — Google asserts a verified email, so it is a reliable
+    consent anchor with no extra step. A previously-known email is never blanked.
+    add-only; caller commits.
+    """
+    existing = db.scalars(select(Learner).where(Learner.google_sub == sub)).first()
+    if existing is not None:
+        if email is not None and existing.email is None:
+            existing.email = email
+        return existing
+    learner = Learner(
+        session_id=f"google:{sub}",
+        google_sub=sub,
+        email=email,
+        role=PARENT_ROLE,
+        email_verified=True,
+    )
+    db.add(learner)
+    return learner
+
+
+def create_child(
+    db: OrmSession,
+    *,
+    parent_id: int,
+    public_id: str,
+    display_name: str,
+    grade_level: int | None,
+    locale: str,
+    child_username: str,
+    pin_hash: str,
+) -> Learner:
+    """Create a CHILD learner owned by ``parent_id`` (role stays "student").
+
+    A child is a normal student Learner (role stays "student" — identity gates
+    surfaces only, invariant 8) plus the parent link and login credential. Its
+    ``session_id`` is the namespaced ``child:<public_id>`` (public_id is a unique
+    UUID4, so the session_id is unique too). ``child_username`` is unique only within
+    the parent's household (the ``uq_learner_parent_username`` index). ``pin_hash`` is
+    already Argon2id-hashed by the caller. add-only; caller commits.
+    """
+    child = Learner(
+        session_id=f"child:{public_id}",
+        public_id=public_id,
+        parent_id=parent_id,
+        role="student",
+        display_name=display_name,
+        grade_level=grade_level,
+        locale=locale,
+        child_username=child_username,
+        pin_hash=pin_hash,
+    )
+    db.add(child)
+    return child
+
+
+def get_children_of_parent(db: OrmSession, parent_id: int) -> Sequence[Learner]:
+    """Return all CHILD learners owned by a parent, oldest first. Read-only."""
+    return db.scalars(
+        select(Learner).where(Learner.parent_id == parent_id).order_by(Learner.id)
+    ).all()
+
+
+def get_child_for_parent(db: OrmSession, parent_id: int, public_id: str) -> Learner | None:
+    """Return ONE child by ``public_id`` ONLY IF it belongs to ``parent_id``, else None.
+
+    The BOLA / object-ownership guard (OWASP API #1, RESEARCH.md): the ``parent_id``
+    is part of the WHERE clause, so a parent asking for another family's child
+    ``public_id`` gets ``None`` — authorization is enforced IN the query, never
+    trusted from the request. The opaque ``public_id`` is defense-in-depth on top
+    (IDOR), not the authorization itself.
+    """
+    return db.scalars(
+        select(Learner).where(Learner.public_id == public_id, Learner.parent_id == parent_id)
+    ).first()
+
+
+def get_child_by_parent_and_username(
+    db: OrmSession, parent_id: int, child_username: str
+) -> Learner | None:
+    """Return a child by (parent, username) for the independent-login path, or None.
+
+    Child login is namespaced under the parent (owner decision 2026-06-03): the
+    lookup REQUIRES the ``parent_id``, so a bare child username is never globally
+    resolvable and child usernames cannot be enumerated across families (OWASP
+    enumeration mitigation). PIN verification + lockout happen in the auth layer.
+    """
+    return db.scalars(
+        select(Learner).where(
+            Learner.parent_id == parent_id,
+            Learner.child_username == child_username,
+        )
+    ).first()
+
+
+def record_consent(
+    db: OrmSession,
+    *,
+    parent_id: int,
+    child_id: int | None,
+    policy_version: str,
+    method: str = "parent_account",
+    ip_address: str | None = None,
+) -> ConsentRecord:
+    """Stamp a verifiable-parental-consent row (FTC COPPA Rule, RESEARCH.md).
+
+    Written in the same unit of work as ``create_child`` so the child and the proof
+    of consent for it commit together. add-only; caller commits.
+    """
+    consent = ConsentRecord(
+        parent_id=parent_id,
+        child_id=child_id,
+        policy_version=policy_version,
+        method=method,
+        ip_address=ip_address,
+    )
+    db.add(consent)
+    return consent
 
 
 def get_learner_locale(db: OrmSession, learner_id: int) -> str | None:
