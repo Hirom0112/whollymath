@@ -1226,6 +1226,43 @@ export interface IntegerJumpView {
   delta: number;
 }
 /**
+ * Persist a learner's sticky HELP-language preference (Slice 3.6, V2_TODO §0.3).
+ *
+ * The deferred ``Learner.locale`` write: the bilingual-scaffold toggle records which language
+ * the avatar SPEAKS for this learner so it survives across sessions/devices. ``locale`` is the
+ * shared ``Locale`` literal, so a value outside {'en', 'es-MX'} is a 422 before the handler runs.
+ * Identity-adjacent but NOT identity, and never on the turn loop (see ``Learner.locale``); this
+ * is a persisted preference, distinct from the per-request ``TurnRequest.locale`` that drives an
+ * anonymous session's voicing live.
+ */
+export interface LearnerLocaleRequest {
+  /**
+   * The persisted learner whose help-language to set.
+   */
+  learner_id: number;
+  /**
+   * The help-language to store: 'en' or 'es-MX' (outside the two → 422).
+   */
+  locale: "en" | "es-MX";
+}
+/**
+ * The learner's stored help-language after a ``POST /learner/locale`` write (Slice 3.6).
+ *
+ * Echoes the persisted ``locale`` back so the surface can confirm the sticky preference took.
+ * ``locale`` is a plain ``str`` (not the literal) because it reflects what is now stored — the
+ * write already validated it on the way in.
+ */
+export interface LearnerLocaleResponse {
+  /**
+   * The learner whose help-language was set.
+   */
+  learner_id: number;
+  /**
+   * The stored help-language ('en' or 'es-MX').
+   */
+  locale: string;
+}
+/**
  * One lesson within a unit, with the learner's status on its KC (Slice DAT.9).
  *
  * The renderable subset of a catalog ``CatalogLesson`` joined to its rolled-up
@@ -1743,6 +1780,10 @@ export interface StartSessionRequest {
    * Opt into the proactive HelpNeed arm for this session (Slice 4.5). Default OFF = observe-only (RESEARCH.md §7.5); set by the Slice 5.4 A/B harness or a demo. When OFF the session never sees a proactive intervention.
    */
   proactive_enabled?: boolean;
+  /**
+   * The HELP-language to voice the avatar's hints/nudges in for this session (Slice 3.6 bilingual scaffold, V2_TODO §0.3): 'en' (default) or 'es-MX'. Selects the SPOKEN/help surface ONLY — the on-screen problem stays English, and no turn-loop decision branches on it (it never reaches verify/mastery/policy, §8.1). A value outside the two tags is a 422. Default 'en' keeps the English path byte-for-byte unchanged.
+   */
+  locale?: "en" | "es-MX";
 }
 /**
  * The freshly-started session and its Turn-1 calibration problem (0.D.2).
@@ -1993,6 +2034,10 @@ export interface TurnRequest {
    * Whether a hint was shown for this problem (down-weights the attempt, §6).
    */
   hint_used?: boolean;
+  /**
+   * The HELP-language to voice this turn's hint/nudge/intervention in (Slice 3.6 bilingual scaffold, V2_TODO §0.3): 'en' (default) or 'es-MX'. Selects the SPOKEN/help surface text + audio asset ONLY — the served ``next_problem`` stays English, and it never reaches verify/mastery/policy (read AFTER the turn outcome is fixed, §8.1). A value outside the two tags is a 422. Default 'en' keeps the English turn byte-for-byte unchanged.
+   */
+  locale?: "en" | "es-MX";
 }
 /**
  * The turn loop's reply to the surface (ARCHITECTURE.md §10 steps 11-12).

@@ -43,6 +43,8 @@ from app.api.schemas import (
     HwStatusResponse,
     HwSubmitRequest,
     HwSubmitResponse,
+    LearnerLocaleRequest,
+    LearnerLocaleResponse,
     ReadBackView,
     RouteOptionView,
     StartSessionRequest,
@@ -273,15 +275,50 @@ def start_session(
             detail="provide exactly one of 'kc' or 'route_key'",
         )
     if request.kc is not None:
-        return store.start_kc(request.kc, proactive_enabled=request.proactive_enabled)
+        return store.start_kc(
+            request.kc, proactive_enabled=request.proactive_enabled, locale=request.locale
+        )
     assert request.route_key is not None  # narrowed by the exactly-one check above
     try:
-        return store.start(request.route_key, proactive_enabled=request.proactive_enabled)
+        return store.start(
+            request.route_key,
+            proactive_enabled=request.proactive_enabled,
+            locale=request.locale,
+        )
     except UnknownRouteError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"unknown route_key: {request.route_key!r}",
         ) from exc
+
+
+@router.post("/learner/locale", response_model=LearnerLocaleResponse, tags=["session"])
+def set_learner_locale(
+    request: LearnerLocaleRequest,
+    store: StoreDep,
+) -> LearnerLocaleResponse:
+    """Persist a learner's sticky HELP-language preference (Slice 3.6, V2_TODO §0.3).
+
+    The deferred ``Learner.locale`` write: records which language the avatar SPEAKS for this
+    learner so it survives across sessions. FastAPI validates ``locale`` against the ``Locale``
+    literal first, so a value outside {'en', 'es-MX'} is a 422 before the handler runs. The thin
+    handler delegates to the store (which owns the DB unit of work + commit, CLAUDE.md §7): an
+    unknown ``learner_id`` → 404; a process with no persistence configured → 503 (the preference
+    cannot be stored). Locale is a rendering preference, never on the turn loop (see
+    ``Learner.locale``; ARCHITECTURE.md §14 invariant 8 is adjacent — identity, not this).
+    """
+    if store.session_factory is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="locale persistence is unavailable",
+        )
+    stored = store.set_locale(request.learner_id, request.locale)
+    if stored is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"unknown learner_id: {request.learner_id!r}",
+        )
+    return LearnerLocaleResponse(learner_id=request.learner_id, locale=stored)
 
 
 @router.post("/turn", response_model=TurnResponse, tags=["turn"])
