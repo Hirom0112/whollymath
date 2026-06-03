@@ -34,6 +34,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db.models import (
     Assignment,
+    AuthSession,
     ConsentRecord,
     InteractionEvent,
     Learner,
@@ -337,6 +338,75 @@ def record_consent(
     )
     db.add(consent)
     return consent
+
+
+# ── Revocable sessions (the kill-switch backing, Slice auth/parent-child S2) ───
+
+
+def create_auth_session(
+    db: OrmSession,
+    *,
+    learner_id: int,
+    jti: str,
+    kind: str,
+    expires_at: datetime,
+) -> AuthSession:
+    """Open a revocable server-side session for a freshly-minted JWT.
+
+    ``jti`` is the token's unique id (UNIQUE here, so one token ↔ one session);
+    ``expires_at`` mirrors the JWT ``exp``. add-only; caller commits.
+    """
+    session = AuthSession(learner_id=learner_id, jti=jti, kind=kind, expires_at=expires_at)
+    db.add(session)
+    return session
+
+
+def get_active_auth_session(db: OrmSession, jti: str, now: datetime) -> AuthSession | None:
+    """Return the session for ``jti`` ONLY IF it is live (not revoked, not expired).
+
+    The server-side check that makes revocation real: a token whose row is missing,
+    revoked, or past ``expires_at`` resolves to ``None`` and the request is refused,
+    even though the JWT signature itself is still valid.
+    """
+    return db.scalars(
+        select(AuthSession).where(
+            AuthSession.jti == jti,
+            AuthSession.revoked_at.is_(None),
+            AuthSession.expires_at > now,
+        )
+    ).first()
+
+
+def revoke_auth_session(db: OrmSession, jti: str, now: datetime) -> bool:
+    """Revoke one session by ``jti`` (logout). Returns whether a live row was revoked.
+
+    Idempotent: revoking an already-revoked/expired/unknown session is a no-op that
+    returns False. mutate-only; caller commits.
+    """
+    session = db.scalars(
+        select(AuthSession).where(AuthSession.jti == jti, AuthSession.revoked_at.is_(None))
+    ).first()
+    if session is None:
+        return False
+    session.revoked_at = now
+    return True
+
+
+def revoke_all_sessions_for_learner(db: OrmSession, learner_id: int, now: datetime) -> int:
+    """Revoke EVERY live session for a learner (the "sign out everywhere" kill-switch).
+
+    A parent uses this to end a child's session left open on a shared/school device,
+    or to lock everyone out after a credential reset. Returns how many live sessions
+    were revoked. mutate-only; caller commits.
+    """
+    live = db.scalars(
+        select(AuthSession).where(
+            AuthSession.learner_id == learner_id, AuthSession.revoked_at.is_(None)
+        )
+    ).all()
+    for session in live:
+        session.revoked_at = now
+    return len(live)
 
 
 def get_learner_locale(db: OrmSession, learner_id: int) -> str | None:

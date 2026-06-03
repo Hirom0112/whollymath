@@ -701,3 +701,44 @@ class ConsentRecord(Base):
     # The IP the consent was given from, recorded as part of the auditable consent
     # context. Nullable (may be unavailable). String(45) holds a full IPv6 literal.
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+
+
+class AuthSession(Base):
+    """A revocable server-side session record (Slice auth/parent-child, S2).
+
+    A session JWT (``app.auth.tokens``) proves a request is authentic, but a bare
+    stateless JWT cannot be un-issued — so a parent's "sign out everywhere" / a
+    kill-switch on a child's session left open on a school device would be
+    impossible. This row is the revocable half: the JWT carries a unique ``jti`` that
+    points at exactly one ``AuthSession``, and a request is only honored while its
+    row is present, NOT revoked, and NOT past ``expires_at`` (OWASP session-management
+    guidance, RESEARCH.md). Logout / kill-switch just stamps ``revoked_at``.
+
+    ``learner_id`` CASCADEs so deleting a learner drops their sessions. ``kind`` is the
+    same "parent"/"child" tag the token carries — identity that gates surfaces only
+    (ARCHITECTURE.md §14 invariant 8), never a turn-loop decision. ``expires_at``
+    mirrors the JWT ``exp`` so a sweep can purge dead rows. Portable column types only
+    (§4); the repository owns the reads/writes (CLAUDE.md §7).
+    """
+
+    __tablename__ = "auth_session"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    learner_id: Mapped[int] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # The JWT id (``jti`` claim) this row backs — the link between the stateless token
+    # and this revocable record. UNIQUE so a token maps to exactly one session.
+    jti: Mapped[str] = mapped_column(String(36), unique=True, index=True, nullable=False)
+    # "parent" or "child" — mirrors the token's kind; gates which surface the session
+    # may use (invariant 8). Plain string tag, not a DB ENUM (§4 portability).
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    # Mirror of the JWT ``exp``: a request is refused once now ≥ this, even if the row
+    # was never revoked, and a cleanup sweep can delete rows past it.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Stamped when the session is explicitly ended (logout / parent kill-switch). NULL
+    # while live; once set the session is dead even before ``expires_at``.
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

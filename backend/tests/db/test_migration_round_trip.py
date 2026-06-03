@@ -257,3 +257,31 @@ def test_auth_migration_upgrade_then_downgrade_round_trips(
     assert "consent_record" not in _table_names(url)
     # The prior learner columns survive the downgrade.
     assert {"id", "session_id", "role", "locale"} <= cols_after_downgrade
+
+
+# The revocable-session migration (reversible) and the revision just before it (the
+# parent/child auth schema it builds on).
+_AUTH_SESSION_REVISION = "a3c8e1f5d720"
+_PRE_AUTH_SESSION_REVISION = "f1a9c7d3e2b4"
+
+
+def test_auth_session_migration_upgrade_then_downgrade_round_trips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """auth/parent-child S2: upgrade to head adds auth_session; downgrade removes it."""
+    db_path = tmp_path / "auth_session_round_trip.sqlite"
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = _alembic_config()
+
+    # Apply the whole chain to head: the table appears.
+    command.upgrade(config, _AUTH_SESSION_REVISION)
+    assert "auth_session" in _table_names(url)
+
+    # Step back one revision (undo only this migration): the table is gone, the prior
+    # parent/child schema survives.
+    command.downgrade(config, _PRE_AUTH_SESSION_REVISION)
+    tables_after_downgrade = _table_names(url)
+    assert "auth_session" not in tables_after_downgrade
+    assert {"learner", "consent_record"} <= tables_after_downgrade
