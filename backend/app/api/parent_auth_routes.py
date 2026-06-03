@@ -14,10 +14,17 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
-from app.api.parent_auth_schemas import ParentLoginRequest, ParentMeResponse, ParentSignupRequest
+from app.api.parent_auth_schemas import (
+    GoogleParentRequest,
+    ParentLoginRequest,
+    ParentMeResponse,
+    ParentSignupRequest,
+)
 from app.api.parent_auth_service import (
     EmailTakenError,
+    GoogleNotConfiguredError,
     InvalidCredentialsError,
+    google_login_parent,
     login_parent,
     signup_parent,
     verify_parent_email,
@@ -138,6 +145,39 @@ def login(body: ParentLoginRequest, store: StoreDep, response: Response) -> Pare
             )
         except InvalidCredentialsError as exc:
             # ONE generic 401 for no-such-parent and wrong-password (no enumeration).
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials"
+            ) from exc
+    set_session_cookies(
+        response,
+        token=outcome.session.token,
+        csrf_token=outcome.session.csrf_token,
+        max_age=outcome.session.ttl,
+    )
+    return outcome.me
+
+
+@parent_auth_router.post(
+    "/google",
+    response_model=ParentMeResponse,
+    dependencies=[Depends(rate_limit(max_hits=10, window_seconds=60.0, scope="parent-google"))],
+)
+def google_login(
+    body: GoogleParentRequest, store: StoreDep, response: Response
+) -> ParentMeResponse:
+    """Sign a parent in with a Google ID token and open a session (cookies)."""
+    key = _signing_key_or_503()
+    _require_persistence(store)
+    assert store.session_factory is not None
+    with store.session_factory() as db:
+        try:
+            outcome = google_login_parent(db, id_token=body.id_token, signing_key=key, now=_now())
+        except GoogleNotConfiguredError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="google sign-in is not configured",
+            ) from exc
+        except InvalidCredentialsError as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials"
             ) from exc

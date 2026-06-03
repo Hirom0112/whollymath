@@ -190,3 +190,42 @@ def test_verify_email_marks_verified(app: FastAPI, sender: _CapturingSender) -> 
 def test_verify_email_rejects_garbage_token(app: FastAPI) -> None:
     status, _ = CookieClient(app).get("/parent/verify-email?token=not-a-real-token")
     assert status == 400
+
+
+def test_google_signup_opens_a_verified_session(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Google parent maps to a role=parent row, pre-verified, with a live session cookie."""
+    import app.api.parent_auth_service as svc
+    from app.auth.google import GoogleIdentity
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client.apps.googleusercontent.com")
+    # Never hit Google's network: stub the verifier (same approach as the teacher-auth tests).
+    monkeypatch.setattr(
+        svc,
+        "verify_google_id_token",
+        lambda token, *, client_id: GoogleIdentity(sub="g-parent-1", email="gparent@example.com"),
+    )
+
+    client = CookieClient(app)
+    status, body = client.post("/parent/google", {"id_token": "any-token"})
+    assert status == 200
+    assert body == {"email": "gparent@example.com", "email_verified": True}
+    assert "wm_session" in client.cookies
+    # The cookie authenticates /me.
+    status, me = client.get("/parent/me")
+    assert status == 200 and me["email"] == "gparent@example.com"
+
+
+def test_google_login_invalid_token_is_401(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.api.parent_auth_service as svc
+    from app.auth.google import InvalidIdTokenError
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client.apps.googleusercontent.com")
+
+    def _reject(token: str, *, client_id: str) -> object:
+        raise InvalidIdTokenError("bad")
+
+    monkeypatch.setattr(svc, "verify_google_id_token", _reject)
+    status, _ = CookieClient(app).post("/parent/google", {"id_token": "bad"})
+    assert status == 401

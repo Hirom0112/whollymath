@@ -31,6 +31,14 @@ class ParentLoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=200)
 
 
+class GoogleParentRequest(BaseModel):
+    """Google sign-in for a parent: the GIS-issued ID token the frontend obtained."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id_token: str = Field(min_length=1)
+
+
 class ParentMeResponse(BaseModel):
     """The parent's own minimal profile — no internal ids, no PII beyond their email."""
 

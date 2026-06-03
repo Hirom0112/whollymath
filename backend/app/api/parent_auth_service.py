@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session as OrmSession
 from app.api.parent_auth_schemas import ParentMeResponse
 from app.api.parent_session import PARENT_SESSION_TTL
 from app.auth.csrf import generate_csrf_token
+from app.auth.google import InvalidIdTokenError, google_client_id, verify_google_id_token
 from app.auth.passwords import hash_password, validate_password_strength, verify_password
 from app.auth.tokens import PARENT_KIND, mint_session_token
 from app.db import repositories as repo
@@ -47,6 +48,10 @@ class EmailTakenError(Exception):
 
 class InvalidCredentialsError(Exception):
     """Login with no matching parent or a wrong password (one generic error — no enum)."""
+
+
+class GoogleNotConfiguredError(Exception):
+    """Google sign-in was attempted but GOOGLE_CLIENT_ID is unset (caller → 503)."""
 
 
 @dataclass(frozen=True)
@@ -150,6 +155,34 @@ def login_parent(
 
     session = _issue_parent_session(db, learner_id=learner.id, signing_key=signing_key, now=now)
     me = ParentMeResponse(email=learner.email, email_verified=learner.email_verified)
+    db.commit()
+    return AuthOutcome(me=me, session=session)
+
+
+def google_login_parent(
+    db: OrmSession, *, id_token: str, signing_key: str, now: datetime
+) -> AuthOutcome:
+    """Sign a parent in via Google and open a session (idempotent on the Google sub).
+
+    Verifies the Google ID token with Google's official library (app.auth.google — we do
+    not hand-roll JWT/JWKS), then maps the stable ``sub`` to a parent Learner row
+    (``role="parent"``, ``email_verified=True`` — Google asserts a verified email, so no
+    separate verification step is needed). Raises ``GoogleNotConfiguredError`` (→ 503) when
+    GOOGLE_CLIENT_ID is unset, and ``InvalidCredentialsError`` (→ 401) for any token failure
+    (the verifier already collapses the reason — no detail leak).
+    """
+    client_id = google_client_id()
+    if client_id is None:
+        raise GoogleNotConfiguredError
+    try:
+        identity = verify_google_id_token(id_token, client_id=client_id)
+    except InvalidIdTokenError as exc:
+        raise InvalidCredentialsError from exc
+
+    parent = repo.get_or_create_parent_by_google_sub(db, identity.sub, email=identity.email)
+    db.flush()
+    session = _issue_parent_session(db, learner_id=parent.id, signing_key=signing_key, now=now)
+    me = ParentMeResponse(email=parent.email, email_verified=parent.email_verified)
     db.commit()
     return AuthOutcome(me=me, session=session)
 
