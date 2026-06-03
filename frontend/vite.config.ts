@@ -34,6 +34,12 @@ export default defineConfig({
       '/hw': API_TARGET,
       // Teacher dashboard: roster + per-student drill-in + assign-next-unit (TCH.B8).
       '/teacher': API_TARGET,
+      // Parent/child auth (Slice auth/parent-child). The trailing slash proxies only the API
+      // SUB-paths ('/parent/me', '/parent/signup', '/parent/children', ...) to FastAPI, while the
+      // bare '/parent' SPA route is left for Vite to serve index.html (so the parent page still
+      // deep-links in dev). '/child' has no SPA route, so child login proxies wholesale.
+      '/parent/': API_TARGET,
+      '/child': API_TARGET,
     },
   },
   test: {

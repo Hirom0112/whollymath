@@ -1,40 +1,38 @@
 import { useState } from 'react';
 
+import { ApiError } from '../api/index';
 import { addChild } from '../api/parent';
 import { ParentShell } from '../components/ParentShell';
+
+import './parent/ParentCreateChildAuth.css';
 import './ParentCreateChild.css';
 
 /**
  * Add-a-child form, rendered inside the parent shell as the `addChild` view. Collects the child's
- * first name, grade, and the login (username + password) the CHILD will use to sign into the learner
- * app. Local validation only; on submit (demo) it appends the child to the in-memory household via
- * `addChild` (parentDemo) so they appear on the household dashboard, then shows a brief confirmation
- * of the login to share before returning home. NO network call. Unique classes (`.wm-pcreate-*`).
+ * nickname, grade, help language, and the login (username + 4-digit PIN) the CHILD uses to sign into
+ * the learner app. On submit it calls the REAL `addChild` (POST /parent/children via parentAuth.ts),
+ * creating a live child account, then shows the login to share before returning home. Handles 409
+ * (username taken) and 400 (bad PIN) inline. Unique classes (`.wm-pcreate-*`).
  */
 
 const USERNAME_MIN = 4;
 const USERNAME_MAX = 20;
-const PASSWORD_MIN = 8;
 const GRADES = [4, 5, 6, 7, 8] as const;
 
 interface FormErrors {
   name?: string;
   username?: string;
-  password?: string;
-  confirm?: string;
+  pin?: string;
 }
 
-function validate(name: string, username: string, password: string, confirm: string): FormErrors {
+function validate(name: string, username: string, pin: string): FormErrors {
   const errors: FormErrors = {};
-  if (name.trim() === '') errors.name = 'Please enter your child’s first name.';
+  if (name.trim() === '') errors.name = 'Please enter a nickname for your child.';
   const u = username.trim();
   if (u.length < USERNAME_MIN || u.length > USERNAME_MAX) {
     errors.username = `Username must be ${String(USERNAME_MIN)}–${String(USERNAME_MAX)} characters.`;
   }
-  if (password.length < PASSWORD_MIN) {
-    errors.password = `Password must be at least ${String(PASSWORD_MIN)} characters.`;
-  }
-  if (confirm !== password) errors.confirm = 'Passwords don’t match.';
+  if (!/^\d{4}$/.test(pin)) errors.pin = 'PIN must be exactly 4 digits.';
   return errors;
 }
 
@@ -54,24 +52,40 @@ export function ParentCreateChild({
 }): React.JSX.Element {
   const [name, setName] = useState('');
   const [grade, setGrade] = useState(6);
+  const [locale, setLocale] = useState<'en' | 'es-MX'>('en');
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
+  const [pin, setPin] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [busy, setBusy] = useState(false);
   // After a successful add we show the login to share before returning home.
-  const [created, setCreated] = useState<{ name: string; username: string } | null>(null);
+  const [created, setCreated] = useState<{ name: string; username: string; pin: string } | null>(
+    null,
+  );
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     if (busy) return;
-    const found = validate(name, username, password, confirm);
+    const found = validate(name, username, pin);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
     setBusy(true);
     try {
-      const result = await addChild({ name: name.trim(), grade, username: username.trim() });
-      setCreated({ name: name.trim(), username: result.username });
+      const result = await addChild({
+        name: name.trim(),
+        grade,
+        locale,
+        username: username.trim(),
+        pin,
+      });
+      setCreated({ name: name.trim(), username: result.username, pin });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setErrors({ username: 'That username is already taken. Please choose another.' });
+      } else if (err instanceof ApiError && err.status === 400) {
+        setErrors({ pin: err.message || 'That PIN is not valid — use exactly 4 digits.' });
+      } else {
+        setErrors({ name: 'We could not create this login. Please try again.' });
+      }
     } finally {
       setBusy(false);
     }
@@ -118,13 +132,13 @@ export function ParentCreateChild({
             <h1 className="wm-pcreate-done-head">{created.name} is added</h1>
             <p className="wm-pcreate-done-body">
               Share this login with {created.name}. It&rsquo;s what they&rsquo;ll use to sign into
-              the WhollyMath learner app.
+              the WhollyMath learner app. The PIN won&rsquo;t be shown again — note it now.
             </p>
             <div className="wm-pcreate-done-login">
               <span className="wm-pcreate-done-login-key">Username</span>
               <span className="wm-pcreate-done-login-val">{created.username}</span>
-              <span className="wm-pcreate-done-login-key">Password</span>
-              <span className="wm-pcreate-done-login-val">the one you just set</span>
+              <span className="wm-pcreate-done-login-key">PIN</span>
+              <span className="wm-pcreate-done-login-val">{created.pin}</span>
             </div>
             <button type="button" className="wm-pcreate-submit" onClick={onDone}>
               Back to family
@@ -134,12 +148,12 @@ export function ParentCreateChild({
           <form className="wm-pcreate-card" onSubmit={(e) => void handleSubmit(e)} noValidate>
             <h1 className="wm-pcreate-title">Add a child</h1>
             <p className="wm-pcreate-sub">
-              Create a login for your child. They&rsquo;ll use the username and password below to
+              Create a login for your child. They&rsquo;ll use the username and 4-digit PIN below to
               sign into the learner app.
             </p>
 
             <label className="wm-pcreate-field">
-              <span className="wm-pcreate-label">Child&rsquo;s first name</span>
+              <span className="wm-pcreate-label">Child&rsquo;s nickname</span>
               <input
                 type="text"
                 value={name}
@@ -147,6 +161,9 @@ export function ParentCreateChild({
                 autoComplete="off"
                 aria-invalid={errors.name !== undefined}
               />
+              <span className="wm-pcreate-hint">
+                Use a nickname, not their real name — it&rsquo;s what they&rsquo;ll see on screen.
+              </span>
               {errors.name !== undefined ? (
                 <span className="wm-pcreate-err">{errors.name}</span>
               ) : null}
@@ -163,6 +180,32 @@ export function ParentCreateChild({
               </select>
             </label>
 
+            <div className="wm-pcreate-field">
+              <span className="wm-pcreate-label">Language</span>
+              <div className="wm-pcreate-langtoggle" role="group" aria-label="Help language">
+                <button
+                  type="button"
+                  className={
+                    'wm-pcreate-langbtn' + (locale === 'en' ? ' wm-pcreate-langbtn--on' : '')
+                  }
+                  aria-pressed={locale === 'en'}
+                  onClick={() => setLocale('en')}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  className={
+                    'wm-pcreate-langbtn' + (locale === 'es-MX' ? ' wm-pcreate-langbtn--on' : '')
+                  }
+                  aria-pressed={locale === 'es-MX'}
+                  onClick={() => setLocale('es-MX')}
+                >
+                  Español
+                </button>
+              </div>
+            </div>
+
             <label className="wm-pcreate-field">
               <span className="wm-pcreate-label">Username (the child&rsquo;s login)</span>
               <input
@@ -178,30 +221,19 @@ export function ParentCreateChild({
             </label>
 
             <label className="wm-pcreate-field">
-              <span className="wm-pcreate-label">Password</span>
+              <span className="wm-pcreate-label">4-digit PIN</span>
               <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-                aria-invalid={errors.password !== undefined}
+                type="text"
+                inputMode="numeric"
+                pattern="\d*"
+                maxLength={4}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                autoComplete="off"
+                aria-invalid={errors.pin !== undefined}
               />
-              {errors.password !== undefined ? (
-                <span className="wm-pcreate-err">{errors.password}</span>
-              ) : null}
-            </label>
-
-            <label className="wm-pcreate-field">
-              <span className="wm-pcreate-label">Confirm password</span>
-              <input
-                type="password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                autoComplete="new-password"
-                aria-invalid={errors.confirm !== undefined}
-              />
-              {errors.confirm !== undefined ? (
-                <span className="wm-pcreate-err">{errors.confirm}</span>
+              {errors.pin !== undefined ? (
+                <span className="wm-pcreate-err">{errors.pin}</span>
               ) : null}
             </label>
 

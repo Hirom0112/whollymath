@@ -53,6 +53,13 @@ const API_PATH_PATTERNS: readonly string[] = [
   '/routing-choices',
   '/teacher',
   '/teacher/*',
+  // Parent/child auth (Slice auth/parent-child). Route only the SUB-paths to the ALB —
+  // '/parent/*' (signup, login, me, children, verify-email, ...) and '/child/*' (child login) —
+  // and deliberately NOT the bare '/parent', so that exact path falls to the S3 default behavior
+  // and the parent SPA page still deep-links cleanly. (Contrast '/teacher' above, whose exact
+  // path also goes to the ALB; the parent route navigation is reached client-side from /welcome.)
+  '/parent/*',
+  '/child/*',
   '/health',
 ];
 
