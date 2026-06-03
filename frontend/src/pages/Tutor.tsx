@@ -552,6 +552,13 @@ export function Tutor({
         },
         locale,
       );
+      // Carry the FULL hint response into `result`, not just the caption text. helpAudio reads
+      // `result.hint_audio` and guideEmotion reads `result.hint_emotion` (both gated on
+      // `hint !== null`), so without this the bubble showed the hint but the mascot never voiced it
+      // and never emoted — the audio/emotion were silently dropped. Safe in the answering phase: the
+      // verdict/feedback panel is gated on `phase === 'feedback'` (the form/feedback ternary), which
+      // a hint never enters, so this only feeds the voice + emotion, never a verdict.
+      setResult(response);
       setHint(response.hint ?? null);
       setHintUsed(true);
     } catch {
