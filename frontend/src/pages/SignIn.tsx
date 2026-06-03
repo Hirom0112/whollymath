@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { fetchMe, setAuthToken } from '../api';
+import { ApiError, fetchMe, setAuthToken } from '../api';
+import { childLogin } from '../api/parentAuth';
 import { promptGoogleSignIn } from '../auth/google';
 import { Mascot } from '../components/Mascot';
 
-import { ChildSignIn } from './parent/ChildSignIn';
 import './SignIn.css';
+import './SignInStudent.css';
 
 /** How the learner chose to enter. Google is the real account path (OIDC, Slice PL.3); "demo"
  * is the no-account guest path. Choosing Google triggers the GIS flow (when configured) and,
@@ -94,11 +95,40 @@ export function SignIn({
 }): React.JSX.Element {
   const [entering, setEntering] = useState(true);
   const [leaving, setLeaving] = useState(false);
-  // When true, show the child (username + PIN) sign-in instead of the choice card. A kid with a
-  // parent-made account signs in HERE, on the one student sign-in surface (the parent portal
-  // links here too); on success ChildSignIn drops them straight into the learner app.
-  const [childView, setChildView] = useState(false);
   const firedRef = useRef(false);
+
+  // The student (child-account) login, INLINE on this one sign-in surface (the parent portal
+  // links here too). A kid enters the username + PIN their parent set, namespaced by the parent
+  // email; on success POST /child/login sets a child session cookie and we go to the learner app.
+  const [parentEmail, setParentEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [pin, setPin] = useState('');
+  const [childBusy, setChildBusy] = useState(false);
+  const [childError, setChildError] = useState<string | null>(null);
+
+  async function handleChildLogin(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    if (childBusy) return;
+    setChildError(null);
+    if (parentEmail.trim() === '' || username.trim() === '' || !/^\d{4}$/.test(pin)) {
+      setChildError('Enter the parent email, your username, and your 4-digit PIN.');
+      return;
+    }
+    setChildBusy(true);
+    try {
+      await childLogin({ parent_email: parentEmail.trim(), username: username.trim(), pin });
+      window.location.assign('/units');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 423) {
+        setChildError('Too many tries. Ask a parent to reset your PIN, then try again.');
+      } else if (err instanceof ApiError && err.status === 401) {
+        setChildError("That didn't match. Check the username and PIN and try again.");
+      } else {
+        setChildError('We could not sign you in. Please try again.');
+      }
+      setChildBusy(false);
+    }
+  }
 
   useEffect(() => {
     const delay = prefersReducedMotion() ? REDUCED_MS : ROLL_IN_MS;
@@ -141,10 +171,6 @@ export function SignIn({
     }, delay);
   }
 
-  if (childView) {
-    return <ChildSignIn onBack={() => setChildView(false)} />;
-  }
-
   const mascotState = leaving
     ? ' wm-signin-mascot--leaving'
     : entering
@@ -176,6 +202,54 @@ export function SignIn({
           <p className="wm-signin-subhead">How would you like to sign in today?</p>
 
           <div className="wm-signin-card">
+            <form className="wm-signin-form" onSubmit={(e) => void handleChildLogin(e)} noValidate>
+              <label className="wm-signin-field">
+                <span className="wm-signin-flabel">Parent&rsquo;s email</span>
+                <input
+                  type="email"
+                  value={parentEmail}
+                  onChange={(e) => setParentEmail(e.target.value)}
+                  autoComplete="off"
+                  disabled={childBusy}
+                />
+              </label>
+              <label className="wm-signin-field">
+                <span className="wm-signin-flabel">Username</span>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="off"
+                  disabled={childBusy}
+                />
+              </label>
+              <label className="wm-signin-field">
+                <span className="wm-signin-flabel">4-digit PIN</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d*"
+                  maxLength={4}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  autoComplete="off"
+                  disabled={childBusy}
+                />
+              </label>
+              {childError !== null ? (
+                <p className="wm-signin-err" role="alert">
+                  {childError}
+                </p>
+              ) : null}
+              <button type="submit" className="wm-signin-primary" disabled={childBusy}>
+                {childBusy ? 'Signing in…' : 'Start practicing'}
+              </button>
+            </form>
+
+            <div className="wm-signin-orline" aria-hidden="true">
+              or
+            </div>
+
             <button
               type="button"
               className="wm-signin-google"
@@ -186,18 +260,10 @@ export function SignIn({
               Sign in with Google
               <GoogleG />
             </button>
+
             <button
               type="button"
-              className="wm-signin-demo"
-              onClick={() => {
-                setChildView(true);
-              }}
-            >
-              Sign in with username &amp; PIN
-            </button>
-            <button
-              type="button"
-              className="wm-signin-demo"
+              className="wm-signin-demolink"
               onClick={() => {
                 handleChoose('demo');
               }}
