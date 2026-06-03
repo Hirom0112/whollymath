@@ -11,9 +11,10 @@
 // (`useGuideSpeech`) installs the unlock once and reuses `sharedAudioElement()` for every line.
 
 // A 44-byte silent WAV (data URI) — enough to satisfy Safari's "started in a gesture" requirement
-// without making any sound.
+// without making any sound. It must be GENUINELY PLAYABLE: a zero-length clip can reject on Safari
+// and then never grants the activation. This is ~0.05s of 8-bit PCM silence (samples = 0x80).
 const SILENT_WAV =
-  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
 
 // The gestures Safari/iOS accept as a user-activation that can unblock audio. Passive listeners:
 // we never call preventDefault, so we must not block scrolling/taps.
@@ -47,14 +48,11 @@ function blessOnce(): void {
   const element = sharedAudioElement();
   if (element !== null) {
     element.src = SILENT_WAV;
-    element.muted = true;
-    // Play the silent clip inside the gesture to bless the element; then reset so the first real
-    // line starts clean and audible. The play() promise may reject in odd states — ignore it; the
-    // gesture itself is what grants the activation Safari needs.
+    // Play the silent clip INSIDE the gesture — the resolved play() is what grants Safari the
+    // activation for later out-of-gesture voice playback. Do NOT pause() synchronously: that aborts
+    // the play before it starts and the activation is never granted (the original bug). The clip is
+    // ~0.05s of silence and ends on its own; a real line later just re-sets `.src` on this element.
     void Promise.resolve(element.play()).catch(() => {});
-    element.pause();
-    element.currentTime = 0;
-    element.muted = false;
   }
   removeUnlockListeners();
 }
