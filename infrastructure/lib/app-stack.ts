@@ -19,6 +19,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
@@ -185,7 +186,22 @@ export class AppStack extends cdk.Stack {
       };
     }
 
+    // Custom domain + TLS for the distribution. The ACM cert (us-east-1, covers
+    // whollymath.app and www) and the Route 53 alias records were created out-of-band
+    // at first launch and were NOT in this stack — so a `cdk deploy` reset the
+    // distribution to its code-defined state and stripped the aliases/cert, breaking
+    // the custom domain (default *.cloudfront.net cert can't serve whollymath.app).
+    // Declaring them here makes the binding survive every future deploy.
+    // Ref: project_aws_deployment (cert arn ...995e5838, Route 53 zone Z04875931OEN82PDTA54P).
+    const siteCertificate = acm.Certificate.fromCertificateArn(
+      this,
+      'SiteCertificate',
+      'arn:aws:acm:us-east-1:463470963743:certificate/995e5838-2210-4c37-a0a4-4fcf7943f4ce',
+    );
+
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
+      domainNames: ['whollymath.app', 'www.whollymath.app'],
+      certificate: siteCertificate,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
