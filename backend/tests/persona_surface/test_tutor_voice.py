@@ -9,7 +9,11 @@ returns the pre-written help text unchanged (ARCHITECTURE.md §14 invariant 4).
 from __future__ import annotations
 
 from app.llm.provider import Message, Tier
-from app.persona_surface.tutor_voice import MASCOT_SYSTEM_PROMPT, voice_help
+from app.persona_surface.tutor_voice import (
+    MASCOT_SYSTEM_PROMPT,
+    MASCOT_SYSTEM_PROMPT_ES,
+    voice_help,
+)
 from app.policy.emotion import Emotion, MomentType
 
 
@@ -121,3 +125,67 @@ def test_mascot_prompt_forbids_revealing_the_answer() -> None:
     lowered = MASCOT_SYSTEM_PROMPT.lower()
     assert "do not give the answer" in lowered
     assert "do not solve" in lowered
+
+
+def test_es_mx_locale_uses_the_spanish_mascot_prompt() -> None:
+    """locale="es-MX" → the provider is called with the SPANISH mascot system prompt.
+
+    The caller passes already-translated Spanish ``base_text`` (the banked es string); this
+    test only asserts the deterministic system-prompt selection (Slice 3.4). Mirrors
+    ``test_voices_help_via_cheap_tier_with_the_mascot_prompt`` for the es-MX path.
+    """
+    provider = _RecordingProvider(reply="¡Imagina primero las partes!")
+    out = voice_help(
+        "¿Las partes son del mismo tamaño?",
+        moment=MomentType.STUCK_NUDGE,
+        provider=provider,
+        locale="es-MX",
+    )
+    assert out.text == "¡Imagina primero las partes!"
+    assert len(provider.calls) == 1
+    call = provider.calls[0]
+    assert call["tier"] == "cheap"
+    assert call["system"] == MASCOT_SYSTEM_PROMPT_ES
+    assert call["system"] != MASCOT_SYSTEM_PROMPT
+
+
+def test_default_locale_still_uses_the_english_mascot_prompt() -> None:
+    """The default locale ("en") is unchanged: still the English mascot prompt, byte-for-byte."""
+    provider = _RecordingProvider()
+    voice_help("Are the pieces the same size?", moment=MomentType.STUCK_NUDGE, provider=provider)
+    assert provider.calls[0]["system"] == MASCOT_SYSTEM_PROMPT
+
+
+def test_es_mx_disabled_layer4_returns_prewritten_spanish_text() -> None:
+    """No provider on the es-MX path → the banked Spanish base text is returned unchanged."""
+    out = voice_help(
+        "Encuentra primero un denominador común.",
+        moment=MomentType.STUCK_NUDGE,
+        locale="es-MX",
+    )
+    assert out.text == "Encuentra primero un denominador común."
+
+
+def test_locale_does_not_affect_emotion_or_intensity() -> None:
+    """Affect comes from the MOMENT, not the locale: emotion/intensity are identical across
+    en and es-MX for the same moment (Slice 1.3 — locale only routes the system prompt)."""
+    en = voice_help(
+        "Find a common denominator first.",
+        moment=MomentType.STUCK_NUDGE,
+        provider=_RecordingProvider(),
+    )
+    es = voice_help(
+        "Encuentra primero un denominador común.",
+        moment=MomentType.STUCK_NUDGE,
+        provider=_RecordingProvider(reply="¡Tú puedes!"),
+        locale="es-MX",
+    )
+    assert en.emotion == es.emotion
+    assert en.intensity == es.intensity
+
+
+def test_spanish_mascot_prompt_forbids_revealing_the_answer() -> None:
+    """The Spanish prompt carries the same guardrails: rephrase only, never solve or reveal."""
+    lowered = MASCOT_SYSTEM_PROMPT_ES.lower()
+    assert "no resuelvas" in lowered
+    assert "no des la respuesta" in lowered

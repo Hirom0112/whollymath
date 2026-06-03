@@ -27,6 +27,7 @@ from dataclasses import dataclass
 
 from app.llm.provider import AnthropicProvider, LLMProvider, Message, Tier
 from app.policy.emotion import Emotion, MomentType, select_emotion
+from app.tts.provider import Locale
 
 # The mascot's character + the hard guardrails. It rephrases; it never solves or reveals.
 MASCOT_SYSTEM_PROMPT = (
@@ -35,6 +36,18 @@ MASCOT_SYSTEM_PROMPT = (
     "chosen. Say it to the student in your own warm, encouraging voice, in ONE short "
     "sentence. Do NOT solve the problem, do NOT give the answer, and do NOT add any new math "
     "— only rephrase the given hint more kindly."
+)
+
+# es-MX (Latin-American Spanish) counterpart of MASCOT_SYSTEM_PROMPT — a faithful translation
+# carrying the IDENTICAL guardrails (rephrase only; never solve, never reveal the answer, never
+# add new math). Selected deterministically from the ``locale`` arg (Slice 3.4); the LLM never
+# chooses the language. Register matches the locked es-MX locale (V2_TODO 3.2 / hints_es.py).
+MASCOT_SYSTEM_PROMPT_ES = (
+    "Eres Pie, la simpática mascota de WhollyMath — un alegre pastelito que ayuda a un "
+    "estudiante de sexto o séptimo grado con las fracciones. Te darán una pista que el tutor "
+    "ya eligió. Dísela al estudiante con tu propia voz cálida y alentadora, en UNA sola "
+    "oración corta y en español. NO resuelvas el problema, NO des la respuesta y NO agregues "
+    "matemáticas nuevas — solo expresa la pista dada de forma más amable."
 )
 
 
@@ -60,6 +73,7 @@ def voice_help(
     moment: MomentType,
     provider: LLMProvider | None = None,
     tier: Tier = "cheap",
+    locale: Locale = "en",
 ) -> VoicedHelp:
     """Voice an already-decided help line and pair it with its deterministic avatar affect.
 
@@ -74,10 +88,15 @@ def voice_help(
       - ``emotion`` / ``intensity`` — chosen deterministically from ``moment`` by the policy
         layer (``select_emotion``), so the avatar's affect can never contradict the verdict
         (no celebrating a wrong answer) and never leaks knowledge state (§8.3).
+
+    ``locale`` (Slice 3.4) selects WHICH mascot system prompt voices the line — English or the
+    es-MX Spanish prompt — deterministically; the LLM never chooses the language. The CALLER is
+    responsible for passing already-translated Spanish ``base_text`` (the banked es-MX string,
+    ``app/tutor/hints_es.py``) when ``locale == "es-MX"``; this function does not translate.
     """
     cue = select_emotion(moment)
     return VoicedHelp(
-        text=_voice_text(base_text, provider=provider, tier=tier),
+        text=_voice_text(base_text, provider=provider, tier=tier, locale=locale),
         emotion=cue.emotion,
         intensity=cue.intensity,
     )
@@ -88,17 +107,23 @@ def _voice_text(
     *,
     provider: LLMProvider | None,
     tier: Tier,
+    locale: Locale,
 ) -> str:
     """Rephrase ``base_text`` in the mascot's voice, or return it verbatim (invariant 4).
 
     The LLM half of ``voice_help`` in isolation: it sees only ``base_text`` — never the moment,
     never the learner's knowledge state. Disabled/failing/blank all fall back to ``base_text``.
+
+    ``locale`` picks the system prompt (English vs. es-MX Spanish) deterministically. The caller
+    must hand in already-Spanish ``base_text`` for the es-MX path — this function only routes the
+    guardrail prompt; it never translates ``base_text`` itself.
     """
     if provider is None:
         return base_text
+    system = MASCOT_SYSTEM_PROMPT_ES if locale == "es-MX" else MASCOT_SYSTEM_PROMPT
     messages = [Message("user", f"Here is the hint to say in your voice:\n{base_text}")]
     try:
-        voiced = provider.complete(messages, tier=tier, system=MASCOT_SYSTEM_PROMPT)
+        voiced = provider.complete(messages, tier=tier, system=system)
     except Exception:
         # Invariant 4: a model/network failure costs us naturalness, never the help itself.
         return base_text
@@ -111,4 +136,10 @@ def default_voice_provider() -> LLMProvider:
     return AnthropicProvider()
 
 
-__all__ = ["MASCOT_SYSTEM_PROMPT", "VoicedHelp", "default_voice_provider", "voice_help"]
+__all__ = [
+    "MASCOT_SYSTEM_PROMPT",
+    "MASCOT_SYSTEM_PROMPT_ES",
+    "VoicedHelp",
+    "default_voice_provider",
+    "voice_help",
+]
