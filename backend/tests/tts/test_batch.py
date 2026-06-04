@@ -91,6 +91,35 @@ def test_changing_text_rerenders_only_the_changed_line(tmp_path: Path) -> None:
     assert provider.calls == [("check the whole amount", "en")]
 
 
+def test_partial_render_merges_into_existing_manifest(tmp_path: Path) -> None:
+    """A single-locale (or --limit subset) render MERGES into the manifest, never clobbers it.
+
+    Regression for the render_bank footgun: ``--locale es-MX`` used to rewrite ``manifest.json``
+    with only the es-MX rows, silently dropping every ``en`` row (the content-hashed audio survived
+    on disk, but the manifest lost the rows, so lookups went silent). Render ``en``, then render
+    ONLY ``es-MX``, and assert BOTH locales survive in the written manifest.
+    """
+    run_batch(FakeTtsProvider(), cache_dir=tmp_path, locales=("en",), strings=_LINES)
+    run_batch(FakeTtsProvider(), cache_dir=tmp_path, locales=("es-MX",), strings=_LINES)
+
+    data = json.loads((tmp_path / MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert set(data.keys()) == {
+        "nudge:demo:0|en",
+        "nudge:demo:0|es-MX",
+        "nudge:demo:1|en",
+        "nudge:demo:1|es-MX",
+    }
+
+
+def test_partial_render_returns_only_this_runs_entries(tmp_path: Path) -> None:
+    """The RETURN value is this run's entries (what was rendered now), even though the written
+    manifest is the merged superset — so ``render_bank``'s "Rendered -> N clips" count stays honest.
+    """
+    run_batch(FakeTtsProvider(), cache_dir=tmp_path, locales=("en",), strings=_LINES)
+    second = run_batch(FakeTtsProvider(), cache_dir=tmp_path, locales=("es-MX",), strings=_LINES)
+    assert set(second.keys()) == {"nudge:demo:0|es-MX", "nudge:demo:1|es-MX"}
+
+
 def test_manifest_json_is_written_and_parseable(tmp_path: Path) -> None:
     run_batch(FakeTtsProvider(), cache_dir=tmp_path, locales=("en",), strings=_LINES)
     manifest_path = tmp_path / MANIFEST_FILENAME
