@@ -34,6 +34,7 @@ def _example(error_rate: float, *, label: bool, idx: int) -> TrainingExample:
         recent_hint_rate=error_rate,
         recent_error_rate=error_rate,
         recent_request_answer_rate=error_rate,
+        recent_no_hint_error_rate=error_rate,
         turns_since_last_correct=1.0 + 4.0 * error_rate,
         prior_unproductive_rate=error_rate,
         session_position=3.0,

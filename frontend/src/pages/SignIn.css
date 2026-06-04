@@ -102,7 +102,8 @@
   position: relative;
   z-index: 3;
   text-align: center;
-  padding-top: 96px;
+  /* Nudged up (was 96px) so the taller username/PIN card sits higher on the hero. */
+  padding-top: 56px;
 }
 .wm-signin-headline {
   margin: 0;
@@ -425,7 +426,7 @@
 /* responsive */
 @media (max-width: 760px) {
   .wm-signin-copy {
-    padding-top: 80px;
+    padding-top: 44px;
   }
   .wm-signin-subhead {
     font-size: 15px;

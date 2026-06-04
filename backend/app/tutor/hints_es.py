@@ -1,12 +1,11 @@
 """es-MX (Mexican Spanish) translations of the spoken help-string bank (Slice 3.2a).
 
-DRAFT — PENDING HUMAN REVIEW. These translations were drafted by an AI assistant and have
-NOT yet been reviewed by a human bilingual / math educator. Per V2_TODO Slice 3.2 ("Claude
-drafts offline → human review (non-negotiable for a Grade-6 audience) → freeze") NO unreviewed
-Spanish ships to a Grade-6 audience as final. The ``ES_MX_REVIEWED`` flag below is ``False`` and
-MUST be flipped to ``True`` only by a human reviewer once the bank is checked and frozen. Slice
-3.5 (render the es-MX audio) and Slice 3.6 (the bilingual help-mode toggle) MUST NOT treat this
-bank as production until ``ES_MX_REVIEWED`` is ``True``.
+REVIEWED & PASSED (owner, 2026-06-04). These translations were drafted by an AI assistant and then
+reviewed by a human bilingual / math reviewer per V2_TODO Slice 3.2 ("Claude drafts offline → human
+review (non-negotiable for a Grade-6 audience) → freeze"). The ``ES_MX_REVIEWED`` flag below is now
+``True``, so Slice 3.5 (render the es-MX audio) and Slice 3.6 (the bilingual help-mode toggle) may
+treat this bank as production. Re-flip to ``False`` only if the bank is re-drafted and needs
+re-review.
 
 WHAT this module is (the bilingual-SCAFFOLD design, V2_TODO 3.6): the on-screen lesson/problem
 content stays ENGLISH; only the avatar's spoken help (the nudges) and the misconception framing
@@ -127,9 +126,10 @@ from __future__ import annotations
 from typing import Final
 
 # ── HUMAN-REVIEW GATE (required; CLAUDE.md §1 / V2_TODO 3.2 task 4) ──────────────────────────
-# False until a human bilingual reviewer checks and freezes the bank. Slice 3.5 (render) and 3.6
-# (toggle) must read this flag and refuse to treat es-MX as production audio while it is False.
-ES_MX_REVIEWED: Final[bool] = False
+# True: a human bilingual / math reviewer checked and PASSED the es-MX bank (owner, 2026-06-04), so
+# Slice 3.5 (render) and 3.6 (toggle) may treat es-MX as production audio. Flip back to False only
+# if the bank is re-drafted and needs re-review.
+ES_MX_REVIEWED: Final[bool] = True
 
 # The es-MX locale tag, matching ``app.tts.provider.Locale``'s ``"es-MX"`` member. Kept as a
 # named constant so the renderer wiring and any reviewer reference the SAME string.
@@ -213,6 +213,17 @@ ES_MX_HELP_STRINGS: Final[dict[str, str]] = {
     ),
     "nudge:KC_unit_rate:2": (
         "Reparte el total en partes iguales entre esa cantidad. ¿De qué tamaño es una sola parte?"
+    ),
+    # ── KC_better_buy ──
+    "nudge:KC_better_buy:0": (
+        "La mejor compra es el menor precio por UN artículo, no el menor precio en total."
+    ),
+    "nudge:KC_better_buy:1": (
+        "Un montón más grande puede costar más en total y aun así salir más barato por artículo. "
+        "¿Cuál cuesta menos por artículo?"
+    ),
+    "nudge:KC_better_buy:2": (
+        "Encuentra cuánto cobra cada tienda por un solo artículo, y luego compara esos dos precios."
     ),
     # ── KC_equivalent_ratios ──
     "nudge:KC_equivalent_ratios:0": (
@@ -651,6 +662,7 @@ ES_MX_HELP_STRINGS: Final[dict[str, str]] = {
     "misconception_name:sign-rule-error": "Error en la regla de signos al multiplicar o dividir",
     "misconception_name:triangle-formula-error": "Error en la fórmula del triángulo",
     "misconception_name:forgot-triangle-half": "Olvidó la mitad en el triángulo",
+    "misconception_name:forgot-trapezoid-half": "Olvidó la mitad en el trapecio",
     "misconception_name:add-edges-error": "Suma las aristas en lugar de multiplicar",
     "misconception_name:count-three-faces": "Cuenta solo tres de las seis caras",
     "misconception_name:forgot-absolute-value": "Olvida el valor absoluto en la DMA",
@@ -660,6 +672,9 @@ ES_MX_HELP_STRINGS: Final[dict[str, str]] = {
     "misconception_name:wrong-denominator": "Frecuencia relativa sobre el denominador equivocado",
     "misconception_name:treats-any-as-statistical": (
         "Trata cualquier pregunta sobre personas o números como estadística"
+    ),
+    "misconception_name:compare-totals-not-unit-rates": (
+        "Compara los precios totales en lugar del precio por artículo"
     ),
     "misconception_name:dependent-independent-swap": (
         "Confunde la relación dependiente e independiente"

@@ -80,9 +80,11 @@ _CATEGORICAL_MODE_CODE = CATEGORICAL_MODE_CODE
 # ─── The shared Problem type ─────────────────────────────────────────────────
 
 
-# The truth rule for a yes/no item: an equality judgment ("same amount?") or a magnitude
-# comparison ("greater than?"). Default "equal" keeps every existing yes/no item unchanged.
-YesNoRelation = Literal["equal", "greater"]
+# The truth rule for a yes/no item: an equality judgment ("same amount?"), a magnitude comparison
+# ("greater than?"), or a better-buy unit-rate comparison ("is Store A the better buy?"). Default
+# "equal" keeps every existing yes/no item unchanged. "better_buy" reads FOUR operands
+# (qA, pA, qB, pB) and is true iff Store A's unit price is strictly lower (pA/qA < pB/qB).
+YesNoRelation = Literal["equal", "greater", "better_buy"]
 
 
 class AnswerKind(StrEnum):
@@ -735,23 +737,67 @@ _RATE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
 }
 _RATE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8, 9)
 
+# Direction modes for KC_unit_rate, appended as the LAST operand of every item (mirroring the
+# KC_percent ``(percent, whole, mode)`` and KC_decimal_operations conventions). The seeded RNG picks
+# one so a SINGLE generator covers two distinct verbs of CCSS 6.RP.3: the original single-step
+# per-ONE rate AND multi-step SCALE-the-rate reasoning. The scale mode makes the catalog lesson
+# U1.L4 ("Rate problems") genuinely distinct rate problem-solving (6.RP.3b) instead of a duplicate
+# of the per-ONE generator (panel audit, 2026-06-04). The flag also lets the verifier gate the
+# per-ONE-specific rate-inversion misconception, returning None off mode 0.
+_UNIT_RATE_PER_ONE = 0
+_UNIT_RATE_SCALE = 1
+
+# Small unit counts for the SCALE mode. Kept small so the stated total (r*count) and the scaled
+# answer (r*new_count) read cleanly; new_count is drawn DISTINCT from count (the scaling is to a
+# DIFFERENT number of units — the whole point of the multi-step problem).
+_RATE_SCALE_COUNTS: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8)
+
 
 def _generate_unit_rate(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
-    """KC_unit_rate: find the per-ONE rate from a total given for several units.
+    """KC_unit_rate: per-ONE rate (mode 0) OR scale-the-rate multi-step reasoning (mode 1).
 
-    Builds a clean whole-number unit rate ``r`` (so the answer is friendly): a total of
-    ``r * count`` over ``count`` units, asking how much for ONE unit. The correct value is the
-    SymPy quotient ``total / count`` (which equals ``r``); ``operands = (total, count)`` so the
-    verifier can replay the rate-inversion misconception (``count / total``). Rendered
-    symbolically — a numeric-answer word problem; ``difficulty`` widens the rate pool.
+    The seeded RNG picks a direction MODE so the single KC covers two CCSS 6.RP.3 verbs:
+
+      - PER_ONE (mode 0): the original behavior. A clean whole-number unit rate ``r``: a total of
+        ``r * count`` over ``count`` units, asking how much for ONE unit. The correct value is the
+        SymPy quotient ``total / count`` (which equals ``r``); ``operands = (total, count, mode)``
+        (the mode appended to the original 2-tuple) so the verifier can replay the rate-inversion
+        misconception (``count / total``).
+      - SCALE (mode 1): multi-step rate problem-solving (6.RP.3b). Given a total for several
+        units, find the amount for a DIFFERENT number of units — e.g. "$24 for 4 tickets. How much
+        for 7 tickets?". With whole rate ``r`` and a DISTINCT ``new_count`` the answer
+        ``r * new_count`` is a positive whole number. ``operands = (total, count, new_count, mode)``
+        so both the answer and ``new_count`` are recoverable. This is what makes the catalog lesson
+        U1.L4 ("Rate problems") genuinely distinct from the per-ONE generator (panel, 2026-06-04).
+
+    Rendered symbolically — a numeric-answer word problem; ``difficulty`` widens the rate pool.
     """
     rate_pool = _RATE_BY_DIFFICULTY.get(difficulty, _RATE_POOL) if difficulty else _RATE_POOL
     rate = rng.choice(rate_pool)
+    mode = rng.choice((_UNIT_RATE_PER_ONE, _UNIT_RATE_SCALE))
+    noun, unit = rng.choice(_RATE_CONTEXTS)
+    if mode == _UNIT_RATE_SCALE:
+        count = rng.choice(_RATE_SCALE_COUNTS)
+        # new_count DISTINCT from count: scaling to the SAME number of units is no problem at all.
+        new_count = rng.choice(tuple(c for c in _RATE_SCALE_COUNTS if c != count))
+        total = rate * count
+        statement = (
+            f"{total} {noun} for {count} {unit}s. How many {noun} for {new_count} {unit}s? "
+            f"(Find the unit rate first, then scale it up.)"
+        )
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.UNIT_RATE, seed, surface_format),
+            kc=KnowledgeComponentId.UNIT_RATE,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=Rational(rate * new_count),
+            representations_available=get_kc(KnowledgeComponentId.UNIT_RATE).representations,
+            operands=(Rational(total), Rational(count), Rational(new_count), Rational(mode)),
+        )
     count = rng.choice((2, 3, 4, 5, 6))
     total = rate * count
-    noun, unit = rng.choice(_RATE_CONTEXTS)
     statement = (
         f"{total} {noun} for {count} {unit}s. How many {noun} per {unit}? "
         f"(Find the unit rate — the amount for ONE {unit}.)"
@@ -763,8 +809,114 @@ def _generate_unit_rate(
         statement=statement,
         correct_value=Rational(total, count),
         representations_available=get_kc(KnowledgeComponentId.UNIT_RATE).representations,
-        operands=(Rational(total), Rational(count)),
+        operands=(Rational(total), Rational(count), Rational(mode)),
     )
+
+
+# ── KC_better_buy (6.RP.3b / 6.RP.2): compare two unit rates ──────────────────────────────────
+#
+# Two stores sell the SAME item; each has a (quantity, total-price) pair. The better buy is the
+# LOWER price PER UNIT (total/quantity). Operands are (qA, pA, qB, pB) — quantity and TOTAL price
+# for each store — so the verifier and worked example recompute the unit-price comparison from the
+# stated numbers, exactly the figures the learner reads (no hidden unit rate). Prices are exact
+# Rationals (dollars), never floats (CLAUDE.md §8.2).
+#
+# Per-UNIT prices (dollars per item) the generator draws from. Kept as exact Rationals on a 5-cent
+# grid so the totals (unit × quantity) land on clean money the learner can verify. The two stores'
+# unit prices are drawn DISTINCT, so the better buy is always unambiguous (no tie).
+_BETTER_BUY_UNIT_PRICES: tuple[Rational, ...] = (
+    Rational(1, 5),  # $0.20
+    Rational(1, 4),  # $0.25
+    Rational(3, 10),  # $0.30
+    Rational(2, 5),  # $0.40
+    Rational(1, 2),  # $0.50
+    Rational(3, 5),  # $0.60
+    Rational(3, 4),  # $0.75
+)
+# Item counts each store sells the bundle in. Small whole numbers so the totals read cleanly.
+_BETTER_BUY_QUANTITIES: tuple[int, ...] = (2, 3, 4, 5, 6, 8, 10, 12)
+# The item nouns the comparison is phrased over (display only; the math is the same noun for both
+# stores). Chosen through the seeded RNG so the same seed yields the same scenario (§4.1).
+_BETTER_BUY_ITEMS: tuple[str, ...] = (
+    "apples",
+    "oranges",
+    "bagels",
+    "markers",
+    "notebooks",
+    "juice boxes",
+)
+
+
+def _generate_better_buy(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_better_buy (6.RP.3b / 6.RP.2): which store is the better buy? — a YES/NO judgment.
+
+    REUSES the existing YES_NO answer kind (NO new widget). Two stores sell the same item; each is
+    given a (quantity, total-price) pair, and the question is "Is Store A the better buy?". The
+    better buy is the LOWER price PER UNIT — ``pA/qA < pB/qB`` — and the truth is computed by SymPy
+    over the operands by ``_verify_yes_no`` (so SymPy decides the math; CLAUDE.md §8.2), never a
+    stored boolean. ``operands = (qA, pA, qB, pB)`` carries the quantity and TOTAL price for each
+    store so the verifier and worked example recompute the comparison from exactly the stated
+    numbers.
+
+    Construction (so the lesson is sound AND diagnostic):
+      - The two stores' (quantity, per-unit price) pairs are sampled INDEPENDENTLY, with the only
+        constraint that the two unit prices be DISTINCT (so the better buy is never a tie). Because
+        the quantity and the per-unit price are uncorrelated, neither naive heuristic ("the lower
+        TOTAL is the better buy" nor "the store with MORE items is the better buy") tracks the
+        truth — across seeds a meaningful share of items trap EACH of them. That is exactly the
+        compare-totals / count-the-items misconception this lesson is built to expose (a test pins
+        the diagnostic share for both heuristics).
+      - Each store's total is ``unit × quantity`` (an exact Rational), kept on a clean money grid.
+      - Which physical store (A or B) ends up cheaper is determined by the independent draws, so YES
+        and NO answers both occur across seeds (a test pins both verdicts).
+
+    Rendered symbolically — a numeric-context word problem; ``difficulty`` does not vary the item
+    (the comparison structure is the skill, not a magnitude to ramp). Deterministic per seed.
+    """
+    item = rng.choice(_BETTER_BUY_ITEMS)
+    qa = rng.choice(_BETTER_BUY_QUANTITIES)
+    ua = rng.choice(_BETTER_BUY_UNIT_PRICES)
+    qb = rng.choice(_BETTER_BUY_QUANTITIES)
+    # Store B's per-unit price is drawn DISTINCT from A's, so the two unit prices never tie and the
+    # better buy is unambiguous. Quantity and unit price are sampled independently (see docstring),
+    # so neither "lower total" nor "more items" tracks the better unit buy — the diagnostic design.
+    ub = rng.choice([u for u in _BETTER_BUY_UNIT_PRICES if u != ua])
+    pa = ua * qa  # exact total price for Store A (Rational dollars)
+    pb = ub * qb  # exact total price for Store B
+    statement = (
+        f"Store A sells {qa} {item} for {_dollars(pa)}. "
+        f"Store B sells {qb} {item} for {_dollars(pb)}. "
+        f"Is Store A the better buy? "
+        f"(Find each store's price per item, then compare — the lower price per item wins.)"
+    )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.BETTER_BUY, seed, surface_format),
+        kc=KnowledgeComponentId.BETTER_BUY,
+        surface_format=surface_format,
+        # YES_NO truth is computed over operands; correct_value is the Store-A unit-price anchor the
+        # worked example teaches (mirrors how the other YES_NO generators anchor correct_value).
+        correct_value=Rational(pa, qa),
+        representations_available=get_kc(KnowledgeComponentId.BETTER_BUY).representations,
+        operands=(Rational(qa), Rational(pa), Rational(qb), Rational(pb)),
+        answer_kind=AnswerKind.YES_NO,
+        yes_no_relation="better_buy",
+        statement=statement,
+    )
+
+
+def _dollars(amount: Rational) -> str:
+    """Render an exact Rational dollar ``amount`` as ``$d.cc`` (two-decimal currency).
+
+    The amount is exact money on a 5-cent grid (unit × quantity over the better-buy pools), so it
+    always has an exact two-place decimal form — we format the cents without any float rounding by
+    splitting into whole dollars and exact hundredths (CLAUDE.md §8.2: no float in the value path;
+    this is display-only, the operands stay exact Rationals)."""
+    hundredths = amount * 100  # exact Rational; integral for any 5-cent-grid money amount
+    cents_total = int(hundredths)
+    dollars, cents = divmod(cents_total, 100)
+    return f"${dollars}.{cents:02d}"
 
 
 def _generate_equivalent_ratios(
@@ -812,28 +964,60 @@ _PERCENT_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
 # distinct from the correct value (p% of 100 == p only at whole == 100).
 _PERCENT_WHOLES: tuple[int, ...] = (20, 30, 40, 50, 60, 80)
 
+# Direction modes for KC_percent, the THIRD operand of every item (the ``(percent, whole, mode)``
+# shape). Module-level int constants mirroring _DECIMAL_MULTIPLY etc.: the seeded RNG picks one so a
+# single generator covers BOTH directions of CCSS 6.RP.3c — "what is p% of whole?" AND "find the
+# whole given a part and a percent" — not just the part (the coverage gap the panel flagged,
+# 2026-06-04). The flag also lets the verifier gate the percent-of-specific percent-as-amount
+# misconception (it must not fire on find-the-whole).
+_PERCENT_OF = 0
+_PERCENT_FIND_WHOLE = 1
+
 
 def _generate_percent(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
-    """KC_percent: find a percent OF a quantity (a rate per 100).
+    """KC_percent: relate a percent, a part, and a whole in EITHER direction (CCSS 6.RP.3c).
 
-    Asks "what is p% of whole?"; the answer is the SymPy ``Rational(p*whole, 100)`` (may reduce
-    to a fraction, which the editor accepts). ``operands = (p, whole)`` so the verifier can replay
-    the percent-as-amount misconception (answering the percent ``p`` itself). Numeric, symbolic.
+    The seeded RNG picks a direction MODE so the single lesson covers the whole standard, not just
+    the part (coverage fix, panel audit 2026-06-04):
+
+      - PERCENT_OF (mode 0): "what is p% of whole?" — the original behavior. The answer is the SymPy
+        ``Rational(p*whole, 100)`` (may reduce to a fraction, which the editor accepts).
+      - FIND_WHOLE (mode 1): "{part} is p% of what number?" — given the part and the percent, find
+        the whole. The answer is the whole itself (a positive integer). Only ``(p, whole)`` pairs
+        whose part ``p*whole/100`` is a positive WHOLE number are used, so the stated part reads
+        cleanly (no fractional part in the prompt): the candidate wholes are filtered to those with
+        ``p*whole`` divisible by 100. Every percent in the pools admits at least one such whole.
+
+    ``operands = (percent, whole, mode)`` mirrors the KC_decimal_operations shape. ``whole`` is kept
+    as ``operands[1]`` in BOTH modes so the find-the-whole answer is recoverable, and the verifier
+    can gate the PERCENT_OF-specific percent-as-amount misconception (answering ``p`` itself), which
+    returns ``None`` off mode 0, mirroring the decimal-point-misplacement gate. Numeric, symbolic.
     """
     pool = _PERCENT_BY_DIFFICULTY.get(difficulty, _PERCENT_POOL) if difficulty else _PERCENT_POOL
     percent = rng.choice(pool)
-    whole = rng.choice(_PERCENT_WHOLES)
-    statement = f"What is {percent}% of {whole}?"
+    mode = rng.choice((_PERCENT_OF, _PERCENT_FIND_WHOLE))
+    if mode == _PERCENT_FIND_WHOLE:
+        # Keep only wholes whose part (p% of whole) is a positive whole number, so the prompt states
+        # a clean integer part. Every pool percent admits at least one such whole (tested).
+        whole_pool = tuple(w for w in _PERCENT_WHOLES if (percent * w) % 100 == 0)
+        whole = rng.choice(whole_pool)
+        part = percent * whole // 100
+        statement = f"{part} is {percent}% of what number?"
+        correct_value = Rational(whole)
+    else:
+        whole = rng.choice(_PERCENT_WHOLES)
+        statement = f"What is {percent}% of {whole}?"
+        correct_value = Rational(percent * whole, 100)
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.PERCENT, seed, surface_format),
         kc=KnowledgeComponentId.PERCENT,
         surface_format=surface_format,
         statement=statement,
-        correct_value=Rational(percent * whole, 100),
+        correct_value=correct_value,
         representations_available=get_kc(KnowledgeComponentId.PERCENT).representations,
-        operands=(Rational(percent), Rational(whole)),
+        operands=(Rational(percent), Rational(whole), Rational(mode)),
     )
 
 
@@ -1077,34 +1261,115 @@ def _decimal_literal(numerator: int, power_of_ten_denominator: int) -> str:
     return f"{sign}{digits[:-places]}.{digits[-places:]}"
 
 
+def _decimal_text(value: Rational) -> str:
+    """Render an exact terminating rational as a finite decimal string (3/4 -> "0.75").
+
+    Used for an OPERAND already reduced past its power-of-ten origin (e.g. 75/100 reduces to 3/4):
+    we factor the denominator into 2s and 5s to recover the place count, so the literal is
+    exact without assuming a power-of-ten denominator. Pure integer arithmetic — no float (§8.2)."""
+    den = value.q
+    twos = fives = 0
+    while den % 2 == 0:
+        den //= 2
+        twos += 1
+    while den % 5 == 0:
+        den //= 5
+        fives += 1
+    places = max(twos, fives)
+    if places == 0:
+        return str(value.p)
+    scaled = int(value * (10**places))  # exact: value has exactly ``places`` decimal places
+    sign = "-" if scaled < 0 else ""
+    digits = str(abs(scaled)).zfill(places + 1)
+    return f"{sign}{digits[:-places]}.{digits[-places:]}"
+
+
+# Operation modes for KC_decimal_operations, the third operand of every item (the
+# ``(first, second, mode)`` shape). Module-level int constants, mirroring _AREA_TRIANGLE_MODE: the
+# seeded RNG picks one so a single generator covers the WHOLE of 6.NS.3 — add, subtract, multiply,
+# AND divide multi-digit decimals — not just multiplication (the coverage gap the panel flagged,
+# 2026-06-04). The flag also lets the verifier gate the multiply-specific point-misplacement
+# misconception (it must not fire on add/subtract/divide).
+_DECIMAL_MULTIPLY = 0
+_DECIMAL_ADD = 1
+_DECIMAL_SUBTRACT = 2
+_DECIMAL_DIVIDE = 3
+
+# DIVIDE pairs as ``((dividend_n, dividend_d), (divisor_n, divisor_d))`` with power-of-ten
+# denominators. Each pair is curated so the EXACT quotient is a terminating decimal (its reduced
+# denominator is a power of ten) — verified by test_divide_result_is_an_exact_finite_decimal —
+# so the answer renders as a clean decimal string and never repeats. Both operands stay genuine
+# decimals (denominator > 1), keeping place value non-trivial.
+_DECIMAL_DIVIDE_POOL: tuple[tuple[tuple[int, int], tuple[int, int]], ...] = (
+    ((8, 10), (2, 10)),  # 0.8 / 0.2 = 4
+    ((6, 10), (4, 10)),  # 0.6 / 0.4 = 1.5
+    ((6, 10), (5, 10)),  # 0.6 / 0.5 = 1.2
+    ((8, 10), (5, 10)),  # 0.8 / 0.5 = 1.6
+    ((15, 10), (5, 10)),  # 1.5 / 0.5 = 3
+    ((9, 10), (6, 10)),  # 0.9 / 0.6 = 1.5
+    ((12, 10), (8, 10)),  # 1.2 / 0.8 = 1.5
+    ((25, 100), (5, 10)),  # 0.25 / 0.5 = 0.5
+)
+
+
 def _generate_decimal_operations(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
-    """KC_decimal_operations: multiply two decimals; the product (a decimal) is the answer.
+    """KC_decimal_operations: add, subtract, multiply, OR divide two decimals (CCSS 6.NS.3).
 
-    Both factors are exact decimals with power-of-ten denominators (tenths/hundredths), so the
-    product is a finite decimal the symbolic editor accepts as a decimal string. The correct value
-    is the SymPy product ``first * second``; ``operands = (first, second)`` so the verifier can
-    replay the decimal-point-misplacement misconception (the product off by a power of ten).
-    Rendered symbolically; ``difficulty`` widens the factor pool from tenths to hundredths.
+    The seeded RNG picks an operation MODE (one of the four, equally weighted) so the single lesson
+    covers the whole standard, not just multiplication (coverage fix, panel audit 2026-06-04). Both
+    operands are exact decimals with power-of-ten denominators (tenths/hundredths), and every mode
+    yields a finite-decimal answer the symbolic editor accepts as a decimal string:
+
+      - MULTIPLY: ``first * second`` (unchanged; the original behavior).
+      - ADD: ``first + second`` — a sum of finite decimals is a finite decimal.
+      - SUBTRACT: ``larger - smaller`` — operands are ORDERED so the result is NON-NEGATIVE (a
+        negative answer is out of scope for 6.NS.3's whole-decimal arithmetic).
+      - DIVIDE: from a curated pool whose quotient is an EXACT terminating decimal (no repeats);
+        phrased "{a} divided by {b} = ?" exactly like the MULTI_DIGIT_DIVISION generator.
+
+    The correct value is computed with SymPy (the oracle). ``operands = (first, second, mode)`` so
+    the verifier can gate the MULTIPLY-specific decimal-point-misplacement misconception (it returns
+    ``None`` off multiply, mirroring the AREA_POLYGONS forgot-the-half gate). The math is sampled
+    before the surface format is applied, so the same seed yields identical operands and mode in
+    either SYMBOLIC or AREA_MODEL. ``difficulty`` widens the factor pool from tenths to hundredths.
     """
     pool = (
         _DECIMAL_FACTORS_BY_DIFFICULTY.get(difficulty, _DECIMAL_FACTOR_POOL)
         if difficulty
         else _DECIMAL_FACTOR_POOL
     )
-    (n1, d1), (n2, d2) = rng.choice(pool), rng.choice(pool)
-    first, second = Rational(n1, d1), Rational(n2, d2)
-    # Render each factor as its decimal literal so the statement reads like a decimal problem.
-    a_text, b_text = _decimal_literal(n1, d1), _decimal_literal(n2, d2)
+    mode = rng.choice((_DECIMAL_MULTIPLY, _DECIMAL_ADD, _DECIMAL_SUBTRACT, _DECIMAL_DIVIDE))
+    if mode == _DECIMAL_DIVIDE:
+        (n1, d1), (n2, d2) = rng.choice(_DECIMAL_DIVIDE_POOL)
+        first, second = Rational(n1, d1), Rational(n2, d2)
+        statement = f"{_decimal_literal(n1, d1)} divided by {_decimal_literal(n2, d2)} = ?"
+        correct = Rational(first / second)
+    else:
+        (n1, d1), (n2, d2) = rng.choice(pool), rng.choice(pool)
+        first, second = Rational(n1, d1), Rational(n2, d2)
+        if mode == _DECIMAL_SUBTRACT and second > first:
+            # Order operands larger − smaller so the difference is never negative (out of scope).
+            first, second = second, first
+        a_text, b_text = _decimal_text(first), _decimal_text(second)
+        if mode == _DECIMAL_ADD:
+            statement = f"{a_text} + {b_text} = ?"
+            correct = Rational(first + second)
+        elif mode == _DECIMAL_SUBTRACT:
+            statement = f"{a_text} − {b_text} = ?"  # unicode minus, consistent within the lesson
+            correct = Rational(first - second)
+        else:  # _DECIMAL_MULTIPLY
+            statement = f"{a_text} x {b_text} = ?"
+            correct = Rational(first * second)
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.DECIMAL_OPERATIONS, seed, surface_format),
         kc=KnowledgeComponentId.DECIMAL_OPERATIONS,
         surface_format=surface_format,
-        statement=f"{a_text} x {b_text} = ?",
-        correct_value=first * second,
+        statement=statement,
+        correct_value=correct,
         representations_available=get_kc(KnowledgeComponentId.DECIMAL_OPERATIONS).representations,
-        operands=(first, second),
+        operands=(first, second, Rational(mode)),
     )
 
 
@@ -1905,26 +2170,56 @@ _EXPONENT_POWER_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
 _EXPONENT_BASE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8)
 _EXPONENT_POWER_POOL: tuple[int, ...] = (2, 3, 4, 5)
 
+# KC_exponents has TWO modes behind a TRAILING flag (the mode is the LAST operand, the established
+# convention — see _generate_decimal_operations). The seeded RNG picks the mode so a single lesson
+# covers all of 6.EE.1 — "write and evaluate numerical expressions involving whole-number
+# exponents" — not just a bare power. Panel coverage fix (Dr. Okafor, 2026-06-04): U4.L1 never
+# exercised order of operations, where the exponent must be applied BEFORE a surrounding operation.
+_EXPONENT_POWER_ONLY = 0  # the bare power "base^exp"; operands (base, exp, mode)
+_EXPONENT_ORDER_OF_OPS = 1  # a power inside one operation; operands (base, exp, a, op_code, mode)
+
+# ORDER_OF_OPS operation codes. BOTH forms put the surrounding operation to the LEFT of the power
+# (`a + base^exp`, `a * base^exp`) so that evaluating LEFT-TO-RIGHT (the diagnostic slip) genuinely
+# differs from the correct exponent-first value: (a + base)^exp != a + base^exp and
+# (a * base)^exp != a * base^exp for a, base >= 2 and exp >= 2. A `base^exp - a` form is NOT used:
+# the power is already leftmost there, so left-to-right would equal the correct value and the
+# misconception would not be diagnostic (CLAUDE.md §8 — no misconception that can't be wrong).
+_EXPONENT_OP_ADD = 0  # a + base^exp
+_EXPONENT_OP_MULTIPLY = 1  # a * base^exp
+# The small surrounding constant `a` — kept tiny so the friendly whole-number answer stays in
+# grade-6 range (a >= 2 also forces the left-to-right slip to be distinct, per above).
+_EXPONENT_ORDER_CONST_POOL: tuple[int, ...] = (2, 3, 4, 5)
+
 
 def _generate_exponents(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
-    """KC_exponents: evaluate a whole-number power base^exp; a single numeric answer.
+    """KC_exponents: write/evaluate a whole-number exponent expression; a single numeric answer.
 
-    Picks a base (>= 2) and an exponent (>= 2) via the seeded RNG; the answer is ``base ** exp``
-    (repeated multiplication). ``operands = (base, exp)`` so the verifier can replay the
-    multiply-base-by-exponent slip (``base * exp``). Two REAL surfaces share this answer (so the KC
-    is masterable across representations, PROJECT.md §3.4 rule 2):
+    ONE KC, TWO modes behind a TRAILING operand flag (the mode is the LAST operand) so one lesson
+    covers all of 6.EE.1 (panel coverage fix, Dr. Okafor 2026-06-04):
 
-      - **SYMBOLIC** (default) — "What is 3^4?" (the symbolic power);
-      - **AREA_MODEL** — the geometric picture: base^2 as the area of a square of side base,
-        base^3 as the volume of a cube of edge base (the visual, magnitude-grounded form).
+      - **POWER_ONLY** (mode 0) — the bare power "What is 3^4?"; the answer is ``base ** exp``
+        (repeated multiplication). ``operands = (base, exp, mode)``. Two REAL surfaces share this
+        answer (so the KC is masterable across representations, PROJECT.md §3.4 rule 2):
+          - **SYMBOLIC** (default) — "What is 3^4?";
+          - **AREA_MODEL** — the geometric picture: base^2 as the area of a square of side base,
+            base^3 as the volume of a cube of edge base (the visual, magnitude-grounded form).
+        The single ``(base, exp) == (2, 2)`` case is excluded (there ``base ** exp == base * exp``),
+        so the multiply-base-by-exponent slip is always distinct from the correct value.
 
-    The single ``(base, exp) == (2, 2)`` case is excluded because there ``base ** exp == base *
-    exp`` (4 == 4), which would make the misconception indistinguishable from the correct; every
-    other in-scope pair has ``base ** exp != base * exp``, so the slip is always diagnostic. The
-    math is sampled before the format is applied, so the same seed yields identical operands in
-    either surface. ``difficulty`` widens the base/exponent pools.
+      - **ORDER_OF_OPS** (mode 1) — a small expression with ONE power and ONE surrounding
+        whole-number operation evaluated EXPONENT-FIRST: "a + base^exp" or "a * base^exp". The
+        answer is ``a + base**exp`` / ``a * base**exp``. ``operands = (base, exp, a, op_code,
+        mode)`` so the verifier can replay the left-to-right slip (apply the operation BEFORE the
+        power: ``(a + base)**exp`` / ``(a * base)**exp``), which the generator keeps DISTINCT from
+        the correct value for every item (a, base >= 2, exp >= 2). This mode is SYMBOLIC only — an
+        order-of-ops expression has no single square/cube picture — so **AREA_MODEL forces
+        POWER_ONLY** (an order-of-ops item is never rendered as a nonexistent picture).
+
+    The mode and math are sampled BEFORE the surface format is applied, so the same seed yields
+    identical operands in either surface (and AREA_MODEL's forced power-only is deterministic).
+    ``difficulty`` widens the base/exponent pools.
     """
     base_pool = (
         _EXPONENT_BASE_BY_DIFFICULTY.get(difficulty, _EXPONENT_BASE_POOL)
@@ -1936,6 +2231,13 @@ def _generate_exponents(
         if difficulty
         else _EXPONENT_POWER_POOL
     )
+    # AREA_MODEL has no picture for an order-of-ops expression, so it FORCES the bare-power mode;
+    # SYMBOLIC lets the seeded RNG pick either mode (so both appear across seeds).
+    mode = (
+        _EXPONENT_POWER_ONLY
+        if surface_format is Representation.AREA_MODEL
+        else rng.choice((_EXPONENT_POWER_ONLY, _EXPONENT_ORDER_OF_OPS))
+    )
     base = rng.choice(base_pool)
     exponent = rng.choice(power_pool)
     # Resample the one collision case (2^2 == 2*2) so the multiply slip stays distinct (AREA_MODEL
@@ -1943,6 +2245,34 @@ def _generate_exponents(
     while base == 2 and exponent == 2:
         base = rng.choice(base_pool)
         exponent = rng.choice(power_pool)
+
+    if mode == _EXPONENT_ORDER_OF_OPS:
+        a_const = rng.choice(_EXPONENT_ORDER_CONST_POOL)
+        op_code = rng.choice((_EXPONENT_OP_ADD, _EXPONENT_OP_MULTIPLY))
+        power = base**exponent
+        if op_code == _EXPONENT_OP_ADD:
+            correct = a_const + power
+            statement = f"What is {a_const} + {base}^{exponent}?"
+        else:  # _EXPONENT_OP_MULTIPLY
+            correct = a_const * power
+            statement = f"What is {a_const} x {base}^{exponent}?"
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.EXPONENTS, seed, surface_format),
+            kc=KnowledgeComponentId.EXPONENTS,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=Rational(correct),
+            representations_available=get_kc(KnowledgeComponentId.EXPONENTS).representations,
+            operands=(
+                Rational(base),
+                Rational(exponent),
+                Rational(a_const),
+                Rational(op_code),
+                Rational(_EXPONENT_ORDER_OF_OPS),
+            ),
+        )
+
+    # POWER_ONLY (mode 0): the bare power, on either surface.
     if surface_format is Representation.AREA_MODEL:
         if exponent == 2:
             statement = (
@@ -1964,7 +2294,7 @@ def _generate_exponents(
         statement=statement,
         correct_value=Rational(base**exponent),
         representations_available=get_kc(KnowledgeComponentId.EXPONENTS).representations,
-        operands=(Rational(base), Rational(exponent)),
+        operands=(Rational(base), Rational(exponent), Rational(_EXPONENT_POWER_ONLY)),
     )
 
 
@@ -2609,9 +2939,12 @@ _AREA_SIDE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
     4: (11, 12, 13, 14, 15),
 }
 _AREA_SIDE_POOL: tuple[int, ...] = (3, 4, 5, 6, 7, 8, 9, 10, 12, 14)
-# Triangle mode = 0 (area 1/2·b·h); parallelogram/rectangle mode = 1 (area b·h).
+# Triangle mode = 0 (area 1/2·b·h); parallelogram/rectangle mode = 1 (area b·h); trapezoid mode = 2
+# (area 1/2·(base1 + base2)·h — two parallel sides). The trapezoid carries an EXTRA operand (the
+# second base), so its operand tuple is a 4-tuple while the other two stay 3-tuples (see generator).
 _AREA_TRIANGLE_MODE = 0
 _AREA_PARALLELOGRAM_MODE = 1
+_AREA_TRAPEZOID_MODE = 2
 
 
 def _generate_area_polygons(
@@ -2619,39 +2952,75 @@ def _generate_area_polygons(
 ) -> Problem:
     """KC_area_polygons: find a polygon's area; a single numeric area answer (6.G.1).
 
-    A shape-mode flag (the seeded RNG picks triangle vs parallelogram/rectangle) decides the item.
-    TRIANGLE (mode 0): area is ``1/2 · base · height`` — the HEIGHT is drawn even so the area is a
-    whole number. PARALLELOGRAM/RECTANGLE (mode 1): area is ``base · height``. ``operands =
-    (base, height, mode)`` so the verifier can replay the forgot-the-half misconception (answer
-    ``base · height`` on a triangle). ``difficulty`` widens the side pool.
+    A shape-mode flag (the seeded RNG picks triangle, parallelogram/rectangle, or trapezoid)
+    decides the item. The U6.L3 lesson (6.G.1) promises all three, so the trapezoid mode (Slice 4c)
+    covers the third (composite figures are deferred — they need a richer figure representation).
+
+      - **TRIANGLE** (mode 0): area is ``1/2 · base · height`` — the HEIGHT is drawn even so the
+        area is a whole number. ``operands = (base, height, mode)``.
+      - **PARALLELOGRAM/RECTANGLE** (mode 1): area is ``base · height``. ``operands =
+        (base, height, mode)``.
+      - **TRAPEZOID** (mode 2): area is ``1/2 · (base1 + base2) · height`` — the two parallel sides
+        are drawn DISTINCT and the HEIGHT even so ``(base1 + base2) · height`` is even and the area
+        lands whole. A trapezoid needs a second base, so its tuple is a 4-tuple ``operands =
+        (base1, base2, height, mode)`` — the verifier and worked example branch on the trailing
+        mode/arity (the forgot-the-half models are gated by operand count, so each fires only on
+        its own shape).
 
     Two REAL surfaces share this answer (so the KC is masterable across representations,
     PROJECT.md §3.4 rule 2), mirroring KC_evaluate_expressions / KC_exponents:
 
-      - **SYMBOLIC** (default) — "Find the area of a triangle with base {b} and height {h}." (the
-        formula form);
-      - **AREA_MODEL** — the same figure read off a unit-square grid: "On a unit grid, a triangle
-        has base {b} and height {h}. What is its area in square units?" (the visual form).
+      - **SYMBOLIC** (default) — the formula form ("Find the area of a triangle with base {b} and
+        height {h}." / "...trapezoid with parallel sides {b1} and {b2} and height {h}.");
+      - **AREA_MODEL** — the same figure read off a unit-square grid.
 
     The math is sampled before the format is applied, so the same seed yields identical operands in
-    either surface. Base and height are positive, so ``base · height > base · height / 2`` and the
-    forgot-the-half misconception is always diagnostic on a triangle.
+    either surface. Sides are positive (and the trapezoid's bases distinct), so the un-halved
+    product always exceeds the halved area and the forgot-the-half misconception is always
+    diagnostic on a triangle/trapezoid.
     """
     pool = (
         _AREA_SIDE_BY_DIFFICULTY.get(difficulty, _AREA_SIDE_POOL) if difficulty else _AREA_SIDE_POOL
     )
-    triangle = rng.random() < 0.5
+    mode = rng.choice((_AREA_TRIANGLE_MODE, _AREA_PARALLELOGRAM_MODE, _AREA_TRAPEZOID_MODE))
     base = rng.choice(pool)
     height = rng.choice(pool)
-    if triangle:
+    if mode == _AREA_TRAPEZOID_MODE:
+        # A trapezoid has TWO distinct parallel sides; resample the second until it differs.
+        base2 = rng.choice(pool)
+        while base2 == base:
+            base2 = rng.choice(pool)
+        # Force an even height so 1/2·(base1 + base2)·height is a whole-number area: an even height
+        # makes (base1 + base2)·height even regardless of the bases' parities (a clean answer).
+        if height % 2 == 1:
+            height += 1
+        correct = Rational((base + base2) * height, 2)
+        if surface_format is Representation.AREA_MODEL:
+            statement = (
+                f"On a unit grid, a trapezoid has parallel sides {base} and {base2} and "
+                f"height {height}. What is its area in square units?"
+            )
+        else:
+            statement = (
+                f"Find the area of a trapezoid with parallel sides {base} and {base2} and "
+                f"height {height}."
+            )
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.AREA_POLYGONS, seed, surface_format),
+            kc=KnowledgeComponentId.AREA_POLYGONS,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=correct,
+            representations_available=get_kc(KnowledgeComponentId.AREA_POLYGONS).representations,
+            operands=(Rational(base), Rational(base2), Rational(height), Rational(mode)),
+        )
+    if mode == _AREA_TRIANGLE_MODE:
         # Force an even height so 1/2·base·height is a whole-number area (a clean grade-6 answer).
         if height % 2 == 1:
             height += 1
-        mode = _AREA_TRIANGLE_MODE
         correct = Rational(base * height, 2)
         shape = "triangle"
     else:
-        mode = _AREA_PARALLELOGRAM_MODE
         correct = Rational(base * height)
         shape = "parallelogram"
     if surface_format is Representation.AREA_MODEL:
@@ -3390,6 +3759,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _generate_number_line,
     KnowledgeComponentId.RATIO_LANGUAGE: _generate_ratio_language,
     KnowledgeComponentId.UNIT_RATE: _generate_unit_rate,
+    KnowledgeComponentId.BETTER_BUY: _generate_better_buy,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _generate_equivalent_ratios,
     KnowledgeComponentId.PERCENT: _generate_percent,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _generate_multiply_fractions,

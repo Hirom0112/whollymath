@@ -21,6 +21,7 @@ import pytest
 from app.api.app import create_app
 from app.api.schemas import ActionType, SurfaceState, TurnRequest
 from app.api.service import SessionStore
+from app.tts.live_synth import LiveAudio
 from app.tts.manifest_lookup import (
     lookup_audio,
     override_cache_dir,
@@ -90,11 +91,13 @@ def test_first_hint_on_equivalence_carries_canonical_audio_ref() -> None:
     assert result.hint == " ".join(result.hint_audio.words)
 
 
-def test_first_hint_without_cached_audio_is_silent_captions_only(empty_cache: None) -> None:
-    """A nudge with no cached audio → hint present, hint_audio null (today's silent behavior).
+def test_first_hint_without_cached_audio_degrades_to_captions_only(empty_cache: None) -> None:
+    """No banked clip AND live synth unavailable → hint present, hint_audio null (invariant 4).
 
-    Runs against an empty temp cache (``empty_cache`` fixture) so the silent path is exercised
-    regardless of what the real on-disk cache holds.
+    Runs against an empty temp cache (``empty_cache`` isolates BOTH the banked lookup and the live
+    synth path) with no ELEVENLABS key, so neither a cache hit nor a live render is possible — the
+    line degrades to captions-only. (In prod, live synth voices this line; the positive wiring is
+    asserted in ``test_first_hint_live_synthesises_when_no_banked_clip``.)
     """
     store = SessionStore()
     started = store.start(_NUMBER_LINE_ROUTE)
@@ -103,7 +106,36 @@ def test_first_hint_without_cached_audio_is_silent_captions_only(empty_cache: No
     result = store.process_turn(_hint_req(sid, pid))
 
     assert result.hint is not None  # the caption is always there
-    assert result.hint_audio is None  # but no audio for an unrendered line
+    assert result.hint_audio is None  # but no audio when neither banked nor live synth can voice it
+
+
+def test_first_hint_live_synthesises_when_no_banked_clip(
+    empty_cache: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No banked clip BUT live synth available → the dynamic hint line TALKS (owner decision).
+
+    The empty cache means no banked audio for this KC's nudge; we inject a live-synth result (so the
+    test never touches the network, CLAUDE.md §9) and assert the hint now carries that audio with
+    the EXACT shown words — proving the dynamic line is no longer silent.
+    """
+    spoken = LiveAudio(
+        audio_url="/tts/audio/deadbeef.mp3",
+        words=["picture", "how", "big"],
+        wtimes=[0.0, 0.4, 0.8],
+        wdurations=[0.4, 0.4, 0.4],
+    )
+    monkeypatch.setattr("app.api.service.synthesize_live", lambda *a, **k: spoken)
+
+    store = SessionStore()
+    started = store.start(_NUMBER_LINE_ROUTE)
+    sid, pid = started.session_id, started.problem.problem_id
+
+    result = store.process_turn(_hint_req(sid, pid))
+
+    assert result.hint is not None
+    assert result.hint_audio is not None
+    assert result.hint_audio.audio_url == "/tts/audio/deadbeef.mp3"
+    assert result.hint_audio.words == ["picture", "how", "big"]
 
 
 def _answer_req(session_id: str, problem_id: str, answer: str) -> TurnRequest:

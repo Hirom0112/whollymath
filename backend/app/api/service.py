@@ -101,7 +101,8 @@ from app.domain.knowledge_components import (
     Representation,
     get_kc,
 )
-from app.domain.lesson_spec import widget_for_representation
+from app.domain.lesson_spec import get_lesson_spec, widget_for_representation
+from app.domain.misconceptions import MisconceptionId, get_misconception
 from app.domain.percent_grid_stimulus import PercentGridStimulus
 from app.domain.problem_generators import Problem
 from app.domain.ratio_table_stimulus import RatioTableStimulus
@@ -126,6 +127,7 @@ from app.mastery.mastery_model import Observation
 from app.mastery.progression import plan_study
 from app.mastery.retention import ReviewableSkill
 from app.mastery.unit_progress import UnitProgress, build_unit_progress
+from app.persona_surface.misconception_voice import voice_misconception_nudge
 from app.persona_surface.tutor_voice import voice_help
 from app.policy.emotion import MomentType, select_emotion
 from app.policy.intervention_gate import SustainedHelpNeedGate
@@ -149,9 +151,12 @@ from app.policy.scheduler import (
     next_spec_after_outcome,
 )
 from app.policy.state_classifier import classify_state
+from app.tts.live_synth import synthesize_live
 from app.tts.manifest_lookup import audio_url_for, lookup_audio
+from app.tts.provider import Locale
 from app.tts.spoken_bank import nudge_string_id
 from app.tutor.hints import HintLevel, build_validated_hint, select_nudge
+from app.tutor.hints_es import es_mx_text
 from app.tutor.live_transfer_probe import build_live_probe_steps
 from app.tutor.session import (
     MasterySnapshot as TutorMasterySnapshot,
@@ -290,6 +295,18 @@ def _scene_view(scene: Scene | None) -> SceneView | None:
     return None  # pragma: no cover — the union above is exhaustive
 
 
+def _supports_written_work(kc: KnowledgeComponentId) -> bool:
+    """Whether this KC's lesson is worked out on paper (so the surface offers the camera beat).
+
+    Reads the per-lesson declaration (``lesson_spec._WRITTEN_WORK_KCS`` via the spec). Defaults to
+    False for a KC with no registered spec (e.g. a forward-declared label-space KC) — degrade to
+    "no camera" rather than break the projection."""
+    try:
+        return get_lesson_spec(kc).supports_written_work
+    except KeyError:
+        return False
+
+
 def _problem_view(problem: Problem) -> ProblemView:
     """Project a domain ``Problem`` to the answer-free ``ProblemView`` the wire ships.
 
@@ -321,6 +338,7 @@ def _problem_view(problem: Problem) -> ProblemView:
         surface_format=problem.surface_format,
         widget_id=widget_for_representation(problem.surface_format, problem.kc).value,
         statement=problem.statement,
+        supports_written_work=_supports_written_work(problem.kc),
         answer_kind=problem.answer_kind,
         yes_no_relation=problem.yes_no_relation,
         tick_segments=int(problem.correct_value.q) if is_number_line else None,
@@ -497,19 +515,40 @@ def _help_need(
     return predictor.predict_proba(features)
 
 
-def _nudge_audio(kc_value: str, index: int = 0) -> SpokenAudio | None:
+def _localized_nudge_text(kc: KnowledgeComponentId, index: int, locale: Locale) -> str:
+    """The canonical nudge text for ``kc`` at ``index`` in ``locale`` — English, or its es-MX line.
+
+    The locale seam for help TEXT (Slice 3.6 bilingual scaffold). English ('en') returns the banked
+    English nudge (``select_nudge`` — the single source of truth for the text); 'es-MX' returns the
+    parallel Mexican-Spanish line keyed by the SAME canonical ``string_id`` (``es_mx_text`` over the
+    reviewed es-MX bank, ``tutor/hints_es``). When no es-MX entry exists for the id we fall back to
+    the English nudge so a gap voices *something* rather than crashing — mirroring
+    ``spoken_bank.text_for_locale``. No LLM/SymPy here: a banked-string lookup (§8.1). The English
+    branch is byte-for-byte the pre-Slice-3.6 behavior (locale defaults to 'en')."""
+    english = select_nudge(kc, index=index).text
+    if locale != "en":
+        translated = es_mx_text(nudge_string_id(kc.value, index))
+        if translated is not None:
+            return translated
+    return english
+
+
+def _nudge_audio(kc_value: str, index: int = 0, *, locale: Locale = "en") -> SpokenAudio | None:
     """Cached audio + lip-sync timing for the canonical nudge at ``index`` of ``kc_value``, or None.
 
     The canonical-line bridge (Slice AR.3): a help moment selects a banked nudge (``select_nudge``,
-    default index 0), and IF that exact canonical line was pre-rendered (``manifest_lookup``), the
-    surface can speak it. Returns a ``SpokenAudio`` referencing the served mp3 + word timings, or
-    ``None`` when no audio exists for the line (the common case — only a few lines are rendered).
+    default index 0), and IF that exact canonical line was pre-rendered IN ``locale``
+    (``manifest_lookup`` keyed ``<string_id>|<locale>``), the surface can speak it. Returns a
+    ``SpokenAudio`` referencing the served mp3 + word timings, or ``None`` when no audio exists for
+    the line in that locale (the common case — only a few lines are rendered, and es-MX audio is
+    not rendered yet, so 'es-MX' resolves to ``None`` and the existing caption-only fallback holds).
 
-    A caller that attaches this MUST also ship the CANONICAL caption (the banked nudge text), not an
-    LLM rephrase, so the spoken words and the on-screen words match (the SpokenAudio invariant). Off
-    the turn-loop decision path: a single cached-manifest dict lookup, no LLM/SymPy/network (§8.1).
+    A caller that attaches this MUST also ship the CANONICAL caption (the banked nudge text in the
+    same locale), not an LLM rephrase, so the spoken words and the on-screen words match (the
+    SpokenAudio invariant). Off the turn-loop decision path: a single cached-manifest dict lookup,
+    no LLM/SymPy/network (§8.1). ``locale`` defaults to 'en' so the English path is unchanged.
     """
-    entry = lookup_audio(nudge_string_id(kc_value, index))
+    entry = lookup_audio(nudge_string_id(kc_value, index), locale=locale)
     if entry is None:
         return None
     audio_file = entry.get("audio_file")
@@ -533,11 +572,34 @@ def _nudge_audio(kc_value: str, index: int = 0) -> SpokenAudio | None:
     )
 
 
+def _live_audio(text: str, locale: Locale) -> SpokenAudio | None:
+    """Voice a DYNAMIC help line (no banked clip) via serve-time live synth, or ``None``.
+
+    The fallback that makes LLM-rephrased / number-templated help lines TALK instead of staying
+    captions-only (owner 2026-06-04): ``synthesize_live`` voices the EXACT shown ``text`` in
+    Hope and content-hash caches it (so a repeat is free), returning a ref this maps onto the
+    ``SpokenAudio`` wire model. ``None`` (captions-only) when synth is disabled, keyless, or fails —
+    it never raises into the turn (invariant 4). Off the graded loop (§8.1): only called on a help
+    moment, after the verdict. The caller passes the verbatim shown text so the mouth matches the
+    bubble (the SpokenAudio invariant).
+    """
+    live = synthesize_live(text, locale=locale)
+    if live is None:
+        return None
+    return SpokenAudio(
+        audio_url=live.audio_url,
+        words=live.words,
+        wtimes=live.wtimes,
+        wdurations=live.wdurations,
+    )
+
+
 def _maybe_intervene(
     live: _LiveSession,
     gate: SustainedHelpNeedGate,
     next_problem: Problem,
     voice_provider: LLMProvider | None,
+    locale: Locale = "en",
 ) -> InterventionView | None:
     """Decide whether to PROACTIVELY offer help before the next problem (Slice 4.5.1).
 
@@ -566,11 +628,20 @@ def _maybe_intervene(
     # A help moment: voice the pre-written nudge in the mascot's voice (Slice 5.5.2), or
     # return it verbatim if voicing is disabled/fails (invariant 4). The LLM only rephrases
     # an already-decided nudge — it never decides whether to intervene (§8.1).
-    nudge_text = select_nudge(next_problem.kc).text
-    voiced = voice_help(nudge_text, moment=MomentType.STUCK_NUDGE, provider=voice_provider)
-    # If the canonical nudge has cached audio, speak it — and show the CANONICAL caption (not the
-    # LLM rephrase) so the spoken words match the bubble (SpokenAudio canonical-line invariant).
-    audio = _nudge_audio(next_problem.kc.value)
+    nudge_text = _localized_nudge_text(next_problem.kc, 0, locale)
+    # If the canonical nudge has cached audio IN THIS LOCALE, speak it — and show the CANONICAL
+    # caption (not the LLM rephrase) so the spoken words match the bubble (the SpokenAudio
+    # invariant). es-MX audio is not rendered yet, so 'es-MX' resolves to None → captions-only.
+    audio = _nudge_audio(next_problem.kc.value, locale=locale)
+    # The mascot voices the already-decided nudge in the learner's help-locale: voice_help picks
+    # the English or es-MX rephrase prompt deterministically from ``locale`` (Slice 3.4), so the
+    # LLM only ever rephrases — never decides language, correctness, or whether to intervene
+    # (§8.1/§8.3). With audio present we keep the canonical caption (mouth/bubble match); with no
+    # provider the rephrase falls back to the verbatim nudge (invariant 4). es-MX has no rendered
+    # audio yet, so it is captions-only.
+    voiced = voice_help(
+        nudge_text, moment=MomentType.STUCK_NUDGE, provider=voice_provider, locale=locale
+    )
     return InterventionView(
         kind=InterventionKind.INLINE_ASSERTION,
         text=nudge_text if audio is not None else voiced.text,
@@ -949,17 +1020,32 @@ def _answer_response(
         hint=None,
         mastery=_mastery_view(result.mastery_snapshot, live),
         help_need=help_need,
-        intervention=_maybe_intervene(live, gate, next_problem, voice_provider),
+        intervention=_maybe_intervene(live, gate, next_problem, voice_provider, request.locale),
         next_problem=_problem_view(next_problem),
         worked_example=worked_example,
         explanation=explanation,
     )
 
 
+def _last_matched_misconception(live: _LiveSession) -> MisconceptionId | None:
+    """The named misconception the learner's MOST RECENT answer matched, or ``None``.
+
+    Reads the settled verdict off the session history (``Turn.result.matched_misconception`` — the
+    verifier already decided this off the turn loop, §8.2); it never re-verifies. Returns ``None``
+    when there is no history yet (a hint requested before any answer) or the last answer matched no
+    named misconception, so the error-specific nudge only fires when the verifier actually named the
+    error. This is a READ of an existing fact, never a new correctness decision (§8.2)."""
+    history = live.tutor.history
+    if not history:
+        return None
+    return history[-1].result.matched_misconception
+
+
 def _hint_response(
     live: _LiveSession,
     voice_provider: LLMProvider | None,
     hint_provider: LLMProvider | None,
+    locale: Locale = "en",
 ) -> TurnResponse:
     """Answer a REQUEST_HINT turn with an ESCALATING hint — no state change, no advance.
 
@@ -996,19 +1082,45 @@ def _hint_response(
     # escalated partial_step / worked_step hints are number-templated and stay captions-only.
     hint_audio: SpokenAudio | None = None
     if requests_so_far == 0:
-        canonical_nudge = select_nudge(problem.kc).text
-        hint_audio = _nudge_audio(problem.kc.value)
+        canonical_nudge = _localized_nudge_text(problem.kc, 0, locale)
+        hint_audio = _nudge_audio(problem.kc.value, locale=locale)
         if hint_audio is not None:
             # Speak the cached canonical line and caption it verbatim (canonical-line invariant) —
             # the mouth lip-syncs the same words the bubble shows.
             hint_text = canonical_nudge
         else:
-            hint_text = voice_help(
-                canonical_nudge, moment=MomentType.STUCK_NUDGE, provider=voice_provider
-            ).text
+            # No cached audio: the mascot rephrases the canonical nudge in the learner's locale.
+            # If the learner's LAST wrong answer matched a NAMED misconception (the verifier already
+            # decided this, off the turn loop), voice an ERROR-SPECIFIC corrective nudge tailored to
+            # that misconception (Slice 1.2) — gated through the SymPy numeric gate + safety filter,
+            # with the canonical nudge as the dependable fallback. Otherwise the generic nudge.
+            # Either path: the LLM only re-voices an already-decided line; it never decides
+            # correctness (§8.2) or sees mastery state (§8.3), and with no provider returns the
+            # verbatim canonical nudge (invariant 4). es-MX stays captions-only until audio renders.
+            matched = _last_matched_misconception(live)
+            if matched is not None:
+                hint_text = voice_misconception_nudge(
+                    get_misconception(matched),
+                    canonical_nudge,
+                    provider=voice_provider,
+                    locale=locale,
+                )
+            else:
+                hint_text = voice_help(
+                    canonical_nudge,
+                    moment=MomentType.STUCK_NUDGE,
+                    provider=voice_provider,
+                    locale=locale,
+                ).text
     else:
         level = HintLevel.PARTIAL_STEP if requests_so_far == 1 else HintLevel.WORKED_STEP
         hint_text = build_validated_hint(problem, level, provider=hint_provider).natural_language
+    # If no banked clip voiced this line (an LLM-rephrased nudge, a misconception corrective, or a
+    # number-templated worked step — and the whole es-MX path until its bank renders), voice the
+    # EXACT shown text live in Hope and cache it (owner decision 2026-06-04). Degrades to
+    # captions-only when synth is disabled/keyless/failing (invariant 4); off the graded loop.
+    if hint_audio is None:
+        hint_audio = _live_audio(hint_text, locale)
     live.hints_this_problem += 1
     return TurnResponse(
         correct=False,
@@ -1071,6 +1183,12 @@ class _LiveSession:
 
     tutor: TutorSession
     proactive_enabled: bool = False
+    # The session's HELP-language preference recorded at ``start`` (Slice 3.6 bilingual scaffold,
+    # V2_TODO §0.3): 'en' (default) or 'es-MX'. RECORDED for observability/continuity — the live
+    # turn loop reads ``TurnRequest.locale`` per turn (the surface sends it each turn, so an
+    # anonymous session needs no server-side lookup, §8.1). NEVER on the decision path: locale
+    # selects only the spoken help surface, never verify/mastery/policy.
+    locale: Locale = "en"
     help_need_history: list[float] = field(default_factory=list)
     # Persistence linkage (Slice PL.1), all OFF the decision path. ``learner_session_id`` is
     # the opaque external key the client echoes (== the API session id), used to find/create
@@ -1299,6 +1417,7 @@ class SessionStore:
         *,
         proactive_enabled: bool = False,
         session_id: str | None = None,
+        locale: Locale = "en",
     ) -> StartSessionResponse:
         """Start a session from a Turn-0 route key and return its Turn-1 problem (0.D.2).
 
@@ -1324,6 +1443,7 @@ class SessionStore:
         live = _LiveSession(
             tutor=TutorSession.from_route(option),
             proactive_enabled=proactive_enabled,
+            locale=locale,
             learner_session_id=session_id,
             seed_base=_seed_base_from_session_id(session_id),
         )
@@ -1337,7 +1457,11 @@ class SessionStore:
         )
 
     def start_kc(
-        self, kc: KnowledgeComponentId, *, proactive_enabled: bool = False
+        self,
+        kc: KnowledgeComponentId,
+        *,
+        proactive_enabled: bool = False,
+        locale: Locale = "en",
     ) -> StartSessionResponse:
         """Start a lesson DIRECTLY for a KC (the course-map node launch, Slice CP.A.2/§3.13).
 
@@ -1359,6 +1483,7 @@ class SessionStore:
         live = _LiveSession(
             tutor=TutorSession.for_goal_kc(kc, surface_format=surface_format, seed=seed_base),
             proactive_enabled=proactive_enabled,
+            locale=locale,
             learner_session_id=session_id,
             seed_base=seed_base,
         )
@@ -1428,7 +1553,7 @@ class SessionStore:
         if live is None:
             raise SessionNotFoundError(request.session_id)
         if request.action is ActionType.REQUEST_HINT:
-            response = _hint_response(live, self.voice_provider, self.hint_provider)
+            response = _hint_response(live, self.voice_provider, self.hint_provider, request.locale)
         else:
             response = _answer_response(
                 live, request, self.predictor, self.gate, self.voice_provider
@@ -1715,6 +1840,29 @@ class SessionStore:
             teacher = repo.get_or_create_demo_teacher(db)
             db.commit()
             return DemoTeacherHandle(learner_id=teacher.id, email=teacher.email)
+
+    def set_locale(self, learner_id: int, locale: Locale) -> str | None:
+        """Persist a learner's sticky HELP-language preference, or ``None`` if unknown (Slice 3.6).
+
+        The deferred ``Learner.locale`` write (V2_TODO §0.3): records which language the avatar
+        SPEAKS for this learner so it survives across sessions/devices. Owns its short unit of work
+        like ``provision_demo_teacher`` — opens a session, mutates via the repository (the only
+        place a DB query lives, CLAUDE.md §7), and COMMITS so the preference is durable. Returns the
+        stored locale on success, or ``None`` when the learner row is unknown so the route can 404.
+
+        ``locale`` is the validated ``Locale`` literal (the route accepts only 'en'/'es-MX'), so the
+        allowed-value check happens at the wire boundary, not here. Raises nothing for a missing
+        factory — the route checks ``session_factory`` first and 503s (mirroring the other
+        persistence-required endpoints). Locale is a rendering preference, never on the turn loop.
+        """
+        assert self.session_factory is not None  # the route guards this and 503s when absent.
+        with self.session_factory() as db:
+            learner = repo.set_learner_locale(db, learner_id, locale)
+            if learner is None:
+                return None
+            stored = learner.locale
+            db.commit()
+            return stored
 
     def _reviewable_skills_for_learner(self, learner_id: int) -> list[ReviewableSkill]:
         """Project a learner's persisted ``MasteryState`` rows → the retention model's inputs.

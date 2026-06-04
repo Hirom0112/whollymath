@@ -27,6 +27,7 @@ def _features(*, error_rate: float, unproductive_rate: float, attempts: float) -
         recent_hint_rate=2.0 * error_rate,
         recent_error_rate=error_rate,
         recent_request_answer_rate=error_rate,
+        recent_no_hint_error_rate=error_rate,
         turns_since_last_correct=1.0 + 4.0 * error_rate,
         prior_unproductive_rate=unproductive_rate,
         session_position=5.0,

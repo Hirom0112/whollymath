@@ -155,6 +155,10 @@ class MisconceptionId(StrEnum):
     # Unit 6 (6.G.1): forgot the 1/2 on a triangle — applied the rectangle formula b·h to a
     # triangle instead of 1/2·b·h, so the area comes out twice too big.
     FORGOT_TRIANGLE_HALF = "forgot-triangle-half"
+    # Unit 6 (6.G.1): forgot the 1/2 on a trapezoid — answered (base1 + base2)·height instead of
+    # AVERAGING the two parallel sides first (1/2·(base1 + base2)·height), so the area is twice too
+    # big. The trapezoid analogue of forgot-triangle-half (Slice 4c, U6.L3 trapezoid coverage).
+    FORGOT_TRAPEZOID_HALF = "forgot-trapezoid-half"
     # Unit 6 (6.G.2): finding a prism's volume by ADDING the edge lengths (l + w + h) instead of
     # MULTIPLYING them (V = l*w*h) — the wrong operation, so the answer comes out far too small.
     ADD_EDGES_ERROR = "add-edges-error"
@@ -190,6 +194,15 @@ class MisconceptionId(StrEnum):
     # the verifier does NOT classify this id (a wrong yes/no is scored MAGNITUDE / no misconception,
     # like every YES_NO item). It lives here for catalog completeness and hint framing only.
     TREATS_ANY_AS_STATISTICAL = "treats-any-as-statistical"
+    # Unit 1 (6.RP.3b / 6.RP.2): deciding the better buy by comparing the two TOTAL prices (or the
+    # item counts) instead of the price PER ITEM — picking the store with the lower total as "the
+    # better buy" even when its unit price is higher (6 for $3 = $0.50 each vs 10 for $4 = $0.40
+    # each: the $3 total is lower, but the $4 store is the better buy). The learner compares the
+    # wrong quantities, missing that the better buy is the lower UNIT rate, not the lower total.
+    # NOTE: the YES_NO answer kind does not use the operand-based ``_WRONG_ANSWER_MODELS`` path, so
+    # the verifier does NOT classify this id (a wrong yes/no is scored MAGNITUDE / no misconception,
+    # like every YES_NO item). It lives here for catalog completeness and hint framing only.
+    COMPARE_TOTALS_NOT_UNIT_RATES = "compare-totals-not-unit-rates"
     # Unit 4/5 (6.EE.9): confusing the dependent/independent relationship — treating the
     # MULTIPLICATIVE rule y = a·x as ADDITIVE, computing a + x instead of a·x ("y = 3x, x = 4"
     # answered 7 instead of 12). The learner reads the rate as something to ADD to the input rather
@@ -480,12 +493,19 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         id=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
         name="Order-of-operations slip on evaluation",
         description=(
-            "Evaluates a*x + b by combining left-to-right instead of by precedence — adds before "
-            "multiplying, computing a*(x + b) rather than a*x + b. 'Evaluate 3x + 2 when x = 4' "
-            "becomes 3*(4 + 2) = 18 instead of 3*4 + 2 = 14. The substitution is right; the "
-            "OPERATION order is wrong (multiplication should happen before the addition)."
+            "Combines an expression left-to-right instead of by precedence. When evaluating "
+            "a*x + b the learner adds before multiplying — a*(x + b) rather than a*x + b — so "
+            "'Evaluate 3x + 2 when x = 4' becomes 3*(4 + 2) = 18 instead of 3*4 + 2 = 14. The same "
+            "slip hits "
+            "a power inside an expression (6.EE.1): '2 + 3^2' is read left-to-right as (2 + 3)^2 = "
+            "25 instead of 2 + 9 = 11, applying the operation BEFORE the exponent. The numbers are "
+            "right; the OPERATION order is wrong (the exponent — like the multiplication — comes "
+            "first)."
         ),
-        applicable_kcs=(KnowledgeComponentId.EVALUATE_EXPRESSIONS,),
+        applicable_kcs=(
+            KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+            KnowledgeComponentId.EXPONENTS,
+        ),
     ),
     Misconception(
         id=MisconceptionId.INVERSE_OPERATION_ERROR,
@@ -614,6 +634,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         applicable_kcs=(KnowledgeComponentId.AREA_POLYGONS,),
     ),
     Misconception(
+        id=MisconceptionId.FORGOT_TRAPEZOID_HALF,
+        name="Forgot the one-half on a trapezoid",
+        description=(
+            "Computes a trapezoid's area as (base1 + base2) x height instead of one half "
+            "(base1 + base2) x height — it sums the two parallel sides and multiplies by the "
+            "height but never AVERAGES the bases. A trapezoid's area uses the average of the two "
+            "parallel sides, so dropping the 1/2 makes the answer exactly twice too big. Does not "
+            "apply to a triangle or parallelogram item (a different formula)."
+        ),
+        applicable_kcs=(KnowledgeComponentId.AREA_POLYGONS,),
+    ),
+    Misconception(
         id=MisconceptionId.ADD_EDGES_ERROR,
         name="Adds the edges instead of multiplying",
         description=(
@@ -704,6 +736,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "statistical question anticipates VARIABILITY, so its answers vary across the data."
         ),
         applicable_kcs=(KnowledgeComponentId.STATISTICAL_QUESTIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.COMPARE_TOTALS_NOT_UNIT_RATES,
+        name="Compares total prices instead of the price per item",
+        description=(
+            "Decides the better buy by comparing the two TOTAL prices (or the item counts) rather "
+            "than the price PER ITEM — choosing the store with the lower total as 'the better buy' "
+            "even when its unit price is higher (6 apples for $3 is $0.50 each, 10 apples for $4 "
+            "is $0.40 each: the $3 total is lower, but the $4 store is the better buy). The "
+            "learner compares the wrong quantities, missing that the better buy is the lower rate."
+        ),
+        applicable_kcs=(KnowledgeComponentId.BETTER_BUY,),
     ),
     Misconception(
         id=MisconceptionId.DEPENDENT_INDEPENDENT_SWAP,
@@ -941,6 +985,28 @@ def invert_rate(total: int, count: int) -> Rational:
     return Rational(count, total)
 
 
+def rate_inversion(operands: tuple[Rational, ...]) -> Rational | None:
+    """rate-inversion, gated to the PER_ONE direction of KC_unit_rate.
+
+    The unit-rate generator encodes an item as ``(total, count, mode)`` for the per-ONE direction
+    (``mode == 0``, _UNIT_RATE_PER_ONE) and as ``(total, count, new_count, mode)`` for the SCALE
+    direction (``mode == 1``, _UNIT_RATE_SCALE). This misconception — forming the rate upside-down
+    (``count/total`` instead of ``total/count``) — is per-ONE-specific: on the SCALE direction the
+    answer is a scaled total (``r * new_count``), not a per-ONE rate, so inverting the rate is not
+    the error being modelled. This returns ``None`` for the SCALE shape and for any unexpected
+    operand shape (defensive), exactly as ``percent_as_amount`` returns ``None`` off the percent-of
+    mode, so the verifier never mislabels a correct (or otherwise-wrong) SCALE answer as
+    rate-inversion. On the per-ONE direction it delegates to ``invert_rate`` (``count/total``);
+    total > count > 0 guarantees that value differs from the correct ``total/count``.
+    """
+    if len(operands) != 3:
+        return None  # scale (4-tuple) or unexpected shape: the verifier reports OTHER, not a match
+    total, count, mode = operands
+    if mode != 0:  # scale: no per-ONE rate to invert there, so the error does not apply
+        return None
+    return invert_rate(int(total), int(count))
+
+
 def invert_conversion(quantity: int, factor: int) -> Rational:
     """conversion-inversion: convert to the smaller unit by DIVIDING by the factor, not multiplying.
 
@@ -1012,18 +1078,53 @@ def _decimal_places(value: Rational) -> int:
     return max(twos, fives)
 
 
-def decimal_point_misplacement(first: Rational, second: Rational) -> Rational:
-    """decimal-point-misplacement: place the product's point by the LONGER factor's place count.
+def decimal_point_misplacement(operands: tuple[Rational, ...]) -> Rational | None:
+    """decimal-point-misplacement: place the PRODUCT's point by the LONGER factor's place count.
 
-    The correct product ``first * second`` has ``places(first) + places(second)`` decimal places.
-    The learner counts only ``max`` of the two instead of the SUM, so the point lands too far
-    right — the value is the correct product scaled UP by ``10 ** min(places)`` (a power of ten).
-    e.g. 0.5 x 0.4 (one place each): correct 0.20, misplaced 2.0 (x10). The digits are right; the
-    magnitude is wrong — which is why the verifier classifies this as a MAGNITUDE error. Returned
-    as a SymPy ``Rational`` so the verifier compares values directly.
+    The decimal-operations generator encodes an item as ``(first, second, mode)`` where
+    ``mode == 0`` (_DECIMAL_MULTIPLY) is a multiplication and 1/2/3 are add/subtract/divide. This is
+    MULTIPLY-SPECIFIC — it models mis-placing the *product's* decimal point — so it only applies to
+    multiply items; it returns ``None`` for add/subtract/divide (no product to misplace) and for an
+    unexpected operand shape (defensive), exactly as ``forget_triangle_half`` returns ``None`` off
+    the triangle mode. The verifier then never mislabels a correct or wrong non-multiply answer.
+
+    On a MULTIPLY item the correct product ``first * second`` has ``places(first) + places(second)``
+    decimal places. The learner counts only ``max`` of the two instead of the SUM, so the point
+    lands too far right — the value is the correct product scaled UP by ``10 ** min(places)`` (a
+    power of ten). e.g. 0.5 x 0.4 (one place each): correct 0.20, misplaced 2.0 (x10). The digits
+    are right; the magnitude is wrong — which is why the verifier classifies this as a MAGNITUDE
+    error. Returned as a SymPy ``Rational`` so the verifier compares values directly.
     """
+    if len(operands) != 3:
+        return None  # defensive: the verifier then reports OTHER rather than a false match
+    first, second, mode = operands
+    if mode != 0:  # add/subtract/divide: no product point to misplace, so the error does not apply
+        return None
     p1, p2 = _decimal_places(first), _decimal_places(second)
     return Rational(first * second) * (10 ** min(p1, p2))
+
+
+def percent_as_amount(operands: tuple[Rational, ...]) -> Rational | None:
+    """percent-as-amount: report the percent NUMBER itself instead of that percent OF the whole.
+
+    The percent generator encodes an item as ``(percent, whole, mode)`` where ``mode == 0``
+    (_PERCENT_OF) asks "what is p% of whole?" and ``mode == 1`` (_PERCENT_FIND_WHOLE) asks
+    "{part} is p% of what number?". This error is PERCENT_OF-specific — it models reading the
+    percent ``p`` as an absolute count instead of taking it OF the base (30% of 50 -> 30, not 15).
+    On the find-the-whole direction there is no "percent OF the whole" to skip (the answer IS the
+    whole), so the error does not apply: this returns ``None`` for mode 1 and for an unexpected
+    operand shape (defensive), exactly as ``decimal_point_misplacement`` returns ``None`` off the
+    multiply mode. The verifier then never mislabels a correct (or otherwise-wrong) find-the-whole
+    answer as percent-as-amount. Returned as a SymPy ``Rational`` so the verifier compares values
+    directly; the generator excludes whole == 100, so on a PERCENT_OF item ``p`` always differs from
+    the correct ``p*whole/100``.
+    """
+    if len(operands) != 3:
+        return None  # defensive: the verifier then reports OTHER rather than a false match
+    percent, _whole, mode = operands
+    if mode != 0:  # find-the-whole: no "percent OF the whole" to skip, so the error does not apply
+        return None
+    return percent
 
 
 def signed_not_magnitude(value: int) -> Rational:
@@ -1197,11 +1298,35 @@ def forget_triangle_half(operands: tuple[Rational, ...]) -> Rational | None:
     the verifier then reports OTHER rather than a false match).
     """
     if len(operands) != 3:
-        return None
+        return None  # defensive: a trapezoid's 4-tuple is a different model's job; report OTHER
     base, height, mode = operands
     if mode == 0:  # triangle: answered the bounding parallelogram b·h, dropping the 1/2
         return base * height
     return None  # parallelogram/rectangle: b·h is correct, no half to forget
+
+
+def forget_trapezoid_half(operands: tuple[Rational, ...]) -> Rational | None:
+    """forgot-trapezoid-half: answer (base1 + base2)·height, skipping the averaging 1/2 (6.G.1).
+
+    A trapezoid item is encoded as the 4-tuple ``(base1, base2, height, mode)`` where ``mode == 2``
+    (the only mode with two parallel sides). The correct area AVERAGES the bases:
+    ``1/2 · (base1 + base2) · height``. The learner who makes this error sums the two bases and
+    multiplies by the height but never halves — answering ``(base1 + base2) · height`` — so the
+    area comes out exactly twice too big (the trapezoid analogue of forgot-triangle-half).
+
+    Returned as a SymPy ``Rational`` so the verifier compares values directly; the un-halved value
+    is always DISTINCT from the correct half because the bases and height are positive (so the sum
+    is nonzero). Gated on ARITY and MODE: returns ``None`` for any tuple that is not the
+    trapezoid's 4-tuple (the triangle/parallelogram 3-tuple is forget_triangle_half's job) and for
+    a non-trapezoid mode (defensive — the verifier then reports OTHER rather than a false match),
+    exactly as ``decimal_point_misplacement`` and ``percent_as_amount`` gate on their shape.
+    """
+    if len(operands) != 4:
+        return None  # defensive: triangle/parallelogram 3-tuple (or any other shape) is not ours
+    base1, base2, height, mode = operands
+    if mode != 2:  # only a trapezoid has two parallel sides to average
+        return None
+    return (base1 + base2) * height
 
 
 def evaluate_left_to_right(a: int, x: int, b: int) -> Rational:
@@ -1272,6 +1397,47 @@ def multiply_base_by_exponent(base: int, exponent: int) -> Rational:
     the single ``2^2 == 2*2`` collision excluded), so a match is always diagnostic.
     """
     return Rational(base * exponent)
+
+
+def multiply_base_by_exponent_predict(operands: tuple[Rational, ...]) -> Rational | None:
+    """Verifier hook for multiply-base-by-exponent, GATED to the POWER_ONLY mode (mode 0).
+
+    KC_exponents encodes a POWER_ONLY item as ``(base, exp, mode)`` with ``mode == 0`` and an
+    ORDER_OF_OPS item as a 5-tuple ``(base, exp, a, op_code, mode)`` with ``mode == 1``. This slip
+    models reading a BARE power as one multiplication, so it applies ONLY to the bare power: it
+    returns ``None`` off the 3-tuple shape or off mode 0 (defensive), exactly as
+    ``decimal_point_misplacement`` returns ``None`` off the multiply mode. The verifier then never
+    mislabels an order-of-ops answer as this slip.
+    """
+    if len(operands) != 3:
+        return None  # defensive: not the POWER_ONLY shape
+    base, exponent, mode = operands
+    if mode != 0:  # not POWER_ONLY — the slip models a bare power, so it does not apply
+        return None
+    return multiply_base_by_exponent(int(base), int(exponent))
+
+
+def evaluate_exponent_order_left_to_right(operands: tuple[Rational, ...]) -> Rational | None:
+    """order-of-operations-slip on an exponent expression: apply the operation BEFORE the power.
+
+    KC_exponents encodes an ORDER_OF_OPS item as ``(base, exp, a, op_code, mode)`` (``mode == 1``;
+    ``op_code == 0`` is "a + base^exp", ``op_code == 1`` is "a * base^exp"). The learner who ignores
+    precedence works LEFT-TO-RIGHT — combining ``a`` with the base FIRST and then raising to the
+    power — so "2 + 3^2" becomes ``(2 + 3)^2 = 25`` instead of ``2 + 9 = 11``, and "2 * 3^2" becomes
+    ``(2 * 3)^2 = 36`` instead of ``2 * 9 = 18``. Returns ``None`` off the 5-tuple shape or off mode
+    1 (defensive), so it never fires on a POWER_ONLY item; on an order-of-ops item the value is
+    always DISTINCT from the correct one (the generator's a, base >= 2 and exp >= 2 guarantee
+    ``(a + base)**exp != a + base**exp`` and ``(a * base)**exp != a * base**exp``), so the match is
+    always diagnostic. Returned as a SymPy ``Rational`` so the verifier compares values directly.
+    """
+    if len(operands) != 5:
+        return None  # defensive: not the ORDER_OF_OPS shape
+    base, exponent, a_const, op_code, mode = (int(operand) for operand in operands)
+    if mode != 1:  # not ORDER_OF_OPS
+        return None
+    if op_code == 0:  # a + base^exp evaluated as (a + base)^exp
+        return Rational((a_const + base) ** exponent)
+    return Rational((a_const * base) ** exponent)  # a * base^exp evaluated as (a * base)^exp
 
 
 def add_instead_of_applying_rate(rate: int, value: int) -> Rational:

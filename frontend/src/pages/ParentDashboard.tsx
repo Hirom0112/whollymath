@@ -11,6 +11,9 @@ import { AreaChart } from '../components/AreaChart';
 import { ParentShell } from '../components/ParentShell';
 import { Sparkline, type SparklineTone } from '../components/Sparkline';
 import { CategoryChip, ProgressBar } from '../components/TeacherSignals';
+
+import { ParentDashboardTour, shouldShowParentTour } from './parent/ParentDashboardTour';
+import './parent/ParentDashboardActions.css';
 import './ParentDashboard.css';
 
 /**
@@ -64,21 +67,35 @@ const DEMO_AS_OF = '2026-06-01';
 export function ParentDashboard({
   onOpenChild,
   onAddChild,
+  onStartPractice,
   onExit,
 }: {
   onOpenChild: (childId: string) => void;
   onAddChild: () => void;
+  // Open the "who's practicing?" child picker (start a child session on this device).
+  onStartPractice: () => void;
   onExit: () => void;
 }): React.JSX.Element {
   const [household, setHousehold] = useState<Household | null>(null);
   const [notes, setNotes] = useState<ParentNote[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // First-run guided tour: shown once (localStorage-gated), after the household has rendered so the
+  // tour can measure the real dashboard elements it highlights.
+  const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
     let live = true;
     fetchHousehold()
       .then((h) => {
-        if (live) setHousehold(h);
+        if (!live) return;
+        setHousehold(h);
+        // Trigger the first-run tour once the cards exist to highlight. A frame's delay lets the
+        // child cards mount before the tour measures them.
+        if (shouldShowParentTour()) {
+          window.requestAnimationFrame(() => {
+            if (live) setShowTour(true);
+          });
+        }
       })
       .catch(() => {
         if (live) setError('We could not load your family. Please try again.');
@@ -135,7 +152,17 @@ export function ParentDashboard({
               </p>
             ) : null}
           </div>
-          {dateLabel !== null ? <p className="wm-parent-date">{dateLabel}</p> : null}
+          <div className="wm-parent-head-actions">
+            <button type="button" className="wm-parent-practice" onClick={onStartPractice}>
+              <span aria-hidden="true" className="wm-parent-practice-ico">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M8 5 L19 12 L8 19 Z" fill="currentColor" />
+                </svg>
+              </span>
+              Let a child practice
+            </button>
+            {dateLabel !== null ? <p className="wm-parent-date">{dateLabel}</p> : null}
+          </div>
         </div>
 
         {children !== null && children.length > 0 ? (
@@ -198,6 +225,7 @@ export function ParentDashboard({
           </aside>
         </div>
       </div>
+      {showTour ? <ParentDashboardTour onClose={() => setShowTour(false)} /> : null}
     </ParentShell>
   );
 }

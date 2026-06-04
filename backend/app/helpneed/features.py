@@ -56,6 +56,7 @@ _NUMERIC_FEATURE_NAMES: tuple[str, ...] = (
     "recent_hint_rate",
     "recent_error_rate",
     "recent_request_answer_rate",
+    "recent_no_hint_error_rate",
     "turns_since_last_correct",
     "prior_unproductive_rate",
     "session_position",
@@ -82,6 +83,7 @@ class HelpNeedFeatures:
     recent_hint_rate: float
     recent_error_rate: float
     recent_request_answer_rate: float
+    recent_no_hint_error_rate: float
     turns_since_last_correct: float
     prior_unproductive_rate: float
     session_position: float
@@ -95,6 +97,7 @@ class HelpNeedFeatures:
             self.recent_hint_rate,
             self.recent_error_rate,
             self.recent_request_answer_rate,
+            self.recent_no_hint_error_rate,
             self.turns_since_last_correct,
             self.prior_unproductive_rate,
             self.session_position,
@@ -153,6 +156,12 @@ def _features_at(session: Sequence[EdmCupTurn], index: int) -> HelpNeedFeatures:
         recent_hint_rate=_mean([float(t.hint_count) for t in window]),
         recent_error_rate=_mean([0.0 if t.first_attempt_correct else 1.0 for t in window]),
         recent_request_answer_rate=_mean([1.0 if t.requested_answer else 0.0 for t in window]),
+        # "Quiet mis-reasoning": a first-attempt error WITHOUT seeking a hint — the confident
+        # wrong answer that the weak RP/expression KCs produce (the help-seeking features stay
+        # silent there). Computable identically live from (correct, hinted) — see live_features.py.
+        recent_no_hint_error_rate=_mean(
+            [1.0 if (not t.first_attempt_correct and t.hint_count == 0) else 0.0 for t in window]
+        ),
         turns_since_last_correct=turns_since_last_correct,
         prior_unproductive_rate=_mean([1.0 if is_unproductive(t) else 0.0 for t in prior]),
         session_position=float(index),

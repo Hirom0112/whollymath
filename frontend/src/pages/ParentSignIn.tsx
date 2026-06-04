@@ -1,3 +1,6 @@
+import { useState } from 'react';
+
+import './parent/ParentSignInAuth.css';
 import './ParentSignIn.css';
 
 /**
@@ -5,9 +8,12 @@ import './ParentSignIn.css';
  * split-panel register: a cosmic "world" panel on the left — our starfield (public/parent-cosmos.jpg)
  * carrying three floating preview cards (today's focus, skill mastery, practice suggestions),
  * recreated in pure CSS/SVG so they ship no live data — beside a cream sign-in panel on the right.
- * Two ways in: a real Google/OIDC path (wired once parent auth lands) and a demo path that drops
- * straight into the seeded household. Both call `onSignIn`; the container sets the demo token. The
- * brand mark is our own WhollyMath pie, rotating. Unique classes app-wide (`.wm-psignin-*`).
+ *
+ * Ways in (all real, cookie-session backend via parentAuth.ts): "Sign up" opens the multi-step
+ * wizard; "Sign in with Google" runs the GIS flow; returning parents use the email + password
+ * sign-in form. A secondary "Child sign-in" link surfaces the standalone child login (for a kid on
+ * their own/school device). The brand mark is our own WhollyMath pie, rotating. Unique classes
+ * app-wide (`.wm-psignin-*`).
  */
 
 const GoogleG = (): React.JSX.Element => (
@@ -146,14 +152,33 @@ const FEATURES: { icon: () => React.JSX.Element; title: string; sub: string }[] 
 ];
 
 export function ParentSignIn({
-  onSignIn,
+  onSignUp,
+  onGoogle,
+  onEmailLogin,
+  onChildSignIn,
   busy = false,
   error = null,
 }: {
-  onSignIn: () => void;
+  // Open the multi-step sign-up wizard.
+  onSignUp: () => void;
+  // Run the Google sign-in flow.
+  onGoogle: () => void;
+  // Submit a returning parent's email + password.
+  onEmailLogin: (email: string, password: string) => void;
+  // Open the standalone child sign-in (own/school device).
+  onChildSignIn: () => void;
   busy?: boolean;
   error?: string | null;
 }): React.JSX.Element {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  function handleLogin(e: React.FormEvent): void {
+    e.preventDefault();
+    if (busy) return;
+    onEmailLogin(email.trim(), password);
+  }
+
   return (
     <div className="wm-psignin">
       <aside className="wm-psignin-art" aria-hidden="true">
@@ -197,16 +222,46 @@ export function ParentSignIn({
               <button
                 type="button"
                 className="wm-psignin-google"
-                onClick={onSignIn}
+                onClick={onGoogle}
                 disabled={busy}
               >
                 <GoogleG />
                 Sign in with Google
               </button>
-              <button type="button" className="wm-psignin-demo" onClick={onSignIn} disabled={busy}>
-                {busy ? 'Starting…' : 'Try a parent demo'}
+              <button type="button" className="wm-psignin-demo" onClick={onSignUp} disabled={busy}>
+                Sign up
               </button>
             </div>
+
+            <div className="wm-psignin-or" aria-hidden="true">
+              <span>or sign in with email</span>
+            </div>
+
+            <form className="wm-psignin-login" onSubmit={handleLogin} noValidate>
+              <label className="wm-psignin-login-field">
+                <span className="wm-psignin-login-label">Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  disabled={busy}
+                />
+              </label>
+              <label className="wm-psignin-login-field">
+                <span className="wm-psignin-login-label">Password</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  disabled={busy}
+                />
+              </label>
+              <button type="submit" className="wm-psignin-login-submit" disabled={busy}>
+                {busy ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
 
             {error !== null ? (
               <p className="wm-psignin-error" role="alert">
@@ -214,7 +269,12 @@ export function ParentSignIn({
               </p>
             ) : null}
 
-            <p className="wm-psignin-note">The demo uses sample children. No real student data.</p>
+            <p className="wm-psignin-note">
+              Is this a child&rsquo;s own device?{' '}
+              <button type="button" className="wm-psignin-childlink" onClick={onChildSignIn}>
+                Child sign-in
+              </button>
+            </p>
           </div>
         </div>
       </main>

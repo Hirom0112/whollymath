@@ -1,0 +1,107 @@
+/* Additive styles for the parent sign-in's real-auth affordances (email/password sign-in form,
+   divider, child-signin link). Kept in a NEW file (the existing ParentSignIn.css is owned by another
+   lane) and imported alongside it. Matches the cream-panel register exactly. Unique classes
+   (.wm-psignin-or / .wm-psignin-login* / .wm-psignin-childlink) so nothing collides app-wide. */
+
+.wm-psignin-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 16px;
+  color: var(--wm-ink-soft);
+  font-size: var(--wm-fs-meta);
+  font-weight: 600;
+}
+.wm-psignin-or::before,
+.wm-psignin-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(20, 30, 70, 0.12);
+}
+
+.wm-psignin-login {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wm-psignin-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.wm-psignin-login-label {
+  font-size: var(--wm-fs-ui);
+  font-weight: 600;
+  color: var(--wm-navy-deep);
+}
+.wm-psignin-login-field input {
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-body);
+  color: var(--wm-ink);
+  background: #fffdf7;
+  border: none;
+  border-radius: var(--wm-r-md);
+  padding: 12px 14px;
+  box-shadow: inset 0 0 0 1.5px rgba(20, 30, 70, 0.12);
+}
+.wm-psignin-login-field input:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 1px;
+}
+.wm-psignin-login-field input:disabled {
+  opacity: 0.6;
+}
+
+.wm-psignin-login-submit {
+  margin-top: 2px;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-body);
+  font-weight: 700;
+  color: var(--wm-cream);
+  background: var(--wm-blue);
+  border: none;
+  border-radius: var(--wm-r-pill);
+  padding: 13px 22px;
+  cursor: pointer;
+  transition:
+    background var(--wm-motion-press) ease,
+    transform var(--wm-motion-press) ease;
+}
+.wm-psignin-login-submit:hover:not(:disabled) {
+  background: var(--wm-blue-bright);
+  transform: translateY(-1px);
+}
+.wm-psignin-login-submit:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+.wm-psignin-login-submit:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.wm-psignin-childlink {
+  font-family: var(--wm-font-sans);
+  font-size: inherit;
+  font-weight: 700;
+  color: var(--wm-blue);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.wm-psignin-childlink:hover {
+  color: var(--wm-blue-bright);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-psignin-login-submit {
+    transition: none;
+  }
+  .wm-psignin-login-submit:hover:not(:disabled) {
+    transform: none;
+  }
+}

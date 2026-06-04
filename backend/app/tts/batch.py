@@ -106,10 +106,13 @@ def run_batch(
 
     ``strings`` defaults to ``enumerate_renderable()`` (the full variable-free bank); a caller
     may pass a SUBSET (e.g. a few NUDGE_BANK lines) for a small real render. ``locales``
-    defaults to en + es-MX. The manifest is written atomically-ish (full rewrite) at the end.
+    defaults to en + es-MX. The newly-rendered rows are MERGED into the existing on-disk
+    ``manifest.json`` (a partial render — one locale, or a ``--limit`` subset — updates only its
+    own keys and preserves every other row), so rendering one locale never drops the others.
 
-    Deterministic given a fixed provider: same inputs ⇒ same files + manifest. No turn-loop
-    involvement (§8.1) — this is a build step.
+    Returns THIS run's entries (what was rendered/refreshed now), not the merged superset, so a
+    caller can report exactly what this invocation produced. Deterministic given a fixed provider:
+    same inputs ⇒ same files + manifest. No turn-loop involvement (§8.1) — this is a build step.
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
     lines = tuple(strings) if strings is not None else enumerate_renderable()
@@ -131,7 +134,7 @@ def run_batch(
                 # Idempotent skip: the audio for this exact content already rendered. We still
                 # need the word timings for the manifest; re-derive them by rendering ONLY if a
                 # sidecar timing file is absent (cheap to keep timings next to the audio).
-                timings = _load_timings(cache_dir, text_sha)
+                timings = load_timings(cache_dir, text_sha)
                 if timings is not None:
                     manifest[_manifest_key(spoken.string_id, locale)] = ManifestEntry(
                         audio_file=audio_file,
@@ -146,7 +149,7 @@ def run_batch(
 
             rendered = provider.render(text, locale)
             audio_path.write_bytes(rendered.audio)
-            _store_timings(cache_dir, text_sha, rendered)
+            store_timings(cache_dir, text_sha, rendered)
             manifest[_manifest_key(spoken.string_id, locale)] = ManifestEntry(
                 audio_file=audio_file,
                 words=list(rendered.words),
@@ -156,18 +159,26 @@ def run_batch(
                 text_sha=text_sha,
             )
 
-    _write_manifest(cache_dir, manifest)
+    # Merge this run's rows into the manifest already on disk so a partial render (one locale, a
+    # --limit subset) refreshes only its own keys and preserves the rest (the render_bank footgun).
+    merged = _read_existing_manifest(cache_dir)
+    merged.update({key: asdict(entry) for key, entry in manifest.items()})
+    _write_manifest(cache_dir, merged)
     return manifest
 
 
-def _timings_path(cache_dir: Path, text_sha: str) -> Path:
-    """The sidecar JSON holding a clip's word timings (so an idempotent skip needn't re-render)."""
+def timings_path(cache_dir: Path, text_sha: str) -> Path:
+    """The sidecar JSON holding a clip's word timings (so an idempotent skip needn't re-render).
+
+    Public so the live-synth path (``app/tts/live_synth.py``) reuses the SAME content-addressed
+    cache convention (``<sha>.mp3`` + ``<sha>.timings.json``) — one canonical audio cache, not two.
+    """
     return cache_dir / f"{text_sha}.timings.json"
 
 
-def _store_timings(cache_dir: Path, text_sha: str, rendered: RenderedLine) -> None:
+def store_timings(cache_dir: Path, text_sha: str, rendered: RenderedLine) -> None:
     """Persist a clip's word timings next to its audio for idempotent reuse on re-runs."""
-    _timings_path(cache_dir, text_sha).write_text(
+    timings_path(cache_dir, text_sha).write_text(
         json.dumps(
             {
                 "words": list(rendered.words),
@@ -179,20 +190,39 @@ def _store_timings(cache_dir: Path, text_sha: str, rendered: RenderedLine) -> No
     )
 
 
-def _load_timings(
+def load_timings(
     cache_dir: Path, text_sha: str
 ) -> tuple[list[str], list[float], list[float]] | None:
     """Load a clip's cached word timings, or ``None`` if the sidecar is absent."""
-    path = _timings_path(cache_dir, text_sha)
+    path = timings_path(cache_dir, text_sha)
     if not path.exists():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
     return data["words"], data["wtimes"], data["wdurations"]
 
 
-def _write_manifest(cache_dir: Path, manifest: dict[str, ManifestEntry]) -> None:
-    """Write ``manifest.json`` (string_id|locale → entry), sorted for a stable diff."""
-    serializable = {key: asdict(entry) for key, entry in sorted(manifest.items())}
+def _read_existing_manifest(cache_dir: Path) -> dict[str, dict[str, object]]:
+    """The on-disk manifest rows (raw dicts), or ``{}`` when absent/unreadable.
+
+    The merge source for a partial render: rendering one locale (or a ``--limit`` subset) loads the
+    existing rows and updates only its own keys, so the rows it did NOT render survive. A missing or
+    corrupt manifest is not an error — it yields ``{}`` (the run then writes a fresh full manifest).
+    """
+    path = cache_dir / MANIFEST_FILENAME
+    if not path.exists():
+        return {}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(loaded, dict):
+        return {}
+    return loaded
+
+
+def _write_manifest(cache_dir: Path, manifest: dict[str, dict[str, object]]) -> None:
+    """Write ``manifest.json`` (string_id|locale → row), sorted for a stable diff."""
+    serializable = dict(sorted(manifest.items()))
     (cache_dir / MANIFEST_FILENAME).write_text(
         json.dumps(serializable, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -205,5 +235,8 @@ __all__ = [
     "MANIFEST_FILENAME",
     "ManifestEntry",
     "content_hash",
+    "load_timings",
     "run_batch",
+    "store_timings",
+    "timings_path",
 ]

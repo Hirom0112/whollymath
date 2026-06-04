@@ -14,7 +14,7 @@ on dot plots / histograms, and read them.
 
 from __future__ import annotations
 
-from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId, Representation
 from app.domain.misconceptions import (
     DATA_DISPLAY_QUESTION_CODE,
     MisconceptionId,
@@ -26,6 +26,7 @@ from app.domain.problem_generators import (
     Problem,
     generate_problem,
 )
+from app.domain.stats_stimulus import stimulus_for
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -36,6 +37,18 @@ _COUNT_ABOVE_CODE = _DATA_DISPLAY_QUESTION_CODE["count_above"]
 
 def _problem(seed: int) -> Problem:
     return generate_problem(_KC, seed)
+
+
+def test_number_line_is_the_same_item_over_the_rendered_display() -> None:
+    """NUMBER_LINE serves the SAME answer as SYMBOLIC (same operands + value), over the rendered dot
+    plot / histogram itself (stats_stimulus) — the masterable second representation, no new input
+    widget. For 6.SP.4 the display IS the standard, and it renders (panel audit 2026-06-04)."""
+    sym = generate_problem(_KC, seed=5, surface_format=Representation.SYMBOLIC)
+    line = generate_problem(_KC, seed=5, surface_format=Representation.NUMBER_LINE)
+    assert line.surface_format is Representation.NUMBER_LINE
+    assert line.operands == sym.operands
+    assert line.correct_value == sym.correct_value
+    assert stimulus_for(_KC, line.operands) is not None
 
 
 def test_data_displays_is_live() -> None:

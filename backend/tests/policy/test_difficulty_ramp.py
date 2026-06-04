@@ -119,6 +119,11 @@ def test_generator_difficulty_narrows_denominators() -> None:
             # statistical-questions is a YES/NO item: its operands are the equality truth carrier
             # (0/1, denom 1), NOT magnitudes — there is no item to ramp by difficulty at all.
             KnowledgeComponentId.STATISTICAL_QUESTIONS,
+            # better-buy is a YES/NO comparison: its operands are (qA, pA, qB, pB) — item counts and
+            # currency totals on a 5-cent grid (denominators 1/2/4/5/10, NOT a fraction-curriculum
+            # denominator pool), and difficulty does not vary the item (the comparison structure is
+            # the skill, not a magnitude to ramp). So it is not a denominator-narrowing ramp.
+            KnowledgeComponentId.BETTER_BUY,
             # dependent-vars operands are (rate, value) — whole numbers (denominator 1); the
             # difficulty widens the rate/value magnitude pools, not a fraction-denominator pool.
             KnowledgeComponentId.DEPENDENT_VARS,

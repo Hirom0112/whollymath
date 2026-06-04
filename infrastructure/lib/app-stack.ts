@@ -21,6 +21,7 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 export interface AppStackProps extends cdk.StackProps {
@@ -52,6 +53,13 @@ const API_PATH_PATTERNS: readonly string[] = [
   '/routing-choices',
   '/teacher',
   '/teacher/*',
+  // Parent/child auth (Slice auth/parent-child). Route only the SUB-paths to the ALB —
+  // '/parent/*' (signup, login, me, children, verify-email, ...) and '/child/*' (child login) —
+  // and deliberately NOT the bare '/parent', so that exact path falls to the S3 default behavior
+  // and the parent SPA page still deep-links cleanly. (Contrast '/teacher' above, whose exact
+  // path also goes to the ALB; the parent route navigation is reached client-side from /welcome.)
+  '/parent/*',
+  '/child/*',
   '/health',
 ];
 
@@ -74,6 +82,15 @@ export class AppStack extends cdk.Stack {
     const mathpixSecret = new secretsmanager.Secret(this, 'MathpixAppKey', {
       secretName: 'whollymath/mathpix-app-key',
       description: 'Mathpix app key (homework-scan OCR); value set out-of-band post-deploy.',
+    });
+    // HS256 signing key for our parent/child session JWTs (app/auth/tokens.py, Slice
+    // auth/parent-child). Unlike the API-key shells above, the AUTO-GENERATED random value
+    // is exactly what we want — a long random signing secret — so it needs NO out-of-band
+    // population; it just must stay STABLE across deploys (existing sessions stay valid),
+    // which a managed Secret does. Rotating it invalidates all live sessions (acceptable).
+    const sessionSigningKey = new secretsmanager.Secret(this, 'SessionSigningKey', {
+      secretName: 'whollymath/session-signing-key',
+      description: 'HS256 signing key for parent/child session JWTs (random; keep stable).',
     });
 
     // ---- Backend: ECS cluster + ALB Fargate service.
@@ -132,6 +149,14 @@ export class AppStack extends cdk.Stack {
           // no-op passthrough unless LANGSMITH_TRACING=true AND a key is present (Slice PL.0).
           LANGSMITH_TRACING: 'true',
           LANGSMITH_PROJECT: 'whollymath',
+          // Parent/child auth (Slice auth/parent-child). The COPPA verification email's SES
+          // "From" identity + the public origin used to build the verification link. SES_SENDER
+          // must be a VERIFIED SES identity (see AUTH.md runbook); until then the app uses its
+          // logging fallback. SESSION_COOKIE_SECURE is intentionally unset → defaults true (prod
+          // is HTTPS behind CloudFront), so the session cookie is Secure.
+          SES_SENDER: 'no-reply@whollymath.app',
+          AWS_REGION: this.region,
+          PUBLIC_API_BASE_URL: 'https://whollymath.app',
         },
         secrets: {
           DB_HOST: ecs.Secret.fromSecretsManager(props.dbSecret, 'host'),
@@ -140,6 +165,7 @@ export class AppStack extends cdk.Stack {
           ANTHROPIC_API_KEY: ecs.Secret.fromSecretsManager(anthropicSecret),
           LANGSMITH_API_KEY: ecs.Secret.fromSecretsManager(langsmithSecret),
           MATHPIX_APP_KEY: ecs.Secret.fromSecretsManager(mathpixSecret),
+          SESSION_SIGNING_KEY: ecs.Secret.fromSecretsManager(sessionSigningKey),
         },
       },
     });
@@ -159,6 +185,17 @@ export class AppStack extends cdk.Stack {
 
     // The task reads HelpNeed artifacts from the ML bucket.
     props.artifactBucket.grantRead(service.taskDefinition.taskRole);
+
+    // The task sends the COPPA parental-email verification through SES (Slice auth/parent-child).
+    // Scoped to SendEmail/SendRawEmail; the verified-identity restriction is enforced SES-side
+    // (the sender must be a verified identity — see AUTH.md). No static AWS creds: the task uses
+    // this role. Until the SES sender identity is verified, the app falls back to logging the link.
+    service.taskDefinition.taskRole.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      }),
+    );
 
     // ---- Frontend: private S3 bucket + CloudFront distribution.
     const siteBucket = new s3.Bucket(this, 'SiteBucket', {

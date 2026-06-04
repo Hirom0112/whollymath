@@ -1,0 +1,97 @@
+/* The bilingual HELP-language toggle (Slice 3.6), bottom-left of the Tutor world.
+   All class names are the specific compound `wm-help-lang-toggle*` form — never a generic name —
+   because this project has a real history of reused global class names colliding app-wide. */
+
+.wm-help-lang-toggle {
+  /* Bottom-LEFT of the lesson world; Pi stands bottom-right, so the two never overlap. The
+     parent `.wm-tutor` is the positioned container the lesson chrome already lays out against. */
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  pointer-events: none; /* only the button itself is interactive; the note is passive */
+}
+
+.wm-help-lang-toggle-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 2px solid var(--wm-navy);
+  border-radius: 999px;
+  background: var(--wm-cream);
+  color: var(--wm-navy);
+  font-family: var(--wm-font-sans);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 2px 6px var(--wm-shadow);
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+.wm-help-lang-toggle-btn:hover {
+  background: var(--wm-cream-2);
+}
+
+.wm-help-lang-toggle-btn:active {
+  transform: translateY(1px);
+}
+
+.wm-help-lang-toggle-btn:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+
+/* The two language labels; the active one is filled, the inactive one dimmed — a clear affordance
+   for which language the hints are coming back in right now. */
+.wm-help-lang-toggle-opt {
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--wm-navy);
+  opacity: 0.4;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.wm-help-lang-toggle-opt--on {
+  opacity: 1;
+  background: var(--wm-navy);
+  color: var(--wm-cream);
+}
+
+.wm-help-lang-toggle-sep {
+  opacity: 0.5;
+}
+
+.wm-help-lang-toggle-note {
+  pointer-events: none;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: rgba(247, 239, 220, 0.85);
+  color: var(--wm-ink-soft);
+  font-family: var(--wm-font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* Respect a reduced-motion preference: no slide/scale transitions on the control. */
+@media (prefers-reduced-motion: reduce) {
+  .wm-help-lang-toggle-btn,
+  .wm-help-lang-toggle-opt {
+    transition: none;
+  }
+
+  .wm-help-lang-toggle-btn:active {
+    transform: none;
+  }
+}

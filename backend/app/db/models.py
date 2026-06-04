@@ -61,6 +61,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
@@ -91,6 +92,17 @@ class Learner(Base):
     """
 
     __tablename__ = "learner"
+    # A CHILD's login username is GLOBALLY unique (owner decision 2026-06-03, revised
+    # 2026-06-04): a child logs in with username + PIN ALONE — no parent email — because
+    # a kid does not know their parent's email, so the username must identify the child by
+    # itself. This relaxes the earlier per-household namespacing: the tradeoff is that
+    # usernames are now enumerable across families, defended instead by the per-account PIN
+    # lockout + rate limiting + non-identifying usernames (the standard kids'-product model,
+    # e.g. Khan Academy). Modeled as a UNIQUE INDEX (not a table constraint) so the Alembic
+    # migration can add it to the existing learner table on SQLite (which rejects ALTER ADD
+    # CONSTRAINT); ``create_all`` builds the identical index. Rows with NULL child_username
+    # (every non-child learner) are exempt — SQL treats NULLs as distinct.
+    __table_args__ = (Index("uq_learner_child_username", "child_username", unique=True),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     # The externally-visible session id the frontend sends in place of auth. Unique
@@ -140,6 +152,83 @@ class Learner(Base):
     # (which keeps IDENTITY off the mastery path) but DISTINCT from it: locale is a rendering
     # preference, not identity. Source: V2_TODO §0.3 + owner clarification 2026-06-02.
     locale: Mapped[str] = mapped_column(String(8), default="en", nullable=False)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Parent/child accounts (Slice auth/parent-child, owner decision 2026-06-03).
+    # These columns turn the session-id-only Learner of TECH_STACK §9 into the
+    # foundation for verifiable-parental-consent accounts: a PARENT is a Learner
+    # with role="parent" who may also carry a ``password_hash`` (email/password
+    # signup) on top of the existing ``google_sub`` path; a CHILD is a Learner the
+    # parent created, linked by ``parent_id`` and reached by a non-identifying
+    # ``child_username`` + PIN for independent login. This reverses the "auth is
+    # post-launch" line in TECH_STACK §9 (recorded there + in the commit), and is
+    # grounded in COPPA verifiable parental consent (RESEARCH.md, FTC COPPA Rule)
+    # and the OWASP authentication guidance.
+    #
+    # CRITICAL (ARCHITECTURE.md §14 invariant 8): every column here is IDENTITY or
+    # a CREDENTIAL. None of it reaches the mastery model / policy / tutor / LLM — it
+    # only gates which surface a request may use and who may read whose state.
+
+    # The parent who created and owns this child account (a Learner with
+    # role="parent"). NULL for everyone else (anonymous/Google students, teachers,
+    # and the parents themselves). CASCADE so deleting a parent purges their
+    # children in one unit — the COPPA "parent may delete the child's data" right
+    # (FTC COPPA Rule; 2025 retention amendment). Indexed so "children of a parent"
+    # is cheap.
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    # Argon2id hash of a PARENT's password, when they signed up with email/password
+    # rather than Google (owner decision 2026-06-03: support both). NULL for Google
+    # parents (keyed on ``google_sub``) and for every student/teacher. We store ONLY
+    # the hash, never the password (OWASP Password Storage Cheat Sheet). Read solely
+    # by the auth layer; never consumed by a turn-loop decision (invariant 8).
+    # String(255) comfortably holds an Argon2id PHC-format hash.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Whether a PARENT has verified their email. An unverified email is not a
+    # reliable consent anchor, so child profiles do not go live until this is True
+    # (RESEARCH.md COPPA verifiable-parental-consent). Default False; left False (and
+    # meaningless) for Google parents — Google already asserts a verified email — and
+    # for students/teachers. NOT NULL with a Python-side default.
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # A CHILD's display nickname, shown on the parent dashboard and the profile
+    # picker. NULL for non-children. COPPA data-minimization: parents are instructed
+    # to use a NON-identifying nickname, not the child's real name (mirrors Khan
+    # Academy's guidance, RESEARCH.md). A plain display string — never identity.
+    display_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # A CHILD's grade level (the curriculum is Grade 6, with remediation down a level
+    # — CURRICULUM_STANDARD.md). NULL for non-children. Stored for routing/display
+    # only; not consumed by the turn loop (invariant 8).
+    grade_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # A CHILD's login handle for INDEPENDENT login (the school/shared-device path —
+    # owner decision 2026-06-03: profiles at home, username+PIN away). NULL for
+    # non-children. UNIQUE PER PARENT, not globally (see ``__table_args__``).
+    child_username: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Argon2id hash of a CHILD's 4-digit PIN (owner decision 2026-06-03: a PIN, not a
+    # full password, is developmentally right for an 11-12-year-old — RESEARCH.md).
+    # NULL for non-children. Like ``password_hash`` we store ONLY the hash. The PIN's
+    # small keyspace is defended by per-account lockout (the two columns below) and
+    # the per-parent namespacing above, not by the hash alone.
+    pin_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Consecutive failed PIN attempts on a CHILD account, for brute-force lockout
+    # (OWASP brute-force mitigation, RESEARCH.md). Reset to 0 on a correct PIN. NOT
+    # NULL, default 0. The lockout POLICY (threshold, cooldown) lives in the auth
+    # layer; this column only holds the counter.
+    failed_pin_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # When a CHILD account is locked out until, after too many failed PINs. NULL when
+    # not locked. The auth layer compares against ``now()`` before accepting a PIN.
+    pin_locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # An OPAQUE, unguessable public identifier (UUID4 hex) used in URLs/API paths in
+    # place of the sequential integer id, so child records cannot be enumerated by
+    # iterating ids (OWASP IDOR defense-in-depth; authorization is STILL enforced by
+    # the ``parent_id`` ownership check, RESEARCH.md). UNIQUE, NULL for rows that
+    # predate it. String(36), not a Postgres UUID type, per the §4 portability rule.
+    public_id: Mapped[str | None] = mapped_column(
+        String(36), unique=True, index=True, nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
@@ -151,6 +240,17 @@ class Learner(Base):
     )
     mastery_states: Mapped[list[MasteryState]] = relationship(
         back_populates="learner", cascade="all, delete-orphan"
+    )
+    # Self-referential parent↔children link (the FK is ``parent_id`` above). cascade
+    # so a parent's children delete with them — the COPPA deletion right (FTC COPPA
+    # Rule). ``remote_side`` on the parent side resolves the self-join direction.
+    children: Mapped[list[Learner]] = relationship(
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )
+    parent: Mapped[Learner | None] = relationship(
+        back_populates="children",
+        remote_side="Learner.id",
     )
 
 
@@ -553,3 +653,91 @@ class TeacherReminder(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
+
+
+class ConsentRecord(Base):
+    """A recorded act of verifiable parental consent (Slice auth/parent-child).
+
+    COPPA requires verifiable parental consent before collecting a child's data,
+    and an auditable record that it happened (FTC COPPA Rule; RESEARCH.md). In our
+    model the consent EVENT is the authenticated parent creating a child profile, so
+    we stamp one row per (parent, child) at creation time: who consented, to which
+    privacy-policy version, by what method, and from where. This is the tracked
+    proof we can show a regulator, and the anchor for honoring later revocation /
+    deletion (the 2025 COPPA retention amendment, RESEARCH.md).
+
+    Both FKs point at ``learner.id`` (parent and child are both Learner rows; the
+    ``role``/``parent_id`` columns distinguish them). CASCADE on both so deleting
+    either the parent or the child removes the consent row with them, keeping the
+    deletion a clean unit. ``child_id`` is NULLABLE so an account-level consent
+    (recorded before any child exists) can also be stored.
+
+    Thin model, portable column types only (the §4 rule); the repository owns the
+    writes (CLAUDE.md §7). Never on a turn-loop path (invariant 8).
+    """
+
+    __tablename__ = "consent_record"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    parent_id: Mapped[int] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    child_id: Mapped[int | None] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    # The privacy-policy / direct-notice version the parent consented to, so we can
+    # prove WHICH disclosures they saw (policies change; consent is version-bound).
+    policy_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    # How consent was obtained. Default "parent_account": the authenticated parent's
+    # own action creating the child IS the consent (the method our architecture
+    # uses, RESEARCH.md). A plain string tag, not a DB ENUM (§4 portability), so
+    # adding a stronger VPC method later (e.g. "text_plus") is a code change, not a
+    # Postgres migration.
+    method: Mapped[str] = mapped_column(String(32), default="parent_account", nullable=False)
+    consented_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    # The IP the consent was given from, recorded as part of the auditable consent
+    # context. Nullable (may be unavailable). String(45) holds a full IPv6 literal.
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+
+
+class AuthSession(Base):
+    """A revocable server-side session record (Slice auth/parent-child, S2).
+
+    A session JWT (``app.auth.tokens``) proves a request is authentic, but a bare
+    stateless JWT cannot be un-issued — so a parent's "sign out everywhere" / a
+    kill-switch on a child's session left open on a school device would be
+    impossible. This row is the revocable half: the JWT carries a unique ``jti`` that
+    points at exactly one ``AuthSession``, and a request is only honored while its
+    row is present, NOT revoked, and NOT past ``expires_at`` (OWASP session-management
+    guidance, RESEARCH.md). Logout / kill-switch just stamps ``revoked_at``.
+
+    ``learner_id`` CASCADEs so deleting a learner drops their sessions. ``kind`` is the
+    same "parent"/"child" tag the token carries — identity that gates surfaces only
+    (ARCHITECTURE.md §14 invariant 8), never a turn-loop decision. ``expires_at``
+    mirrors the JWT ``exp`` so a sweep can purge dead rows. Portable column types only
+    (§4); the repository owns the reads/writes (CLAUDE.md §7).
+    """
+
+    __tablename__ = "auth_session"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    learner_id: Mapped[int] = mapped_column(
+        ForeignKey("learner.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # The JWT id (``jti`` claim) this row backs — the link between the stateless token
+    # and this revocable record. UNIQUE so a token maps to exactly one session.
+    jti: Mapped[str] = mapped_column(String(36), unique=True, index=True, nullable=False)
+    # "parent" or "child" — mirrors the token's kind; gates which surface the session
+    # may use (invariant 8). Plain string tag, not a DB ENUM (§4 portability).
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    # Mirror of the JWT ``exp``: a request is refused once now ≥ this, even if the row
+    # was never revoked, and a cleanup sweep can delete rows past it.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Stamped when the session is explicitly ended (logout / parent kill-switch). NULL
+    # while live; once set the session is dead even before ``expires_at``.
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

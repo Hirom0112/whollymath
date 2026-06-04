@@ -96,6 +96,12 @@ def live_features(
         recent_hint_rate=hint_rate,
         recent_error_rate=_mean([0.0 if t.correct else 1.0 for t in window]),
         recent_request_answer_rate=hint_rate,  # proxy: no give-up action live
+        # Quiet mis-reasoning: wrong WITHOUT a hint. Faithful to the training feature — live's
+        # one-submit turn makes ``correct`` the analogue of ``first_attempt_correct`` and
+        # ``not hinted`` the analogue of ``hint_count == 0`` (features.py._features_at).
+        recent_no_hint_error_rate=_mean(
+            [1.0 if (not t.correct and not t.hinted) else 0.0 for t in window]
+        ),
         turns_since_last_correct=turns_since_last_correct,
         prior_unproductive_rate=_mean([0.0 if t.correct else 1.0 for t in history]),
         session_position=float(len(history)),

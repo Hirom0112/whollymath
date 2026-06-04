@@ -2,6 +2,7 @@ import type { Emotion } from '@whollymath/shared-types';
 import { useCallback, useEffect, useState } from 'react';
 
 import { emotionToGuide } from './avatar/emotionToGuide';
+import type { Viseme } from './avatar/visemes';
 import './Mascot.css';
 
 // Where the mute preference is remembered, so the choice persists across reloads/sessions.
@@ -54,6 +55,7 @@ export function Mascot({
   emotion,
   intensity = 0,
   speaking = false,
+  viseme = 'rest',
 }: {
   /** A short line for the mascot to speak in a bubble; omit for a bare, silent figure. */
   speech?: string;
@@ -70,6 +72,12 @@ export function Mascot({
    * Captions (the speech bubble) are independent of this — they always show regardless of audio.
    */
   speaking?: boolean;
+  /**
+   * The current phoneme-class mouth shape (from `useGuideSpeech`), driving SHAPE-accurate lip-sync
+   * instead of a generic pulse. Defaults `rest`; only read while `speaking`, so non-speaking callers
+   * are unaffected. CSS renders one mouth shape per viseme via `data-viseme`.
+   */
+  viseme?: Viseme;
 } = {}): React.JSX.Element {
   const [muted, setMuted] = useState<boolean>(() => readStoredMuted());
 
@@ -120,8 +128,13 @@ export function Mascot({
       <div className="wm-mascot-pie">
         <div className="wm-mascot-smile" />
         {/* The animated talking mouth — only visible/animating while `speaking` (CSS gates it on
-            the `.wm-guide-speaking` ancestor). Decorative; the caption carries the words. */}
-        <div className="wm-guide-mouth" aria-hidden="true" />
+            the `.wm-guide-speaking` ancestor). `data-viseme` selects the phoneme mouth SHAPE so the
+            lip-sync tracks the words, not a generic pulse. Decorative; the caption carries the words. */}
+        <div
+          className="wm-guide-mouth"
+          aria-hidden="true"
+          data-viseme={speaking ? viseme : undefined}
+        />
       </div>
       <div className="wm-mascot-arm-l" />
       <div className="wm-mascot-arm-r" />

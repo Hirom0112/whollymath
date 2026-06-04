@@ -89,6 +89,19 @@ def _learner_columns(url: str) -> set[str]:
         engine.dispose()
 
 
+def _learner_index_names(url: str) -> set[str]:
+    """The index names on the ``learner`` table at ``url``."""
+    engine = create_engine(url)
+    try:
+        return {
+            name
+            for ix in inspect(engine).get_indexes("learner")
+            if (name := ix.get("name")) is not None
+        }
+    finally:
+        engine.dispose()
+
+
 def _scalar(url: str, sql: str) -> int:
     """Run a one-value query against the database at ``url`` (a COUNT)."""
     engine = create_engine(url)
@@ -212,3 +225,107 @@ def test_locale_migration_upgrade_then_downgrade_round_trips(
     assert "locale" not in learner_cols_after_downgrade
     # The prior learner columns (incl. the role column the curriculum migration added) survive.
     assert {"id", "session_id", "role"} <= learner_cols_after_downgrade
+
+
+# The parent/child auth migration (reversible) and the revision just before it (the
+# Slice-0.3 locale head it builds on).
+_AUTH_REVISION = "f1a9c7d3e2b4"
+_PRE_AUTH_REVISION = "e7c2a9f4b108"
+
+# The learner columns + new table the parent/child auth migration is responsible for.
+_AUTH_LEARNER_COLUMNS = {
+    "parent_id",
+    "password_hash",
+    "email_verified",
+    "display_name",
+    "grade_level",
+    "child_username",
+    "pin_hash",
+    "failed_pin_attempts",
+    "pin_locked_until",
+    "public_id",
+}
+
+
+def test_auth_migration_upgrade_then_downgrade_round_trips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """auth/parent-child: upgrade adds parent/child columns + consent_record; downgrade reverts."""
+    db_path = tmp_path / "auth_round_trip.sqlite"
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = _alembic_config()
+
+    # Apply the whole chain to the auth revision (head): the columns + table appear.
+    command.upgrade(config, _AUTH_REVISION)
+    assert _AUTH_LEARNER_COLUMNS <= _learner_columns(url)
+    assert "consent_record" in _table_names(url)
+
+    # Step back one revision (undo only the auth migration): the columns + table are
+    # gone, the prior schema survives.
+    command.downgrade(config, _PRE_AUTH_REVISION)
+    cols_after_downgrade = _learner_columns(url)
+    assert _AUTH_LEARNER_COLUMNS.isdisjoint(cols_after_downgrade)
+    assert "consent_record" not in _table_names(url)
+    # The prior learner columns survive the downgrade.
+    assert {"id", "session_id", "role", "locale"} <= cols_after_downgrade
+
+
+# The revocable-session migration (reversible) and the revision just before it (the
+# parent/child auth schema it builds on).
+_AUTH_SESSION_REVISION = "a3c8e1f5d720"
+_PRE_AUTH_SESSION_REVISION = "f1a9c7d3e2b4"
+
+
+def test_auth_session_migration_upgrade_then_downgrade_round_trips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """auth/parent-child S2: upgrade to head adds auth_session; downgrade removes it."""
+    db_path = tmp_path / "auth_session_round_trip.sqlite"
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = _alembic_config()
+
+    # Apply the whole chain to head: the table appears.
+    command.upgrade(config, _AUTH_SESSION_REVISION)
+    assert "auth_session" in _table_names(url)
+
+    # Step back one revision (undo only this migration): the table is gone, the prior
+    # parent/child schema survives.
+    command.downgrade(config, _PRE_AUTH_SESSION_REVISION)
+    tables_after_downgrade = _table_names(url)
+    assert "auth_session" not in tables_after_downgrade
+    assert {"learner", "consent_record"} <= tables_after_downgrade
+
+
+# The global-username migration (reversible) and the revision just before it.
+_GLOBAL_USERNAME_REVISION = "b2d4f6a8c1e3"
+_PRE_GLOBAL_USERNAME_REVISION = "a3c8e1f5d720"
+
+
+def test_global_username_migration_swaps_the_unique_index(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """2026-06-04: upgrade swaps per-parent username index for a global one; downgrade reverts."""
+    db_path = tmp_path / "global_username_round_trip.sqlite"
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = _alembic_config()
+
+    # Before this migration: the per-household composite index exists.
+    command.upgrade(config, _PRE_GLOBAL_USERNAME_REVISION)
+    assert "uq_learner_parent_username" in _learner_index_names(url)
+    assert "uq_learner_child_username" not in _learner_index_names(url)
+
+    # Upgrade: per-parent index gone, global username index present.
+    command.upgrade(config, _GLOBAL_USERNAME_REVISION)
+    assert "uq_learner_child_username" in _learner_index_names(url)
+    assert "uq_learner_parent_username" not in _learner_index_names(url)
+
+    # Downgrade restores the per-parent index.
+    command.downgrade(config, _PRE_GLOBAL_USERNAME_REVISION)
+    assert "uq_learner_parent_username" in _learner_index_names(url)
+    assert "uq_learner_child_username" not in _learner_index_names(url)

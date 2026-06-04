@@ -1,0 +1,132 @@
+/* Inline student (username + PIN) login on the /signin card, plus a quiet "try a free demo"
+   link. Additive (SignIn.css is the iterated brand screen and is not edited here) and matched to
+   its playful cream register: rounded navy-outlined inputs, a blue primary, a small demo link.
+   Unique classes (.wm-signin-form / -field / -flabel / -primary / -err / -orline / -demolink). */
+
+.wm-signin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.wm-signin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.wm-signin-flabel {
+  font-family: var(--wm-font-serif);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--wm-navy-deep);
+}
+
+.wm-signin-field input {
+  font-family: var(--wm-font-sans);
+  font-size: 17px;
+  color: var(--wm-navy-deep);
+  background: #fff;
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.wm-signin-field input:focus-visible {
+  outline: 3px solid var(--wm-blue-bright);
+  outline-offset: 2px;
+}
+.wm-signin-field input:disabled {
+  opacity: 0.6;
+}
+
+.wm-signin-primary {
+  width: 100%;
+  margin-top: 2px;
+  padding: 16px 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--wm-blue-bright);
+  color: #fff;
+  font-family: var(--wm-font-serif);
+  font-weight: 700;
+  font-size: 19px;
+  cursor: pointer;
+  box-shadow:
+    0 6px 0 var(--wm-blue-press),
+    0 14px 28px rgba(58, 89, 217, 0.35);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.wm-signin-primary:hover:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 var(--wm-blue-press);
+}
+.wm-signin-primary:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--wm-blue-press);
+}
+.wm-signin-primary:focus-visible {
+  outline: 3px solid var(--wm-navy-deep);
+  outline-offset: 3px;
+}
+.wm-signin-primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.wm-signin-err {
+  margin: 0;
+  color: #b3261e;
+  font-size: 14px;
+}
+
+.wm-signin-orline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--wm-navy-deep);
+  font-family: var(--wm-font-serif);
+  font-weight: 700;
+  font-size: 14px;
+  opacity: 0.65;
+}
+.wm-signin-orline::before,
+.wm-signin-orline::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: rgba(20, 30, 70, 0.15);
+}
+
+.wm-signin-demolink {
+  align-self: center;
+  background: none;
+  border: none;
+  color: var(--wm-navy-deep);
+  opacity: 0.7;
+  font-family: var(--wm-font-sans);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.wm-signin-demolink:hover {
+  opacity: 1;
+}
+.wm-signin-demolink:focus-visible {
+  outline: 3px solid var(--wm-navy-deep);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-signin-primary {
+    transition: none;
+  }
+  .wm-signin-primary:hover:not(:disabled),
+  .wm-signin-primary:active:not(:disabled) {
+    transform: none;
+  }
+}

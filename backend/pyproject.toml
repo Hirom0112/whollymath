@@ -19,6 +19,9 @@ dependencies = [
     "langsmith>=0.1.0",       # Optional LLM-call tracing for the Layer-4 surface, confined to llm/ and env-gated by LANGSMITH_TRACING (Slice PL.0); no-op passthrough when off. MIT.
     "google-auth==2.43.0",    # Google's OFFICIAL ID-token verifier (oauth2.id_token.verify_oauth2_token): fetches Google's JWKS and checks the RS256 signature, issuer, audience, and expiry for us. Confined to app/auth/ (Slice PL.3). Apache-2.0. Justified per CLAUDE.md §8.7 + PROJECT.md §3.12 "don't build your own auth": delegating token verification to Google's maintained library is materially safer than hand-rolling JWT/JWKS/crypto.
     "psycopg2-binary==2.9.10", # PostgreSQL driver for SQLAlchemy's default postgresql:// dialect. REQUIRED for the prod RDS deploy (TECH_STACK §4, CLAUDE.md §10): no driver was ever in the deps, so the app silently used its SQLite fallback and could not connect to Postgres. The -binary wheel bundles libpq so the slim Fargate image needs no build toolchain (CLAUDE.md §8.7). LGPL-3.0; used as a dynamically-linked driver (not modified/redistributed).
+    "argon2-cffi==23.1.0",     # Argon2id password + child-PIN hashing for parent/child accounts (Slice auth/parent-child, owner decision 2026-06-03). OWASP Password Storage Cheat Sheet ranks Argon2id first; we do NOT hand-roll crypto (CLAUDE.md §8.7, PROJECT.md §3.12 "don't build your own auth"). Confined to app/auth/. MIT; bundles the Argon2 reference implementation via CFFI, no system libargon2 needed for the Fargate image.
+    "pyjwt==2.10.1",           # Mint + verify OUR OWN short-lived session JWTs for parent/child auth (Slice auth/parent-child). google-auth only VERIFIES Google's tokens; it cannot issue ours. PyJWT is the de-facto standard, audited JWT library — used with HS256 + a Secrets-Manager signing key, paired with a server-side revocable session record (never a bare stateless JWT). Confined to app/auth/. MIT.
+    "boto3>=1.34",             # AWS SDK — used ONLY to send the COPPA parental-email verification via SES SendEmail (owner decision 2026-06-03: real email verification is the consent anchor). Confined to app/notifications/; the Fargate task authenticates via its IAM role (no static creds). Falls back to a logging no-op sender when SES is unconfigured (local dev). Apache-2.0. Lock pins the exact version.
 ]
 
 [dependency-groups]
@@ -82,6 +85,13 @@ ignore_missing_imports = true
 # missing imports for them specifically rather than globally (same policy as sympy).
 [[tool.mypy.overrides]]
 module = ["xgboost.*", "sklearn.*", "shap.*", "joblib.*"]
+ignore_missing_imports = true
+
+# boto3 (AWS SDK, used only for SES in app/notifications/, Slice auth/parent-child) ships no
+# type stubs; ignore missing imports for it specifically rather than globally (same policy as
+# sympy/the ML libs). The send path is best-effort and behind a Protocol, covered by tests.
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*"]
 ignore_missing_imports = true
 
 # google-auth (Slice PL.3) is installed but its public verifier surface is untyped

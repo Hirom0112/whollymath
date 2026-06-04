@@ -1,6 +1,7 @@
 import type { Emotion } from '@whollymath/shared-types';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import type { Viseme } from './avatar/visemes';
 import { Mascot } from './Mascot';
 import './PiMenu.css';
 
@@ -79,6 +80,7 @@ export function PiMenu({
   emotion,
   intensity,
   speaking = false,
+  viseme = 'rest',
 }: {
   /** The nav choices to fan out, in display order. An empty list renders no trigger. */
   items: PiMenuItem[];
@@ -95,6 +97,8 @@ export function PiMenu({
   intensity?: number;
   /** True while the shared mascot is SPEAKING cached audio (Slice AR.3); drives the talking mouth. */
   speaking?: boolean;
+  /** Current phoneme mouth shape for the shared mascot's lip-sync (from `useGuideSpeech`). */
+  viseme?: Viseme;
 }): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -159,7 +163,7 @@ export function PiMenu({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="wm-pimenu-fig" aria-hidden="true">
-          <Mascot emotion={emotion} intensity={intensity} speaking={speaking} />
+          <Mascot emotion={emotion} intensity={intensity} speaking={speaking} viseme={viseme} />
         </span>
       </button>
 

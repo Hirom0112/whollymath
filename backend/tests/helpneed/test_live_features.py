@@ -42,6 +42,7 @@ def test_empty_history_is_all_neutral() -> None:
         recent_hint_rate=0.0,
         recent_error_rate=0.0,
         recent_request_answer_rate=0.0,
+        recent_no_hint_error_rate=0.0,
         turns_since_last_correct=0.0,
         prior_unproductive_rate=0.0,
         session_position=0.0,
@@ -76,6 +77,8 @@ def test_hand_computed_feature_values() -> None:
     assert feats.recent_latency_ms_mean == (2000 + 6000 + 10000) / 3
     assert feats.recent_hint_rate == 1 / 3
     assert feats.recent_error_rate == 2 / 3  # two of three wrong
+    # turn 1 is wrong but hinted (excluded); turn 2 is wrong with no hint (counted); turn 0 correct.
+    assert feats.recent_no_hint_error_rate == 1 / 3
     # last correct was turn 0 (offset 3 back from the in-progress current problem)
     assert feats.turns_since_last_correct == 3.0
     assert feats.prior_unproductive_rate == 2 / 3  # unproductive == not correct, live

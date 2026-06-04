@@ -231,7 +231,11 @@ model ever grows or needs independent versioning — premature at this size.
 
 Because the data is gitignored, the binary's provenance can't show in a diff, so it lives
 in the decision log instead. **Reproduce the committed artifact** (XGBoost, fit on all
-~95.8k examples from the first 5M action rows; holdout AUC 0.893):
+~322k examples from the first 5M action rows; holdout AUC 0.899). The earlier 0.893/~95.8k
+figure was the fraction-only predecessor — the skill filter was since widened to the full
+cross-topic Grade-6 KC set, and a "quiet mis-reasoning" feature (wrong without seeking a
+hint) was added, lifting the artifact to 0.899 with 34 proactive-eligible (per-KC AUC ≥ 0.85)
+KCs:
 
 ```bash
 cd backend && WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000 \

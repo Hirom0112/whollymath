@@ -33,9 +33,10 @@ from app.domain.center_spread import (
     range_as_sum,
     range_spread,
 )
-from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId, Representation
 from app.domain.misconceptions import MisconceptionId
 from app.domain.problem_generators import AnswerKind, Problem, generate_problem
+from app.domain.stats_stimulus import stimulus_for
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -58,6 +59,18 @@ def _mode_and_data(problem: Problem) -> tuple[int, tuple[Rational, ...]]:
 def test_center_spread_shape_is_live() -> None:
     """The KC is content-complete (registered), so the tutor can schedule it."""
     assert _KC in LIVE_KCS
+
+
+def test_number_line_is_the_same_item_over_the_rendered_display() -> None:
+    """NUMBER_LINE serves the SAME answer as SYMBOLIC (same operands + value), over the data set's
+    rendered dot plot (stats_stimulus) — the masterable second representation, no new input widget.
+    Center & spread are read along the line (panel audit 2026-06-04)."""
+    sym = generate_problem(_KC, seed=5, surface_format=Representation.SYMBOLIC)
+    line = generate_problem(_KC, seed=5, surface_format=Representation.NUMBER_LINE)
+    assert line.surface_format is Representation.NUMBER_LINE
+    assert line.operands == sym.operands
+    assert line.correct_value == sym.correct_value
+    assert stimulus_for(_KC, line.operands) is not None
 
 
 def test_generated_problem_is_a_clean_in_scope_numeric_item() -> None:

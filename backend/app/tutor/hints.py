@@ -210,6 +210,23 @@ NUDGE_BANK: dict[KnowledgeComponentId, tuple[NudgeHint, ...]] = {
             "Split the total evenly into that many equal shares. How big is a single share?",
         ),
     ),
+    # Grade-6 Unit 1 (6.RP.3b): index 0 orients toward the price PER ITEM (not the total); index 1
+    # warns against picking the lower total; index 2 reinforces finding each unit price to compare.
+    KnowledgeComponentId.BETTER_BUY: (
+        _nudge(
+            KnowledgeComponentId.BETTER_BUY,
+            "The better buy is the lower price for ONE item — not the lower price overall.",
+        ),
+        _nudge(
+            KnowledgeComponentId.BETTER_BUY,
+            "A bigger pile can cost more in total yet still be cheaper for each item. Which costs "
+            "less per item?",
+        ),
+        _nudge(
+            KnowledgeComponentId.BETTER_BUY,
+            "Find what each store charges for a single item, then compare those two prices.",
+        ),
+    ),
     # index 0 (operation) orients toward multiplying both parts by the same number; index 1
     # (magnitude) toward keeping the ratio's size.
     KnowledgeComponentId.EQUIVALENT_RATIOS: (

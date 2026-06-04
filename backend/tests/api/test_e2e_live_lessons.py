@@ -91,6 +91,15 @@ def _correct_answer(problem: Problem) -> str:
     kind = problem.answer_kind
     if kind is AnswerKind.YES_NO:
         operands = problem.operands
+        if problem.yes_no_relation == "better_buy":
+            # better-buy: operands = (qA, pA, qB, pB); Store A wins iff pA/qA < pB/qB (recomputed
+            # the same way _verify_yes_no does — cross-multiplied over exact Rationals, qA, qB > 0).
+            assert operands is not None and len(operands) == 4, (
+                f"better-buy problem {problem.problem_id!r} must carry four operands"
+            )
+            qa, pa, qb, pb = operands
+            truth = bool(pa * qb < pb * qa)
+            return "yes" if truth else "no"
         assert operands is not None and len(operands) == 2, (
             f"yes/no problem {problem.problem_id!r} must carry two operands"
         )

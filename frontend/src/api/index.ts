@@ -128,14 +128,21 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
  * `proactiveEnabled` opts the session into the proactive HelpNeed arm (Slice 4.5);
  * default OFF = observe-only (RESEARCH.md §7.5). It is a demo / A/B switch, not a
  * learner-facing control.
+ *
+ * `locale` is the HELP-language for this session's hints/nudges (Slice 3.6 bilingual scaffold):
+ * 'en' (default) or 'es-MX'. It localizes the SPOKEN/help surface ONLY — the on-screen problem
+ * stays English, and it never reaches verify/mastery/policy (§8.1). Default 'en' keeps the
+ * English path byte-for-byte unchanged for every existing caller.
  */
 export async function startSession(
   routeKey: string,
   proactiveEnabled = false,
+  locale: 'en' | 'es-MX' = 'en',
 ): Promise<StartSessionResponse> {
   return postJson<StartSessionResponse>('/session', {
     route_key: routeKey,
     proactive_enabled: proactiveEnabled,
+    locale,
   });
 }
 
@@ -149,13 +156,30 @@ export async function startSession(
 export async function startLesson(
   kc: KnowledgeComponentId,
   proactiveEnabled = false,
+  locale: 'en' | 'es-MX' = 'en',
 ): Promise<StartSessionResponse> {
-  return postJson<StartSessionResponse>('/session', { kc, proactive_enabled: proactiveEnabled });
+  return postJson<StartSessionResponse>('/session', {
+    kc,
+    proactive_enabled: proactiveEnabled,
+    locale,
+  });
 }
 
-/** Submit one learner action (answer or hint request) and get the turn result. */
-export async function submitTurn(request: TurnRequest): Promise<TurnResponse> {
-  return postJson<TurnResponse>('/turn', request);
+/**
+ * Submit one learner action (answer or hint request) and get the turn result.
+ *
+ * `locale` is the HELP-language for this turn's hint/nudge/intervention (Slice 3.6 bilingual
+ * scaffold): 'en' (default) or 'es-MX'. It localizes the SPOKEN/help surface ONLY — the served
+ * `next_problem` stays English, and it is read AFTER the turn outcome is fixed so it never reaches
+ * verify/mastery/policy (§8.1). It is a second arg (not a `TurnRequest` field the caller sets) so
+ * existing callers pass nothing and get the unchanged English turn byte-for-byte; the toggle's
+ * choice is folded in here. A `locale` already on `request` is respected if present.
+ */
+export async function submitTurn(
+  request: TurnRequest,
+  locale: 'en' | 'es-MX' = 'en',
+): Promise<TurnResponse> {
+  return postJson<TurnResponse>('/turn', { ...request, locale: request.locale ?? locale });
 }
 
 /**

@@ -8,7 +8,9 @@ provider, and runs the batch.
 
 Flags:
   --limit N        render only the first N enumerated strings (a small, quota-friendly subset).
-  --locale L       restrict to one locale (``en`` or ``es-MX``); default renders both.
+  --locale L       restrict to one locale (``en`` or ``es-MX``); default renders both. A
+                   single-locale render MERGES into the existing manifest (it no longer drops the
+                   other locale's rows — the old footgun), so re-rendering one language is safe.
   --cache-dir P    write to an alternate cache dir (default ``app/tts/cache``).
 
 The key is loaded, never printed. The script prints a short summary (counts + manifest path),

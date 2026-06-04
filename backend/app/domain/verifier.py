@@ -64,25 +64,28 @@ from app.domain.misconceptions import (
     decimal_point_misplacement,
     distinct_value_count,
     distributive_error,
+    evaluate_exponent_order_left_to_right,
     evaluate_left_to_right,
     flip_result_sign,
     flipped_inequality,
+    forget_trapezoid_half,
     forget_triangle_half,
     forgot_to_multiply_by_years,
     gcf_lcm_confusion,
     inverse_operation_error,
     invert_conversion,
-    invert_rate,
     keep_original_sign,
     mean_signed_deviation,
-    multiply_base_by_exponent,
+    multiply_base_by_exponent_predict,
     multiply_without_inverting,
     natural_number_bias_number_line,
     omit_rational_for_integer,
     parse_points,
     part_part_ratio,
     part_whole_ratio,
+    percent_as_amount,
     place_value_slip,
+    rate_inversion,
     reversed_operands,
     signed_not_magnitude,
     solution_substitution_error,
@@ -231,18 +234,23 @@ def _parse_to_bool(submitted: Submitted) -> bool | None:
 
 
 def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult:
-    """Verify a yes/no judgment over the two operands. The truth is SymPy: equality
-    ("same amount?" — 2/3 == 4/6 → YES) or, when ``yes_no_relation`` is "greater", a
-    magnitude comparison ("is a greater than b?" — the symbolic form of number-line
-    placement). A wrong judgment is a MAGNITUDE error (the learner misjudged the amounts —
-    §3.6 routes it to S2, the number line). We do not over-claim a misconception match."""
+    """Verify a yes/no judgment over the operands. The truth is SymPy: equality ("same amount?" —
+    2/3 == 4/6 → YES), a magnitude comparison ("is a greater than b?" — the symbolic form of
+    number-line placement, ``yes_no_relation == "greater"``), or a BETTER-BUY unit-rate comparison
+    ("is Store A the better buy?", ``yes_no_relation == "better_buy"``) over FOUR operands
+    (qA, pA, qB, pB), true iff Store A's unit price is strictly lower (pA/qA < pB/qB, decided by
+    SymPy cross-multiplication). A wrong judgment is a MAGNITUDE error (the learner misjudged the
+    amounts/rates — §3.6 routes it to S2, the number line). We do not over-claim a misconception
+    match (the YES_NO path never operand-classifies a misconception)."""
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        # A yes/no item without a fraction pair is a CONSTRUCTION bug (not learner
-        # input): there is nothing for SymPy to judge over. Fail loudly (CLAUDE.md §8.5)
-        # rather than silently scoring a meaningless verdict.
+    expected_arity = 4 if problem.yes_no_relation == "better_buy" else 2
+    if operands is None or len(operands) != expected_arity:
+        # A yes/no item without the operands its relation needs is a CONSTRUCTION bug (not learner
+        # input): there is nothing for SymPy to judge over. Fail loudly (CLAUDE.md §8.5) rather
+        # than silently scoring a meaningless verdict.
         raise ValueError(
-            f"yes/no problem {problem.problem_id!r} needs exactly two operands to verify"
+            f"yes/no problem {problem.problem_id!r} needs exactly {expected_arity} operands "
+            f"for relation {problem.yes_no_relation!r} to verify"
         )
 
     answer = _parse_to_bool(submitted)
@@ -251,7 +259,12 @@ def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult
             is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
         )
 
-    if problem.yes_no_relation == "greater":
+    if problem.yes_no_relation == "better_buy":
+        # operands = (qA, pA, qB, pB); Store A is the better buy iff pA/qA < pB/qB. Cross-multiply
+        # (qA, qB > 0 by construction) so the comparison is exact SymPy over Rationals, no division.
+        qa, pa, qb, pb = operands
+        truth = bool(pa * qb < pb * qa)
+    elif problem.yes_no_relation == "greater":
         truth = bool(operands[0] > operands[1])
     else:
         truth = bool(operands[0] == operands[1])
@@ -660,13 +673,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         ),
     ),
     # unit-rate inversion: total/count formed upside-down as count/total — a wrong OPERATION
-    # setup (operands are (total, count), both whole-number Rationals).
+    # setup. PER_ONE-SPECIFIC: operands are (total, count, mode) on the per-ONE direction and
+    # (total, count, new_count, mode) on the SCALE direction; ``rate_inversion`` returns None off
+    # mode 0 (and on the 4-tuple), so it never fires on a scale item — the percent-as-amount gate
+    # pattern. ``operand_count=None`` lets the row see BOTH shapes; the predictor does the gating.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.UNIT_RATE,
-        operand_count=2,
+        operand_count=None,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.RATE_INVERSION,
-        predict=lambda ops: invert_rate(int(ops[0]), int(ops[1])),
+        predict=rate_inversion,
     ),
     # additive ratio: scaled a:b -> ?:target_den by adding instead of multiplying (operands are
     # (a, b, target_den)). A wrong OPERATION (additive vs multiplicative reasoning).
@@ -678,13 +694,15 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         predict=lambda ops: additive_ratio(int(ops[0]), int(ops[1]), int(ops[2])),
     ),
     # percent-as-amount: answers the percent number itself instead of that percent OF the whole
-    # (operands are (percent, whole)). A wrong OPERATION (ignored the base).
+    # (operands are (percent, whole, mode)). A wrong OPERATION (ignored the base). PERCENT_OF-
+    # SPECIFIC: the predictor returns None on the find-the-whole mode (no "percent OF the whole" to
+    # skip there), so it never fires off mode 0 — the decimal-point-misplacement gate pattern.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.PERCENT,
-        operand_count=2,
+        operand_count=3,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.PERCENT_AS_AMOUNT,
-        predict=lambda ops: ops[0],
+        predict=percent_as_amount,
     ),
     # multiply-as-add: multiplied two fractions by ADDING them instead (operands are the two
     # fractions). A wrong OPERATION (x treated as +) — the sum is larger than the product.
@@ -736,14 +754,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
     ),
     # decimal-point-misplacement: multiplied the digits right but placed the product's point by the
     # longer factor's place count, not the SUM — so the value is off by a power of ten (operands are
-    # the two decimal factors). The DIGITS are right, the SIZE is wrong: a MAGNITUDE error (routes
-    # to the size-exposing surface, §3.6), distinct from the OPERATION errors above.
+    # (first, second, mode)). The DIGITS are right, the SIZE is wrong: a MAGNITUDE error (routes to
+    # the size-exposing surface, §3.6), distinct from the OPERATION errors above. MULTIPLY-SPECIFIC:
+    # the predictor returns None on add/subtract/divide modes (no product point to misplace), so it
+    # never fires off multiply — the AREA_POLYGONS forgot-the-half gate pattern.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.DECIMAL_OPERATIONS,
-        operand_count=2,
+        operand_count=3,
         error_category=ErrorCategory.MAGNITUDE,
         misconception=MisconceptionId.DECIMAL_POINT_MISPLACEMENT,
-        predict=lambda ops: decimal_point_misplacement(ops[0], ops[1]),
+        predict=decimal_point_misplacement,
     ),
     # signed-not-magnitude: reported the signed value itself instead of its distance from 0
     # (|-7| -> -7). Operands are (value,), the signed input. A misjudged MAGNITUDE (a magnitude
@@ -784,16 +804,33 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         misconception=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
         predict=lambda ops: evaluate_left_to_right(int(ops[0]), int(ops[1]), int(ops[2])),
     ),
-    # multiply-base-by-exponent: read a power as one multiplication — base * exponent (3^4 -> 12)
-    # instead of base multiplied by itself exponent-many times (3*3*3*3 = 81). Operands are
-    # (base, exp). A wrong OPERATION (the exponent was treated as a factor, not a repeat count); the
-    # generator excludes 2^2, so the predicted value always differs from the correct power.
+    # multiply-base-by-exponent: read a BARE power as one multiplication — base * exponent (3^4 ->
+    # 12) instead of base multiplied by itself exponent-many times (3*3*3*3 = 81). The POWER_ONLY
+    # item is the 3-tuple (base, exp, mode==0); the predictor is gated to that shape (returns None
+    # off mode 0), and ``operand_count=3`` keeps this row off the ORDER_OF_OPS 5-tuple — the
+    # arity/mode split that disambiguates the two exponent misconceptions, mirroring the
+    # AREA_POLYGONS triangle/trapezoid pair. The generator excludes 2^2, so on a power-only item the
+    # predicted value always differs from the correct power.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.EXPONENTS,
-        operand_count=2,
+        operand_count=3,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.MULTIPLY_BASE_BY_EXPONENT,
-        predict=lambda ops: multiply_base_by_exponent(int(ops[0]), int(ops[1])),
+        predict=multiply_base_by_exponent_predict,
+    ),
+    # order-of-operations-slip on an exponent EXPRESSION: applied the surrounding operation BEFORE
+    # the power — "2 + 3^2" done as (2 + 3)^2 = 25 instead of 2 + 9 = 11 (6.EE.1, panel coverage fix
+    # 2026-06-04). The ORDER_OF_OPS item is the 5-tuple (base, exp, a, op_code, mode==1); the
+    # predictor reads op_code and is gated to that shape. ``operand_count=5`` keeps it off the
+    # POWER_ONLY 3-tuple. A wrong OPERATION (the values are read right; precedence was ignored); the
+    # generator keeps the left-to-right value distinct from the correct one, so a match is always
+    # diagnostic. Reuses ORDER_OF_OPERATIONS_SLIP — the same precedence error as KC_evaluate.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.EXPONENTS,
+        operand_count=5,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
+        predict=evaluate_exponent_order_left_to_right,
     ),
     # inverse-operation-error: solved a one-step equation with the WRONG inverse — added b for
     # x + b = c, or subtracted a for a*x = c (operands are (mode, p, q)). A wrong OPERATION (reached
@@ -849,13 +886,28 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
     # parallelogram). A wrong OPERATION (used the wrong formula, not a magnitude misjudgment); the
     # predictor returns None for the parallelogram mode (b·h IS correct there, no error to model),
     # so it never fires on a parallelogram. base, height > 0, so b·h always differs from b·h/2 —
-    # the match is always diagnostic.
+    # the match is always diagnostic. ``operand_count=3`` keeps this row off the trapezoid item,
+    # whose 4-tuple (base1, base2, height, mode) is the forgot-trapezoid-half row's job below.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.AREA_POLYGONS,
         operand_count=3,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.FORGOT_TRIANGLE_HALF,
         predict=forget_triangle_half,
+    ),
+    # forgot-trapezoid-half: summed the two parallel sides and multiplied by the height but skipped
+    # the averaging 1/2 — answering (base1 + base2)·height instead of half of it, so the area is
+    # twice too big (operands are the trapezoid's 4-tuple (base1, base2, height, mode); mode 2). The
+    # SAME KC carries TWO half-dropping errors that differ ONLY by shape; they are disambiguated by
+    # operand ARITY (``operand_count=4`` here vs 3 above), so each fires only on its own figure — no
+    # mode branch needed in the loop. A wrong OPERATION (wrong formula). The bases are distinct and
+    # positive, so (base1 + base2)·height always differs from its half — the match is diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.AREA_POLYGONS,
+        operand_count=4,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.FORGOT_TRAPEZOID_HALF,
+        predict=forget_trapezoid_half,
     ),
     # add-edges-error: found a prism's volume by ADDING the edges (l + w + h) instead of MULTIPLYING
     # them (V = l*w*h). Operands are (l, w, h). A wrong OPERATION (summed a perimeter-style total

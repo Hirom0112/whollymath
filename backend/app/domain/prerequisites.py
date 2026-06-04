@@ -48,6 +48,10 @@ KC_PREREQUISITES: dict[KnowledgeComponentId, frozenset[KnowledgeComponentId]] = 
     _KC.RATIO_LANGUAGE: frozenset({_KC.EQUIVALENCE}),
     # Grade-6 Unit 1: a unit rate is a ratio relationship, so it builds on equivalent fractions.
     _KC.UNIT_RATE: frozenset({_KC.EQUIVALENCE}),
+    # Grade-6 Unit 1 (6.RP.3b): comparing two stores for the better buy means finding and comparing
+    # each one's UNIT RATE, so it forward-unlocks on KC_unit_rate — you must be able to find a unit
+    # rate before you can compare two of them.
+    _KC.BETTER_BUY: frozenset({_KC.UNIT_RATE}),
     _KC.EQUIVALENT_RATIOS: frozenset({_KC.EQUIVALENCE}),
     # Percent forward-unlocks on equivalence (a percent is a per-100 ratio). Its decimal-ops
     # prereq (REMEDIATION_ROUTING) isn't a forward edge — that KC isn't live yet.
@@ -228,6 +232,7 @@ SPINE_ORDER: tuple[KnowledgeComponentId, ...] = (
     _KC.SUBTRACTION_UNLIKE,  # … (add/sub both gated on common denominator)
     _KC.RATIO_LANGUAGE,  # Grade-6 Unit 1: read a ratio (part-part vs part-whole), on equivalence
     _KC.UNIT_RATE,  # Grade-6 Unit 1: a ratio relationship, built on equivalence
+    _KC.BETTER_BUY,  # Grade-6 Unit 1 (6.RP.3b): compare two unit rates, built on the unit rate
     _KC.EQUIVALENT_RATIOS,  # Grade-6 Unit 1: scale a ratio multiplicatively
     _KC.PERCENT,  # Grade-6 Unit 1: a per-100 ratio
     _KC.MULTIPLY_FRACTIONS,  # Grade-6 Unit 2: multiply fractions, built on equivalence

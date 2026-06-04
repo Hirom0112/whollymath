@@ -3,6 +3,9 @@ node_modules/
 dist/
 build/
 coverage/
+# CDK synth output (generated, gitignored; CI never has it — keep it out of the gate)
+cdk.out/
+infrastructure/cdk.out/
 # Python project (backend) is formatted by ruff, not prettier
 backend/
 # Generated lockfiles

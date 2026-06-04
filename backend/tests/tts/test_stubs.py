@@ -1,8 +1,10 @@
-"""Tests pinning the inert stubs (Slice A): they ship NO behavior and fail loudly if called.
+"""Tests pinning the inert stub (Slice A): it ships NO behavior and fails loudly if called.
 
-The Rhubarb viseme upgrade and the number-splicing path are documented seams, not features
-(CLAUDE.md §5 "report partial as partial"). These tests assert they stay inert so they cannot
-be mistaken for working code.
+The Rhubarb viseme upgrade is a documented seam, not a feature (CLAUDE.md §5 "report partial as
+partial") — an OPTIONAL acoustic upgrade needing an external binary; phoneme lip-sync already ships
+via grapheme→viseme derivation (frontend ``avatar/visemes.ts``). This test asserts the seam stays
+inert so it cannot be mistaken for working code. (The old number-splicing seam was deleted —
+superseded by live synth, ``app/tts/live_synth.py``, which voices number-templated lines directly.)
 """
 
 from __future__ import annotations
@@ -32,11 +34,3 @@ def test_rhubarb_stub_is_inert() -> None:
     assert module.IS_STUB is True
     with pytest.raises(NotImplementedError):
         module.rhubarb_visemes_for(Path("anything.mp3"))
-
-
-def test_number_splicing_seam_is_inert() -> None:
-    from app.tts import number_splicing
-
-    assert number_splicing.IS_STUB is True
-    with pytest.raises(NotImplementedError):
-        number_splicing.build_spliced_line()

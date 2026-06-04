@@ -155,3 +155,95 @@ def get_raw(app: FastAPI, path: str, headers: dict[str, str] | None = None) -> t
 
     anyio.run(_run)
     return captured["status"], b"".join(chunks)
+
+
+# ── Cookie-aware client (for the cookie-borne parent/child sessions, Slice S3) ──
+
+
+class CookieClient:
+    """A tiny stateful client that carries cookies across requests, like a browser.
+
+    The parent/child auth surface uses HttpOnly session cookies + a double-submit CSRF
+    token, so a contract test needs to (a) keep the Set-Cookie values the server issues
+    and resend them, and (b) echo the readable ``wm_csrf`` cookie in the ``X-CSRF-Token``
+    header on unsafe verbs — exactly what the real SPA does. This wraps the same in-process
+    ASGI drive as ``_request`` but also captures response headers and maintains a cookie jar.
+    """
+
+    def __init__(self, app: FastAPI) -> None:
+        self._app = app
+        self.cookies: dict[str, str] = {}
+
+    def _drive(
+        self, method: str, path: str, body: Any | None, extra_headers: dict[str, str] | None
+    ) -> tuple[int, Any]:
+        body_bytes = b"" if body is None else json.dumps(body).encode("utf-8")
+        captured: dict[str, Any] = {"headers": []}
+        chunks: list[bytes] = []
+
+        async def receive() -> AsgiMessage:
+            return {"type": "http.request", "body": body_bytes, "more_body": False}
+
+        async def send(message: AsgiMessage) -> None:
+            if message["type"] == "http.response.start":
+                captured["status"] = message["status"]
+                captured["headers"] = message.get("headers", [])
+            elif message["type"] == "http.response.body":
+                chunks.append(message.get("body", b""))
+
+        raw_headers: list[tuple[bytes, bytes]] = [(b"content-type", b"application/json")]
+        # Send the cookie jar back, like a browser.
+        if self.cookies:
+            jar = "; ".join(f"{k}={v}" for k, v in self.cookies.items())
+            raw_headers.append((b"cookie", jar.encode("latin-1")))
+        # Echo the CSRF token (double-submit) on every request, mirroring the SPA.
+        if "wm_csrf" in self.cookies:
+            raw_headers.append((b"x-csrf-token", self.cookies["wm_csrf"].encode("latin-1")))
+        for name, value in (extra_headers or {}).items():
+            raw_headers.append((name.lower().encode("latin-1"), value.encode("latin-1")))
+
+        path_only, _, query = path.partition("?")
+        scope: dict[str, Any] = {
+            "type": "http",
+            "asgi": {"version": "3.0", "spec_version": "2.3"},
+            "http_version": "1.1",
+            "method": method,
+            "path": path_only,
+            "raw_path": path.encode("utf-8"),
+            "query_string": query.encode("utf-8"),
+            "headers": raw_headers,
+            "scheme": "http",
+            "server": ("testserver", 80),
+            "client": ("testclient", 12345),
+            "root_path": "",
+        }
+
+        async def _run() -> None:
+            await self._app(scope, receive, send)
+
+        anyio.run(_run)
+        self._absorb_set_cookie(captured["headers"])
+        raw = b"".join(chunks)
+        return captured["status"], (json.loads(raw) if raw else None)
+
+    def _absorb_set_cookie(self, headers: list[tuple[bytes, bytes]]) -> None:
+        """Update the jar from Set-Cookie response headers (value, or delete on max-age=0)."""
+        for name, value in headers:
+            if name.lower() != b"set-cookie":
+                continue
+            cookie = value.decode("latin-1")
+            pair, _, attrs = cookie.partition(";")
+            key, _, val = pair.partition("=")
+            key, val = key.strip(), val.strip()
+            if "max-age=0" in attrs.lower() or "expires=thu, 01 jan 1970" in attrs.lower():
+                self.cookies.pop(key, None)
+            else:
+                self.cookies[key] = val
+
+    def post(
+        self, path: str, body: Any | None = None, headers: dict[str, str] | None = None
+    ) -> tuple[int, Any]:
+        return self._drive("POST", path, body, headers)
+
+    def get(self, path: str, headers: dict[str, str] | None = None) -> tuple[int, Any]:
+        return self._drive("GET", path, None, headers)

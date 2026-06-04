@@ -31,6 +31,7 @@ import { Tutor } from './pages/Tutor';
 import { Unit } from './pages/Unit';
 import { Units } from './pages/Units';
 import { GuideProvider } from './state/GuideContext';
+import { LocaleProvider, useHelpLocale } from './state/LocaleContext';
 import { SessionProvider, useSession } from './state/SessionContext';
 
 // The skill the homework screen anchors to when entered from the home. Homework starts at
@@ -38,10 +39,12 @@ import { SessionProvider, useSession } from './state/SessionContext';
 // line — nothing written for the scanner to read — so it has no scannable homework.
 const HOMEWORK_KC: KnowledgeComponentId = 'KC_equivalence';
 
-// Demo / A/B switch: ?proactive=1 opts into the proactive HelpNeed arm (Slice 4.5).
-// Default OFF = observe-only (RESEARCH.md §7.5); not a learner-facing control. Read once at
-// module load so it's a stable value for the whole run (the URL changes as the learner navigates).
-const PROACTIVE = new URLSearchParams(window.location.search).get('proactive') === '1';
+// Live adaptation arm: the hyperreactive loop is ON for every learner (owner 2026-06-04 —
+// "individualize for every child"). It stays advisory + sustained-signal-gated (the refuse-rules
+// and SustainedHelpNeedGate are the guardrails), so "on" means the screen MAY morph with a labeled
+// reason, never chaotically. `?proactive=0` opts a session OUT — the A/B control arm and the eval
+// harness still measure both ways. Read once at module load so it's stable for the whole run.
+const PROACTIVE = new URLSearchParams(window.location.search).get('proactive') !== '0';
 
 // The app entry. The router lives INSIDE App (App.tsx stays self-contained, and tests that render
 // <App/> keep working) and is wrapped in the SessionProvider so every route shares the lesson
@@ -53,9 +56,11 @@ export function App(): React.JSX.Element {
   return (
     <SessionProvider proactive={PROACTIVE}>
       <GuideProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <LocaleProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </LocaleProvider>
       </GuideProvider>
     </SessionProvider>
   );
@@ -101,7 +106,8 @@ function readFrom(state: unknown, fallback: string): string {
 
 // The Landing route also absorbs the legacy query-param entry points (existing links / printed QR
 // codes may still use ?teacher=1, ?eval=1, ?theater=1, ?hwupload=<token>). We redirect them to the
-// new paths once, preserving ?proactive=1, before rendering the landing for a plain visit.
+// new paths once, preserving the ?proactive=0 OPT-OUT (the loop is on by default), before rendering
+// the landing for a plain visit.
 function LandingRoute(): React.JSX.Element {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -111,16 +117,16 @@ function LandingRoute(): React.JSX.Element {
   const evalArm = params.get('eval') === '1';
   const theater = params.get('theater') === '1';
   const hwUpload = params.get('hwupload');
-  const proactive = params.get('proactive') === '1';
+  const proactiveOff = params.get('proactive') === '0';
 
   const legacyTarget = ((): string | null => {
-    const suffix = proactive ? '?proactive=1' : '';
+    const suffix = proactiveOff ? '?proactive=0' : '';
     if (teacher) return `/teacher${suffix}`;
     if (parent) return `/parent${suffix}`;
     if (evalArm) return `/eval${suffix}`;
     if (theater) return `/theater${suffix}`;
     if (hwUpload !== null && hwUpload !== '') {
-      const sep = proactive ? '&proactive=1' : '';
+      const sep = proactiveOff ? '&proactive=0' : '';
       return `/hw/upload?token=${encodeURIComponent(hwUpload)}${sep}`;
     }
     return null;
@@ -198,6 +204,9 @@ function HomeworkRoute(): React.JSX.Element {
 function ColdStartRoute(): React.JSX.Element {
   const navigate = useNavigate();
   const { proactive, setStarted } = useSession();
+  // The help-language rides session start so the very first hint/nudge is already localized
+  // (Slice 3.6). 'en' default leaves the English start unchanged.
+  const { locale } = useHelpLocale();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -205,7 +214,7 @@ function ColdStartRoute(): React.JSX.Element {
     setStarting(true);
     setError(null);
     try {
-      const resp = await startSession(route, proactive);
+      const resp = await startSession(route, proactive, locale);
       setStarted(resp);
       navigate(`/lesson/${resp.problem.kc}`, { state: { from: '/start' } });
     } catch {
@@ -239,6 +248,12 @@ function LessonRoute(): React.JSX.Element {
   const location = useLocation();
   const { kc = '' } = useParams();
   const { proactive, setStarted, takePending } = useSession();
+  // The help-language at session-start (Slice 3.6). Read through a ref so toggling language
+  // mid-lesson does NOT restart the session — the start uses the locale chosen when the lesson
+  // began, and later turns pick up the live choice (threaded at the /turn call sites in Tutor).
+  const { locale } = useHelpLocale();
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
 
   const [session, setSession] = useState<StartSessionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -260,7 +275,7 @@ function LessonRoute(): React.JSX.Element {
 
     void (async (): Promise<void> => {
       try {
-        const resp = await startLesson(kcId, proactive);
+        const resp = await startLesson(kcId, proactive, localeRef.current);
         // Apply only if this is still the active lesson. `startedForKc` is the single source
         // of truth: it survives StrictMode's mount→unmount→remount (so we neither double-start
         // nor hang waiting on a cancelled request), and it ignores a stale resolution after the

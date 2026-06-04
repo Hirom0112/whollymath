@@ -8,6 +8,7 @@
 // fetch path (stubbed for later) and the seeded demo household (parentDemo.ts). Both paths exist so
 // flipping to real data is a one-line change once a backend + real child logins land.
 
+import { createChild, listChildren, parentMe, type ChildAccount } from './parentAuth';
 import {
   addChildInDemo,
   demoChild,
@@ -27,115 +28,115 @@ import { ApiError } from './index';
 export type { AddChildInput, ChildSummary, Household, ParentNote };
 export type { ChildDetail };
 
-// The /api/parent/* endpoints are NOT built yet — the parent surface ships demo-first, mirroring the
-// teacher surface's bots-deferred state (see api/teacher.ts, TEACHER_API_READY). Until there is a
-// backend that serves a real household, serve the seeded demo household (parentDemo.ts) so the parent
-// dashboard renders populated and demoable. The live code paths below stay intact so the flip is a
-// one-line change.
+// Parent auth + child accounts are now LIVE (see api/parentAuth.ts): signup/login set a cookie
+// session, and a child is a real account (display_name + grade + locale + username + PIN). So the
+// HOUSEHOLD ROSTER (`fetchHousehold`) and ADD-A-CHILD (`addChild`) now read/write the real
+// `/parent/*` backend.
 //
-// TODO(owner, deferred — confirmed 2026-06-02): switch the parent surface off the hardcoded fixtures
-// onto REAL data. This needs, in order:
-//   1. A backend `/api/parent/*` surface (household + per-child progress), parent auth, and a
-//      household → children data model linking a parent to their kids' learner accounts.
-//   2. Real LOGINS for those children (the username/password the "Add a child" form collects), so a
-//      child's sessions/mastery are genuine and the parent sees real progress.
-// Until then we intentionally keep the polished demo fixtures for the pitch.
-export const PARENT_API_READY = false;
+// What the auth backend does NOT yet serve is per-child PROGRESS (mastery category, accuracy trend,
+// current lesson, percent-complete) — that's a separate data model. So a real child maps into the
+// dashboard's richer `ChildSummary` as an honest "just getting started" card (no fabricated
+// progress), and per-child DRILL-IN (`fetchChild`) + the parent NOTES card still come from the
+// authored demo fixtures, which is where the polished progress story lives for the pitch.
+//
+// `PARENT_API_READY` keeps the seeded-demo escape hatch: set true (default) for the real roster +
+// real add-child; set false to fall back to the fully-seeded demo household offline.
+export const PARENT_API_READY = true;
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Client. Both paths exist; `PARENT_API_READY` selects which is live. The live
-   base is `/api/parent` (NOT `/parent`) — there is deliberately no `/parent`
-   vite proxy, so live calls go through the API prefix and the SPA route `/parent`
-   stays a clean client-side deep link.
+   Client. The household ROSTER + ADD-A-CHILD go through the real cookie-session
+   `/parent/*` backend (api/parentAuth.ts); per-child DRILL-IN + NOTES stay on the
+   authored demo fixtures (no backend progress yet). `PARENT_API_READY` (default
+   true) toggles the roster between real and the fully-seeded demo household.
    ────────────────────────────────────────────────────────────────────────── */
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path, { headers: parentAuthHeaders() });
-  if (!response.ok) {
-    throw new ApiError(response.status, `GET ${path} failed (${String(response.status)})`);
-  }
-  return (await response.json()) as T;
+// Derive a friendly household label + parent first-name from the parent's email local-part, since
+// the auth backend keys the account by email and carries no separate display name yet.
+function nameFromEmail(email: string): string {
+  const local = email.split('@')[0] ?? email;
+  const word = local.split(/[._-]+/)[0] || local;
+  return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', ...parentAuthHeaders() },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new ApiError(response.status, `POST ${path} failed (${String(response.status)})`);
-  }
-  return (await response.json()) as T;
-}
-
-// The demo-parent bearer token. Set on parent sign-in. Module-level so the routes authenticate
-// without prop-threading, mirroring the teacher `setTeacherToken` (api/teacher.ts).
-let parentToken: string | null = null;
-
-/** Set (or clear) the demo-parent bearer token used for /api/parent/* calls. */
-export function setParentToken(token: string | null): void {
-  parentToken = token;
-}
-
-function parentAuthHeaders(): Record<string, string> {
-  return parentToken === null ? {} : { authorization: `Bearer ${parentToken}` };
-}
-
-/** The one-click demo-parent login handle (mirrors the teacher `DemoLoginResponse` token field). */
-export interface ParentLoginResponse {
-  email: string;
-  role: 'parent';
-  token: string;
-}
-
-/**
- * One-click demo-parent login. In live mode this would POST `/api/parent/demo-login`; in demo mode
- * (`!PARENT_API_READY`) it short-circuits to a synthetic handle and makes NO network call, so the
- * parent demo signs in and renders the seeded household with or without a backend.
- */
-export async function parentDemoLogin(): Promise<ParentLoginResponse> {
-  if (!PARENT_API_READY) {
-    return Promise.resolve({
-      email: 'demo.parent@whollymath.dev',
-      role: 'parent',
-      token: 'demo:offline',
-    });
-  }
-  return postJson<ParentLoginResponse>('/api/parent/demo-login', {});
+// Map a real child ACCOUNT (api/parentAuth.ChildAccount) into the dashboard's richer ChildSummary.
+// The auth backend serves identity (name/grade/locale) but NOT progress, so this is an honest
+// "just added — no practice yet" card: needs_attention category, a flat trend, 0% complete. This
+// keeps the dashboard's shape intact (per CLAUDE.md §7: adapt in the API layer, don't rewrite the
+// page) while never fabricating progress the backend hasn't measured.
+function summaryFromAccount(account: ChildAccount): ChildSummary {
+  return {
+    child_id: account.public_id,
+    name: account.display_name,
+    grade: account.grade_level,
+    category: 'needs_attention',
+    status_line: 'Just added — ask them to sign in and start their first lesson.',
+    current_unit_title: null,
+    current_lesson_title: null,
+    percent_complete: 0,
+    practiced_today: false,
+    trend: [],
+  };
 }
 
 /** Fetch the signed-in parent's household: their name, the household label, and the child cards. */
 export async function fetchHousehold(): Promise<Household> {
-  if (!PARENT_API_READY) return Promise.resolve(demoHousehold());
-  return getJson<Household>('/api/parent/household');
+  if (!PARENT_API_READY) return demoHousehold();
+  const [me, children] = await Promise.all([parentMe(), listChildren()]);
+  const first = nameFromEmail(me.email);
+  return {
+    parent_name: first,
+    household_label: `The ${first} Family`,
+    children: children.map(summaryFromAccount),
+  };
 }
 
-/** Fetch one child's full progress drill-in. 404 if the child is not in this parent's household. */
+/** Fetch one child's full progress drill-in. Served from the authored demo fixtures (no backend
+ *  progress model yet). 404 if the child id is not one we can render a detail for. */
 export async function fetchChild(childId: string): Promise<ChildDetail> {
-  if (!PARENT_API_READY) {
-    const child = demoChild(childId);
-    if (child === null) throw new ApiError(404, `child ${childId} not in household`);
-    return Promise.resolve(child);
-  }
-  return getJson<ChildDetail>(`/api/parent/child/${encodeURIComponent(childId)}`);
+  const child = demoChild(childId);
+  if (child === null) throw new ApiError(404, `child ${childId} has no progress detail yet`);
+  return Promise.resolve(child);
 }
 
-/** Fetch the parent's seeded notes / "things to ask about" (local-toggle in demo mode). */
+/** Fetch the parent's seeded notes / "things to ask about" (authored fixtures; local-toggle). */
 export async function fetchParentNotes(): Promise<ParentNote[]> {
-  if (!PARENT_API_READY) return Promise.resolve(DEMO_PARENT_NOTES);
-  return getJson<ParentNote[]>('/api/parent/notes');
+  return Promise.resolve(DEMO_PARENT_NOTES);
 }
 
 /**
- * Add a child to the household. In demo mode this appends to the in-memory household (so the new
- * child appears on the dashboard immediately) and returns the login to share with the child — NO
- * network, NO real account. In live mode this would POST `/api/parent/child` to create a real
- * learner login (see the deferred TODO above).
+ * Add a child to the household. In real mode (`PARENT_API_READY`) this POSTs the live
+ * `/parent/children` endpoint (cookie session + CSRF, via parentAuth.createChild), creating a real
+ * child account with a username + PIN the child uses to sign in, and returns the login to share. In
+ * demo mode it appends to the in-memory household instead (no network, no real account).
+ *
+ * The live path needs the child's locale + 4-digit PIN, which the legacy `AddChildInput` doesn't
+ * carry, so callers pass the richer `AddChildLive` shape; demo mode reads the overlapping fields.
  */
+export interface AddChildLive {
+  name: string;
+  grade: number;
+  locale: 'en' | 'es-MX';
+  username: string;
+  pin: string;
+}
+
 export async function addChild(
-  input: AddChildInput,
+  input: AddChildLive,
 ): Promise<{ childId: string; username: string }> {
-  if (!PARENT_API_READY) return Promise.resolve(addChildInDemo(input));
-  return postJson<{ childId: string; username: string }>('/api/parent/child', input);
+  if (!PARENT_API_READY) {
+    const demoInput: AddChildInput = {
+      name: input.name,
+      grade: input.grade,
+      username: input.username,
+    };
+    return Promise.resolve(addChildInDemo(demoInput));
+  }
+  const created = await createChild({
+    display_name: input.name,
+    grade_level: input.grade,
+    locale: input.locale,
+    username: input.username,
+    pin: input.pin,
+  });
+  return { childId: created.public_id, username: created.username };
 }

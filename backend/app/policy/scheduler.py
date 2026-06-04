@@ -53,15 +53,20 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # representation, like COMMON_DENOMINATOR) until a numeric word-problem widget lands (T3),
     # at which point adding WORD_PROBLEM here makes it masterable with no other change.
     _KC.UNIT_RATE: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 1 (6.RP.3b): SYMBOLIC = the yes/no "is Store A the better buy?" judgment.
+    # PRACTICE-ONLY (one live answer surface, like UNIT_RATE / STATISTICAL_QUESTIONS); WORD_PROBLEM
+    # is the same judgment with no separate surface state.
+    _KC.BETTER_BUY: (_REP.SYMBOLIC,),
     _KC.EQUIVALENT_RATIOS: (_REP.SYMBOLIC,),  # numeric missing-term entry; practice-only
     _KC.PERCENT: (_REP.SYMBOLIC,),  # numeric "percent of" entry; practice-only
-    # Grade-6 Unit 2 (T2): SYMBOLIC = the product entered in the fraction editor. PRACTICE-ONLY
-    # until the AREA_MODEL multiply widget lands (T3), then adding AREA_MODEL makes it masterable.
-    _KC.MULTIPLY_FRACTIONS: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 2 (T2): SYMBOLIC = the quotient entered in the fraction editor. PRACTICE-ONLY
-    # (like MULTIPLY_FRACTIONS) until the AREA_MODEL division widget lands (T3), then adding
-    # AREA_MODEL here makes it masterable with no other change.
-    _KC.DIVIDE_FRACTIONS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 2: SYMBOLIC = the product entered in the fraction editor; AREA_MODEL = the same
+    # numeric answer over a fraction-area picture (FractionAreaStimulus, already wired) —
+    # the EVALUATE_EXPRESSIONS pattern, no new input widget. MASTERABLE: two live representations.
+    # (Promoted 2026-06-04 per the panel audit; the second rep already renders.)
+    _KC.MULTIPLY_FRACTIONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
+    # Grade-6 Unit 2: SYMBOLIC = the quotient in the fraction editor; AREA_MODEL = the same answer
+    # over the "how many c/d fit in a/b" area picture (FractionAreaStimulus). MASTERABLE (2 reps).
+    _KC.DIVIDE_FRACTIONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
     # Grade-6 Unit 1: SYMBOLIC = the numeric "how many small units" entry. PRACTICE-ONLY (one live
     # representation, like UNIT_RATE) until a numeric word-problem widget lands (T3), at which point
     # adding WORD_PROBLEM here makes it masterable with no other change.
@@ -73,22 +78,22 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # Grade-6 Unit 2: SYMBOLIC = the integer quotient entered in the editor. PRACTICE-ONLY until
     # the AREA_MODEL equal-groups widget lands (T3), then adding AREA_MODEL makes it masterable.
     _KC.MULTI_DIGIT_DIVISION: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 2: SYMBOLIC = the decimal product entered in the editor (the decimal-string
-    # answer the verifier now parses exactly). PRACTICE-ONLY until the AREA_MODEL decimal-grid
-    # widget lands (T3), then adding AREA_MODEL here makes it masterable with no other change.
-    _KC.DECIMAL_OPERATIONS: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 3: SYMBOLIC = the non-negative integer (the distance) entered in the editor.
-    # PRACTICE-ONLY until a signed NUMBER_LINE distance widget lands (T3), then adding NUMBER_LINE
-    # makes it masterable with no other change.
-    _KC.ABSOLUTE_VALUE: (_REP.SYMBOLIC,),
-    # Grade-6 Unit-INT: SYMBOLIC = the signed sum entered in the editor. PRACTICE-ONLY for now; the
-    # NUMBER_LINE rep (its widget exists) is the natural masterable second surface — adding
-    # NUMBER_LINE here promotes it, deferred to avoid over-scoping this build.
-    _KC.INTEGER_ADD_SUBTRACT: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 3: SYMBOLIC = the signed integer (the opposite) entered in the editor. PRACTICE-
-    # ONLY for now; the NUMBER_LINE rep (its widget already exists) is the natural masterable second
-    # surface — adding NUMBER_LINE here promotes it, deferred to avoid over-scoping this build.
-    _KC.SIGNED_NUMBERS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 2: SYMBOLIC = the decimal answer in the editor (parsed exactly by the verifier);
+    # AREA_MODEL = the same answer over the place-value picture (DecimalPlaceValueStimulus, already
+    # wired in scene.py). MASTERABLE: two live representations, no new input widget.
+    # (Promoted 2026-06-04 per the panel audit; the second rep already renders.)
+    _KC.DECIMAL_OPERATIONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
+    # Grade-6 Unit 3: SYMBOLIC = the distance in the editor; NUMBER_LINE = the same scalar over the
+    # AbsoluteValueStimulus picture (distance-from-zero, already wired). MASTERABLE (2 reps).
+    # (Promoted 2026-06-04 per the panel audit; absolute value IS a distance, so the line is it.)
+    _KC.ABSOLUTE_VALUE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit-INT: SYMBOLIC = the signed sum; NUMBER_LINE = the same answer over the directed-
+    # jump picture (IntegerJumpStimulus, already wired). MASTERABLE (2 reps). (Promoted 2026-06-04.)
+    _KC.INTEGER_ADD_SUBTRACT: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 3: SYMBOLIC = the opposite in the editor; NUMBER_LINE = the same answer over the
+    # SignedPointStimulus picture (reflection across zero, already wired). MASTERABLE (2 reps).
+    # (Promoted 2026-06-04 per the panel audit; signed numbers ARE positions on the line.)
+    _KC.SIGNED_NUMBERS: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
     # Grade-6 Unit 4: EXPRESSION = the typed algebra string (the ExpressionInput widget). Live on
     # EXPRESSION (not SYMBOLIC) — this KC's default + only answer surface; the WORD_PROBLEM rep is
     # the phrase framing with no surface state. PRACTICE-ONLY (one live rep); a second masterable
@@ -137,16 +142,17 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # WORD_PROBLEM is the phrase framing with no surface state. PRACTICE-ONLY (one live rep); there
     # is no second concrete widget for naming a part, so SYMBOLIC stays the only live surface.
     _KC.EXPRESSION_PARTS: (_REP.SYMBOLIC,),
-    # Grade-6 Unit-INT (TEKS 6.3C/D): SYMBOLIC = the signed integer product/quotient entered in the
-    # editor. PRACTICE-ONLY for now; the NUMBER_LINE rep (its widget exists) is the natural
-    # masterable second surface — a product is repeated directed jumps from zero — but adding it
-    # here promotes it, deferred to avoid over-scoping this build.
-    _KC.INTEGER_MULTIPLY_DIVIDE: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 6 (TEKS 6.8A): SYMBOLIC = the missing angle / area as a single number entered in
-    # the editor. PRACTICE-ONLY for now; the AREA_MODEL rep (the triangle FIGURE — its angles and
-    # its base×height region) is the natural masterable second surface, added here once a
-    # triangle-figure input widget lands — deferred to avoid over-scoping this build.
-    _KC.TRIANGLE_PROPERTIES: (_REP.SYMBOLIC,),
+    # Grade-6 Unit-INT (TEKS 6.3C/D): SYMBOLIC = the signed product/quotient; NUMBER_LINE = the same
+    # answer (a product is repeated directed jumps from zero). MASTERABLE (2 reps). Pictureless for
+    # now — no scene deriver yet (EVALUATE_EXPRESSIONS/MULTI_DIGIT_DIVISION precedent: masterable
+    # without a picture); the directed-jump scene is a later polish. (Promoted 2026-06-04.)
+    _KC.INTEGER_MULTIPLY_DIVIDE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 6 (TEKS 6.8A): SYMBOLIC = the missing angle / area; AREA_MODEL = the same numeric
+    # answer for the triangle FIGURE. MASTERABLE (2 reps). Pictureless for now — the labelled figure
+    # isn't drawn yet (no scene deriver); the EVALUATE_EXPRESSIONS / INTEGER_MULTIPLY_DIVIDE
+    # precedent: masterable without a picture. Drawing the figure (FigureStimulus) is frontend
+    # follow-up. (Promoted 2026-06-04 per the panel audit.)
+    _KC.TRIANGLE_PROPERTIES: (_REP.SYMBOLIC, _REP.AREA_MODEL),
     # Grade-6 Unit 6: SYMBOLIC = the area computed from the base/height formula entered in the
     # NUMERIC editor; AREA_MODEL = the SAME area read off a unit-square grid (count the squares the
     # shape covers). Both surfaces are LIVE and answered with the SAME numeric area, so this KC is
@@ -154,42 +160,39 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # EXPONENTS, not the practice-only Grade-6 KCs. Area is literally an area-model quantity, so
     # AREA_MODEL is the natural second surface here.
     _KC.AREA_POLYGONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
-    # Grade-6 Unit 6 (6.G.2): SYMBOLIC = the numeric volume (a Rational fraction) entered in the
-    # editor. PRACTICE-ONLY for now; the AREA_MODEL rep (a prism's volume IS a 3D area-model — the
-    # stack-of-unit-cubes picture) is the natural masterable second surface, but it has no widget
-    # yet, so adding it here would promote it — deferred to avoid over-scoping this build.
-    _KC.VOLUME_FRACTIONAL_EDGES: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 6 (6.G.2): SYMBOLIC = the numeric volume (a Rational); AREA_MODEL = the same
+    # volume for the prism's stack-of-unit-cubes picture. MASTERABLE (2 reps). Pictureless for now —
+    # the cube-stack figure isn't drawn yet (no scene deriver); the INTEGER_MULTIPLY_DIVIDE
+    # precedent. Drawing it (FigureStimulus) is frontend follow-up. (Promoted 2026-06-04.)
+    _KC.VOLUME_FRACTIONAL_EDGES: (_REP.SYMBOLIC, _REP.AREA_MODEL),
     # Grade-6 Unit 6 (6.G.3): COORDINATE_PLANE = the four-quadrant point-plotting grid (REUSES
     # KC_coordinate_plane's coordinate-plane widget). Live on COORDINATE_PLANE (its default + only
     # answer surface); the WORD_PROBLEM rep is the phrase framing with no surface state.
     # PRACTICE-ONLY (one live rep, like KC_coordinate_plane) — a second masterable surface awaits
     # its own widget.
     _KC.POLYGONS_COORDINATE_PLANE: (_REP.COORDINATE_PLANE,),
-    # Grade-6 Unit 6 (6.G.4): SYMBOLIC = the total surface area entered in the editor. PRACTICE-ONLY
-    # for now; the AREA_MODEL rep (a net IS an area-model — the six unfolded rectangular faces) is
-    # the natural masterable second surface, but it has no widget yet, so adding it here would
-    # promote it — deferred to avoid over-scoping this build.
-    _KC.SURFACE_AREA_NETS: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 7 (6.SP.5c): SYMBOLIC = the MAD value entered in the editor. PRACTICE-ONLY for
-    # now; the NUMBER_LINE rep (each deviation is a distance from the mean on the line, and its
-    # widget already exists) is the natural masterable second surface — adding NUMBER_LINE here
-    # promotes it, deferred to avoid over-scoping this build.
-    _KC.MEAN_ABSOLUTE_DEVIATION: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 7 (6.SP.2): SYMBOLIC = the median/range/IQR value entered in the editor.
-    # PRACTICE-ONLY for now; the NUMBER_LINE rep (center & spread are read along a number line — a
-    # box plot lays Q1/median/Q3 and the extremes on one) is the natural masterable second surface,
-    # and its widget exists, so adding it here would promote it — deferred to avoid over-scoping.
-    _KC.CENTER_SPREAD_SHAPE: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 7 (6.SP.3): SYMBOLIC = the single statistic entered in the editor. PRACTICE-ONLY
-    # for now; the NUMBER_LINE rep (the data set is points on the line, and center/spread are read
-    # off it) is the natural masterable second surface — its widget already exists — but adding it
-    # here would promote it, deferred to avoid over-scoping this build.
-    _KC.SUMMARY_STATISTICS: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 7 (6.SP.4): SYMBOLIC = the count/value read off the display, entered in the
-    # editor. PRACTICE-ONLY for now; the NUMBER_LINE rep (a dot plot is dots stacked above a number
-    # line) is the natural masterable second surface — its widget already exists — but adding it
-    # here would promote it, deferred to avoid over-scoping this build.
-    _KC.DATA_DISPLAYS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 6 (6.G.4): SYMBOLIC = the total surface area; AREA_MODEL = the same answer for
+    # the net (six unfolded rectangular faces). MASTERABLE (2 reps). Pictureless for now — the net
+    # isn't drawn yet (no scene deriver); the INTEGER_MULTIPLY_DIVIDE precedent. NOTE: for 6.G.4 the
+    # net IS the standard, so drawing it (FigureStimulus) is the priority frontend follow-up, not
+    # just polish. (Promoted 2026-06-04 per the panel audit.)
+    _KC.SURFACE_AREA_NETS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
+    # Grade-6 Unit 7 (6.SP.5c): SYMBOLIC = the MAD value; NUMBER_LINE = the same answer over the
+    # set's dot plot (each deviation is a distance from the mean). The plot already renders via
+    # stats_stimulus (wired in service.py). MASTERABLE (2 reps). (Promoted 2026-06-04 per panel.)
+    _KC.MEAN_ABSOLUTE_DEVIATION: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 7 (6.SP.2): SYMBOLIC = the median/range/IQR; NUMBER_LINE = the same answer read
+    # off the data set's dot plot (center & spread along the line). Plot renders via stats_stimulus.
+    # MASTERABLE (2 reps). (Promoted 2026-06-04 per panel audit.)
+    _KC.CENTER_SPREAD_SHAPE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 7 (6.SP.3): SYMBOLIC = the single statistic; NUMBER_LINE = the same answer read
+    # off the dot plot (the data set IS points on the line). Plot renders via stats_stimulus.
+    # MASTERABLE (2 reps). (Promoted 2026-06-04 per panel audit.)
+    _KC.SUMMARY_STATISTICS: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 7 (6.SP.4): SYMBOLIC = the count/value read off the display; NUMBER_LINE = the
+    # same answer over the rendered dot plot / histogram itself (stats_stimulus, wired in
+    # service.py). MASTERABLE (2 reps) — the display IS the standard. (Promoted 2026-06-04.)
+    _KC.DATA_DISPLAYS: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
     # Grade-6 Unit 7 (TEKS 6.12D): SYMBOLIC = the single summary value entered in the editor.
     # PRACTICE-ONLY for now; the AREA_MODEL rep (a bar/area graph of the category breakdown) is the
     # natural masterable second surface — but adding it here would promote it, deferred to avoid

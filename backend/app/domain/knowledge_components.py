@@ -62,6 +62,7 @@ class KnowledgeComponentId(StrEnum):
     EQUIVALENT_RATIOS = "KC_equivalent_ratios"
     UNIT_RATE = "KC_unit_rate"
     RATE_PROBLEMS = "KC_rate_problems"
+    BETTER_BUY = "KC_better_buy"
     PERCENT = "KC_percent"
     UNIT_CONVERSION = "KC_unit_conversion"
     # U2 — Fractions & Decimals (6.NS.1–4)
@@ -266,6 +267,28 @@ _KNOWLEDGE_COMPONENTS: tuple[KnowledgeComponent, ...] = (
         description=(
             "Find how much for ONE — the rate per single unit — from a quantity given for "
             "several units (e.g. $6 for 3 lbs is $2 per lb)."
+        ),
+        representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
+    ),
+    # Better buy (6.RP.3b / 6.RP.2): compare TWO unit rates to decide which store is the better
+    # buy — the multi-step rate-reasoning lesson U1.L4 ("Rate problems") was promised but reused
+    # the unit-rate generator (panel audit, 2026-06-04). Two stores sell the same item, each with
+    # a (quantity, price) pair; the better buy is the LOWER price PER UNIT (price/quantity). The
+    # answer is YES_NO ("is Store A the better buy?"), REUSING the existing yes/no answer kind (NO
+    # widget): the truth rides in ``operands`` ((qA,pA,qB,pB)) so the SAME ``_verify_yes_no``
+    # SymPy-comparison path grades it (SymPy decides, never an LLM — CLAUDE.md §8.2). Advertises
+    # SYMBOLIC + WORD_PROBLEM (the comparison text IS a word problem — the ≥2-rep contract), LIVE
+    # only on SYMBOLIC (scheduler._LIVE_REPRESENTATIONS) — PRACTICE-ONLY (one live answer surface;
+    # WORD_PROBLEM is the same judgment with no separate surface state), exactly like UNIT_RATE and
+    # STATISTICAL_QUESTIONS. Error routes never target WORD_PROBLEM — they stay on SYMBOLIC.
+    KnowledgeComponent(
+        id=KnowledgeComponentId.BETTER_BUY,
+        skill_name="Compare two rates (better buy)",
+        description=(
+            "Compare two stores' prices by finding each unit price (price per item) and deciding "
+            "which is the better buy — the lower price per item (6 apples for $3 is $0.50 each, "
+            "10 apples for $4 is $0.40 each, so the 10-apple store is the better buy), not the "
+            "lower total price."
         ),
         representations=(Representation.SYMBOLIC, Representation.WORD_PROBLEM),
     ),

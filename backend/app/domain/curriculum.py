@@ -166,11 +166,15 @@ _U1 = CatalogUnit(
             slug="u1_l4",
             unit_slug="u1",
             order=4,
-            title="Rate problems",
-            kc_id="KC_unit_rate",  # reuses KC_unit_rate (CURRICULUM_STANDARD.md §3)
+            title="Better buy",
+            # Repointed from KC_unit_rate to the new KC_better_buy (2026-06-04): U1.L4 had reused
+            # the unit-rate generator and never delivered the promised better-buy comparison.
+            # KC_better_buy is the genuine multi-step rate-reasoning lesson — compare TWO unit
+            # rates (6.RP.3b / 6.RP.2) — so the panel-flagged duplication is closed.
+            kc_id="KC_better_buy",
             ccss_code="6.RP.3b",
             teks_code="6.4B",
-            description="Use rates to solve speed, price, and other real-world problems.",
+            description="Compare two stores' prices per item to decide which is the better buy.",
         ),
         CatalogLesson(
             slug="u1_l5",
@@ -264,7 +268,12 @@ _U2 = CatalogUnit(
             order=5,
             title="Multiply fractions",
             kc_id="KC_multiply_fractions",  # built KC id (knowledge_components.py LIVE_KCS)
-            ccss_code="6.NS.1",  # spec: "6.NS.1-adj"
+            # Fraction multiplication is CCSS 5.NF.4 (Grade 5), NOT 6.NS.1 — that
+            # code is fraction DIVISION (u2_l3 above). Texas places it in Grade 6
+            # (TEKS 6.3B), so this lesson is TEKS-only with no Grade-6 CCSS code,
+            # exactly like the integer unit's CCSS gap. (Was "6.NS.1 # spec 6.NS.1-adj";
+            # corrected per the panel standards audit, 2026-06-04.)
+            ccss_code=None,
             teks_code="6.3B",
             description="Multiply fractions and decide if the answer grows or shrinks.",
         ),

@@ -344,18 +344,47 @@ def _number_line_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'share the total into equal parts' steps for a unit rate (Grade-6 Unit 1).
+    """The rate-reasoning steps for a unit-rate item — per-ONE (mode 0) or SCALE (mode 1).
 
-    ``operands = (total, count)``; the unit rate is ``total / count``, which equals
-    ``problem.correct_value`` by construction (the last step lands on it). Raises if the
-    operands are missing (CLAUDE.md §8.5 — a hollow example would mislead).
+    The mode is the LAST operand. For PER_ONE (``operands = (total, count, mode)``) the steps
+    share the total into equal parts, landing on the unit rate ``total / count``. For SCALE
+    (``operands = (total, count, new_count, mode)``) they FIND the unit rate first, then multiply
+    it by ``new_count`` to reach the scaled total ``rate * new_count`` (6.RP.3b multi-step). Either
+    way the last step equals ``problem.correct_value`` by construction. Raises if the operands are
+    missing or mis-shaped (CLAUDE.md §8.5 — a hollow example would mislead).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"unit-rate problem {problem.problem_id} needs (total, count) operands")
+    if operands is None or len(operands) not in (3, 4):
+        raise ValueError(
+            f"unit-rate problem {problem.problem_id} needs "
+            "(total, count, [new_count,] mode) operands"
+        )
     total, count = int(operands[0]), int(operands[1])
-    rate = problem.correct_value
-    each = f"{rate.p}/{rate.q}" if rate.q != 1 else f"{rate.p}"
+    answer = problem.correct_value
+    if len(operands) == 4:  # SCALE: find the unit rate, then multiply by the new count
+        new_count = int(operands[2])
+        unit_rate = Rational(total, count)
+        each = f"{unit_rate.p}/{unit_rate.q}" if unit_rate.q != 1 else f"{unit_rate.p}"
+        return (
+            WorkedStep(
+                shown=(
+                    f"First find the unit rate — the amount for ONE: {total} divided by {count}."
+                ),
+                why_prompt="Why find the amount for ONE before scaling up?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"Each single unit is {each}. Now scale up to {new_count} units.",
+                why_prompt="Why does the unit rate let us answer for any number of units?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"Multiply the unit rate by {new_count}: {each} x {new_count}.",
+                why_prompt=f"Why multiply by {new_count} rather than add it on?",
+                revealed_value=answer,
+            ),
+        )
+    each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
     return (
         WorkedStep(
             shown=f"A unit rate is the amount for ONE. Here {total} is shared over {count} units.",
@@ -370,7 +399,7 @@ def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
         WorkedStep(
             shown=f"Each single unit is {each}.",
             why_prompt="Why is this the amount for exactly one unit?",
-            revealed_value=rate,
+            revealed_value=answer,
         ),
     )
 
@@ -463,16 +492,42 @@ def _equivalent_ratios_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _percent_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'per 100, then of the whole' steps for a percent-of problem.
+    """Per-100 steps for a percent item in EITHER direction of 6.RP.3c.
 
-    ``operands = (percent, whole)``; the answer is ``percent/100 * whole ==
-    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5).
+    ``operands = (percent, whole, mode)`` (the decimal-operations shape). ``mode == 0``
+    (_PERCENT_OF) asks "what is p% of whole?" and ``mode == 1`` (_PERCENT_FIND_WHOLE) asks "{part}
+    is p% of what number?". Each branch lands on ``problem.correct_value`` (the part for percent-of,
+    the whole for find-the-whole). Raises if the operands are missing or the mode is unknown (§8.5).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"percent problem {problem.problem_id} needs (percent, whole)")
-    percent, whole = int(operands[0]), int(operands[1])
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"percent problem {problem.problem_id} needs (percent, whole, mode)")
+    percent, whole, mode = int(operands[0]), int(operands[1]), int(operands[2])
     answer = problem.correct_value
+    if mode == 1:  # _PERCENT_FIND_WHOLE
+        part = percent * whole // 100  # the integer part the prompt states (generator guarantees)
+        return (
+            WorkedStep(
+                shown=f"{percent}% means {percent} out of 100, i.e. the fraction {percent}/100.",
+                why_prompt="Why is a percent just a fraction with a denominator of 100?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=(
+                    f"{part} is {percent}/100 of the whole, so divide the part by the fraction: "
+                    f"{part} ÷ {percent}/100."
+                ),
+                why_prompt="Why does dividing the part by the percent recover the whole?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"That is {answer.p}.",
+                why_prompt="Why is the whole bigger than the part when the percent is under 100?",
+                revealed_value=answer,
+            ),
+        )
+    if mode != 0:  # _PERCENT_OF is 0; anything else is an unexpected mode
+        raise ValueError(f"percent problem {problem.problem_id} has unknown mode {mode}")
     each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
     return (
         WorkedStep(
@@ -674,17 +729,33 @@ def _multi_digit_division_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _decimal_operations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'multiply the digits, then place the point by total places' steps for a decimal product.
+    """Place-value steps for a decimal item in any of the four 6.NS.3 operations.
 
-    ``operands = (first, second)`` (exact decimals with power-of-ten denominators); the product is
-    ``first * second == problem.correct_value``. Walks the canonical place-value procedure, landing
-    on the answer. Raises if the operands are missing (CLAUDE.md §8.5).
+    ``operands = (first, second, mode)`` (exact decimals with power-of-ten denominators; ``mode`` is
+    one of multiply/add/subtract/divide). The answer is the SymPy result for that mode ==
+    ``problem.correct_value``; each branch lands on it. Raises if the operands are missing or the
+    mode is unknown (CLAUDE.md §8.5). The branches mirror the per-mode procedure a teacher would
+    walk: line up the points for add/subtract, count places for multiply, scale to whole numbers for
+    divide.
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"decimal-operations problem {problem.problem_id} needs (first, second)")
-    first, second = operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(
+            f"decimal-operations problem {problem.problem_id} needs (first, second, mode)"
+        )
+    first, second, mode = operands
     answer = problem.correct_value
+    mode_int = int(mode)
+    if mode_int == 1:  # _DECIMAL_ADD
+        return _decimal_add_subtract_steps(first, second, answer, adding=True)
+    if mode_int == 2:  # _DECIMAL_SUBTRACT
+        return _decimal_add_subtract_steps(first, second, answer, adding=False)
+    if mode_int == 3:  # _DECIMAL_DIVIDE
+        return _decimal_divide_steps(first, second, answer)
+    if mode_int != 0:  # _DECIMAL_MULTIPLY is 0; anything else is an unexpected mode
+        raise ValueError(
+            f"decimal-operations problem {problem.problem_id} has unknown mode {mode_int}"
+        )
     places_first = _terminating_decimal_places(first)
     places_second = _terminating_decimal_places(second)
     total_places = places_first + places_second
@@ -705,6 +776,64 @@ def _decimal_operations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
         WorkedStep(
             shown=f"Place the point that many digits from the right: {_decimal_text(answer)}.",
             why_prompt="Why is the product smaller than each factor when both are below one?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _decimal_add_subtract_steps(
+    first: Rational, second: Rational, answer: Rational, *, adding: bool
+) -> tuple[WorkedStep, ...]:
+    """The 'line up the decimal points, then add/subtract column by column' steps (6.NS.3).
+
+    Lining the points up is the whole skill for decimal addition/subtraction — same place values
+    stack — so step 1 names it and step 2 carries it out, landing on ``answer``.
+    """
+    op_word = "Add" if adding else "Subtract"
+    sign = "+" if adding else "−"
+    return (
+        WorkedStep(
+            shown=(
+                f"Stack {_decimal_text(first)} {sign} {_decimal_text(second)} so the points "
+                "line up — same place values in the same columns."
+            ),
+            why_prompt="Why must the decimal points line up before you combine the columns?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"{op_word} column by column, keeping the point in line: the answer is "
+                f"{_decimal_text(answer)}."
+            ),
+            why_prompt="Why does the point in the answer sit directly below the points above it?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _decimal_divide_steps(
+    dividend: Rational, divisor: Rational, answer: Rational
+) -> tuple[WorkedStep, ...]:
+    """The 'shift both numbers to make the divisor whole, then divide' steps (6.NS.3).
+
+    Multiplying both numbers by the same power of ten turns the divisor into a whole number without
+    changing the quotient — the standard decimal-division move — landing on the exact ``answer``.
+    """
+    return (
+        WorkedStep(
+            shown=(
+                f"Divide {_decimal_text(dividend)} by {_decimal_text(divisor)}. Shift both numbers "
+                "by the same power of ten so the divisor becomes a whole number."
+            ),
+            why_prompt="Why does multiplying BOTH numbers by ten leave the quotient unchanged?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                "Now divide as whole numbers and place the point: the quotient is "
+                f"{_decimal_text(answer)}."
+            ),
+            why_prompt="Why does shifting both numbers equally keep the answer the same size?",
             revealed_value=answer,
         ),
     )
@@ -1107,17 +1236,54 @@ def _evaluate_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _exponents_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'repeated multiplication' steps for an evaluate-a-power problem (Grade-6 Unit 4).
+    """The evaluate-an-exponent steps for a Grade-6 Unit 4 (6.EE.1) problem, in EITHER mode.
 
-    ``operands = (base, exp)``; the answer is ``base ** exp == problem.correct_value``. Raises if
-    the operands are missing (CLAUDE.md §8.5). The middle step WRITES OUT the base ``exp`` times so
-    the learner sees the exponent as a repeat COUNT, not a factor to multiply the base by.
+    KC_exponents has two modes behind a trailing flag (the LAST operand):
+
+      - POWER_ONLY (mode 0): ``operands = (base, exp, mode)``; the answer is ``base ** exp``. The
+        middle step WRITES OUT the base ``exp`` times so the learner sees the exponent as a repeat
+        COUNT, not a factor to multiply the base by.
+      - ORDER_OF_OPS (mode 1): ``operands = (base, exp, a, op_code, mode)``; the answer is
+        ``a + base**exp`` (op_code 0) or ``a * base**exp`` (op_code 1). The steps show evaluating
+        the POWER FIRST, THEN the surrounding operation — the precedence the lesson teaches.
+
+    Raises if the operands are missing or the wrong shape (CLAUDE.md §8.5). The final step's
+    ``revealed_value`` equals ``problem.correct_value`` in both modes (self-consistency).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"exponents problem {problem.problem_id} needs (base, exp) operands")
-    base, exp = (int(operand) for operand in operands)
+    if operands is None or len(operands) not in (3, 5):
+        raise ValueError(
+            f"exponents problem {problem.problem_id} needs a (..., mode) operand tuple"
+        )
     answer = problem.correct_value
+
+    if len(operands) == 5:  # ORDER_OF_OPS
+        base, exp, a_const, op_code, _mode = (int(operand) for operand in operands)
+        power = base**exp
+        op_symbol = "+" if op_code == 0 else "x"
+        return (
+            WorkedStep(
+                shown=(
+                    f"In {a_const} {op_symbol} {base}^{exp}, do the POWER first — exponents come "
+                    f"before adding or multiplying."
+                ),
+                why_prompt="Why does the exponent get evaluated before the other operation?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"Evaluate the power: {base}^{exp} = {power}.",
+                why_prompt="Why is the exponent a repeat count of multiplications?",
+                revealed_value=Rational(power),
+            ),
+            WorkedStep(
+                shown=f"Now do the operation: {a_const} {op_symbol} {power} = {answer.p}.",
+                why_prompt="Why would going left-to-right instead give the wrong answer?",
+                revealed_value=answer,
+            ),
+        )
+
+    # POWER_ONLY
+    base, exp, _mode = (int(operand) for operand in operands)
     expanded = " x ".join([str(base)] * exp)
     return (
         WorkedStep(
@@ -1664,6 +1830,46 @@ def _statistical_questions_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _better_buy_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'compare the two unit prices' steps for a better-buy item (Unit 1, 6.RP.3b / 6.RP.2).
+
+    ``operands = (qA, pA, qB, pB)`` — each store's quantity and TOTAL price. The procedure finds
+    each store's price PER ITEM (total ÷ quantity), compares them, and names the lower-unit-price
+    store as the better buy. The answer is a YES/NO verdict, not a magnitude, so (like
+    ``_statistical_questions_steps``) the final step lands the verdict in its ``shown`` text and
+    keeps ``revealed_value`` ``None`` (the documented non-magnitude case). The comparison is exact
+    over Rationals, matching the verifier's truth (pA/qA < pB/qB ⟹ Store A). Raises if the operands
+    are missing/malformed (CLAUDE.md §8.5)."""
+    operands = problem.operands
+    if operands is None or len(operands) != 4:
+        raise ValueError(f"better-buy problem {problem.problem_id} needs (qA, pA, qB, pB)")
+    qa, pa, qb, pb = operands
+    unit_a, unit_b = Rational(pa, qa), Rational(pb, qb)
+    # pA/qA < pB/qB, the same SymPy truth the verifier uses (cross-multiplied; qA, qB > 0).
+    store_a_better = bool(pa * qb < pb * qa)
+    verdict = "Store A is the better buy" if store_a_better else "Store B is the better buy"
+    return (
+        WorkedStep(
+            shown="The better buy is the lower price PER ITEM — not the lower total price.",
+            why_prompt="Why does the total price alone not tell you which store is the better buy?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"Store A: divide its total by its count for the price per item ({unit_a} each). "
+                f"Store B: do the same ({unit_b} each)."
+            ),
+            why_prompt="Why does dividing the total by the count give the price for one item?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Compare the price per item: the lower one wins, so {verdict}.",
+            why_prompt="Why is the store with the lower price per item the better buy?",
+            revealed_value=None,
+        ),
+    )
+
+
 def _expression_parts_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'name the part of the expression' steps for an expression-parts item (Unit 4, 6.EE.2b).
 
@@ -1730,18 +1936,62 @@ def _expression_parts_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
-def _area_polygons_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'base x height, then halve a triangle' steps for an area problem (Grade-6 Unit 6).
+def _trapezoid_area_steps(
+    problem: Problem, operands: tuple[Rational, ...]
+) -> tuple[WorkedStep, ...]:
+    """The 'average the two parallel sides, then x height' steps for a trapezoid area (6.G.1).
 
-    ``operands = (base, height, mode)`` with ``mode == 0`` a triangle / ``1`` a
-    parallelogram/rectangle; the answer is ``base*height/2`` or ``base*height ==
-    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5). The triangle
-    path shows the bounding parallelogram ``base*height`` first, then halves it — so the learner
-    sees WHY the 1/2 is there (a triangle is half its bounding parallelogram).
+    ``operands = (base1, base2, height, mode)``; the answer ``(base1 + base2)*height/2 ==
+    problem.correct_value``. Shows the un-halved (base1 + base2)*height strip first, then halves it
+    — so the learner sees WHY the 1/2 is there (a trapezoid's area uses the AVERAGE of its two
+    parallel sides). Pure integer arithmetic, no float on a shown value (CLAUDE.md §8.2)."""
+    base1, base2, height = int(operands[0]), int(operands[1]), int(operands[2])
+    base_sum = base1 + base2
+    strip = Rational(base_sum * height)  # the un-halved (base1 + base2)*height (twice the area)
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=(
+                f"A trapezoid's area averages its two parallel sides: add them, "
+                f"{base1} + {base2} = {base_sum}."
+            ),
+            why_prompt="Why do you AVERAGE the two parallel sides instead of using just one?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"Multiply the sum of the sides by the height: {base_sum} x {height} = {strip.p}."
+            ),
+            why_prompt="Why is the sum-of-sides times height twice the trapezoid's area?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Take half (that's the average): {strip.p} / 2 = {answer.p} square units.",
+            why_prompt="Why would skipping the half (averaging) make the answer twice too big?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _area_polygons_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'base x height, then halve a triangle/trapezoid' steps for an area problem (Unit 6).
+
+    Two operand shapes share this KC (6.G.1), so the builder branches on the trailing mode/arity:
+
+      - 3-tuple ``(base, height, mode)`` — ``mode == 0`` a triangle (area ``base*height/2``) or
+        ``mode == 1`` a parallelogram/rectangle (area ``base*height``);
+      - 4-tuple ``(base1, base2, height, mode)`` — ``mode == 2`` a trapezoid (area
+        ``(base1 + base2)*height/2`` — the two parallel sides are AVERAGED).
+
+    The answer always equals ``problem.correct_value``. The triangle/trapezoid paths show the
+    un-halved box/strip first, then halve it — so the learner sees WHY the 1/2 is there. Raises if
+    the operands are missing/malformed (CLAUDE.md §8.5).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 3:
-        raise ValueError(f"area problem {problem.problem_id} needs (base, height, mode) operands")
+    if operands is None or len(operands) not in (3, 4):
+        raise ValueError(f"area problem {problem.problem_id} needs (base.., height, mode) operands")
+    if len(operands) == 4:  # trapezoid: (base1, base2, height, mode)
+        return _trapezoid_area_steps(problem, operands)
     base, height = int(operands[0]), int(operands[1])
     triangle = int(operands[2]) == 0
     box = Rational(base * height)
@@ -1952,6 +2202,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _number_line_steps,
     KnowledgeComponentId.RATIO_LANGUAGE: _ratio_language_steps,
     KnowledgeComponentId.UNIT_RATE: _unit_rate_steps,
+    KnowledgeComponentId.BETTER_BUY: _better_buy_steps,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _equivalent_ratios_steps,
     KnowledgeComponentId.PERCENT: _percent_steps,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _multiply_fractions_steps,

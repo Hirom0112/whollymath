@@ -81,10 +81,16 @@ def ratio_table_for(
     KC that carries no ratio (every KC except the unit-rate / equivalent-ratios family) or whose
     operand tuple is malformed (defensive: draw no table rather than crash).
 
-    KC_unit_rate encodes ``operands = (total, count)`` and asks the per-ONE rate. The table shows
-    the unit column ``(?, 1)`` then the given column ``(total, count)``, with the scale-DOWN arrow
-    ``÷count`` between them. The blank top-of-unit-column cell is exactly the unit rate the student
-    must find — so the table shows the scaffold (scale to one) without the answer.
+    KC_unit_rate (per-ONE, ``operands = (total, count, mode=0)``) asks the per-ONE rate. The table
+    shows the unit column ``(?, 1)`` then the given column ``(total, count)``, with the scale-DOWN
+    arrow ``÷count`` between them. The blank top-of-unit-column cell is exactly the unit rate the
+    student must find — so the table shows the scaffold (scale to one) without the answer.
+
+    KC_unit_rate (SCALE, ``operands = (total, count, new_count, mode=1)``) asks the amount for a
+    DIFFERENT number of units (6.RP.3b). The table shows the given column ``(total, count)`` then
+    the asked column ``(?, new_count)``, with the multiplicative scale arrow ``×(new_count/count)``
+    between them. The blank top-of-asked-column cell is the scaled total the student must find —
+    the scaffold (the same-ratio relationship) without the answer.
 
     KC_equivalent_ratios encodes ``operands = (a, b, target_den)`` and asks the missing top term of
     ``a : b = ? : target_den``. The scale factor ``k = target_den / b`` is integer by construction.
@@ -99,8 +105,11 @@ def ratio_table_for(
 
 
 def _unit_rate_table(operands: tuple[Rational, ...] | None) -> RatioTableStimulus | None:
-    if operands is None or len(operands) != 2:
+    # The mode is the LAST operand: per-ONE is a 3-tuple, SCALE a 4-tuple (problem_generators).
+    if operands is None or len(operands) not in (3, 4):
         return None
+    if len(operands) == 4:
+        return _unit_rate_scale_table(operands)
     total, count = int(operands[0]), int(operands[1])
     if count <= 0:
         return None  # defensive: a zero/negative count has no meaningful scale-down arrow
@@ -115,6 +124,31 @@ def _unit_rate_table(operands: tuple[Rational, ...] | None) -> RatioTableStimulu
             RatioTableColumn(top=total, bottom=count),
         ),
         scale_label=f"÷{count}",
+    )
+
+
+def _unit_rate_scale_table(operands: tuple[Rational, ...]) -> RatioTableStimulus | None:
+    """The SCALE-direction table: given (total, count) → asked (?, new_count).
+
+    The asked top cell (the scaled total = rate*new_count) is blank — the scaffold (the same-ratio
+    relationship between the two columns) without the answer. The scale arrow is the multiplicative
+    step from ``count`` to ``new_count``, rendered as a whole ``×k`` when it divides evenly and as a
+    fraction ``×new_count/count`` otherwise (Rational reduces it, e.g. 4→6 reads ``×3/2``).
+    """
+    total, count, new_count = int(operands[0]), int(operands[1]), int(operands[2])
+    if count <= 0 or new_count <= 0:
+        return None  # defensive: no meaningful scale arrow without positive unit counts
+    factor = Rational(new_count, count)
+    scale = f"×{factor.p}" if factor.q == 1 else f"×{factor.p}/{factor.q}"
+    return RatioTableStimulus(
+        kind="ratio_table",
+        top_label=_UNIT_RATE_TOP_LABEL,
+        bottom_label=_UNIT_RATE_BOTTOM_LABEL,
+        columns=(
+            RatioTableColumn(top=total, bottom=count),
+            RatioTableColumn(top=None, bottom=new_count),
+        ),
+        scale_label=scale,
     )
 
 

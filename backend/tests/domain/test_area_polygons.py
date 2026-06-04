@@ -15,7 +15,11 @@ triangles and quadrilaterals by composing/decomposing into rectangles and triang
 from __future__ import annotations
 
 from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId, Representation
-from app.domain.misconceptions import MisconceptionId, forget_triangle_half
+from app.domain.misconceptions import (
+    MisconceptionId,
+    forget_trapezoid_half,
+    forget_triangle_half,
+)
 from app.domain.problem_generators import AnswerKind, Problem, generate_problem
 from app.domain.verifier import ErrorCategory, verify
 from app.policy.scheduler import live_representations
@@ -26,6 +30,7 @@ from sympy import Rational
 _KC = KnowledgeComponentId.AREA_POLYGONS
 _TRIANGLE_MODE = 0
 _PARALLELOGRAM_MODE = 1
+_TRAPEZOID_MODE = 2
 
 
 def _problem(seed: int) -> Problem:
@@ -33,8 +38,10 @@ def _problem(seed: int) -> Problem:
 
 
 def _mode(problem: Problem) -> int:
+    # The mode flag is always the LAST operand: 3-tuple (base, height, mode) for triangle/
+    # parallelogram, 4-tuple (base1, base2, height, mode) for trapezoid (it needs two bases).
     assert problem.operands is not None
-    return int(problem.operands[2])
+    return int(problem.operands[-1])
 
 
 def test_area_polygons_is_live() -> None:
@@ -43,17 +50,27 @@ def test_area_polygons_is_live() -> None:
 
 
 def test_generated_area_is_a_clean_in_scope_problem() -> None:
-    """The generator yields a numeric item with (base, height, mode) whole-number operands."""
-    problem = _problem(7)
-    assert problem.kc is _KC
-    assert problem.answer_kind is AnswerKind.NUMERIC
-    assert problem.operands is not None and len(problem.operands) == 3
-    base, height, mode = problem.operands
-    assert base > 0 and height > 0
-    assert base.q == 1 and height.q == 1  # whole-number base/height (a signed-free area item)
-    assert int(mode) in (_TRIANGLE_MODE, _PARALLELOGRAM_MODE)
-    # The area is a whole number in scope (the generator keeps b·h even on triangles).
-    assert problem.correct_value.q == 1
+    """The generator yields a numeric item with whole-number side operands across every mode.
+
+    Triangle/parallelogram carry a 3-tuple (base, height, mode); a trapezoid carries a 4-tuple
+    (base1, base2, height, mode) — it needs two parallel sides. Every side is a positive whole
+    number and the area lands whole (the generator forces the relevant product even)."""
+    for seed in range(1, 60):
+        problem = _problem(seed)
+        assert problem.kc is _KC
+        assert problem.answer_kind is AnswerKind.NUMERIC
+        assert problem.operands is not None
+        *sides, mode = problem.operands
+        assert int(mode) in (_TRIANGLE_MODE, _PARALLELOGRAM_MODE, _TRAPEZOID_MODE)
+        if int(mode) == _TRAPEZOID_MODE:
+            assert len(problem.operands) == 4  # (base1, base2, height, mode)
+        else:
+            assert len(problem.operands) == 3  # (base, height, mode)
+        for side in sides:
+            assert side > 0
+            assert side.q == 1  # whole-number sides (a sign-free, fraction-free area item)
+        # The area is a whole number in scope (the generator keeps the halved product even).
+        assert problem.correct_value.q == 1
 
 
 def test_triangle_area_is_half_base_times_height() -> None:
@@ -93,10 +110,13 @@ def test_correct_area_verifies_correct() -> None:
         assert result.error_category is ErrorCategory.NONE
 
 
-def test_both_shape_modes_are_generated() -> None:
-    """Across seeds the generator produces BOTH triangles and parallelograms (the mode flag)."""
-    modes = {_mode(_problem(seed)) for seed in range(1, 40)}
-    assert modes == {_TRIANGLE_MODE, _PARALLELOGRAM_MODE}
+def test_all_three_shape_modes_are_generated() -> None:
+    """Across seeds the generator produces triangles, parallelograms, AND trapezoids.
+
+    The trapezoid mode is the Slice-4c addition: the U6.L3 (6.G.1) lesson promises trapezoids,
+    so the seeded RNG must pick all three shapes (a wider range than the old two-mode flag)."""
+    modes = {_mode(_problem(seed)) for seed in range(1, 80)}
+    assert modes == {_TRIANGLE_MODE, _PARALLELOGRAM_MODE, _TRAPEZOID_MODE}
 
 
 def test_forgot_the_half_is_classified_on_triangles() -> None:
@@ -134,6 +154,106 @@ def test_forgot_the_half_does_not_fire_on_parallelograms() -> None:
         # The predictor returns None for the parallelogram mode (b·h is correct, no error to model).
         assert forget_triangle_half(problem.operands) is None  # type: ignore[arg-type]
     assert seen_parallelogram
+
+
+def _trapezoid_seed() -> int:
+    """The first seed that yields a trapezoid item (mode 2) — kept small for fast tests."""
+    for seed in range(1, 80):
+        if _mode(_problem(seed)) == _TRAPEZOID_MODE:
+            return seed
+    raise AssertionError("no trapezoid item produced in seed range")  # pragma: no cover
+
+
+def test_trapezoid_area_is_half_sum_of_bases_times_height() -> None:
+    """A trapezoid item's correct value is 1/2 · (base1 + base2) · height — the 6.G.1 formula.
+
+    A trapezoid carries TWO parallel sides, so its operands are a 4-tuple (base1, base2, height,
+    mode); the area is the average of the two bases times the height. The bases are distinct,
+    positive whole numbers and the area lands whole (the generator keeps the product even)."""
+    seen_trapezoid = False
+    for seed in range(1, 80):
+        problem = _problem(seed)
+        if _mode(problem) != _TRAPEZOID_MODE:
+            continue
+        seen_trapezoid = True
+        assert problem.operands is not None and len(problem.operands) == 4
+        base1, base2, height, _ = problem.operands
+        assert base1 > 0 and base2 > 0 and height > 0
+        assert base1 != base2  # two DISTINCT parallel sides (a genuine trapezoid)
+        assert problem.correct_value == Rational((base1 + base2) * height, 2)
+        assert problem.correct_value.q == 1  # whole-number area (clean grade-6 answer)
+    assert seen_trapezoid
+
+
+def test_trapezoid_surfaces_share_operands_for_the_same_seed() -> None:
+    """SYMBOLIC and AREA_MODEL trapezoid items generate from the SAME operands for one seed.
+
+    The math is sampled before the surface is chosen, so a learner answers the one trapezoid two
+    ways with the same numeric area (the representation-diversity contract, PROJECT.md §3.4)."""
+    seed = _trapezoid_seed()
+    symbolic = generate_problem(_KC, seed, Representation.SYMBOLIC)
+    area_model = generate_problem(_KC, seed, Representation.AREA_MODEL)
+    assert symbolic.operands == area_model.operands
+    assert symbolic.correct_value == area_model.correct_value
+    assert _mode(symbolic) == _TRAPEZOID_MODE  # both surfaces stayed on the trapezoid
+    assert verify(area_model, str(area_model.correct_value)).is_correct
+
+
+def test_forgot_the_half_is_classified_on_trapezoids() -> None:
+    """Answering (base1+base2)·height (no 1/2) on a TRAPEZOID is flagged OPERATION + the error.
+
+    Parallel to the triangle case: the learner summed the bases and multiplied by the height but
+    skipped the averaging 1/2 (a trapezoid's area is the AVERAGE of the bases times the height).
+    The un-halved (b1+b2)·h is always DISTINCT from the correct 1/2·(b1+b2)·h because the sum and
+    height are positive."""
+    seen_trapezoid = False
+    for seed in range(1, 80):
+        problem = _problem(seed)
+        if _mode(problem) != _TRAPEZOID_MODE:
+            continue
+        seen_trapezoid = True
+        wrong = forget_trapezoid_half(problem.operands)  # type: ignore[arg-type]
+        assert wrong is not None
+        assert wrong != problem.correct_value
+        result = verify(problem, str(wrong))
+        assert not result.is_correct
+        assert result.error_category is ErrorCategory.OPERATION
+        assert result.matched_misconception is MisconceptionId.FORGOT_TRAPEZOID_HALF
+    assert seen_trapezoid
+
+
+def test_correct_trapezoid_answer_is_not_flagged() -> None:
+    """The computed trapezoid area is graded correct (no misconception), the same oracle path."""
+    seed = _trapezoid_seed()
+    problem = _problem(seed)
+    result = verify(problem, str(problem.correct_value))
+    assert result.is_correct
+    assert result.error_category is ErrorCategory.NONE
+    assert result.matched_misconception is None
+
+
+def test_triangle_and_trapezoid_half_errors_stay_distinct() -> None:
+    """forgot-triangle-half never fires on a trapezoid; forgot-trapezoid-half never on a triangle.
+
+    The two half-dropping errors are mode-scoped by operand ARITY: the triangle predictor reads
+    a 3-tuple and returns None off triangle mode; the trapezoid predictor reads a 4-tuple and
+    returns None off trapezoid mode. They must not cross-classify."""
+    triangle_seed = next(s for s in range(1, 80) if _mode(_problem(s)) == _TRIANGLE_MODE)
+    trapezoid_seed = _trapezoid_seed()
+    triangle = _problem(triangle_seed)
+    trapezoid = _problem(trapezoid_seed)
+    # The trapezoid predictor must not apply to a triangle's 3-tuple (defensive arity gate).
+    assert forget_trapezoid_half(triangle.operands) is None  # type: ignore[arg-type]
+    # The triangle predictor must not apply to a trapezoid's 4-tuple (defensive arity gate).
+    assert forget_triangle_half(trapezoid.operands) is None  # type: ignore[arg-type]
+
+
+def test_worked_example_lands_on_a_trapezoid_answer() -> None:
+    """The worked example's final step equals a trapezoid item's correct value (consistency)."""
+    seed = _trapezoid_seed()
+    problem = _problem(seed)
+    example = worked_example_for(problem)
+    assert example.final_value == problem.correct_value
 
 
 def test_area_polygons_is_masterable_live_on_two_representations() -> None:

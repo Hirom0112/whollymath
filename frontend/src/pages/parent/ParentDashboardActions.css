@@ -1,0 +1,62 @@
+/* Additive dashboard styles: the "Let a child practice" header action + its layout wrapper. Kept in
+   a NEW file (the existing ParentDashboard.css is owned by another lane) and imported alongside it.
+   Matches the parent yellow-pill register. Unique classes (.wm-parent-practice / -head-actions /
+   -practice-ico) so nothing collides app-wide. */
+
+.wm-parent-head-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.wm-parent-practice {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--wm-font-serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--wm-navy-deep);
+  background: var(--wm-yellow);
+  border: 2px solid var(--wm-navy-deep);
+  border-radius: var(--wm-r-pill);
+  padding: 10px 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--wm-navy-deep);
+  transition:
+    transform var(--wm-motion-press) ease,
+    box-shadow var(--wm-motion-press) ease;
+}
+.wm-parent-practice:hover {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--wm-navy-deep);
+}
+.wm-parent-practice:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--wm-navy-deep);
+}
+.wm-parent-practice:focus-visible {
+  outline: 3px solid var(--wm-navy-deep);
+  outline-offset: 3px;
+}
+.wm-parent-practice-ico {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  color: var(--wm-navy-deep);
+}
+.wm-parent-practice-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-parent-practice {
+    transition: none;
+  }
+  .wm-parent-practice:hover,
+  .wm-parent-practice:active {
+    transform: none;
+  }
+}

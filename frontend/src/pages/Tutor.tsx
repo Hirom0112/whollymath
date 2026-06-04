@@ -12,8 +12,17 @@ import {
   type SurfaceState,
   type TurnResponse,
 } from '../api';
-import { Mascot, PiMenu, SparkCount, WoodBanner, type PiMenuItem } from '../components';
+import {
+  HelpLanguageToggle,
+  Mascot,
+  PiMenu,
+  SparkCount,
+  WoodBanner,
+  type PiMenuItem,
+} from '../components';
 import { useGuideSpeech } from '../components/avatar/useGuideSpeech';
+import { WorkCamera } from '../components/WorkCamera';
+import { useHelpLocale } from '../state/LocaleContext';
 import { useTelemetry } from '../telemetry';
 import {
   ClassifySets,
@@ -266,6 +275,10 @@ export function Tutor({
   onHomework?: () => void;
 }): React.JSX.Element {
   const sessionId = session.session_id;
+  // The live help-language (Slice 3.6). Threaded into every /turn so hints/nudges come back
+  // localized as soon as the learner flips the toggle — no page reload, no session restart. It
+  // localizes the HELP surface ONLY; the served problem stays English (Rung-0 deferred, see below).
+  const { locale } = useHelpLocale();
   const [problem, setProblem] = useState<ProblemView>(session.problem);
   const [surfaceState, setSurfaceState] = useState<SurfaceState>(session.surface_state);
   // The one-line reason the surface changed, shown as a labeled banner on the new problem
@@ -480,15 +493,18 @@ export function Tutor({
       hint_used: hintUsed,
     });
     try {
-      const response = await submitTurn({
-        session_id: sessionId,
-        problem_id: problem.problem_id,
-        action: 'submit_answer',
-        submitted_answer: answer,
-        surface_state: surfaceState,
-        latency_ms: Date.now() - startedAt.current,
-        hint_used: hintUsed,
-      });
+      const response = await submitTurn(
+        {
+          session_id: sessionId,
+          problem_id: problem.problem_id,
+          action: 'submit_answer',
+          submitted_answer: answer,
+          surface_state: surfaceState,
+          latency_ms: Date.now() - startedAt.current,
+          hint_used: hintUsed,
+        },
+        locale,
+      );
       setResult(response);
       setLastAnswer(answer);
       setMastery((prev) => mergeMastery(prev, response.mastery ?? []));
@@ -526,14 +542,24 @@ export function Tutor({
       elapsed_ms: Date.now() - startedAt.current,
     });
     try {
-      const response = await submitTurn({
-        session_id: sessionId,
-        problem_id: problem.problem_id,
-        action: 'request_hint',
-        surface_state: surfaceState,
-        latency_ms: Date.now() - startedAt.current,
-        hint_used: hintUsed,
-      });
+      const response = await submitTurn(
+        {
+          session_id: sessionId,
+          problem_id: problem.problem_id,
+          action: 'request_hint',
+          surface_state: surfaceState,
+          latency_ms: Date.now() - startedAt.current,
+          hint_used: hintUsed,
+        },
+        locale,
+      );
+      // Carry the FULL hint response into `result`, not just the caption text. helpAudio reads
+      // `result.hint_audio` and guideEmotion reads `result.hint_emotion` (both gated on
+      // `hint !== null`), so without this the bubble showed the hint but the mascot never voiced it
+      // and never emoted — the audio/emotion were silently dropped. Safe in the answering phase: the
+      // verdict/feedback panel is gated on `phase === 'feedback'` (the form/feedback ternary), which
+      // a hint never enters, so this only feeds the voice + emotion, never a verdict.
+      setResult(response);
       setHint(response.hint ?? null);
       setHintUsed(true);
     } catch {
@@ -677,7 +703,7 @@ export function Tutor({
         : intervention !== null
           ? (intervention.audio ?? null)
           : null;
-  const { speaking } = useGuideSpeech(helpAudio);
+  const { speaking, viseme } = useGuideSpeech(helpAudio);
 
   return (
     <main className="wm-tutor">
@@ -920,6 +946,12 @@ export function Tutor({
                   I'd like a hint
                 </button>
               </div>
+              {/* The in-lesson camera beat (HR.C1/C3) — only on paper-worked lessons (the backend
+                  declares this per lesson via ProblemView.supports_written_work). Confirmed reads
+                  go through the normal submit, so SymPy grades a snapped answer like a typed one. */}
+              {problem.supports_written_work ? (
+                <WorkCamera onConfirm={submitAnswerValue} disabled={phase === 'submitting'} />
+              ) : null}
             </form>
           ) : (
             <div className="wm-tutor-feedback-block">
@@ -1060,6 +1092,7 @@ export function Tutor({
                 emotion={guideEmotion?.emotion}
                 intensity={guideEmotion?.intensity}
                 speaking={speaking}
+                viseme={viseme}
               />
             </div>
           ) : (
@@ -1073,11 +1106,20 @@ export function Tutor({
                 emotion={guideEmotion?.emotion}
                 intensity={guideEmotion?.intensity}
                 speaking={speaking}
+                viseme={viseme}
               />
             </div>
           )}
         </div>
       </section>
+
+      {/* The bilingual HELP toggle (Slice 3.6), bottom-left of the lesson world. Flipping it makes
+          subsequent hints/nudges come back in Spanish (captions) with no reload — the choice rides
+          the /turn request via the live `locale` above. Pi stands bottom-RIGHT, so this never
+          collides. DEFERRED (not stubbed here): the avatar reading the whole PROBLEM aloud in
+          Spanish (Rung-0) — that needs Spanish problem-statement translation (3.2b) + es-MX audio
+          (3.5), neither built; the on-screen problem stays English. */}
+      <HelpLanguageToggle />
     </main>
   );
 }
