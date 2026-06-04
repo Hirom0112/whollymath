@@ -1491,6 +1491,10 @@ export interface ProblemView {
    * Kid-friendly problem text.
    */
   statement: string;
+  /**
+   * Whether this lesson is worked out on paper, so the surface offers the in-lesson 'snap your handwritten work' camera beat (HR.C1/C3). False for mental/visual lessons (place a point, name a ratio, read a display) — the camera is hidden there. Declared per lesson in domain/lesson_spec (_WRITTEN_WORK_KCS).
+   */
+  supports_written_work?: boolean;
   answer_kind?: AnswerKind;
   /**
    * For a yes/no item, what it asks: 'equal' (same amount?) or 'greater' (a > b?). Lets the surface label the question accurately. 'equal' for non-yes/no items.
@@ -1819,6 +1823,10 @@ export interface ProblemView1 {
    * Kid-friendly problem text.
    */
   statement: string;
+  /**
+   * Whether this lesson is worked out on paper, so the surface offers the in-lesson 'snap your handwritten work' camera beat (HR.C1/C3). False for mental/visual lessons (place a point, name a ratio, read a display) — the camera is hidden there. Declared per lesson in domain/lesson_spec (_WRITTEN_WORK_KCS).
+   */
+  supports_written_work?: boolean;
   answer_kind?: AnswerKind;
   /**
    * For a yes/no item, what it asks: 'equal' (same amount?) or 'greater' (a > b?). Lets the surface label the question accurately. 'equal' for non-yes/no items.

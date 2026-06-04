@@ -544,6 +544,15 @@ class ProblemView(BaseModel):
         ),
     )
     statement: str = Field(min_length=1, description="Kid-friendly problem text.")
+    supports_written_work: bool = Field(
+        default=False,
+        description=(
+            "Whether this lesson is worked out on paper, so the surface offers the in-lesson "
+            "'snap your handwritten work' camera beat (HR.C1/C3). False for mental/visual lessons "
+            "(place a point, name a ratio, read a display) — the camera is hidden there. Declared "
+            "per lesson in domain/lesson_spec (_WRITTEN_WORK_KCS)."
+        ),
+    )
     answer_kind: AnswerKind = Field(
         default=AnswerKind.NUMERIC,
         description=(

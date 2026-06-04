@@ -118,6 +118,31 @@ def test_codes_are_resolved_where_the_curriculum_has_them() -> None:
     assert any(s.ccss_code is not None for s in _ALL_SPECS)
 
 
+# ── supports_written_work: the per-unit camera-beat gate (paper vs mental lessons) ──
+
+
+def test_written_work_flag_is_set_for_computational_lessons() -> None:
+    """Paper-worked arithmetic/solving lessons offer the camera; mental/visual ones do not.
+
+    Pins a few unambiguous cases independently of the set so a future edit is test-visible: fraction
+    arithmetic and area computation are worked on paper; placing a fraction on a number line or
+    naming a ratio is mental/visual (nothing to photograph). See lesson_spec._WRITTEN_WORK_KCS."""
+    assert get_lesson_spec(KnowledgeComponentId.ADDITION_UNLIKE).supports_written_work is True
+    assert get_lesson_spec(KnowledgeComponentId.COMMON_DENOMINATOR).supports_written_work is True
+    assert get_lesson_spec(KnowledgeComponentId.AREA_POLYGONS).supports_written_work is True
+    placement = get_lesson_spec(KnowledgeComponentId.NUMBER_LINE_PLACEMENT)
+    assert placement.supports_written_work is False
+    assert get_lesson_spec(KnowledgeComponentId.RATIO_LANGUAGE).supports_written_work is False
+
+
+def test_written_work_flag_is_a_bool_on_every_spec() -> None:
+    """Every lesson declares the flag (no None / missing) so the surface can always read it."""
+    assert all(isinstance(s.supports_written_work, bool) for s in _ALL_SPECS)
+    # Both kinds of lesson exist — the gate is a real distinction, not all-on/all-off.
+    assert any(s.supports_written_work for s in _ALL_SPECS)
+    assert any(not s.supports_written_work for s in _ALL_SPECS)
+
+
 # ── SYMBOLIC fraction-vs-scalar widget tie-break (the number_entry routing fix) ──
 
 

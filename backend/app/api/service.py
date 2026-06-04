@@ -101,7 +101,7 @@ from app.domain.knowledge_components import (
     Representation,
     get_kc,
 )
-from app.domain.lesson_spec import widget_for_representation
+from app.domain.lesson_spec import get_lesson_spec, widget_for_representation
 from app.domain.misconceptions import MisconceptionId, get_misconception
 from app.domain.percent_grid_stimulus import PercentGridStimulus
 from app.domain.problem_generators import Problem
@@ -295,6 +295,18 @@ def _scene_view(scene: Scene | None) -> SceneView | None:
     return None  # pragma: no cover — the union above is exhaustive
 
 
+def _supports_written_work(kc: KnowledgeComponentId) -> bool:
+    """Whether this KC's lesson is worked out on paper (so the surface offers the camera beat).
+
+    Reads the per-lesson declaration (``lesson_spec._WRITTEN_WORK_KCS`` via the spec). Defaults to
+    False for a KC with no registered spec (e.g. a forward-declared label-space KC) — degrade to
+    "no camera" rather than break the projection."""
+    try:
+        return get_lesson_spec(kc).supports_written_work
+    except KeyError:
+        return False
+
+
 def _problem_view(problem: Problem) -> ProblemView:
     """Project a domain ``Problem`` to the answer-free ``ProblemView`` the wire ships.
 
@@ -326,6 +338,7 @@ def _problem_view(problem: Problem) -> ProblemView:
         surface_format=problem.surface_format,
         widget_id=widget_for_representation(problem.surface_format, problem.kc).value,
         statement=problem.statement,
+        supports_written_work=_supports_written_work(problem.kc),
         answer_kind=problem.answer_kind,
         yes_no_relation=problem.yes_no_relation,
         tick_segments=int(problem.correct_value.q) if is_number_line else None,

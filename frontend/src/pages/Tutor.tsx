@@ -21,6 +21,7 @@ import {
   type PiMenuItem,
 } from '../components';
 import { useGuideSpeech } from '../components/avatar/useGuideSpeech';
+import { WorkCamera } from '../components/WorkCamera';
 import { useHelpLocale } from '../state/LocaleContext';
 import { useTelemetry } from '../telemetry';
 import {
@@ -945,6 +946,12 @@ export function Tutor({
                   I'd like a hint
                 </button>
               </div>
+              {/* The in-lesson camera beat (HR.C1/C3) — only on paper-worked lessons (the backend
+                  declares this per lesson via ProblemView.supports_written_work). Confirmed reads
+                  go through the normal submit, so SymPy grades a snapped answer like a typed one. */}
+              {problem.supports_written_work ? (
+                <WorkCamera onConfirm={submitAnswerValue} disabled={phase === 'submitting'} />
+              ) : null}
             </form>
           ) : (
             <div className="wm-tutor-feedback-block">

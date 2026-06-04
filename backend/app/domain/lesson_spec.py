@@ -101,6 +101,50 @@ _FRACTION_ANSWER_KCS: frozenset[KnowledgeComponentId] = frozenset(
     }
 )
 
+# The KCs where a learner naturally WORKS THE PROBLEM OUT ON PAPER — multi-step arithmetic, solving,
+# or computation — so the in-lesson "snap your handwritten work" camera beat (HR.C1/C3) is worth
+# offering. The complement are mental / visual / identify-and-select lessons (place a point, name a
+# ratio, classify a number, read a display) where there is no paper work to photograph; for those
+# the camera affordance would be noise, so it is NOT offered (owner direction 2026-06-04: "not every
+# unit needs paper writing; some are just mental"). A reviewable per-unit DECLARATION, not a
+# heuristic (CLAUDE.md §8.5); the surface reads ``ProblemView.supports_written_work`` and shows the
+# camera only where this is true. Default for an unlisted KC is False (no camera).
+_WRITTEN_WORK_KCS: frozenset[KnowledgeComponentId] = frozenset(
+    {
+        # Fraction & number arithmetic
+        KnowledgeComponentId.EQUIVALENCE,
+        KnowledgeComponentId.COMMON_DENOMINATOR,
+        KnowledgeComponentId.ADDITION_UNLIKE,
+        KnowledgeComponentId.SUBTRACTION_UNLIKE,
+        KnowledgeComponentId.MULTIPLY_FRACTIONS,
+        KnowledgeComponentId.DIVIDE_FRACTIONS,
+        KnowledgeComponentId.MULTI_DIGIT_DIVISION,
+        KnowledgeComponentId.DECIMAL_OPERATIONS,
+        KnowledgeComponentId.GCF_LCM,
+        KnowledgeComponentId.INTEGER_ADD_SUBTRACT,
+        KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE,
+        # Ratio & proportional computation
+        KnowledgeComponentId.UNIT_RATE,
+        KnowledgeComponentId.PERCENT,
+        KnowledgeComponentId.EQUIVALENT_RATIOS,
+        KnowledgeComponentId.UNIT_CONVERSION,
+        # Expressions & equations
+        KnowledgeComponentId.EXPONENTS,
+        KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+        KnowledgeComponentId.EQUIVALENT_EXPRESSIONS,
+        KnowledgeComponentId.ONE_STEP_EQUATIONS,
+        # Geometry measurement (compute area / volume / surface area)
+        KnowledgeComponentId.AREA_POLYGONS,
+        KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES,
+        KnowledgeComponentId.SURFACE_AREA_NETS,
+        # Statistics & financial computation
+        KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION,
+        KnowledgeComponentId.SUMMARY_STATISTICS,
+        KnowledgeComponentId.CHECK_REGISTER,
+        KnowledgeComponentId.LIFETIME_INCOME,
+    }
+)
+
 
 def widget_for_representation(
     representation: Representation,
@@ -171,6 +215,9 @@ class LessonSpec:
     difficulty_tiers: tuple[int, ...]
     ccss_code: str | None
     teks_code: str | None
+    # True when this lesson is worked out on paper (so the in-lesson camera beat is offered); False
+    # for mental/visual/identify lessons (see ``_WRITTEN_WORK_KCS``). Surfaced on ``ProblemView``.
+    supports_written_work: bool
 
     @property
     def widgets(self) -> tuple[WidgetId, ...]:
@@ -250,6 +297,7 @@ def _spec(
         difficulty_tiers=_DIFFICULTY_TIERS,
         ccss_code=ccss,
         teks_code=teks,
+        supports_written_work=kc in _WRITTEN_WORK_KCS,
     )
 
 

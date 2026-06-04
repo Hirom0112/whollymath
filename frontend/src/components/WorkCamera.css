@@ -1,0 +1,98 @@
+/* In-lesson camera beat (HR.C1/C3). Namespaced `.wm-workcam-*` to avoid the global-CSS class
+   collision footgun. The trigger matches the tutor's secondary-button look; the read-back panel is a
+   small inline confirm, not a full-screen modal, so it sits under the answer actions. */
+
+.wm-workcam {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.wm-workcam-input {
+  /* Visually hidden but still focusable-by-code; the trigger button drives it. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.wm-workcam-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--wm-blue-soft, #9db8d8);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wm-navy-deep, #1f2d52);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+.wm-workcam-trigger:hover:not(:disabled) {
+  background: var(--wm-cream, #fdf6e9);
+  transform: translateY(-1px);
+}
+.wm-workcam-trigger:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.wm-workcam-glyph {
+  flex: none;
+}
+
+.wm-workcam-readback {
+  width: 100%;
+  max-width: 22rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--wm-blue-soft, #9db8d8);
+  border-radius: 12px;
+  background: var(--wm-cream, #fdf6e9);
+  text-align: center;
+}
+.wm-workcam-readback-q {
+  margin: 0 0 0.6rem;
+  color: var(--wm-navy-deep, #1f2d52);
+}
+.wm-workcam-readback-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.wm-workcam-yes,
+.wm-workcam-retake {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid var(--wm-blue-soft, #9db8d8);
+}
+.wm-workcam-yes {
+  background: var(--wm-blue, #3f6fb0);
+  border-color: var(--wm-blue, #3f6fb0);
+  color: #fff;
+}
+.wm-workcam-yes:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.wm-workcam-retake {
+  background: transparent;
+  color: var(--wm-navy-deep, #1f2d52);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-workcam-trigger {
+    transition: none;
+  }
+  .wm-workcam-trigger:hover:not(:disabled) {
+    transform: none;
+  }
+}
