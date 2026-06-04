@@ -17,3 +17,14 @@ from app.api.rate_limit import reset_all
 @pytest.fixture(autouse=True)
 def _reset_rate_limiter() -> None:
     reset_all()
+
+
+@pytest.fixture(autouse=True)
+def _no_live_tts(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the API tests off the network (CLAUDE.md §9): the hint path now falls back to live
+    ElevenLabs synth (``app/tts/live_synth.synthesize_live``) when a banked clip is absent. With a
+    key absent that already degrades to captions-only, but a dev who exported ``ELEVENLABS_API_KEY``
+    (or whose ``.env`` is loaded) would otherwise make a real synth call from a hint test. Clear the
+    key so the wired fallback is deterministically captions-only here; tests that want to prove the
+    wiring inject a fake via monkeypatching ``service.synthesize_live`` instead."""
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)

@@ -109,6 +109,16 @@ def audio_url_for(audio_file: str) -> str:
     return f"{AUDIO_URL_PREFIX}/{audio_file}"
 
 
+def active_cache_dir() -> Path:
+    """The serve-time audio cache dir currently in effect (the real cache, or a test override).
+
+    The single source of truth for "where served audio lives," shared by the banked lookup AND the
+    live-synth path (``app/tts/live_synth.py``) so they read/write ONE cache. Because both resolve
+    through here, a single ``override_cache_dir`` in a test isolates both from the real cache.
+    """
+    return _active_cache_dir
+
+
 def reset_manifest_cache() -> None:
     """Drop the memoised manifest (tests that write a fresh fixture manifest call this)."""
     _load_manifest.cache_clear()
@@ -137,6 +147,7 @@ def reset_default_cache_dir() -> None:
 __all__ = [
     "AUDIO_URL_PREFIX",
     "DEFAULT_LOCALE",
+    "active_cache_dir",
     "audio_url_for",
     "lookup_audio",
     "override_cache_dir",

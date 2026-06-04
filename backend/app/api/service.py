@@ -151,6 +151,7 @@ from app.policy.scheduler import (
     next_spec_after_outcome,
 )
 from app.policy.state_classifier import classify_state
+from app.tts.live_synth import synthesize_live
 from app.tts.manifest_lookup import audio_url_for, lookup_audio
 from app.tts.provider import Locale
 from app.tts.spoken_bank import nudge_string_id
@@ -555,6 +556,28 @@ def _nudge_audio(kc_value: str, index: int = 0, *, locale: Locale = "en") -> Spo
         words=[str(w) for w in words],
         wtimes=[float(t) for t in wtimes],
         wdurations=[float(d) for d in wdurations],
+    )
+
+
+def _live_audio(text: str, locale: Locale) -> SpokenAudio | None:
+    """Voice a DYNAMIC help line (no banked clip) via serve-time live synth, or ``None``.
+
+    The fallback that makes LLM-rephrased / number-templated help lines TALK instead of staying
+    captions-only (owner 2026-06-04): ``synthesize_live`` voices the EXACT shown ``text`` in
+    Hope and content-hash caches it (so a repeat is free), returning a ref this maps onto the
+    ``SpokenAudio`` wire model. ``None`` (captions-only) when synth is disabled, keyless, or fails —
+    it never raises into the turn (invariant 4). Off the graded loop (§8.1): only called on a help
+    moment, after the verdict. The caller passes the verbatim shown text so the mouth matches the
+    bubble (the SpokenAudio invariant).
+    """
+    live = synthesize_live(text, locale=locale)
+    if live is None:
+        return None
+    return SpokenAudio(
+        audio_url=live.audio_url,
+        words=live.words,
+        wtimes=live.wtimes,
+        wdurations=live.wdurations,
     )
 
 
@@ -1079,6 +1102,12 @@ def _hint_response(
     else:
         level = HintLevel.PARTIAL_STEP if requests_so_far == 1 else HintLevel.WORKED_STEP
         hint_text = build_validated_hint(problem, level, provider=hint_provider).natural_language
+    # If no banked clip voiced this line (an LLM-rephrased nudge, a misconception corrective, or a
+    # number-templated worked step — and the whole es-MX path until its bank renders), voice the
+    # EXACT shown text live in Hope and cache it (owner decision 2026-06-04). Degrades to
+    # captions-only when synth is disabled/keyless/failing (invariant 4); off the graded loop.
+    if hint_audio is None:
+        hint_audio = _live_audio(hint_text, locale)
     live.hints_this_problem += 1
     return TurnResponse(
         correct=False,
@@ -1511,9 +1540,7 @@ class SessionStore:
         if live is None:
             raise SessionNotFoundError(request.session_id)
         if request.action is ActionType.REQUEST_HINT:
-            response = _hint_response(
-                live, self.voice_provider, self.hint_provider, request.locale
-            )
+            response = _hint_response(live, self.voice_provider, self.hint_provider, request.locale)
         else:
             response = _answer_response(
                 live, request, self.predictor, self.gate, self.voice_provider

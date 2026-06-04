@@ -105,7 +105,9 @@ def test_first_hint_in_es_mx_returns_spanish_nudge_text(empty_cache: None) -> No
     expected_es = es_mx_text(nudge_string_id(kc.value, 0))
     assert expected_es is not None  # the bank has an es-MX line for every renderable nudge
     assert result.hint == expected_es
-    # es-MX audio is not rendered yet → captions-only (the existing fallback), never English audio.
+    # With the cache isolated to an empty dir (empty_cache) and live synth keyless here, this
+    # degrades to captions-only (invariant 4) — so we assert the Spanish TEXT deterministically.
+    # In prod the es-MX line now TALKS (its bank is rendered / live synth voices it); never English.
     assert result.hint_audio is None
 
 

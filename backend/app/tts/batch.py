@@ -134,7 +134,7 @@ def run_batch(
                 # Idempotent skip: the audio for this exact content already rendered. We still
                 # need the word timings for the manifest; re-derive them by rendering ONLY if a
                 # sidecar timing file is absent (cheap to keep timings next to the audio).
-                timings = _load_timings(cache_dir, text_sha)
+                timings = load_timings(cache_dir, text_sha)
                 if timings is not None:
                     manifest[_manifest_key(spoken.string_id, locale)] = ManifestEntry(
                         audio_file=audio_file,
@@ -149,7 +149,7 @@ def run_batch(
 
             rendered = provider.render(text, locale)
             audio_path.write_bytes(rendered.audio)
-            _store_timings(cache_dir, text_sha, rendered)
+            store_timings(cache_dir, text_sha, rendered)
             manifest[_manifest_key(spoken.string_id, locale)] = ManifestEntry(
                 audio_file=audio_file,
                 words=list(rendered.words),
@@ -167,14 +167,18 @@ def run_batch(
     return manifest
 
 
-def _timings_path(cache_dir: Path, text_sha: str) -> Path:
-    """The sidecar JSON holding a clip's word timings (so an idempotent skip needn't re-render)."""
+def timings_path(cache_dir: Path, text_sha: str) -> Path:
+    """The sidecar JSON holding a clip's word timings (so an idempotent skip needn't re-render).
+
+    Public so the live-synth path (``app/tts/live_synth.py``) reuses the SAME content-addressed
+    cache convention (``<sha>.mp3`` + ``<sha>.timings.json``) — one canonical audio cache, not two.
+    """
     return cache_dir / f"{text_sha}.timings.json"
 
 
-def _store_timings(cache_dir: Path, text_sha: str, rendered: RenderedLine) -> None:
+def store_timings(cache_dir: Path, text_sha: str, rendered: RenderedLine) -> None:
     """Persist a clip's word timings next to its audio for idempotent reuse on re-runs."""
-    _timings_path(cache_dir, text_sha).write_text(
+    timings_path(cache_dir, text_sha).write_text(
         json.dumps(
             {
                 "words": list(rendered.words),
@@ -186,11 +190,11 @@ def _store_timings(cache_dir: Path, text_sha: str, rendered: RenderedLine) -> No
     )
 
 
-def _load_timings(
+def load_timings(
     cache_dir: Path, text_sha: str
 ) -> tuple[list[str], list[float], list[float]] | None:
     """Load a clip's cached word timings, or ``None`` if the sidecar is absent."""
-    path = _timings_path(cache_dir, text_sha)
+    path = timings_path(cache_dir, text_sha)
     if not path.exists():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -231,5 +235,8 @@ __all__ = [
     "MANIFEST_FILENAME",
     "ManifestEntry",
     "content_hash",
+    "load_timings",
     "run_batch",
+    "store_timings",
+    "timings_path",
 ]
