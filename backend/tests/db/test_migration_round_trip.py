@@ -93,7 +93,11 @@ def _learner_index_names(url: str) -> set[str]:
     """The index names on the ``learner`` table at ``url``."""
     engine = create_engine(url)
     try:
-        return {ix["name"] for ix in inspect(engine).get_indexes("learner") if ix.get("name")}
+        return {
+            name
+            for ix in inspect(engine).get_indexes("learner")
+            if (name := ix.get("name")) is not None
+        }
     finally:
         engine.dispose()
 

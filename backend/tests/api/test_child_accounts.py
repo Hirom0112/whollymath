@@ -23,6 +23,7 @@ fixture mounts it so these contract tests exercise the real router on the real s
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 from app.api.app import create_app
@@ -102,7 +103,7 @@ def _create_child(
     username: str = "kiddo",
     pin: str = _GOOD_PIN,
     display_name: str = "Kid One",
-) -> tuple[int, object]:
+) -> tuple[int, Any]:
     return client.post(
         "/parent/children",
         {"display_name": display_name, "username": username, "pin": pin},

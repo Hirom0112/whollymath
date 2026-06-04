@@ -183,7 +183,9 @@ def test_set_locale_happy_path_persists_and_reads_back(
     assert body == {"learner_id": learner_id, "locale": "es-MX"}
     # Durable: a fresh read sees the committed value, not a transient one.
     with session_factory() as db:
-        assert db.get(Learner, learner_id).locale == "es-MX"
+        stored = db.get(Learner, learner_id)
+        assert stored is not None
+        assert stored.locale == "es-MX"
 
 
 def test_set_locale_unknown_learner_is_404(session_factory: sessionmaker[OrmSession]) -> None:
@@ -204,9 +206,7 @@ def test_set_locale_invalid_value_is_422(session_factory: sessionmaker[OrmSessio
     store = _store_with_db(session_factory)
     app = _app_with(store)
 
-    status_code, _ = post_json(
-        app, "/learner/locale", {"learner_id": learner_id, "locale": "fr"}
-    )
+    status_code, _ = post_json(app, "/learner/locale", {"learner_id": learner_id, "locale": "fr"})
 
     assert status_code == 422
 

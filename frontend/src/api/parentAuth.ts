@@ -196,9 +196,7 @@ export function startChildSession(publicId: string): Promise<ChildSession> {
 
 /** POST /parent/children/{public_id}/sign-out-everywhere — 204. */
 export function signOutChildEverywhere(publicId: string): Promise<null> {
-  return postJson<null>(
-    `/parent/children/${encodeURIComponent(publicId)}/sign-out-everywhere`,
-  );
+  return postJson<null>(`/parent/children/${encodeURIComponent(publicId)}/sign-out-everywhere`);
 }
 
 /** POST /child/login — 200 (cookie now a child session). 401 invalid, 423 locked. */

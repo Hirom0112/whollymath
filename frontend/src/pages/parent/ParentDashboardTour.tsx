@@ -67,7 +67,11 @@ interface Rect {
   height: number;
 }
 
-export function ParentDashboardTour({ onClose }: { onClose: () => void }): React.JSX.Element | null {
+export function ParentDashboardTour({
+  onClose,
+}: {
+  onClose: () => void;
+}): React.JSX.Element | null {
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
 

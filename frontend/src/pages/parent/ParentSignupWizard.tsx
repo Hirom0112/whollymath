@@ -35,7 +35,8 @@ const PASSWORD_MIN = 8;
 /** Map an ApiError status to plain-language copy for the account step. */
 function signupErrorText(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.status === 409) return 'An account already exists for that email. Try signing in instead.';
+    if (err.status === 409)
+      return 'An account already exists for that email. Try signing in instead.';
     if (err.status === 400) return err.message; // backend explains the weak-password rule
   }
   return 'We could not create your account. Please check your details and try again.';
@@ -268,7 +269,11 @@ export function ParentSignupWizard({
 
           <div className="wm-pwiz-body">
             {step === 0 ? (
-              <form className="wm-pwiz-card" onSubmit={(e) => void handleCreateAccount(e)} noValidate>
+              <form
+                className="wm-pwiz-card"
+                onSubmit={(e) => void handleCreateAccount(e)}
+                noValidate
+              >
                 <h1 className="wm-pwiz-title">Create your parent account</h1>
                 <p className="wm-pwiz-sub">
                   One account for your whole family. You&rsquo;ll add each child&rsquo;s login in a
@@ -479,9 +484,7 @@ export function ParentSignupWizard({
                         type="button"
                         className={
                           'wm-pwiz-toggle-btn' +
-                          (children[activeChild].locale === 'en'
-                            ? ' wm-pwiz-toggle-btn--on'
-                            : '')
+                          (children[activeChild].locale === 'en' ? ' wm-pwiz-toggle-btn--on' : '')
                         }
                         aria-pressed={children[activeChild].locale === 'en'}
                         onClick={() => updateActiveChild({ locale: 'en' })}
@@ -524,7 +527,9 @@ export function ParentSignupWizard({
                     maxLength={PIN_LENGTH}
                     value={children[activeChild].pin}
                     onChange={(e) =>
-                      updateActiveChild({ pin: e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH) })
+                      updateActiveChild({
+                        pin: e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH),
+                      })
                     }
                     autoComplete="off"
                   />

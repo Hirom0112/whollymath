@@ -158,10 +158,7 @@ function ParentSurface(): React.JSX.Element {
   if (!signedIn) {
     if (gate === 'wizard') {
       return (
-        <ParentSignupWizard
-          onComplete={enterDashboard}
-          onBackToSignIn={() => setGate('signin')}
-        />
+        <ParentSignupWizard onComplete={enterDashboard} onBackToSignIn={() => setGate('signin')} />
       );
     }
     return (

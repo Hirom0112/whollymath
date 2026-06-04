@@ -8,12 +8,7 @@
 // fetch path (stubbed for later) and the seeded demo household (parentDemo.ts). Both paths exist so
 // flipping to real data is a one-line change once a backend + real child logins land.
 
-import {
-  createChild,
-  listChildren,
-  parentMe,
-  type ChildAccount,
-} from './parentAuth';
+import { createChild, listChildren, parentMe, type ChildAccount } from './parentAuth';
 import {
   addChildInDemo,
   demoChild,

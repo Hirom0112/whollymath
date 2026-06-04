@@ -76,9 +76,7 @@ def test_no_provider_returns_canonical_nudge_verbatim() -> None:
 
 def test_provider_failure_falls_back_to_canonical_nudge() -> None:
     """A model/network failure costs naturalness, never the help itself (invariant 4)."""
-    out = voice_misconception_nudge(
-        _ADD_ACROSS, _CANONICAL_NUDGE, provider=_FailingProvider()
-    )
+    out = voice_misconception_nudge(_ADD_ACROSS, _CANONICAL_NUDGE, provider=_FailingProvider())
     assert out == _CANONICAL_NUDGE
 
 

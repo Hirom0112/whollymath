@@ -263,7 +263,7 @@ def _is_power_of_ten_denominator(value: Rational) -> bool:
         den //= 2
     while den % 5 == 0:
         den //= 5
-    return den == 1
+    return bool(den == 1)
 
 
 def _as_decimal_string(value: Rational) -> str:

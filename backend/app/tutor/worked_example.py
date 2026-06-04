@@ -368,8 +368,7 @@ def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
         return (
             WorkedStep(
                 shown=(
-                    f"First find the unit rate — the amount for ONE: "
-                    f"{total} divided by {count}."
+                    f"First find the unit rate — the amount for ONE: {total} divided by {count}."
                 ),
                 why_prompt="Why find the amount for ONE before scaling up?",
                 revealed_value=None,
@@ -1961,8 +1960,7 @@ def _trapezoid_area_steps(
         ),
         WorkedStep(
             shown=(
-                f"Multiply the sum of the sides by the height: "
-                f"{base_sum} x {height} = {strip.p}."
+                f"Multiply the sum of the sides by the height: {base_sum} x {height} = {strip.p}."
             ),
             why_prompt="Why is the sum-of-sides times height twice the trapezoid's area?",
             revealed_value=None,
