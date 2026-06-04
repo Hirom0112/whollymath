@@ -6,13 +6,13 @@ speakable lines live across a few modules; this module reads them and yields one
 ``SpokenString`` per voiceable line, each with a STABLE ``string_id`` (the manifest key the
 frontend looks up) and its source-bank provenance.
 
-The v1 rule (the task's instruction): render the strings that have NO variable numbers.
-Strings WITH variable numbers — problem restatements, number-specific worked-example steps,
-misconception descriptions that quote concrete numbers — are FLAGGED, not rendered, and left
-for the later "number-splicing" approach (carrier audio + a number/fraction library voiced in
-the SAME Hope voice; V2_TODO 2.1 open-decisions invariant). ``has_variable_numbers`` is the
-deterministic test that splits the two; ``enumerate_renderable`` returns only the variable-free
-lines and ``enumerate_deferred`` returns the rest (so the deferral is auditable, not silent).
+The rule: PRE-RENDER the strings that have NO variable numbers (a finite, fixed bank). Strings
+WITH variable numbers — problem restatements, number-specific worked-example steps, misconception
+descriptions that quote concrete numbers — are NOT baked into the bank; they are voiced at serve
+time by live synth (``app/tts/live_synth.py``, content-hash cached in the same Hope voice).
+``has_variable_numbers`` is the deterministic test that splits the two; ``enumerate_renderable``
+returns only the variable-free lines and ``enumerate_deferred`` returns the rest (so the split is
+auditable, not silent).
 
 What is in v1 scope (all variable-free):
 
@@ -25,8 +25,9 @@ What is in v1 scope (all variable-free):
 What is FLAGGED for splicing (number-templated):
 
   - Worked-example narration (``tutor/worked_example.py``): built at runtime with f-strings
-    over a specific ``Problem``'s operands — every step quotes concrete numbers, so it is a
-    number-splicing target, NOT a fixed-phrase render. (See ``number_splicing`` seam.)
+    over a specific ``Problem``'s operands — every step quotes concrete numbers, so it is NOT a
+    fixed-phrase render. These dynamic lines are voiced at serve time by live synth
+    (``app/tts/live_synth.py``, content-hash cached), not pre-rendered to the bank.
   - Misconception ``description`` strings that quote concrete examples (e.g. "1/4 + 1/4 = 2/8")
     — flagged when they contain digits.
   - Any problem restatement (the live problem text) — inherently per-problem numbers.
@@ -98,9 +99,8 @@ def text_for_locale(spoken: SpokenString, locale: Locale) -> str:
     the shipped bank, so the fallback is a safety net, not the normal path. Pure: same inputs ⇒
     same text every call (CLAUDE.md §8.1 — this is offline build data, no LLM/network).
 
-    NOTE (review gate): the es-MX text is DRAFT pending human review (``hints_es.ES_MX_REVIEWED``).
-    This function makes it *available* to the renderer; Slices 3.5/3.6 must not treat the produced
-    es-MX audio as production until that flag is flipped by a reviewer.
+    NOTE (review gate): the es-MX text is human-reviewed and PASSED (``hints_es.ES_MX_REVIEWED`` is
+    True, owner 2026-06-04), so the rendered es-MX audio is production for Slices 3.5/3.6.
     """
     if locale == ES_MX_LOCALE:
         translated = es_mx_text(spoken.string_id)
@@ -112,8 +112,8 @@ def text_for_locale(spoken: SpokenString, locale: Locale) -> str:
 def has_variable_numbers(text: str) -> bool:
     """True iff ``text`` is number-templated (carries a digit) — the deferral test.
 
-    Variable-number lines (problem restatements, numeric worked-example steps) are flagged for
-    the later number-splicing path rather than rendered as fixed phrases; variable-free
+    Variable-number lines (problem restatements, numeric worked-example steps) are voiced by
+    serve-time live synth rather than rendered as fixed phrases; variable-free
     conceptual copy renders in v1. Deterministic and pure.
     """
     return _DIGIT_RE.search(text) is not None
@@ -155,10 +155,11 @@ def enumerate_renderable() -> tuple[SpokenString, ...]:
 
 
 def enumerate_deferred() -> tuple[SpokenString, ...]:
-    """The number-templated lines FLAGGED for number-splicing (NOT rendered in v1).
+    """The number-templated lines NOT pre-rendered to the fixed bank.
 
-    Returned (not dropped) so the deferral is auditable: a caller / report can list exactly
-    which lines wait on the splicing path (``app/tts/number_splicing.py`` seam).
+    Returned (not dropped) so the split is auditable: a caller / report can list exactly which lines
+    are number-templated. These are voiced at serve time by live synth (``app/tts/live_synth.py``,
+    content-hash cached) rather than baked into the build-time bank.
     """
     return tuple(s for s in _all_spoken_strings() if has_variable_numbers(s.text))
 
