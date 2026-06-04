@@ -29,6 +29,7 @@ the invariants that hold them together.
 13. [Repository layout](#13-repository-layout)
 14. [Architectural invariants (never break these)](#14-architectural-invariants-never-break-these)
 15. [The persistent learner: identity, continuity & behavioral capture](#15-the-persistent-learner-identity-continuity--behavioral-capture)
+16. [V2 AI expansion — decisions](#16-v2-ai-expansion--decisions)
 
 ---
 
@@ -551,6 +552,36 @@ The solid path (auth → turn loop → persistence) is request-time but kept off
 decision critical path; the dotted paths (event capture, offline feature derivation) are
 explicitly asynchronous. Nothing in this section may move what the UI does *automatically*
 mid-problem — that remains the refuse-rules' and the sustained-signal gate's job.
+
+---
+
+## 16. V2 AI expansion — decisions
+
+The tracked decision log for the "V2" AI expansion (a talking avatar guide, a warm voice, a Spanish
+help-mode, richer HelpNeed). The detailed planning lives in the gitignored `PROJECT.md` / `V2_TODO.md`;
+this section is the part a reviewer can read in git history (CLAUDE.md §1, §8.4). The two turn-loop
+invariants hold throughout: no LLM/heavy model in the sub-100 ms graded loop, and SymPy is the sole
+math-correctness authority. A third: no biometric/camera capture of children (camera = paper only).
+
+- **Voice = ElevenLabs "Hope", one voice per character.** Warm bilingual (EN + es-MX) from the one
+  voice via `eleven_multilingual_v2`. A finite bank is pre-rendered to content-hashed cached audio at
+  build time (off the turn loop); dynamic lines are voiced by **serve-time live synth, content-hash
+  cached** (owner decision 2026-06-04 — on, with a `WHOLLYMATH_LIVE_SYNTH=0` kill-switch). Never a
+  second engine mid-experience.
+- **Avatar = capability-gated 2D→3D hybrid.** The shipping guide is the 2D `Mascot`; a 3D VRM/
+  TalkingHead path is **deferred (owner hold, 2026-06-04)** behind a default-off capability flag — it
+  needs a real VRM asset + a low-end-Chromebook 30 fps test before it advances. Ready Player Me /
+  Avaturn are OUT (RPM shutdown + biometric/age limits). Lip-sync is **phoneme-level**, derived as
+  grapheme→viseme mouth shapes from the shipped word timings (no external binary); a Rhubarb acoustic
+  upgrade is an optional later swap needing a binary.
+- **Spanish = bilingual scaffold, es-MX.** Only the avatar's help (text + audio) localizes; the
+  on-screen problem stays English. The only DB change is the `Learner.locale` flag. es-MX strings +
+  audio are built but gated `ES_MX_REVIEWED=False` until a native educator signs off.
+- **Eye-tracking = DECLINED** (children's-privacy wall + a fabricated citation in the source report);
+  telemetry-based engagement substitutes.
+- **Camera in the live lesson = per-unit.** The "snap your handwritten work" beat (OCR → SymPy grades,
+  never the OCR) is offered only on lessons worked out on paper (`LessonSpec.supports_written_work`),
+  not on mental/visual lessons (owner direction 2026-06-04).
 
 ---
 
