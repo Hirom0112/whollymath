@@ -651,6 +651,7 @@ ES_MX_HELP_STRINGS: Final[dict[str, str]] = {
     "misconception_name:sign-rule-error": "Error en la regla de signos al multiplicar o dividir",
     "misconception_name:triangle-formula-error": "Error en la fórmula del triángulo",
     "misconception_name:forgot-triangle-half": "Olvidó la mitad en el triángulo",
+    "misconception_name:forgot-trapezoid-half": "Olvidó la mitad en el trapecio",
     "misconception_name:add-edges-error": "Suma las aristas en lugar de multiplicar",
     "misconception_name:count-three-faces": "Cuenta solo tres de las seis caras",
     "misconception_name:forgot-absolute-value": "Olvida el valor absoluto en la DMA",

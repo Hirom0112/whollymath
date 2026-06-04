@@ -2722,9 +2722,12 @@ _AREA_SIDE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
     4: (11, 12, 13, 14, 15),
 }
 _AREA_SIDE_POOL: tuple[int, ...] = (3, 4, 5, 6, 7, 8, 9, 10, 12, 14)
-# Triangle mode = 0 (area 1/2·b·h); parallelogram/rectangle mode = 1 (area b·h).
+# Triangle mode = 0 (area 1/2·b·h); parallelogram/rectangle mode = 1 (area b·h); trapezoid mode = 2
+# (area 1/2·(base1 + base2)·h — two parallel sides). The trapezoid carries an EXTRA operand (the
+# second base), so its operand tuple is a 4-tuple while the other two stay 3-tuples (see generator).
 _AREA_TRIANGLE_MODE = 0
 _AREA_PARALLELOGRAM_MODE = 1
+_AREA_TRAPEZOID_MODE = 2
 
 
 def _generate_area_polygons(
@@ -2732,39 +2735,75 @@ def _generate_area_polygons(
 ) -> Problem:
     """KC_area_polygons: find a polygon's area; a single numeric area answer (6.G.1).
 
-    A shape-mode flag (the seeded RNG picks triangle vs parallelogram/rectangle) decides the item.
-    TRIANGLE (mode 0): area is ``1/2 · base · height`` — the HEIGHT is drawn even so the area is a
-    whole number. PARALLELOGRAM/RECTANGLE (mode 1): area is ``base · height``. ``operands =
-    (base, height, mode)`` so the verifier can replay the forgot-the-half misconception (answer
-    ``base · height`` on a triangle). ``difficulty`` widens the side pool.
+    A shape-mode flag (the seeded RNG picks triangle, parallelogram/rectangle, or trapezoid)
+    decides the item. The U6.L3 lesson (6.G.1) promises all three, so the trapezoid mode (Slice 4c)
+    covers the third (composite figures are deferred — they need a richer figure representation).
+
+      - **TRIANGLE** (mode 0): area is ``1/2 · base · height`` — the HEIGHT is drawn even so the
+        area is a whole number. ``operands = (base, height, mode)``.
+      - **PARALLELOGRAM/RECTANGLE** (mode 1): area is ``base · height``. ``operands =
+        (base, height, mode)``.
+      - **TRAPEZOID** (mode 2): area is ``1/2 · (base1 + base2) · height`` — the two parallel sides
+        are drawn DISTINCT and the HEIGHT even so ``(base1 + base2) · height`` is even and the area
+        lands whole. A trapezoid needs a second base, so its tuple is a 4-tuple ``operands =
+        (base1, base2, height, mode)`` — the verifier and worked example branch on the trailing
+        mode/arity (the forgot-the-half models are gated by operand count, so each fires only on
+        its own shape).
 
     Two REAL surfaces share this answer (so the KC is masterable across representations,
     PROJECT.md §3.4 rule 2), mirroring KC_evaluate_expressions / KC_exponents:
 
-      - **SYMBOLIC** (default) — "Find the area of a triangle with base {b} and height {h}." (the
-        formula form);
-      - **AREA_MODEL** — the same figure read off a unit-square grid: "On a unit grid, a triangle
-        has base {b} and height {h}. What is its area in square units?" (the visual form).
+      - **SYMBOLIC** (default) — the formula form ("Find the area of a triangle with base {b} and
+        height {h}." / "...trapezoid with parallel sides {b1} and {b2} and height {h}.");
+      - **AREA_MODEL** — the same figure read off a unit-square grid.
 
     The math is sampled before the format is applied, so the same seed yields identical operands in
-    either surface. Base and height are positive, so ``base · height > base · height / 2`` and the
-    forgot-the-half misconception is always diagnostic on a triangle.
+    either surface. Sides are positive (and the trapezoid's bases distinct), so the un-halved
+    product always exceeds the halved area and the forgot-the-half misconception is always
+    diagnostic on a triangle/trapezoid.
     """
     pool = (
         _AREA_SIDE_BY_DIFFICULTY.get(difficulty, _AREA_SIDE_POOL) if difficulty else _AREA_SIDE_POOL
     )
-    triangle = rng.random() < 0.5
+    mode = rng.choice((_AREA_TRIANGLE_MODE, _AREA_PARALLELOGRAM_MODE, _AREA_TRAPEZOID_MODE))
     base = rng.choice(pool)
     height = rng.choice(pool)
-    if triangle:
+    if mode == _AREA_TRAPEZOID_MODE:
+        # A trapezoid has TWO distinct parallel sides; resample the second until it differs.
+        base2 = rng.choice(pool)
+        while base2 == base:
+            base2 = rng.choice(pool)
+        # Force an even height so 1/2·(base1 + base2)·height is a whole-number area: an even height
+        # makes (base1 + base2)·height even regardless of the bases' parities (a clean answer).
+        if height % 2 == 1:
+            height += 1
+        correct = Rational((base + base2) * height, 2)
+        if surface_format is Representation.AREA_MODEL:
+            statement = (
+                f"On a unit grid, a trapezoid has parallel sides {base} and {base2} and "
+                f"height {height}. What is its area in square units?"
+            )
+        else:
+            statement = (
+                f"Find the area of a trapezoid with parallel sides {base} and {base2} and "
+                f"height {height}."
+            )
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.AREA_POLYGONS, seed, surface_format),
+            kc=KnowledgeComponentId.AREA_POLYGONS,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=correct,
+            representations_available=get_kc(KnowledgeComponentId.AREA_POLYGONS).representations,
+            operands=(Rational(base), Rational(base2), Rational(height), Rational(mode)),
+        )
+    if mode == _AREA_TRIANGLE_MODE:
         # Force an even height so 1/2·base·height is a whole-number area (a clean grade-6 answer).
         if height % 2 == 1:
             height += 1
-        mode = _AREA_TRIANGLE_MODE
         correct = Rational(base * height, 2)
         shape = "triangle"
     else:
-        mode = _AREA_PARALLELOGRAM_MODE
         correct = Rational(base * height)
         shape = "parallelogram"
     if surface_format is Representation.AREA_MODEL:

@@ -67,6 +67,7 @@ from app.domain.misconceptions import (
     evaluate_left_to_right,
     flip_result_sign,
     flipped_inequality,
+    forget_trapezoid_half,
     forget_triangle_half,
     forgot_to_multiply_by_years,
     gcf_lcm_confusion,
@@ -854,13 +855,28 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
     # parallelogram). A wrong OPERATION (used the wrong formula, not a magnitude misjudgment); the
     # predictor returns None for the parallelogram mode (b·h IS correct there, no error to model),
     # so it never fires on a parallelogram. base, height > 0, so b·h always differs from b·h/2 —
-    # the match is always diagnostic.
+    # the match is always diagnostic. ``operand_count=3`` keeps this row off the trapezoid item,
+    # whose 4-tuple (base1, base2, height, mode) is the forgot-trapezoid-half row's job below.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.AREA_POLYGONS,
         operand_count=3,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.FORGOT_TRIANGLE_HALF,
         predict=forget_triangle_half,
+    ),
+    # forgot-trapezoid-half: summed the two parallel sides and multiplied by the height but skipped
+    # the averaging 1/2 — answering (base1 + base2)·height instead of half of it, so the area is
+    # twice too big (operands are the trapezoid's 4-tuple (base1, base2, height, mode); mode 2). The
+    # SAME KC carries TWO half-dropping errors that differ ONLY by shape; they are disambiguated by
+    # operand ARITY (``operand_count=4`` here vs 3 above), so each fires only on its own figure — no
+    # mode branch needed in the loop. A wrong OPERATION (wrong formula). The bases are distinct and
+    # positive, so (base1 + base2)·height always differs from its half — the match is diagnostic.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.AREA_POLYGONS,
+        operand_count=4,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.FORGOT_TRAPEZOID_HALF,
+        predict=forget_trapezoid_half,
     ),
     # add-edges-error: found a prism's volume by ADDING the edges (l + w + h) instead of MULTIPLYING
     # them (V = l*w*h). Operands are (l, w, h). A wrong OPERATION (summed a perimeter-style total

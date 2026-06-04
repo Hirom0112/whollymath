@@ -1830,18 +1830,63 @@ def _expression_parts_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
-def _area_polygons_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'base x height, then halve a triangle' steps for an area problem (Grade-6 Unit 6).
+def _trapezoid_area_steps(
+    problem: Problem, operands: tuple[Rational, ...]
+) -> tuple[WorkedStep, ...]:
+    """The 'average the two parallel sides, then x height' steps for a trapezoid area (6.G.1).
 
-    ``operands = (base, height, mode)`` with ``mode == 0`` a triangle / ``1`` a
-    parallelogram/rectangle; the answer is ``base*height/2`` or ``base*height ==
-    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5). The triangle
-    path shows the bounding parallelogram ``base*height`` first, then halves it — so the learner
-    sees WHY the 1/2 is there (a triangle is half its bounding parallelogram).
+    ``operands = (base1, base2, height, mode)``; the answer ``(base1 + base2)*height/2 ==
+    problem.correct_value``. Shows the un-halved (base1 + base2)*height strip first, then halves it
+    — so the learner sees WHY the 1/2 is there (a trapezoid's area uses the AVERAGE of its two
+    parallel sides). Pure integer arithmetic, no float on a shown value (CLAUDE.md §8.2)."""
+    base1, base2, height = int(operands[0]), int(operands[1]), int(operands[2])
+    base_sum = base1 + base2
+    strip = Rational(base_sum * height)  # the un-halved (base1 + base2)*height (twice the area)
+    answer = problem.correct_value
+    return (
+        WorkedStep(
+            shown=(
+                f"A trapezoid's area averages its two parallel sides: add them, "
+                f"{base1} + {base2} = {base_sum}."
+            ),
+            why_prompt="Why do you AVERAGE the two parallel sides instead of using just one?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"Multiply the sum of the sides by the height: "
+                f"{base_sum} x {height} = {strip.p}."
+            ),
+            why_prompt="Why is the sum-of-sides times height twice the trapezoid's area?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Take half (that's the average): {strip.p} / 2 = {answer.p} square units.",
+            why_prompt="Why would skipping the half (averaging) make the answer twice too big?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _area_polygons_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'base x height, then halve a triangle/trapezoid' steps for an area problem (Unit 6).
+
+    Two operand shapes share this KC (6.G.1), so the builder branches on the trailing mode/arity:
+
+      - 3-tuple ``(base, height, mode)`` — ``mode == 0`` a triangle (area ``base*height/2``) or
+        ``mode == 1`` a parallelogram/rectangle (area ``base*height``);
+      - 4-tuple ``(base1, base2, height, mode)`` — ``mode == 2`` a trapezoid (area
+        ``(base1 + base2)*height/2`` — the two parallel sides are AVERAGED).
+
+    The answer always equals ``problem.correct_value``. The triangle/trapezoid paths show the
+    un-halved box/strip first, then halve it — so the learner sees WHY the 1/2 is there. Raises if
+    the operands are missing/malformed (CLAUDE.md §8.5).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 3:
-        raise ValueError(f"area problem {problem.problem_id} needs (base, height, mode) operands")
+    if operands is None or len(operands) not in (3, 4):
+        raise ValueError(f"area problem {problem.problem_id} needs (base.., height, mode) operands")
+    if len(operands) == 4:  # trapezoid: (base1, base2, height, mode)
+        return _trapezoid_area_steps(problem, operands)
     base, height = int(operands[0]), int(operands[1])
     triangle = int(operands[2]) == 0
     box = Rational(base * height)

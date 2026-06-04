@@ -85,6 +85,7 @@ EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "sign-rule-error",  # KC_integer_multiply_divide (Unit-INT, TEKS 6.3C/D)
     "triangle-formula-error",  # KC_triangle_properties (Unit 6, TEKS 6.8A)
     "forgot-triangle-half",  # KC_area_polygons (Unit 6, 6.G.1)
+    "forgot-trapezoid-half",  # KC_area_polygons (Unit 6, 6.G.1) — trapezoid mode (Slice 4c)
     "add-edges-error",  # KC_volume_fractional_edges (Unit 6, 6.G.2)
     "count-three-faces",  # KC_surface_area_nets (Unit 6, 6.G.4)
     "forgot-absolute-value",  # KC_mean_absolute_deviation (Unit 7, 6.SP.5c)

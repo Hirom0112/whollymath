@@ -155,6 +155,10 @@ class MisconceptionId(StrEnum):
     # Unit 6 (6.G.1): forgot the 1/2 on a triangle — applied the rectangle formula b·h to a
     # triangle instead of 1/2·b·h, so the area comes out twice too big.
     FORGOT_TRIANGLE_HALF = "forgot-triangle-half"
+    # Unit 6 (6.G.1): forgot the 1/2 on a trapezoid — answered (base1 + base2)·height instead of
+    # AVERAGING the two parallel sides first (1/2·(base1 + base2)·height), so the area is twice too
+    # big. The trapezoid analogue of forgot-triangle-half (Slice 4c, U6.L3 trapezoid coverage).
+    FORGOT_TRAPEZOID_HALF = "forgot-trapezoid-half"
     # Unit 6 (6.G.2): finding a prism's volume by ADDING the edge lengths (l + w + h) instead of
     # MULTIPLYING them (V = l*w*h) — the wrong operation, so the answer comes out far too small.
     ADD_EDGES_ERROR = "add-edges-error"
@@ -610,6 +614,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "The base x height is the bounding parallelogram; a triangle is HALF of it, so the "
             "answer comes out exactly twice too big (the 1/2 was dropped). Does not apply to a "
             "parallelogram/rectangle item, where base x height IS the area."
+        ),
+        applicable_kcs=(KnowledgeComponentId.AREA_POLYGONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.FORGOT_TRAPEZOID_HALF,
+        name="Forgot the one-half on a trapezoid",
+        description=(
+            "Computes a trapezoid's area as (base1 + base2) x height instead of one half "
+            "(base1 + base2) x height — it sums the two parallel sides and multiplies by the "
+            "height but never AVERAGES the bases. A trapezoid's area uses the average of the two "
+            "parallel sides, so dropping the 1/2 makes the answer exactly twice too big. Does not "
+            "apply to a triangle or parallelogram item (a different formula)."
         ),
         applicable_kcs=(KnowledgeComponentId.AREA_POLYGONS,),
     ),
@@ -1232,11 +1248,35 @@ def forget_triangle_half(operands: tuple[Rational, ...]) -> Rational | None:
     the verifier then reports OTHER rather than a false match).
     """
     if len(operands) != 3:
-        return None
+        return None  # defensive: a trapezoid's 4-tuple is a different model's job; report OTHER
     base, height, mode = operands
     if mode == 0:  # triangle: answered the bounding parallelogram b·h, dropping the 1/2
         return base * height
     return None  # parallelogram/rectangle: b·h is correct, no half to forget
+
+
+def forget_trapezoid_half(operands: tuple[Rational, ...]) -> Rational | None:
+    """forgot-trapezoid-half: answer (base1 + base2)·height, skipping the averaging 1/2 (6.G.1).
+
+    A trapezoid item is encoded as the 4-tuple ``(base1, base2, height, mode)`` where ``mode == 2``
+    (the only mode with two parallel sides). The correct area AVERAGES the bases:
+    ``1/2 · (base1 + base2) · height``. The learner who makes this error sums the two bases and
+    multiplies by the height but never halves — answering ``(base1 + base2) · height`` — so the
+    area comes out exactly twice too big (the trapezoid analogue of forgot-triangle-half).
+
+    Returned as a SymPy ``Rational`` so the verifier compares values directly; the un-halved value
+    is always DISTINCT from the correct half because the bases and height are positive (so the sum
+    is nonzero). Gated on ARITY and MODE: returns ``None`` for any tuple that is not the
+    trapezoid's 4-tuple (the triangle/parallelogram 3-tuple is forget_triangle_half's job) and for
+    a non-trapezoid mode (defensive — the verifier then reports OTHER rather than a false match),
+    exactly as ``decimal_point_misplacement`` and ``percent_as_amount`` gate on their shape.
+    """
+    if len(operands) != 4:
+        return None  # defensive: triangle/parallelogram 3-tuple (or any other shape) is not ours
+    base1, base2, height, mode = operands
+    if mode != 2:  # only a trapezoid has two parallel sides to average
+        return None
+    return (base1 + base2) * height
 
 
 def evaluate_left_to_right(a: int, x: int, b: int) -> Rational:
