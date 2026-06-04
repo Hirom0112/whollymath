@@ -18,6 +18,16 @@ behavior ships as if finished (CLAUDE.md §5 "production-grade is the only accep
 taken up it would: (1) take a cached audio path, (2) shell out to a pinned Rhubarb binary, (3) parse
 its cue JSON into a viseme timeline, (4) ship it alongside the word timings for the avatar to prefer
 over the grapheme-derived visemes. No dependency is added until then (CLAUDE.md §8.7).
+
+Note — the whole upgrade is FULLY CLI-PROVISIONABLE (no manual/GUI steps); kept stubbed until the
+3D avatar lands (when the acoustic accuracy actually pays off), but it is a scripted job, not a
+research task:
+  - dev: ``brew install ffmpeg`` (or ``apt-get install -y ffmpeg``); ``curl -L`` the pinned Rhubarb
+    release tarball from the GitHub releases, unzip, put the binary on PATH (or vendor it).
+  - prod: add both to the backend Dockerfile (``apt-get install -y ffmpeg`` + COPY the pinned Linux
+    Rhubarb binary). It runs at BUILD time during bank render — never on the live server/turn loop.
+  - per clip: ``ffmpeg -i <sha>.mp3 <sha>.wav`` then ``rhubarb -f json <sha>.wav``, parse the cues,
+    write the viseme sidecar. All scriptable in the existing batch renderer.
 """
 
 from __future__ import annotations
