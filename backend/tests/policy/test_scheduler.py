@@ -22,6 +22,9 @@ _SUB = KnowledgeComponentId.SUBTRACTION_UNLIKE
 _EQ = KnowledgeComponentId.EQUIVALENCE
 _NL = KnowledgeComponentId.NUMBER_LINE_PLACEMENT
 _CD = KnowledgeComponentId.COMMON_DENOMINATOR
+_MUL = KnowledgeComponentId.MULTIPLY_FRACTIONS
+_DIV = KnowledgeComponentId.DIVIDE_FRACTIONS
+_DEC = KnowledgeComponentId.DECIMAL_OPERATIONS
 
 
 def test_schedule_stays_on_goal_kc_but_varies_representations() -> None:
@@ -71,6 +74,21 @@ def test_common_denominator_is_single_skill_and_practice_only_for_now() -> None:
     assert all(next_spec(_CD, i)[0] == _CD for i in range(6))
     # Honest: one live representation today → not masterable until the second rep exists.
     assert is_masterable_live(_CD) is False
+
+
+def test_fraction_decimal_kcs_are_masterable_via_symbolic_plus_area_model() -> None:
+    """Multiply/divide fractions and decimal operations are masterable: each is served in
+    SYMBOLIC + AREA_MODEL (the area picture is a display stimulus over the same numeric
+    answer — fraction_area / decimal_place_value scenes — so no new input widget is needed).
+    Promoting them closes the panel's #1 finding: these were practice-only naked symbolic
+    drills that could never reach the ≥2-representation mastery gate. (Panel audit 2026-06-04.)"""
+    for kc in (_MUL, _DIV, _DEC):
+        assert all(next_spec(kc, i)[0] == kc for i in range(8)), "single-skill serves only the goal"
+        reps = {rep for i in range(12) for k, rep in [next_spec(kc, i)] if k == kc}
+        assert reps == {Representation.SYMBOLIC, Representation.AREA_MODEL}, (
+            f"{kc.value} should rotate symbolic + area-model, got {reps}"
+        )
+        assert is_masterable_live(kc) is True, f"{kc.value} must be masterable after promotion"
 
 
 def test_placement_rotates_number_line_and_symbolic() -> None:
