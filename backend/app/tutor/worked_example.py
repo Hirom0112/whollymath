@@ -344,18 +344,48 @@ def _number_line_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'share the total into equal parts' steps for a unit rate (Grade-6 Unit 1).
+    """The rate-reasoning steps for a unit-rate item — per-ONE (mode 0) or SCALE (mode 1).
 
-    ``operands = (total, count)``; the unit rate is ``total / count``, which equals
-    ``problem.correct_value`` by construction (the last step lands on it). Raises if the
-    operands are missing (CLAUDE.md §8.5 — a hollow example would mislead).
+    The mode is the LAST operand. For PER_ONE (``operands = (total, count, mode)``) the steps
+    share the total into equal parts, landing on the unit rate ``total / count``. For SCALE
+    (``operands = (total, count, new_count, mode)``) they FIND the unit rate first, then multiply
+    it by ``new_count`` to reach the scaled total ``rate * new_count`` (6.RP.3b multi-step). Either
+    way the last step equals ``problem.correct_value`` by construction. Raises if the operands are
+    missing or mis-shaped (CLAUDE.md §8.5 — a hollow example would mislead).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"unit-rate problem {problem.problem_id} needs (total, count) operands")
+    if operands is None or len(operands) not in (3, 4):
+        raise ValueError(
+            f"unit-rate problem {problem.problem_id} needs "
+            "(total, count, [new_count,] mode) operands"
+        )
     total, count = int(operands[0]), int(operands[1])
-    rate = problem.correct_value
-    each = f"{rate.p}/{rate.q}" if rate.q != 1 else f"{rate.p}"
+    answer = problem.correct_value
+    if len(operands) == 4:  # SCALE: find the unit rate, then multiply by the new count
+        new_count = int(operands[2])
+        unit_rate = Rational(total, count)
+        each = f"{unit_rate.p}/{unit_rate.q}" if unit_rate.q != 1 else f"{unit_rate.p}"
+        return (
+            WorkedStep(
+                shown=(
+                    f"First find the unit rate — the amount for ONE: "
+                    f"{total} divided by {count}."
+                ),
+                why_prompt="Why find the amount for ONE before scaling up?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"Each single unit is {each}. Now scale up to {new_count} units.",
+                why_prompt="Why does the unit rate let us answer for any number of units?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"Multiply the unit rate by {new_count}: {each} x {new_count}.",
+                why_prompt=f"Why multiply by {new_count} rather than add it on?",
+                revealed_value=answer,
+            ),
+        )
+    each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
     return (
         WorkedStep(
             shown=f"A unit rate is the amount for ONE. Here {total} is shared over {count} units.",
@@ -370,7 +400,7 @@ def _unit_rate_steps(problem: Problem) -> tuple[WorkedStep, ...]:
         WorkedStep(
             shown=f"Each single unit is {each}.",
             why_prompt="Why is this the amount for exactly one unit?",
-            revealed_value=rate,
+            revealed_value=answer,
         ),
     )
 

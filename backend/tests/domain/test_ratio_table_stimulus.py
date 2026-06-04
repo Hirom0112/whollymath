@@ -43,8 +43,9 @@ def test_malformed_operands_draw_no_table() -> None:
 
 
 def test_unit_rate_table_matches_the_generated_statement() -> None:
-    """Unit-rate table shows the given (total, count) column verbatim from the prompt, plus the
-    unit column with a blank top cell (the per-one rate the student must find) — no answer leak.
+    """Per-ONE unit-rate table shows the given (total, count) column verbatim from the prompt, plus
+    the unit column with a blank top cell (the per-one rate the student must find) — no answer leak.
+    SCALE items (4-tuple) instead show the given column then the asked (?, new_count) column.
     """
     for seed in range(1, 40):
         problem = generate_problem(_UNIT_RATE, seed)
@@ -57,33 +58,44 @@ def test_unit_rate_table_matches_the_generated_statement() -> None:
         # The given numbers appear in the prompt statement (single source of truth).
         assert f"{total} " in problem.statement
         assert f"{count} " in problem.statement
-        # Column 0 is the unit column: blank top (asked), bottom == 1.
-        assert stimulus.columns[0].top is None
-        assert stimulus.columns[0].bottom == 1
-        # Column 1 is the given column: total over count.
-        assert stimulus.columns[1].top == total
-        assert stimulus.columns[1].bottom == count
-        # The scaffold step is the scale-down arrow ÷count.
-        assert stimulus.scale_label == f"÷{count}"
+        if len(problem.operands) == 4:  # SCALE direction
+            new_count = int(problem.operands[2])
+            assert f"{new_count} " in problem.statement
+            # Given column: total over count; asked column: blank top, new_count bottom.
+            assert stimulus.columns[0].top == total
+            assert stimulus.columns[0].bottom == count
+            assert stimulus.columns[1].top is None
+            assert stimulus.columns[1].bottom == new_count
+            assert stimulus.scale_label.startswith("×")
+        else:  # PER_ONE direction (3-tuple)
+            # Column 0 is the unit column: blank top (asked), bottom == 1.
+            assert stimulus.columns[0].top is None
+            assert stimulus.columns[0].bottom == 1
+            # Column 1 is the given column: total over count.
+            assert stimulus.columns[1].top == total
+            assert stimulus.columns[1].bottom == count
+            # The scaffold step is the scale-down arrow ÷count.
+            assert stimulus.scale_label == f"÷{count}"
 
 
 def test_unit_rate_table_never_shows_the_answer() -> None:
-    """The unit rate (total/count) never appears as a numeric cell — exactly one cell is blank."""
+    """The answer (per-one rate, or the scaled total) never appears as a numeric cell — exactly one
+    cell is blank, and it is the asked top cell."""
     for seed in range(1, 40):
         problem = generate_problem(_UNIT_RATE, seed)
         assert problem.operands is not None
-        rate = int(Rational(int(problem.operands[0]), int(problem.operands[1])))
         stimulus = ratio_table_for(problem.kc, problem.operands)
         assert isinstance(stimulus, RatioTableStimulus)
         cells = [c.top for c in stimulus.columns] + [c.bottom for c in stimulus.columns]
-        # Exactly one cell is blank (the asked per-one quantity).
+        # Exactly one cell is blank (the asked quantity).
         assert cells.count(None) == 1
-        # The blank one is the unit-column top; the answer rate is not in any shown top cell.
-        # (total and count are shown, but the per-ONE rate itself is the blank cell.)
-        assert stimulus.columns[0].top is None
-        # If the rate happens to equal a shown given (e.g. count), the asked cell is still blank;
-        # the asked top cell specifically is None, so the student isn't handed the answer there.
-        assert rate >= 1  # sanity: generator builds whole-number friendly rates
+        answer = int(problem.correct_value)
+        shown_tops = [c.top for c in stimulus.columns if c.top is not None]
+        if len(problem.operands) == 4:  # SCALE: asked column top (the scaled total) is blank
+            assert stimulus.columns[1].top is None
+            assert answer not in shown_tops
+        else:  # PER_ONE: unit-column top (the rate) is blank
+            assert stimulus.columns[0].top is None
 
 
 def test_equivalent_ratios_table_matches_the_generated_statement() -> None:

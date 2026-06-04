@@ -735,23 +735,67 @@ _RATE_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
 }
 _RATE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8, 9)
 
+# Direction modes for KC_unit_rate, appended as the LAST operand of every item (mirroring the
+# KC_percent ``(percent, whole, mode)`` and KC_decimal_operations conventions). The seeded RNG picks
+# one so a SINGLE generator covers two distinct verbs of CCSS 6.RP.3: the original single-step
+# per-ONE rate AND multi-step SCALE-the-rate reasoning. The scale mode makes the catalog lesson
+# U1.L4 ("Rate problems") genuinely distinct rate problem-solving (6.RP.3b) instead of a duplicate
+# of the per-ONE generator (panel audit, 2026-06-04). The flag also lets the verifier gate the
+# per-ONE-specific rate-inversion misconception, returning None off mode 0.
+_UNIT_RATE_PER_ONE = 0
+_UNIT_RATE_SCALE = 1
+
+# Small unit counts for the SCALE mode. Kept small so the stated total (r*count) and the scaled
+# answer (r*new_count) read cleanly; new_count is drawn DISTINCT from count (the scaling is to a
+# DIFFERENT number of units — the whole point of the multi-step problem).
+_RATE_SCALE_COUNTS: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8)
+
 
 def _generate_unit_rate(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
-    """KC_unit_rate: find the per-ONE rate from a total given for several units.
+    """KC_unit_rate: per-ONE rate (mode 0) OR scale-the-rate multi-step reasoning (mode 1).
 
-    Builds a clean whole-number unit rate ``r`` (so the answer is friendly): a total of
-    ``r * count`` over ``count`` units, asking how much for ONE unit. The correct value is the
-    SymPy quotient ``total / count`` (which equals ``r``); ``operands = (total, count)`` so the
-    verifier can replay the rate-inversion misconception (``count / total``). Rendered
-    symbolically — a numeric-answer word problem; ``difficulty`` widens the rate pool.
+    The seeded RNG picks a direction MODE so the single KC covers two CCSS 6.RP.3 verbs:
+
+      - PER_ONE (mode 0): the original behavior. A clean whole-number unit rate ``r``: a total of
+        ``r * count`` over ``count`` units, asking how much for ONE unit. The correct value is the
+        SymPy quotient ``total / count`` (which equals ``r``); ``operands = (total, count, mode)``
+        (the mode appended to the original 2-tuple) so the verifier can replay the rate-inversion
+        misconception (``count / total``).
+      - SCALE (mode 1): multi-step rate problem-solving (6.RP.3b). Given a total for several
+        units, find the amount for a DIFFERENT number of units — e.g. "$24 for 4 tickets. How much
+        for 7 tickets?". With whole rate ``r`` and a DISTINCT ``new_count`` the answer
+        ``r * new_count`` is a positive whole number. ``operands = (total, count, new_count, mode)``
+        so both the answer and ``new_count`` are recoverable. This is what makes the catalog lesson
+        U1.L4 ("Rate problems") genuinely distinct from the per-ONE generator (panel, 2026-06-04).
+
+    Rendered symbolically — a numeric-answer word problem; ``difficulty`` widens the rate pool.
     """
     rate_pool = _RATE_BY_DIFFICULTY.get(difficulty, _RATE_POOL) if difficulty else _RATE_POOL
     rate = rng.choice(rate_pool)
+    mode = rng.choice((_UNIT_RATE_PER_ONE, _UNIT_RATE_SCALE))
+    noun, unit = rng.choice(_RATE_CONTEXTS)
+    if mode == _UNIT_RATE_SCALE:
+        count = rng.choice(_RATE_SCALE_COUNTS)
+        # new_count DISTINCT from count: scaling to the SAME number of units is no problem at all.
+        new_count = rng.choice(tuple(c for c in _RATE_SCALE_COUNTS if c != count))
+        total = rate * count
+        statement = (
+            f"{total} {noun} for {count} {unit}s. How many {noun} for {new_count} {unit}s? "
+            f"(Find the unit rate first, then scale it up.)"
+        )
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.UNIT_RATE, seed, surface_format),
+            kc=KnowledgeComponentId.UNIT_RATE,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=Rational(rate * new_count),
+            representations_available=get_kc(KnowledgeComponentId.UNIT_RATE).representations,
+            operands=(Rational(total), Rational(count), Rational(new_count), Rational(mode)),
+        )
     count = rng.choice((2, 3, 4, 5, 6))
     total = rate * count
-    noun, unit = rng.choice(_RATE_CONTEXTS)
     statement = (
         f"{total} {noun} for {count} {unit}s. How many {noun} per {unit}? "
         f"(Find the unit rate — the amount for ONE {unit}.)"
@@ -763,7 +807,7 @@ def _generate_unit_rate(
         statement=statement,
         correct_value=Rational(total, count),
         representations_available=get_kc(KnowledgeComponentId.UNIT_RATE).representations,
-        operands=(Rational(total), Rational(count)),
+        operands=(Rational(total), Rational(count), Rational(mode)),
     )
 
 

@@ -957,6 +957,28 @@ def invert_rate(total: int, count: int) -> Rational:
     return Rational(count, total)
 
 
+def rate_inversion(operands: tuple[Rational, ...]) -> Rational | None:
+    """rate-inversion, gated to the PER_ONE direction of KC_unit_rate.
+
+    The unit-rate generator encodes an item as ``(total, count, mode)`` for the per-ONE direction
+    (``mode == 0``, _UNIT_RATE_PER_ONE) and as ``(total, count, new_count, mode)`` for the SCALE
+    direction (``mode == 1``, _UNIT_RATE_SCALE). This misconception — forming the rate upside-down
+    (``count/total`` instead of ``total/count``) — is per-ONE-specific: on the SCALE direction the
+    answer is a scaled total (``r * new_count``), not a per-ONE rate, so inverting the rate is not
+    the error being modelled. This returns ``None`` for the SCALE shape and for any unexpected
+    operand shape (defensive), exactly as ``percent_as_amount`` returns ``None`` off the percent-of
+    mode, so the verifier never mislabels a correct (or otherwise-wrong) SCALE answer as
+    rate-inversion. On the per-ONE direction it delegates to ``invert_rate`` (``count/total``);
+    total > count > 0 guarantees that value differs from the correct ``total/count``.
+    """
+    if len(operands) != 3:
+        return None  # scale (4-tuple) or unexpected shape: the verifier reports OTHER, not a match
+    total, count, mode = operands
+    if mode != 0:  # scale: no per-ONE rate to invert there, so the error does not apply
+        return None
+    return invert_rate(int(total), int(count))
+
+
 def invert_conversion(quantity: int, factor: int) -> Rational:
     """conversion-inversion: convert to the smaller unit by DIVIDING by the factor, not multiplying.
 

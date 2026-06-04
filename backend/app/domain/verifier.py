@@ -73,7 +73,6 @@ from app.domain.misconceptions import (
     gcf_lcm_confusion,
     inverse_operation_error,
     invert_conversion,
-    invert_rate,
     keep_original_sign,
     mean_signed_deviation,
     multiply_base_by_exponent,
@@ -85,6 +84,7 @@ from app.domain.misconceptions import (
     part_whole_ratio,
     percent_as_amount,
     place_value_slip,
+    rate_inversion,
     reversed_operands,
     signed_not_magnitude,
     solution_substitution_error,
@@ -662,13 +662,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         ),
     ),
     # unit-rate inversion: total/count formed upside-down as count/total — a wrong OPERATION
-    # setup (operands are (total, count), both whole-number Rationals).
+    # setup. PER_ONE-SPECIFIC: operands are (total, count, mode) on the per-ONE direction and
+    # (total, count, new_count, mode) on the SCALE direction; ``rate_inversion`` returns None off
+    # mode 0 (and on the 4-tuple), so it never fires on a scale item — the percent-as-amount gate
+    # pattern. ``operand_count=None`` lets the row see BOTH shapes; the predictor does the gating.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.UNIT_RATE,
-        operand_count=2,
+        operand_count=None,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.RATE_INVERSION,
-        predict=lambda ops: invert_rate(int(ops[0]), int(ops[1])),
+        predict=rate_inversion,
     ),
     # additive ratio: scaled a:b -> ?:target_den by adding instead of multiplying (operands are
     # (a, b, target_den)). A wrong OPERATION (additive vs multiplicative reasoning).
