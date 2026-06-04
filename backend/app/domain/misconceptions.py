@@ -194,6 +194,15 @@ class MisconceptionId(StrEnum):
     # the verifier does NOT classify this id (a wrong yes/no is scored MAGNITUDE / no misconception,
     # like every YES_NO item). It lives here for catalog completeness and hint framing only.
     TREATS_ANY_AS_STATISTICAL = "treats-any-as-statistical"
+    # Unit 1 (6.RP.3b / 6.RP.2): deciding the better buy by comparing the two TOTAL prices (or the
+    # item counts) instead of the price PER ITEM — picking the store with the lower total as "the
+    # better buy" even when its unit price is higher (6 for $3 = $0.50 each vs 10 for $4 = $0.40
+    # each: the $3 total is lower, but the $4 store is the better buy). The learner compares the
+    # wrong quantities, missing that the better buy is the lower UNIT rate, not the lower total.
+    # NOTE: the YES_NO answer kind does not use the operand-based ``_WRONG_ANSWER_MODELS`` path, so
+    # the verifier does NOT classify this id (a wrong yes/no is scored MAGNITUDE / no misconception,
+    # like every YES_NO item). It lives here for catalog completeness and hint framing only.
+    COMPARE_TOTALS_NOT_UNIT_RATES = "compare-totals-not-unit-rates"
     # Unit 4/5 (6.EE.9): confusing the dependent/independent relationship — treating the
     # MULTIPLICATIVE rule y = a·x as ADDITIVE, computing a + x instead of a·x ("y = 3x, x = 4"
     # answered 7 instead of 12). The learner reads the rate as something to ADD to the input rather
@@ -727,6 +736,18 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
             "statistical question anticipates VARIABILITY, so its answers vary across the data."
         ),
         applicable_kcs=(KnowledgeComponentId.STATISTICAL_QUESTIONS,),
+    ),
+    Misconception(
+        id=MisconceptionId.COMPARE_TOTALS_NOT_UNIT_RATES,
+        name="Compares total prices instead of the price per item",
+        description=(
+            "Decides the better buy by comparing the two TOTAL prices (or the item counts) rather "
+            "than the price PER ITEM — choosing the store with the lower total as 'the better buy' "
+            "even when its unit price is higher (6 apples for $3 is $0.50 each, 10 apples for $4 "
+            "is $0.40 each: the $3 total is lower, but the $4 store is the better buy). The "
+            "learner compares the wrong quantities, missing that the better buy is the lower rate."
+        ),
+        applicable_kcs=(KnowledgeComponentId.BETTER_BUY,),
     ),
     Misconception(
         id=MisconceptionId.DEPENDENT_INDEPENDENT_SWAP,

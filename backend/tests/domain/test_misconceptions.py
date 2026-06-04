@@ -62,6 +62,8 @@ EXPECTED_MISCONCEPTION_IDS = {
 EXPECTED_GRADE6_MISCONCEPTION_IDS = {
     "part-part-whole-confusion",  # KC_ratio_language
     "rate-inversion",  # KC_unit_rate
+    "compare-totals-not-unit-rates",  # KC_better_buy (Unit 1, 6.RP.3b) — registry/hint framing
+    # only; the YES_NO verifier never classifies it (a wrong yes/no is MAGNITUDE / none).
     "additive-ratio",  # KC_equivalent_ratios
     "percent-as-amount",  # KC_percent
     "multiply-as-add",  # KC_multiply_fractions (Unit 2, T2)

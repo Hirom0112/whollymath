@@ -1280,6 +1280,29 @@ _LESSON_SPECS: tuple[LessonSpec, ...] = (
             has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
         ),
     ),
+    # ─── Grade-6 content build (2026-06-04) — Unit 1: Better buy (CCSS 6.RP.3b / 6.RP.2) ───
+    # Compare two unit rates to decide the better buy — a YES/NO judgment (reuses the YES_NO answer
+    # kind, NO new widget). The YES_NO verifier scores a wrong judgment MAGNITUDE (it never operand-
+    # classifies a misconception), so MAGNITUDE is the ONLY error category this lesson sees; it
+    # routes back to SYMBOLIC, the only live answer surface. WORD_PROBLEM is advertised (the
+    # comparison text IS a word problem — the ≥2-rep contract) but has NO surface state, so it is
+    # NEVER an error target. Practice-only (scheduler lives only on SYMBOLIC), so the probe draws
+    # from SYMBOLIC only. The applicable misconception (compare-totals-not-unit-rates) is pulled in
+    # by the registry filter, satisfying the ≥1-misconception contract.
+    _spec(
+        _KC.BETTER_BUY,
+        error_routes=(
+            ErrorRoute(
+                _E.MAGNITUDE,
+                _R.SYMBOLIC,
+                "Compare the price for ONE item at each store — the lower per-item price wins, not "
+                "the lower total.",
+            ),
+        ),
+        transfer_probe=TransferProbeSpec(
+            has_error_finding=False, probe_representations=(_R.SYMBOLIC,)
+        ),
+    ),
 )
 
 LESSON_SPEC_REGISTRY = LessonSpecRegistry(_LESSON_SPECS)

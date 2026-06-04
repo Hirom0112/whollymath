@@ -53,6 +53,10 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # representation, like COMMON_DENOMINATOR) until a numeric word-problem widget lands (T3),
     # at which point adding WORD_PROBLEM here makes it masterable with no other change.
     _KC.UNIT_RATE: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 1 (6.RP.3b): SYMBOLIC = the yes/no "is Store A the better buy?" judgment.
+    # PRACTICE-ONLY (one live answer surface, like UNIT_RATE / STATISTICAL_QUESTIONS); WORD_PROBLEM
+    # is the same judgment with no separate surface state.
+    _KC.BETTER_BUY: (_REP.SYMBOLIC,),
     _KC.EQUIVALENT_RATIOS: (_REP.SYMBOLIC,),  # numeric missing-term entry; practice-only
     _KC.PERCENT: (_REP.SYMBOLIC,),  # numeric "percent of" entry; practice-only
     # Grade-6 Unit 2: SYMBOLIC = the product entered in the fraction editor; AREA_MODEL = the same

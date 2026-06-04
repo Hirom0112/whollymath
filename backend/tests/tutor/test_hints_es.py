@@ -9,8 +9,8 @@ locale. These tests are the parity + sanity gate per the slice plan:
   - NON-EMPTY / NOT-ENGLISH: every es-MX string is non-empty and differs from the English source
     (a basic sanity that a translation actually happened, not a copy of the English).
   - TERMBASE CONSISTENCY: the core math terms appear in their canonical es-MX form (spot-check).
-  - REVIEW GATE: the bank is flagged DRAFT (``ES_MX_REVIEWED is False``) so 3.5/3.6 cannot treat
-    it as production until a human reviewer flips it.
+  - REVIEW GATE: the bank is human-reviewed (``ES_MX_REVIEWED is True``) so 3.5/3.6 may treat it
+    as production audio.
 
 No LLM / network / DB — pure data over the in-process banks (CLAUDE.md §8.1).
 """
@@ -108,9 +108,10 @@ def test_denominador_comun_is_used_consistently_not_drifting() -> None:
             )
 
 
-def test_es_mx_reviewed_flag_is_false_draft_pending_review() -> None:
-    """REVIEW GATE: the bank is DRAFT until a human reviewer flips the flag (V2_TODO 3.2)."""
-    assert ES_MX_REVIEWED is False
+def test_es_mx_reviewed_flag_is_true_human_reviewed() -> None:
+    """REVIEW GATE: a human reviewer checked and PASSED the bank (owner 2026-06-04), so es-MX is
+    production — the flag is True and Slices 3.5/3.6 may treat the bank as final (V2_TODO 3.2)."""
+    assert ES_MX_REVIEWED is True
 
 
 def test_es_mx_locale_tag_is_the_provider_locale() -> None:

@@ -43,6 +43,9 @@ EXPECTED_CATALOG_IDS = {
     # Grade-6 content build (2026-05-30) — Unit 1 (numeric, on the existing infra).
     "KC_ratio_language",
     "KC_unit_rate",
+    # Unit 1 (YES_NO; 6.RP.3b / 6.RP.2 — compare two unit rates for the better buy, reusing the
+    # yes/no answer kind; built 2026-06-04, repoints catalog lesson u1_l4 off KC_unit_rate).
+    "KC_better_buy",
     "KC_equivalent_ratios",
     "KC_percent",
     "KC_unit_conversion",
@@ -134,6 +137,7 @@ EXPECTED_CATALOG_IDS = {
 GRADE6_BUILT_NOT_IN_BANK = {
     "KC_ratio_language",
     "KC_unit_rate",
+    "KC_better_buy",  # Unit 1 (6.RP.3b) — YES_NO better-buy comparison, no gem-bank items
     "KC_equivalent_ratios",
     "KC_percent",
     "KC_unit_conversion",
@@ -241,7 +245,7 @@ def test_enum_is_the_full_grade6_ontology() -> None:
     """
     enum_values = {member.value for member in KnowledgeComponentId}
     assert enum_values == EXPECTED_CATALOG_IDS | EXPECTED_GRADE6_KCS
-    assert len(KnowledgeComponentId) == 46  # 43 content-complete + 3 Grade-6 ontology
+    assert len(KnowledgeComponentId) == 47  # 44 content-complete + 3 Grade-6 ontology
 
 
 def test_live_kcs_is_exactly_the_registry_subset() -> None:

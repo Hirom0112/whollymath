@@ -1831,6 +1831,46 @@ def _statistical_questions_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     )
 
 
+def _better_buy_steps(problem: Problem) -> tuple[WorkedStep, ...]:
+    """The 'compare the two unit prices' steps for a better-buy item (Unit 1, 6.RP.3b / 6.RP.2).
+
+    ``operands = (qA, pA, qB, pB)`` — each store's quantity and TOTAL price. The procedure finds
+    each store's price PER ITEM (total ÷ quantity), compares them, and names the lower-unit-price
+    store as the better buy. The answer is a YES/NO verdict, not a magnitude, so (like
+    ``_statistical_questions_steps``) the final step lands the verdict in its ``shown`` text and
+    keeps ``revealed_value`` ``None`` (the documented non-magnitude case). The comparison is exact
+    over Rationals, matching the verifier's truth (pA/qA < pB/qB ⟹ Store A). Raises if the operands
+    are missing/malformed (CLAUDE.md §8.5)."""
+    operands = problem.operands
+    if operands is None or len(operands) != 4:
+        raise ValueError(f"better-buy problem {problem.problem_id} needs (qA, pA, qB, pB)")
+    qa, pa, qb, pb = operands
+    unit_a, unit_b = Rational(pa, qa), Rational(pb, qb)
+    # pA/qA < pB/qB, the same SymPy truth the verifier uses (cross-multiplied; qA, qB > 0).
+    store_a_better = bool(pa * qb < pb * qa)
+    verdict = "Store A is the better buy" if store_a_better else "Store B is the better buy"
+    return (
+        WorkedStep(
+            shown="The better buy is the lower price PER ITEM — not the lower total price.",
+            why_prompt="Why does the total price alone not tell you which store is the better buy?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"Store A: divide its total by its count for the price per item ({unit_a} each). "
+                f"Store B: do the same ({unit_b} each)."
+            ),
+            why_prompt="Why does dividing the total by the count give the price for one item?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=f"Compare the price per item: the lower one wins, so {verdict}.",
+            why_prompt="Why is the store with the lower price per item the better buy?",
+            revealed_value=None,
+        ),
+    )
+
+
 def _expression_parts_steps(problem: Problem) -> tuple[WorkedStep, ...]:
     """The 'name the part of the expression' steps for an expression-parts item (Unit 4, 6.EE.2b).
 
@@ -2164,6 +2204,7 @@ _STEP_BUILDERS: dict[KnowledgeComponentId, Callable[[Problem], tuple[WorkedStep,
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _number_line_steps,
     KnowledgeComponentId.RATIO_LANGUAGE: _ratio_language_steps,
     KnowledgeComponentId.UNIT_RATE: _unit_rate_steps,
+    KnowledgeComponentId.BETTER_BUY: _better_buy_steps,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _equivalent_ratios_steps,
     KnowledgeComponentId.PERCENT: _percent_steps,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _multiply_fractions_steps,

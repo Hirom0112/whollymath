@@ -166,11 +166,15 @@ _U1 = CatalogUnit(
             slug="u1_l4",
             unit_slug="u1",
             order=4,
-            title="Rate problems",
-            kc_id="KC_unit_rate",  # reuses KC_unit_rate (CURRICULUM_STANDARD.md §3)
+            title="Better buy",
+            # Repointed from KC_unit_rate to the new KC_better_buy (2026-06-04): U1.L4 had reused
+            # the unit-rate generator and never delivered the promised better-buy comparison.
+            # KC_better_buy is the genuine multi-step rate-reasoning lesson — compare TWO unit
+            # rates (6.RP.3b / 6.RP.2) — so the panel-flagged duplication is closed.
+            kc_id="KC_better_buy",
             ccss_code="6.RP.3b",
             teks_code="6.4B",
-            description="Use rates to solve speed, price, and other real-world problems.",
+            description="Compare two stores' prices per item to decide which is the better buy.",
         ),
         CatalogLesson(
             slug="u1_l5",

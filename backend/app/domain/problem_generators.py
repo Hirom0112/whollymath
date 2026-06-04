@@ -80,9 +80,11 @@ _CATEGORICAL_MODE_CODE = CATEGORICAL_MODE_CODE
 # ─── The shared Problem type ─────────────────────────────────────────────────
 
 
-# The truth rule for a yes/no item: an equality judgment ("same amount?") or a magnitude
-# comparison ("greater than?"). Default "equal" keeps every existing yes/no item unchanged.
-YesNoRelation = Literal["equal", "greater"]
+# The truth rule for a yes/no item: an equality judgment ("same amount?"), a magnitude comparison
+# ("greater than?"), or a better-buy unit-rate comparison ("is Store A the better buy?"). Default
+# "equal" keeps every existing yes/no item unchanged. "better_buy" reads FOUR operands
+# (qA, pA, qB, pB) and is true iff Store A's unit price is strictly lower (pA/qA < pB/qB).
+YesNoRelation = Literal["equal", "greater", "better_buy"]
 
 
 class AnswerKind(StrEnum):
@@ -809,6 +811,112 @@ def _generate_unit_rate(
         representations_available=get_kc(KnowledgeComponentId.UNIT_RATE).representations,
         operands=(Rational(total), Rational(count), Rational(mode)),
     )
+
+
+# ── KC_better_buy (6.RP.3b / 6.RP.2): compare two unit rates ──────────────────────────────────
+#
+# Two stores sell the SAME item; each has a (quantity, total-price) pair. The better buy is the
+# LOWER price PER UNIT (total/quantity). Operands are (qA, pA, qB, pB) — quantity and TOTAL price
+# for each store — so the verifier and worked example recompute the unit-price comparison from the
+# stated numbers, exactly the figures the learner reads (no hidden unit rate). Prices are exact
+# Rationals (dollars), never floats (CLAUDE.md §8.2).
+#
+# Per-UNIT prices (dollars per item) the generator draws from. Kept as exact Rationals on a 5-cent
+# grid so the totals (unit × quantity) land on clean money the learner can verify. The two stores'
+# unit prices are drawn DISTINCT, so the better buy is always unambiguous (no tie).
+_BETTER_BUY_UNIT_PRICES: tuple[Rational, ...] = (
+    Rational(1, 5),  # $0.20
+    Rational(1, 4),  # $0.25
+    Rational(3, 10),  # $0.30
+    Rational(2, 5),  # $0.40
+    Rational(1, 2),  # $0.50
+    Rational(3, 5),  # $0.60
+    Rational(3, 4),  # $0.75
+)
+# Item counts each store sells the bundle in. Small whole numbers so the totals read cleanly.
+_BETTER_BUY_QUANTITIES: tuple[int, ...] = (2, 3, 4, 5, 6, 8, 10, 12)
+# The item nouns the comparison is phrased over (display only; the math is the same noun for both
+# stores). Chosen through the seeded RNG so the same seed yields the same scenario (§4.1).
+_BETTER_BUY_ITEMS: tuple[str, ...] = (
+    "apples",
+    "oranges",
+    "bagels",
+    "markers",
+    "notebooks",
+    "juice boxes",
+)
+
+
+def _generate_better_buy(
+    rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
+) -> Problem:
+    """KC_better_buy (6.RP.3b / 6.RP.2): which store is the better buy? — a YES/NO judgment.
+
+    REUSES the existing YES_NO answer kind (NO new widget). Two stores sell the same item; each is
+    given a (quantity, total-price) pair, and the question is "Is Store A the better buy?". The
+    better buy is the LOWER price PER UNIT — ``pA/qA < pB/qB`` — and the truth is computed by SymPy
+    over the operands by ``_verify_yes_no`` (so SymPy decides the math; CLAUDE.md §8.2), never a
+    stored boolean. ``operands = (qA, pA, qB, pB)`` carries the quantity and TOTAL price for each
+    store so the verifier and worked example recompute the comparison from exactly the stated
+    numbers.
+
+    Construction (so the lesson is sound AND diagnostic):
+      - The two stores' (quantity, per-unit price) pairs are sampled INDEPENDENTLY, with the only
+        constraint that the two unit prices be DISTINCT (so the better buy is never a tie). Because
+        the quantity and the per-unit price are uncorrelated, neither naive heuristic ("the lower
+        TOTAL is the better buy" nor "the store with MORE items is the better buy") tracks the
+        truth — across seeds a meaningful share of items trap EACH of them. That is exactly the
+        compare-totals / count-the-items misconception this lesson is built to expose (a test pins
+        the diagnostic share for both heuristics).
+      - Each store's total is ``unit × quantity`` (an exact Rational), kept on a clean money grid.
+      - Which physical store (A or B) ends up cheaper is determined by the independent draws, so YES
+        and NO answers both occur across seeds (a test pins both verdicts).
+
+    Rendered symbolically — a numeric-context word problem; ``difficulty`` does not vary the item
+    (the comparison structure is the skill, not a magnitude to ramp). Deterministic per seed.
+    """
+    item = rng.choice(_BETTER_BUY_ITEMS)
+    qa = rng.choice(_BETTER_BUY_QUANTITIES)
+    ua = rng.choice(_BETTER_BUY_UNIT_PRICES)
+    qb = rng.choice(_BETTER_BUY_QUANTITIES)
+    # Store B's per-unit price is drawn DISTINCT from A's, so the two unit prices never tie and the
+    # better buy is unambiguous. Quantity and unit price are sampled independently (see docstring),
+    # so neither "lower total" nor "more items" tracks the better unit buy — the diagnostic design.
+    ub = rng.choice([u for u in _BETTER_BUY_UNIT_PRICES if u != ua])
+    pa = ua * qa  # exact total price for Store A (Rational dollars)
+    pb = ub * qb  # exact total price for Store B
+    statement = (
+        f"Store A sells {qa} {item} for {_dollars(pa)}. "
+        f"Store B sells {qb} {item} for {_dollars(pb)}. "
+        f"Is Store A the better buy? "
+        f"(Find each store's price per item, then compare — the lower price per item wins.)"
+    )
+    return Problem(
+        problem_id=_generated_id(KnowledgeComponentId.BETTER_BUY, seed, surface_format),
+        kc=KnowledgeComponentId.BETTER_BUY,
+        surface_format=surface_format,
+        # YES_NO truth is computed over operands; correct_value is the Store-A unit-price anchor the
+        # worked example teaches (mirrors how the other YES_NO generators anchor correct_value).
+        correct_value=Rational(pa, qa),
+        representations_available=get_kc(KnowledgeComponentId.BETTER_BUY).representations,
+        operands=(Rational(qa), Rational(pa), Rational(qb), Rational(pb)),
+        answer_kind=AnswerKind.YES_NO,
+        yes_no_relation="better_buy",
+        statement=statement,
+    )
+
+
+def _dollars(amount: Rational) -> str:
+    """Render an exact Rational dollar ``amount`` as ``$d.cc`` (two-decimal currency).
+
+    The amount is exact money on a 5-cent grid (unit × quantity over the better-buy pools), so it
+    always has an exact two-place decimal form — we format the cents without any float rounding by
+    splitting into whole dollars and exact hundredths (CLAUDE.md §8.2: no float in the value path;
+    this is display-only, the operands stay exact Rationals)."""
+    hundredths = amount * 100  # exact Rational; integral for any 5-cent-grid money amount
+    cents_total = int(hundredths)
+    dollars, cents = divmod(cents_total, 100)
+    return f"${dollars}.{cents:02d}"
 
 
 def _generate_equivalent_ratios(
@@ -3651,6 +3759,7 @@ GENERATORS: dict[KnowledgeComponentId, _KcGenerator] = {
     KnowledgeComponentId.NUMBER_LINE_PLACEMENT: _generate_number_line,
     KnowledgeComponentId.RATIO_LANGUAGE: _generate_ratio_language,
     KnowledgeComponentId.UNIT_RATE: _generate_unit_rate,
+    KnowledgeComponentId.BETTER_BUY: _generate_better_buy,
     KnowledgeComponentId.EQUIVALENT_RATIOS: _generate_equivalent_ratios,
     KnowledgeComponentId.PERCENT: _generate_percent,
     KnowledgeComponentId.MULTIPLY_FRACTIONS: _generate_multiply_fractions,

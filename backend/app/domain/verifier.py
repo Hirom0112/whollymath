@@ -234,18 +234,23 @@ def _parse_to_bool(submitted: Submitted) -> bool | None:
 
 
 def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult:
-    """Verify a yes/no judgment over the two operands. The truth is SymPy: equality
-    ("same amount?" — 2/3 == 4/6 → YES) or, when ``yes_no_relation`` is "greater", a
-    magnitude comparison ("is a greater than b?" — the symbolic form of number-line
-    placement). A wrong judgment is a MAGNITUDE error (the learner misjudged the amounts —
-    §3.6 routes it to S2, the number line). We do not over-claim a misconception match."""
+    """Verify a yes/no judgment over the operands. The truth is SymPy: equality ("same amount?" —
+    2/3 == 4/6 → YES), a magnitude comparison ("is a greater than b?" — the symbolic form of
+    number-line placement, ``yes_no_relation == "greater"``), or a BETTER-BUY unit-rate comparison
+    ("is Store A the better buy?", ``yes_no_relation == "better_buy"``) over FOUR operands
+    (qA, pA, qB, pB), true iff Store A's unit price is strictly lower (pA/qA < pB/qB, decided by
+    SymPy cross-multiplication). A wrong judgment is a MAGNITUDE error (the learner misjudged the
+    amounts/rates — §3.6 routes it to S2, the number line). We do not over-claim a misconception
+    match (the YES_NO path never operand-classifies a misconception)."""
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        # A yes/no item without a fraction pair is a CONSTRUCTION bug (not learner
-        # input): there is nothing for SymPy to judge over. Fail loudly (CLAUDE.md §8.5)
-        # rather than silently scoring a meaningless verdict.
+    expected_arity = 4 if problem.yes_no_relation == "better_buy" else 2
+    if operands is None or len(operands) != expected_arity:
+        # A yes/no item without the operands its relation needs is a CONSTRUCTION bug (not learner
+        # input): there is nothing for SymPy to judge over. Fail loudly (CLAUDE.md §8.5) rather
+        # than silently scoring a meaningless verdict.
         raise ValueError(
-            f"yes/no problem {problem.problem_id!r} needs exactly two operands to verify"
+            f"yes/no problem {problem.problem_id!r} needs exactly {expected_arity} operands "
+            f"for relation {problem.yes_no_relation!r} to verify"
         )
 
     answer = _parse_to_bool(submitted)
@@ -254,7 +259,12 @@ def _verify_yes_no(problem: Problem, submitted: Submitted) -> VerificationResult
             is_correct=False, error_category=ErrorCategory.OTHER, matched_misconception=None
         )
 
-    if problem.yes_no_relation == "greater":
+    if problem.yes_no_relation == "better_buy":
+        # operands = (qA, pA, qB, pB); Store A is the better buy iff pA/qA < pB/qB. Cross-multiply
+        # (qA, qB > 0 by construction) so the comparison is exact SymPy over Rationals, no division.
+        qa, pa, qb, pb = operands
+        truth = bool(pa * qb < pb * qa)
+    elif problem.yes_no_relation == "greater":
         truth = bool(operands[0] > operands[1])
     else:
         truth = bool(operands[0] == operands[1])
