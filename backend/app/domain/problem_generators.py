@@ -2062,26 +2062,56 @@ _EXPONENT_POWER_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
 _EXPONENT_BASE_POOL: tuple[int, ...] = (2, 3, 4, 5, 6, 7, 8)
 _EXPONENT_POWER_POOL: tuple[int, ...] = (2, 3, 4, 5)
 
+# KC_exponents has TWO modes behind a TRAILING flag (the mode is the LAST operand, the established
+# convention — see _generate_decimal_operations). The seeded RNG picks the mode so a single lesson
+# covers all of 6.EE.1 — "write and evaluate numerical expressions involving whole-number
+# exponents" — not just a bare power. Panel coverage fix (Dr. Okafor, 2026-06-04): U4.L1 never
+# exercised order of operations, where the exponent must be applied BEFORE a surrounding operation.
+_EXPONENT_POWER_ONLY = 0  # the bare power "base^exp"; operands (base, exp, mode)
+_EXPONENT_ORDER_OF_OPS = 1  # a power inside one operation; operands (base, exp, a, op_code, mode)
+
+# ORDER_OF_OPS operation codes. BOTH forms put the surrounding operation to the LEFT of the power
+# (`a + base^exp`, `a * base^exp`) so that evaluating LEFT-TO-RIGHT (the diagnostic slip) genuinely
+# differs from the correct exponent-first value: (a + base)^exp != a + base^exp and
+# (a * base)^exp != a * base^exp for a, base >= 2 and exp >= 2. A `base^exp - a` form is NOT used:
+# the power is already leftmost there, so left-to-right would equal the correct value and the
+# misconception would not be diagnostic (CLAUDE.md §8 — no misconception that can't be wrong).
+_EXPONENT_OP_ADD = 0  # a + base^exp
+_EXPONENT_OP_MULTIPLY = 1  # a * base^exp
+# The small surrounding constant `a` — kept tiny so the friendly whole-number answer stays in
+# grade-6 range (a >= 2 also forces the left-to-right slip to be distinct, per above).
+_EXPONENT_ORDER_CONST_POOL: tuple[int, ...] = (2, 3, 4, 5)
+
 
 def _generate_exponents(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
-    """KC_exponents: evaluate a whole-number power base^exp; a single numeric answer.
+    """KC_exponents: write/evaluate a whole-number exponent expression; a single numeric answer.
 
-    Picks a base (>= 2) and an exponent (>= 2) via the seeded RNG; the answer is ``base ** exp``
-    (repeated multiplication). ``operands = (base, exp)`` so the verifier can replay the
-    multiply-base-by-exponent slip (``base * exp``). Two REAL surfaces share this answer (so the KC
-    is masterable across representations, PROJECT.md §3.4 rule 2):
+    ONE KC, TWO modes behind a TRAILING operand flag (the mode is the LAST operand) so one lesson
+    covers all of 6.EE.1 (panel coverage fix, Dr. Okafor 2026-06-04):
 
-      - **SYMBOLIC** (default) — "What is 3^4?" (the symbolic power);
-      - **AREA_MODEL** — the geometric picture: base^2 as the area of a square of side base,
-        base^3 as the volume of a cube of edge base (the visual, magnitude-grounded form).
+      - **POWER_ONLY** (mode 0) — the bare power "What is 3^4?"; the answer is ``base ** exp``
+        (repeated multiplication). ``operands = (base, exp, mode)``. Two REAL surfaces share this
+        answer (so the KC is masterable across representations, PROJECT.md §3.4 rule 2):
+          - **SYMBOLIC** (default) — "What is 3^4?";
+          - **AREA_MODEL** — the geometric picture: base^2 as the area of a square of side base,
+            base^3 as the volume of a cube of edge base (the visual, magnitude-grounded form).
+        The single ``(base, exp) == (2, 2)`` case is excluded (there ``base ** exp == base * exp``),
+        so the multiply-base-by-exponent slip is always distinct from the correct value.
 
-    The single ``(base, exp) == (2, 2)`` case is excluded because there ``base ** exp == base *
-    exp`` (4 == 4), which would make the misconception indistinguishable from the correct; every
-    other in-scope pair has ``base ** exp != base * exp``, so the slip is always diagnostic. The
-    math is sampled before the format is applied, so the same seed yields identical operands in
-    either surface. ``difficulty`` widens the base/exponent pools.
+      - **ORDER_OF_OPS** (mode 1) — a small expression with ONE power and ONE surrounding
+        whole-number operation evaluated EXPONENT-FIRST: "a + base^exp" or "a * base^exp". The
+        answer is ``a + base**exp`` / ``a * base**exp``. ``operands = (base, exp, a, op_code,
+        mode)`` so the verifier can replay the left-to-right slip (apply the operation BEFORE the
+        power: ``(a + base)**exp`` / ``(a * base)**exp``), which the generator keeps DISTINCT from
+        the correct value for every item (a, base >= 2, exp >= 2). This mode is SYMBOLIC only — an
+        order-of-ops expression has no single square/cube picture — so **AREA_MODEL forces
+        POWER_ONLY** (an order-of-ops item is never rendered as a nonexistent picture).
+
+    The mode and math are sampled BEFORE the surface format is applied, so the same seed yields
+    identical operands in either surface (and AREA_MODEL's forced power-only is deterministic).
+    ``difficulty`` widens the base/exponent pools.
     """
     base_pool = (
         _EXPONENT_BASE_BY_DIFFICULTY.get(difficulty, _EXPONENT_BASE_POOL)
@@ -2093,6 +2123,13 @@ def _generate_exponents(
         if difficulty
         else _EXPONENT_POWER_POOL
     )
+    # AREA_MODEL has no picture for an order-of-ops expression, so it FORCES the bare-power mode;
+    # SYMBOLIC lets the seeded RNG pick either mode (so both appear across seeds).
+    mode = (
+        _EXPONENT_POWER_ONLY
+        if surface_format is Representation.AREA_MODEL
+        else rng.choice((_EXPONENT_POWER_ONLY, _EXPONENT_ORDER_OF_OPS))
+    )
     base = rng.choice(base_pool)
     exponent = rng.choice(power_pool)
     # Resample the one collision case (2^2 == 2*2) so the multiply slip stays distinct (AREA_MODEL
@@ -2100,6 +2137,34 @@ def _generate_exponents(
     while base == 2 and exponent == 2:
         base = rng.choice(base_pool)
         exponent = rng.choice(power_pool)
+
+    if mode == _EXPONENT_ORDER_OF_OPS:
+        a_const = rng.choice(_EXPONENT_ORDER_CONST_POOL)
+        op_code = rng.choice((_EXPONENT_OP_ADD, _EXPONENT_OP_MULTIPLY))
+        power = base**exponent
+        if op_code == _EXPONENT_OP_ADD:
+            correct = a_const + power
+            statement = f"What is {a_const} + {base}^{exponent}?"
+        else:  # _EXPONENT_OP_MULTIPLY
+            correct = a_const * power
+            statement = f"What is {a_const} x {base}^{exponent}?"
+        return Problem(
+            problem_id=_generated_id(KnowledgeComponentId.EXPONENTS, seed, surface_format),
+            kc=KnowledgeComponentId.EXPONENTS,
+            surface_format=surface_format,
+            statement=statement,
+            correct_value=Rational(correct),
+            representations_available=get_kc(KnowledgeComponentId.EXPONENTS).representations,
+            operands=(
+                Rational(base),
+                Rational(exponent),
+                Rational(a_const),
+                Rational(op_code),
+                Rational(_EXPONENT_ORDER_OF_OPS),
+            ),
+        )
+
+    # POWER_ONLY (mode 0): the bare power, on either surface.
     if surface_format is Representation.AREA_MODEL:
         if exponent == 2:
             statement = (
@@ -2121,7 +2186,7 @@ def _generate_exponents(
         statement=statement,
         correct_value=Rational(base**exponent),
         representations_available=get_kc(KnowledgeComponentId.EXPONENTS).representations,
-        operands=(Rational(base), Rational(exponent)),
+        operands=(Rational(base), Rational(exponent), Rational(_EXPONENT_POWER_ONLY)),
     )
 
 

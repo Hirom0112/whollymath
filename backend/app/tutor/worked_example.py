@@ -1237,17 +1237,54 @@ def _evaluate_expression_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _exponents_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'repeated multiplication' steps for an evaluate-a-power problem (Grade-6 Unit 4).
+    """The evaluate-an-exponent steps for a Grade-6 Unit 4 (6.EE.1) problem, in EITHER mode.
 
-    ``operands = (base, exp)``; the answer is ``base ** exp == problem.correct_value``. Raises if
-    the operands are missing (CLAUDE.md §8.5). The middle step WRITES OUT the base ``exp`` times so
-    the learner sees the exponent as a repeat COUNT, not a factor to multiply the base by.
+    KC_exponents has two modes behind a trailing flag (the LAST operand):
+
+      - POWER_ONLY (mode 0): ``operands = (base, exp, mode)``; the answer is ``base ** exp``. The
+        middle step WRITES OUT the base ``exp`` times so the learner sees the exponent as a repeat
+        COUNT, not a factor to multiply the base by.
+      - ORDER_OF_OPS (mode 1): ``operands = (base, exp, a, op_code, mode)``; the answer is
+        ``a + base**exp`` (op_code 0) or ``a * base**exp`` (op_code 1). The steps show evaluating
+        the POWER FIRST, THEN the surrounding operation — the precedence the lesson teaches.
+
+    Raises if the operands are missing or the wrong shape (CLAUDE.md §8.5). The final step's
+    ``revealed_value`` equals ``problem.correct_value`` in both modes (self-consistency).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"exponents problem {problem.problem_id} needs (base, exp) operands")
-    base, exp = (int(operand) for operand in operands)
+    if operands is None or len(operands) not in (3, 5):
+        raise ValueError(
+            f"exponents problem {problem.problem_id} needs a (..., mode) operand tuple"
+        )
     answer = problem.correct_value
+
+    if len(operands) == 5:  # ORDER_OF_OPS
+        base, exp, a_const, op_code, _mode = (int(operand) for operand in operands)
+        power = base**exp
+        op_symbol = "+" if op_code == 0 else "x"
+        return (
+            WorkedStep(
+                shown=(
+                    f"In {a_const} {op_symbol} {base}^{exp}, do the POWER first — exponents come "
+                    f"before adding or multiplying."
+                ),
+                why_prompt="Why does the exponent get evaluated before the other operation?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"Evaluate the power: {base}^{exp} = {power}.",
+                why_prompt="Why is the exponent a repeat count of multiplications?",
+                revealed_value=Rational(power),
+            ),
+            WorkedStep(
+                shown=f"Now do the operation: {a_const} {op_symbol} {power} = {answer.p}.",
+                why_prompt="Why would going left-to-right instead give the wrong answer?",
+                revealed_value=answer,
+            ),
+        )
+
+    # POWER_ONLY
+    base, exp, _mode = (int(operand) for operand in operands)
     expanded = " x ".join([str(base)] * exp)
     return (
         WorkedStep(

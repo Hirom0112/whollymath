@@ -53,12 +53,18 @@ def exponent_product_for(
     """The display-only repeated-product view for a problem, derived from its ``operands``;
     ``None`` for any problem that is not an exponent item.
 
-    KC_exponents encodes ``operands = (base, exp)`` — ``base`` is the repeated factor, ``exp`` the
-    number of times it is multiplied. ``factors`` is ``base`` repeated ``exp`` times.
+    KC_exponents encodes the base and exponent as the FIRST two operands in either mode: a
+    POWER_ONLY item is ``(base, exp, mode)`` and an ORDER_OF_OPS item is
+    ``(base, exp, a, op_code, mode)``. In BOTH cases the repeated-product picture spells out the
+    power ``base^exp`` — ``base`` is the repeated factor, ``exp`` the number of times it is
+    multiplied — so the picture is derived from operands[0:2] regardless of mode. ``factors`` is
+    ``base`` repeated ``exp`` times. (A legacy bare ``(base, exp)`` 2-tuple is still accepted so the
+    pure unit calls keep working.)
     """
     if kc is not KnowledgeComponentId.EXPONENTS:
         return None
-    if operands is None or len(operands) != 2:
+    # Accept the bare (base, exp) 2-tuple and the moded 3-tuple / 5-tuple; reject other shapes.
+    if operands is None or len(operands) not in (2, 3, 5):
         return None  # defensive: a malformed operand tuple draws no picture rather than crashing
     base, exponent = int(operands[0]), int(operands[1])
     if exponent < 1:

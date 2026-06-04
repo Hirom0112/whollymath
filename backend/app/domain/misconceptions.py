@@ -484,12 +484,19 @@ _MISCONCEPTIONS: tuple[Misconception, ...] = (
         id=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
         name="Order-of-operations slip on evaluation",
         description=(
-            "Evaluates a*x + b by combining left-to-right instead of by precedence — adds before "
-            "multiplying, computing a*(x + b) rather than a*x + b. 'Evaluate 3x + 2 when x = 4' "
-            "becomes 3*(4 + 2) = 18 instead of 3*4 + 2 = 14. The substitution is right; the "
-            "OPERATION order is wrong (multiplication should happen before the addition)."
+            "Combines an expression left-to-right instead of by precedence. When evaluating "
+            "a*x + b the learner adds before multiplying — a*(x + b) rather than a*x + b — so "
+            "'Evaluate 3x + 2 when x = 4' becomes 3*(4 + 2) = 18 instead of 3*4 + 2 = 14. The same "
+            "slip hits "
+            "a power inside an expression (6.EE.1): '2 + 3^2' is read left-to-right as (2 + 3)^2 = "
+            "25 instead of 2 + 9 = 11, applying the operation BEFORE the exponent. The numbers are "
+            "right; the OPERATION order is wrong (the exponent — like the multiplication — comes "
+            "first)."
         ),
-        applicable_kcs=(KnowledgeComponentId.EVALUATE_EXPRESSIONS,),
+        applicable_kcs=(
+            KnowledgeComponentId.EVALUATE_EXPRESSIONS,
+            KnowledgeComponentId.EXPONENTS,
+        ),
     ),
     Misconception(
         id=MisconceptionId.INVERSE_OPERATION_ERROR,
@@ -1369,6 +1376,47 @@ def multiply_base_by_exponent(base: int, exponent: int) -> Rational:
     the single ``2^2 == 2*2`` collision excluded), so a match is always diagnostic.
     """
     return Rational(base * exponent)
+
+
+def multiply_base_by_exponent_predict(operands: tuple[Rational, ...]) -> Rational | None:
+    """Verifier hook for multiply-base-by-exponent, GATED to the POWER_ONLY mode (mode 0).
+
+    KC_exponents encodes a POWER_ONLY item as ``(base, exp, mode)`` with ``mode == 0`` and an
+    ORDER_OF_OPS item as a 5-tuple ``(base, exp, a, op_code, mode)`` with ``mode == 1``. This slip
+    models reading a BARE power as one multiplication, so it applies ONLY to the bare power: it
+    returns ``None`` off the 3-tuple shape or off mode 0 (defensive), exactly as
+    ``decimal_point_misplacement`` returns ``None`` off the multiply mode. The verifier then never
+    mislabels an order-of-ops answer as this slip.
+    """
+    if len(operands) != 3:
+        return None  # defensive: not the POWER_ONLY shape
+    base, exponent, mode = operands
+    if mode != 0:  # not POWER_ONLY — the slip models a bare power, so it does not apply
+        return None
+    return multiply_base_by_exponent(int(base), int(exponent))
+
+
+def evaluate_exponent_order_left_to_right(operands: tuple[Rational, ...]) -> Rational | None:
+    """order-of-operations-slip on an exponent expression: apply the operation BEFORE the power.
+
+    KC_exponents encodes an ORDER_OF_OPS item as ``(base, exp, a, op_code, mode)`` (``mode == 1``;
+    ``op_code == 0`` is "a + base^exp", ``op_code == 1`` is "a * base^exp"). The learner who ignores
+    precedence works LEFT-TO-RIGHT — combining ``a`` with the base FIRST and then raising to the
+    power — so "2 + 3^2" becomes ``(2 + 3)^2 = 25`` instead of ``2 + 9 = 11``, and "2 * 3^2" becomes
+    ``(2 * 3)^2 = 36`` instead of ``2 * 9 = 18``. Returns ``None`` off the 5-tuple shape or off mode
+    1 (defensive), so it never fires on a POWER_ONLY item; on an order-of-ops item the value is
+    always DISTINCT from the correct one (the generator's a, base >= 2 and exp >= 2 guarantee
+    ``(a + base)**exp != a + base**exp`` and ``(a * base)**exp != a * base**exp``), so the match is
+    always diagnostic. Returned as a SymPy ``Rational`` so the verifier compares values directly.
+    """
+    if len(operands) != 5:
+        return None  # defensive: not the ORDER_OF_OPS shape
+    base, exponent, a_const, op_code, mode = (int(operand) for operand in operands)
+    if mode != 1:  # not ORDER_OF_OPS
+        return None
+    if op_code == 0:  # a + base^exp evaluated as (a + base)^exp
+        return Rational((a_const + base) ** exponent)
+    return Rational((a_const * base) ** exponent)  # a * base^exp evaluated as (a * base)^exp
 
 
 def add_instead_of_applying_rate(rate: int, value: int) -> Rational:

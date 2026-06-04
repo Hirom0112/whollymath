@@ -64,6 +64,7 @@ from app.domain.misconceptions import (
     decimal_point_misplacement,
     distinct_value_count,
     distributive_error,
+    evaluate_exponent_order_left_to_right,
     evaluate_left_to_right,
     flip_result_sign,
     flipped_inequality,
@@ -75,7 +76,7 @@ from app.domain.misconceptions import (
     invert_conversion,
     keep_original_sign,
     mean_signed_deviation,
-    multiply_base_by_exponent,
+    multiply_base_by_exponent_predict,
     multiply_without_inverting,
     natural_number_bias_number_line,
     omit_rational_for_integer,
@@ -793,16 +794,33 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         misconception=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
         predict=lambda ops: evaluate_left_to_right(int(ops[0]), int(ops[1]), int(ops[2])),
     ),
-    # multiply-base-by-exponent: read a power as one multiplication — base * exponent (3^4 -> 12)
-    # instead of base multiplied by itself exponent-many times (3*3*3*3 = 81). Operands are
-    # (base, exp). A wrong OPERATION (the exponent was treated as a factor, not a repeat count); the
-    # generator excludes 2^2, so the predicted value always differs from the correct power.
+    # multiply-base-by-exponent: read a BARE power as one multiplication — base * exponent (3^4 ->
+    # 12) instead of base multiplied by itself exponent-many times (3*3*3*3 = 81). The POWER_ONLY
+    # item is the 3-tuple (base, exp, mode==0); the predictor is gated to that shape (returns None
+    # off mode 0), and ``operand_count=3`` keeps this row off the ORDER_OF_OPS 5-tuple — the
+    # arity/mode split that disambiguates the two exponent misconceptions, mirroring the
+    # AREA_POLYGONS triangle/trapezoid pair. The generator excludes 2^2, so on a power-only item the
+    # predicted value always differs from the correct power.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.EXPONENTS,
-        operand_count=2,
+        operand_count=3,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.MULTIPLY_BASE_BY_EXPONENT,
-        predict=lambda ops: multiply_base_by_exponent(int(ops[0]), int(ops[1])),
+        predict=multiply_base_by_exponent_predict,
+    ),
+    # order-of-operations-slip on an exponent EXPRESSION: applied the surrounding operation BEFORE
+    # the power — "2 + 3^2" done as (2 + 3)^2 = 25 instead of 2 + 9 = 11 (6.EE.1, panel coverage fix
+    # 2026-06-04). The ORDER_OF_OPS item is the 5-tuple (base, exp, a, op_code, mode==1); the
+    # predictor reads op_code and is gated to that shape. ``operand_count=5`` keeps it off the
+    # POWER_ONLY 3-tuple. A wrong OPERATION (the values are read right; precedence was ignored); the
+    # generator keeps the left-to-right value distinct from the correct one, so a match is always
+    # diagnostic. Reuses ORDER_OF_OPERATIONS_SLIP — the same precedence error as KC_evaluate.
+    _WrongAnswerModel(
+        kc=KnowledgeComponentId.EXPONENTS,
+        operand_count=5,
+        error_category=ErrorCategory.OPERATION,
+        misconception=MisconceptionId.ORDER_OF_OPERATIONS_SLIP,
+        predict=evaluate_exponent_order_left_to_right,
     ),
     # inverse-operation-error: solved a one-step equation with the WRONG inverse — added b for
     # x + b = c, or subtracted a for a*x = c (operands are (mode, p, q)). A wrong OPERATION (reached
