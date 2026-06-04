@@ -130,16 +130,19 @@ def decimal_place_value_for(
     """The display-only place-value chart for a problem, derived from its ``operands``; ``None`` for
     any problem that carries no decimal operands (every KC except the decimal-operations family).
 
-    KC_decimal_operations encodes ``operands = (first, second)`` -- the two exact-decimal factors
-    the generator also formats into the prompt as ``"{a} x {b} = ?"``. The chart shows both factor
-    rows aligned on a shared place-value grid; it never shows the product (CLAUDE.md §8.2).
+    KC_decimal_operations encodes ``operands = (first, second, mode)`` -- the two exact-decimal
+    operands plus an operation-mode flag (multiply/add/subtract/divide). Only the two operands are
+    charted: ``mode`` is a routing flag, not a decimal to display, so it is sliced off here (it
+    would otherwise draw a spurious "0"/"1"/"2"/"3" row). The chart shows both operand rows on a
+    shared place-value grid; it never shows the answer (CLAUDE.md §8.2).
     """
     if kc is not KnowledgeComponentId.DECIMAL_OPERATIONS:
         return None
-    if operands is None or len(operands) == 0:
+    if operands is None or len(operands) < 2:
         return None  # defensive: a malformed operand tuple draws no chart rather than crashing
-    columns, point_after = _column_layout(operands)
-    rows = tuple(_row_for(value, columns, point_after) for value in operands)
+    factors = operands[:2]  # drop the trailing mode flag; only the two operands are decimals
+    columns, point_after = _column_layout(factors)
+    rows = tuple(_row_for(value, columns, point_after) for value in factors)
     return DecimalPlaceValueStimulus(
         kind="decimal_place_value",
         columns=columns,

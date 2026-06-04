@@ -1077,34 +1077,115 @@ def _decimal_literal(numerator: int, power_of_ten_denominator: int) -> str:
     return f"{sign}{digits[:-places]}.{digits[-places:]}"
 
 
+def _decimal_text(value: Rational) -> str:
+    """Render an exact terminating rational as a finite decimal string (3/4 -> "0.75").
+
+    Used for an OPERAND already reduced past its power-of-ten origin (e.g. 75/100 reduces to 3/4):
+    we factor the denominator into 2s and 5s to recover the place count, so the literal is
+    exact without assuming a power-of-ten denominator. Pure integer arithmetic — no float (§8.2)."""
+    den = value.q
+    twos = fives = 0
+    while den % 2 == 0:
+        den //= 2
+        twos += 1
+    while den % 5 == 0:
+        den //= 5
+        fives += 1
+    places = max(twos, fives)
+    if places == 0:
+        return str(value.p)
+    scaled = int(value * (10**places))  # exact: value has exactly ``places`` decimal places
+    sign = "-" if scaled < 0 else ""
+    digits = str(abs(scaled)).zfill(places + 1)
+    return f"{sign}{digits[:-places]}.{digits[-places:]}"
+
+
+# Operation modes for KC_decimal_operations, the third operand of every item (the
+# ``(first, second, mode)`` shape). Module-level int constants, mirroring _AREA_TRIANGLE_MODE: the
+# seeded RNG picks one so a single generator covers the WHOLE of 6.NS.3 — add, subtract, multiply,
+# AND divide multi-digit decimals — not just multiplication (the coverage gap the panel flagged,
+# 2026-06-04). The flag also lets the verifier gate the multiply-specific point-misplacement
+# misconception (it must not fire on add/subtract/divide).
+_DECIMAL_MULTIPLY = 0
+_DECIMAL_ADD = 1
+_DECIMAL_SUBTRACT = 2
+_DECIMAL_DIVIDE = 3
+
+# DIVIDE pairs as ``((dividend_n, dividend_d), (divisor_n, divisor_d))`` with power-of-ten
+# denominators. Each pair is curated so the EXACT quotient is a terminating decimal (its reduced
+# denominator is a power of ten) — verified by test_divide_result_is_an_exact_finite_decimal —
+# so the answer renders as a clean decimal string and never repeats. Both operands stay genuine
+# decimals (denominator > 1), keeping place value non-trivial.
+_DECIMAL_DIVIDE_POOL: tuple[tuple[tuple[int, int], tuple[int, int]], ...] = (
+    ((8, 10), (2, 10)),  # 0.8 / 0.2 = 4
+    ((6, 10), (4, 10)),  # 0.6 / 0.4 = 1.5
+    ((6, 10), (5, 10)),  # 0.6 / 0.5 = 1.2
+    ((8, 10), (5, 10)),  # 0.8 / 0.5 = 1.6
+    ((15, 10), (5, 10)),  # 1.5 / 0.5 = 3
+    ((9, 10), (6, 10)),  # 0.9 / 0.6 = 1.5
+    ((12, 10), (8, 10)),  # 1.2 / 0.8 = 1.5
+    ((25, 100), (5, 10)),  # 0.25 / 0.5 = 0.5
+)
+
+
 def _generate_decimal_operations(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
-    """KC_decimal_operations: multiply two decimals; the product (a decimal) is the answer.
+    """KC_decimal_operations: add, subtract, multiply, OR divide two decimals (CCSS 6.NS.3).
 
-    Both factors are exact decimals with power-of-ten denominators (tenths/hundredths), so the
-    product is a finite decimal the symbolic editor accepts as a decimal string. The correct value
-    is the SymPy product ``first * second``; ``operands = (first, second)`` so the verifier can
-    replay the decimal-point-misplacement misconception (the product off by a power of ten).
-    Rendered symbolically; ``difficulty`` widens the factor pool from tenths to hundredths.
+    The seeded RNG picks an operation MODE (one of the four, equally weighted) so the single lesson
+    covers the whole standard, not just multiplication (coverage fix, panel audit 2026-06-04). Both
+    operands are exact decimals with power-of-ten denominators (tenths/hundredths), and every mode
+    yields a finite-decimal answer the symbolic editor accepts as a decimal string:
+
+      - MULTIPLY: ``first * second`` (unchanged; the original behavior).
+      - ADD: ``first + second`` — a sum of finite decimals is a finite decimal.
+      - SUBTRACT: ``larger - smaller`` — operands are ORDERED so the result is NON-NEGATIVE (a
+        negative answer is out of scope for 6.NS.3's whole-decimal arithmetic).
+      - DIVIDE: from a curated pool whose quotient is an EXACT terminating decimal (no repeats);
+        phrased "{a} divided by {b} = ?" exactly like the MULTI_DIGIT_DIVISION generator.
+
+    The correct value is computed with SymPy (the oracle). ``operands = (first, second, mode)`` so
+    the verifier can gate the MULTIPLY-specific decimal-point-misplacement misconception (it returns
+    ``None`` off multiply, mirroring the AREA_POLYGONS forgot-the-half gate). The math is sampled
+    before the surface format is applied, so the same seed yields identical operands and mode in
+    either SYMBOLIC or AREA_MODEL. ``difficulty`` widens the factor pool from tenths to hundredths.
     """
     pool = (
         _DECIMAL_FACTORS_BY_DIFFICULTY.get(difficulty, _DECIMAL_FACTOR_POOL)
         if difficulty
         else _DECIMAL_FACTOR_POOL
     )
-    (n1, d1), (n2, d2) = rng.choice(pool), rng.choice(pool)
-    first, second = Rational(n1, d1), Rational(n2, d2)
-    # Render each factor as its decimal literal so the statement reads like a decimal problem.
-    a_text, b_text = _decimal_literal(n1, d1), _decimal_literal(n2, d2)
+    mode = rng.choice((_DECIMAL_MULTIPLY, _DECIMAL_ADD, _DECIMAL_SUBTRACT, _DECIMAL_DIVIDE))
+    if mode == _DECIMAL_DIVIDE:
+        (n1, d1), (n2, d2) = rng.choice(_DECIMAL_DIVIDE_POOL)
+        first, second = Rational(n1, d1), Rational(n2, d2)
+        statement = f"{_decimal_literal(n1, d1)} divided by {_decimal_literal(n2, d2)} = ?"
+        correct = Rational(first / second)
+    else:
+        (n1, d1), (n2, d2) = rng.choice(pool), rng.choice(pool)
+        first, second = Rational(n1, d1), Rational(n2, d2)
+        if mode == _DECIMAL_SUBTRACT and second > first:
+            # Order operands larger − smaller so the difference is never negative (out of scope).
+            first, second = second, first
+        a_text, b_text = _decimal_text(first), _decimal_text(second)
+        if mode == _DECIMAL_ADD:
+            statement = f"{a_text} + {b_text} = ?"
+            correct = Rational(first + second)
+        elif mode == _DECIMAL_SUBTRACT:
+            statement = f"{a_text} − {b_text} = ?"  # unicode minus, consistent within the lesson
+            correct = Rational(first - second)
+        else:  # _DECIMAL_MULTIPLY
+            statement = f"{a_text} x {b_text} = ?"
+            correct = Rational(first * second)
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.DECIMAL_OPERATIONS, seed, surface_format),
         kc=KnowledgeComponentId.DECIMAL_OPERATIONS,
         surface_format=surface_format,
-        statement=f"{a_text} x {b_text} = ?",
-        correct_value=first * second,
+        statement=statement,
+        correct_value=correct,
         representations_available=get_kc(KnowledgeComponentId.DECIMAL_OPERATIONS).representations,
-        operands=(first, second),
+        operands=(first, second, Rational(mode)),
     )
 
 

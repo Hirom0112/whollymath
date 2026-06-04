@@ -62,25 +62,28 @@ def test_columns_are_aligned_on_the_decimal_point() -> None:
 def test_rows_match_the_generated_statement() -> None:
     """Each operand row reads back to the SAME number the prompt names, in order.
 
-    Single source of truth: the row's digits are laid from the operands the statement is formatted
-    from. The row's ``decimal_text`` is the chart's grid form, padded to the shared column width
-    (e.g. ``0.50`` when another factor needs hundredths), so it can be longer than the prompt's
-    minimal literal -- but it must denote the identical value. Chart and words cannot drift.
+    Single source of truth: the row's digits are laid from the two decimal operands the statement is
+    formatted from. ``operands = (first, second, mode)`` since the Slice-4a four-operation build, so
+    only the first two operands are charted (``mode`` is a routing flag, not a decimal). The row's
+    ``decimal_text`` is the chart's grid form, padded to the shared column width (e.g. ``0.50`` when
+    another operand needs hundredths), so it can be longer than the prompt's minimal literal -- but
+    it must denote the identical value. Chart and words cannot drift.
     """
     for seed in range(1, 40):
         problem = generate_problem(_KC, seed)
         stimulus = decimal_place_value_for(problem.kc, problem.operands)
         assert isinstance(stimulus, DecimalPlaceValueStimulus)
         assert problem.operands is not None
-        assert len(stimulus.rows) == len(problem.operands)
-        for operand, row in zip(problem.operands, stimulus.rows, strict=True):
+        factors = problem.operands[:2]  # drop the trailing mode flag; only the two operands chart
+        assert len(stimulus.rows) == len(factors)
+        for operand, row in zip(factors, stimulus.rows, strict=True):
             # The grid text denotes the operand exactly (trailing-zero padding aside).
             assert Rational(row.decimal_text) == operand
 
 
 def test_digits_reconstruct_the_operands_exactly() -> None:
-    """The digit grid encodes each operand exactly (float-free): reading the digits back across the
-    aligned point yields the operand Rational, never the product (no answer leak, §8.2).
+    """The digit grid encodes each decimal operand exactly (float-free): reading the digits back
+    across the aligned point yields the operand Rational, never the answer (no leak, §8.2).
     """
     for seed in range(1, 20):
         problem = generate_problem(_KC, seed)
@@ -88,8 +91,9 @@ def test_digits_reconstruct_the_operands_exactly() -> None:
         stimulus = decimal_place_value_for(problem.kc, problem.operands)
         assert isinstance(stimulus, DecimalPlaceValueStimulus)
         frac_places = len(stimulus.columns) - 1 - stimulus.point_after
-        # Every row reconstructs to exactly one of the OPERANDS -- and there is one row per operand,
-        # so the chart holds the factors only. The product is never among the rows.
-        for operand, row in zip(problem.operands, stimulus.rows, strict=True):
+        factors = problem.operands[:2]  # the mode flag is not a charted decimal
+        # Every row reconstructs to exactly one of the two OPERANDS -- and there is one row per
+        # operand, so the chart holds the operands only. The answer is never among the rows.
+        for operand, row in zip(factors, stimulus.rows, strict=True):
             scaled = int("".join(row.digits))
             assert Rational(scaled, 10**frac_places) == operand

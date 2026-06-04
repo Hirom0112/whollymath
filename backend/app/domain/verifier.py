@@ -736,14 +736,16 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
     ),
     # decimal-point-misplacement: multiplied the digits right but placed the product's point by the
     # longer factor's place count, not the SUM — so the value is off by a power of ten (operands are
-    # the two decimal factors). The DIGITS are right, the SIZE is wrong: a MAGNITUDE error (routes
-    # to the size-exposing surface, §3.6), distinct from the OPERATION errors above.
+    # (first, second, mode)). The DIGITS are right, the SIZE is wrong: a MAGNITUDE error (routes to
+    # the size-exposing surface, §3.6), distinct from the OPERATION errors above. MULTIPLY-SPECIFIC:
+    # the predictor returns None on add/subtract/divide modes (no product point to misplace), so it
+    # never fires off multiply — the AREA_POLYGONS forgot-the-half gate pattern.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.DECIMAL_OPERATIONS,
-        operand_count=2,
+        operand_count=3,
         error_category=ErrorCategory.MAGNITUDE,
         misconception=MisconceptionId.DECIMAL_POINT_MISPLACEMENT,
-        predict=lambda ops: decimal_point_misplacement(ops[0], ops[1]),
+        predict=decimal_point_misplacement,
     ),
     # signed-not-magnitude: reported the signed value itself instead of its distance from 0
     # (|-7| -> -7). Operands are (value,), the signed input. A misjudged MAGNITUDE (a magnitude

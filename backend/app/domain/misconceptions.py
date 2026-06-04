@@ -1012,16 +1012,28 @@ def _decimal_places(value: Rational) -> int:
     return max(twos, fives)
 
 
-def decimal_point_misplacement(first: Rational, second: Rational) -> Rational:
-    """decimal-point-misplacement: place the product's point by the LONGER factor's place count.
+def decimal_point_misplacement(operands: tuple[Rational, ...]) -> Rational | None:
+    """decimal-point-misplacement: place the PRODUCT's point by the LONGER factor's place count.
 
-    The correct product ``first * second`` has ``places(first) + places(second)`` decimal places.
-    The learner counts only ``max`` of the two instead of the SUM, so the point lands too far
-    right — the value is the correct product scaled UP by ``10 ** min(places)`` (a power of ten).
-    e.g. 0.5 x 0.4 (one place each): correct 0.20, misplaced 2.0 (x10). The digits are right; the
-    magnitude is wrong — which is why the verifier classifies this as a MAGNITUDE error. Returned
-    as a SymPy ``Rational`` so the verifier compares values directly.
+    The decimal-operations generator encodes an item as ``(first, second, mode)`` where
+    ``mode == 0`` (_DECIMAL_MULTIPLY) is a multiplication and 1/2/3 are add/subtract/divide. This is
+    MULTIPLY-SPECIFIC — it models mis-placing the *product's* decimal point — so it only applies to
+    multiply items; it returns ``None`` for add/subtract/divide (no product to misplace) and for an
+    unexpected operand shape (defensive), exactly as ``forget_triangle_half`` returns ``None`` off
+    the triangle mode. The verifier then never mislabels a correct or wrong non-multiply answer.
+
+    On a MULTIPLY item the correct product ``first * second`` has ``places(first) + places(second)``
+    decimal places. The learner counts only ``max`` of the two instead of the SUM, so the point
+    lands too far right — the value is the correct product scaled UP by ``10 ** min(places)`` (a
+    power of ten). e.g. 0.5 x 0.4 (one place each): correct 0.20, misplaced 2.0 (x10). The digits
+    are right; the magnitude is wrong — which is why the verifier classifies this as a MAGNITUDE
+    error. Returned as a SymPy ``Rational`` so the verifier compares values directly.
     """
+    if len(operands) != 3:
+        return None  # defensive: the verifier then reports OTHER rather than a false match
+    first, second, mode = operands
+    if mode != 0:  # add/subtract/divide: no product point to misplace, so the error does not apply
+        return None
     p1, p2 = _decimal_places(first), _decimal_places(second)
     return Rational(first * second) * (10 ** min(p1, p2))
 

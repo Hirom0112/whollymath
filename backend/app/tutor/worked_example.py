@@ -674,17 +674,33 @@ def _multi_digit_division_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _decimal_operations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'multiply the digits, then place the point by total places' steps for a decimal product.
+    """Place-value steps for a decimal item in any of the four 6.NS.3 operations.
 
-    ``operands = (first, second)`` (exact decimals with power-of-ten denominators); the product is
-    ``first * second == problem.correct_value``. Walks the canonical place-value procedure, landing
-    on the answer. Raises if the operands are missing (CLAUDE.md §8.5).
+    ``operands = (first, second, mode)`` (exact decimals with power-of-ten denominators; ``mode`` is
+    one of multiply/add/subtract/divide). The answer is the SymPy result for that mode ==
+    ``problem.correct_value``; each branch lands on it. Raises if the operands are missing or the
+    mode is unknown (CLAUDE.md §8.5). The branches mirror the per-mode procedure a teacher would
+    walk: line up the points for add/subtract, count places for multiply, scale to whole numbers for
+    divide.
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"decimal-operations problem {problem.problem_id} needs (first, second)")
-    first, second = operands
+    if operands is None or len(operands) != 3:
+        raise ValueError(
+            f"decimal-operations problem {problem.problem_id} needs (first, second, mode)"
+        )
+    first, second, mode = operands
     answer = problem.correct_value
+    mode_int = int(mode)
+    if mode_int == 1:  # _DECIMAL_ADD
+        return _decimal_add_subtract_steps(first, second, answer, adding=True)
+    if mode_int == 2:  # _DECIMAL_SUBTRACT
+        return _decimal_add_subtract_steps(first, second, answer, adding=False)
+    if mode_int == 3:  # _DECIMAL_DIVIDE
+        return _decimal_divide_steps(first, second, answer)
+    if mode_int != 0:  # _DECIMAL_MULTIPLY is 0; anything else is an unexpected mode
+        raise ValueError(
+            f"decimal-operations problem {problem.problem_id} has unknown mode {mode_int}"
+        )
     places_first = _terminating_decimal_places(first)
     places_second = _terminating_decimal_places(second)
     total_places = places_first + places_second
@@ -705,6 +721,64 @@ def _decimal_operations_steps(problem: Problem) -> tuple[WorkedStep, ...]:
         WorkedStep(
             shown=f"Place the point that many digits from the right: {_decimal_text(answer)}.",
             why_prompt="Why is the product smaller than each factor when both are below one?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _decimal_add_subtract_steps(
+    first: Rational, second: Rational, answer: Rational, *, adding: bool
+) -> tuple[WorkedStep, ...]:
+    """The 'line up the decimal points, then add/subtract column by column' steps (6.NS.3).
+
+    Lining the points up is the whole skill for decimal addition/subtraction — same place values
+    stack — so step 1 names it and step 2 carries it out, landing on ``answer``.
+    """
+    op_word = "Add" if adding else "Subtract"
+    sign = "+" if adding else "−"
+    return (
+        WorkedStep(
+            shown=(
+                f"Stack {_decimal_text(first)} {sign} {_decimal_text(second)} so the points "
+                "line up — same place values in the same columns."
+            ),
+            why_prompt="Why must the decimal points line up before you combine the columns?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                f"{op_word} column by column, keeping the point in line: the answer is "
+                f"{_decimal_text(answer)}."
+            ),
+            why_prompt="Why does the point in the answer sit directly below the points above it?",
+            revealed_value=answer,
+        ),
+    )
+
+
+def _decimal_divide_steps(
+    dividend: Rational, divisor: Rational, answer: Rational
+) -> tuple[WorkedStep, ...]:
+    """The 'shift both numbers to make the divisor whole, then divide' steps (6.NS.3).
+
+    Multiplying both numbers by the same power of ten turns the divisor into a whole number without
+    changing the quotient — the standard decimal-division move — landing on the exact ``answer``.
+    """
+    return (
+        WorkedStep(
+            shown=(
+                f"Divide {_decimal_text(dividend)} by {_decimal_text(divisor)}. Shift both numbers "
+                "by the same power of ten so the divisor becomes a whole number."
+            ),
+            why_prompt="Why does multiplying BOTH numbers by ten leave the quotient unchanged?",
+            revealed_value=None,
+        ),
+        WorkedStep(
+            shown=(
+                "Now divide as whole numbers and place the point: the quotient is "
+                f"{_decimal_text(answer)}."
+            ),
+            why_prompt="Why does shifting both numbers equally keep the answer the same size?",
             revealed_value=answer,
         ),
     )
