@@ -95,9 +95,9 @@ describe('App routing', () => {
     });
 
     // Now on /signin.
-    expect(screen.getByRole('button', { name: /student demo free/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /try a free demo/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /student demo free/i }));
+    fireEvent.click(screen.getByRole('button', { name: /try a free demo/i }));
     await act(async () => {
       await vi.runAllTimersAsync();
     });
