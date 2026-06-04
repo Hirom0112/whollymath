@@ -154,6 +154,22 @@ def test_catalog_contains_the_known_teks_only_units() -> None:
                 )
 
 
+def test_multiply_fractions_is_teks_only_not_ccss_6ns1() -> None:
+    # U2.L4 "Multiply fractions" is fraction multiplication, which is CCSS 5.NF.4
+    # (Grade 5), NOT 6.NS.1 — that code is fraction DIVISION (U2.L3 below it).
+    # Texas places fraction multiplication in Grade 6 (TEKS 6.3B), so the lesson
+    # is correctly TEKS-only with no Grade-6 CCSS code, mirroring how the integer
+    # unit encodes its CCSS gap (ccss_code=None). See CURRICULUM_STANDARD.md §3 and
+    # the panel standards audit (2026-06-04).
+    lesson = get_lesson("u2_l4")
+    assert lesson.title == "Multiply fractions"
+    assert lesson.teks_code == "6.3B"
+    assert lesson.ccss_code is None, (
+        "fraction multiplication is 5.NF.4, not 6.NS.1 (division) — "
+        "must not carry a Grade-6 CCSS code"
+    )
+
+
 # ---------------------------------------------------------------------------
 # KC ids
 # ---------------------------------------------------------------------------
