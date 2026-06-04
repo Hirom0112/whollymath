@@ -195,6 +195,23 @@ Because there is no PR to catch problems, the discipline moves into the commit i
 - The commit message follows §3 and carries the *why* and the *source*. In trunk-based work the commit message is the only record the reviewer of our submission will read — there is no PR description to fall back on.
 - On-disk planning docs updated if the change touches a documented decision (§3, §8.4).
 
+### Enforced pre-push gate
+
+The "keep `main` working" rule above is no longer on the honor system — it is
+enforced by a versioned hook. `.githooks/pre-push` runs the same checks as
+`.github/workflows/ci.yml` (backend: `ruff` · `ruff format` · `mypy --strict` ·
+`pytest`; frontend: `prettier` · `eslint` · `tsc` · `vitest`) and refuses the
+push if any fail. It is tracked in-repo, so it travels with a clone — arm it
+once per clone (a gate that dies on a fresh clone is no gate):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+**Invariant:** never pass `--no-verify` to git. A blocked pre-push is a red
+test: fix until green, never weaken the hook. Pre-existing red found by the
+gate is a finding — file it, don't bypass it.
+
 ### What replaces the PR description
 
 The information a PR description used to carry now lives in the **commit message body**. For any non-trivial commit, the body answers:
