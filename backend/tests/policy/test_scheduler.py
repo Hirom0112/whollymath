@@ -33,6 +33,9 @@ _SUMMARY = KnowledgeComponentId.SUMMARY_STATISTICS
 _DISPLAYS = KnowledgeComponentId.DATA_DISPLAYS
 _CSS = KnowledgeComponentId.CENTER_SPREAD_SHAPE
 _MAD = KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION
+_TRI = KnowledgeComponentId.TRIANGLE_PROPERTIES
+_VOL = KnowledgeComponentId.VOLUME_FRACTIONAL_EDGES
+_NETS = KnowledgeComponentId.SURFACE_AREA_NETS
 
 
 def test_schedule_stays_on_goal_kc_but_varies_representations() -> None:
@@ -125,6 +128,22 @@ def test_statistics_kcs_are_masterable_via_symbolic_plus_number_line() -> None:
         reps = {rep for i in range(12) for k, rep in [next_spec(kc, i)] if k == kc}
         assert reps == {Representation.SYMBOLIC, Representation.NUMBER_LINE}, (
             f"{kc.value} should rotate symbolic + number-line, got {reps}"
+        )
+        assert is_masterable_live(kc) is True, f"{kc.value} must be masterable after promotion"
+
+
+def test_geometry_kcs_are_masterable_via_symbolic_plus_area_model() -> None:
+    """Triangle properties, fractional-edge volume, and surface-area-from-nets are masterable: each
+    is served in SYMBOLIC + AREA_MODEL over the same numeric answer. The labelled FIGURE itself
+    (triangle / prism / net) is not drawn yet — these are masterable but PICTURELESS for now (the
+    EVALUATE_EXPRESSIONS / INTEGER_MULTIPLY_DIVIDE precedent); wiring FigureStimulus to draw the
+    figure is the remaining frontend polish. Promoting them lets a geometry lesson reach mastery
+    instead of being a dead-end practice-only drill (panel audit 2026-06-04)."""
+    for kc in (_TRI, _VOL, _NETS):
+        assert all(next_spec(kc, i)[0] == kc for i in range(8)), "single-skill serves only the goal"
+        reps = {rep for i in range(12) for k, rep in [next_spec(kc, i)] if k == kc}
+        assert reps == {Representation.SYMBOLIC, Representation.AREA_MODEL}, (
+            f"{kc.value} should rotate symbolic + area-model, got {reps}"
         )
         assert is_masterable_live(kc) is True, f"{kc.value} must be masterable after promotion"
 

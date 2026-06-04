@@ -12,9 +12,10 @@ a right rectangular prism with fractional edge lengths.
 
 from __future__ import annotations
 
-from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId, Representation
 from app.domain.misconceptions import MisconceptionId, add_edges_instead_of_multiplying
 from app.domain.problem_generators import AnswerKind, Problem, generate_problem
+from app.domain.scene import scene_for
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -30,6 +31,19 @@ def _problem(seed: int) -> Problem:
 def test_volume_is_live() -> None:
     """The KC is content-complete (registered), so the tutor can schedule it."""
     assert _KC in LIVE_KCS
+
+
+def test_area_model_is_the_same_item_masterable_without_a_figure_yet() -> None:
+    """AREA_MODEL serves the SAME numeric answer as SYMBOLIC (same operands + value), making the KC
+    masterable (>=2 reps). Pictureless for now — the cube-stack figure isn't drawn (no scene
+    deriver); the INTEGER_MULTIPLY_DIVIDE precedent. Drawing it (FigureStimulus) is frontend
+    follow-up."""
+    sym = generate_problem(_KC, seed=5, surface_format=Representation.SYMBOLIC)
+    area = generate_problem(_KC, seed=5, surface_format=Representation.AREA_MODEL)
+    assert area.surface_format is Representation.AREA_MODEL
+    assert area.operands == sym.operands
+    assert area.correct_value == sym.correct_value
+    assert scene_for(_KC, area.operands) is None  # documents pictureless-but-masterable
 
 
 def test_generated_volume_is_a_clean_in_scope_problem() -> None:
