@@ -171,26 +171,22 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # the natural masterable second surface, but it has no widget yet, so adding it here would
     # promote it — deferred to avoid over-scoping this build.
     _KC.SURFACE_AREA_NETS: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 7 (6.SP.5c): SYMBOLIC = the MAD value entered in the editor. PRACTICE-ONLY for
-    # now; the NUMBER_LINE rep (each deviation is a distance from the mean on the line, and its
-    # widget already exists) is the natural masterable second surface — adding NUMBER_LINE here
-    # promotes it, deferred to avoid over-scoping this build.
-    _KC.MEAN_ABSOLUTE_DEVIATION: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 7 (6.SP.2): SYMBOLIC = the median/range/IQR value entered in the editor.
-    # PRACTICE-ONLY for now; the NUMBER_LINE rep (center & spread are read along a number line — a
-    # box plot lays Q1/median/Q3 and the extremes on one) is the natural masterable second surface,
-    # and its widget exists, so adding it here would promote it — deferred to avoid over-scoping.
-    _KC.CENTER_SPREAD_SHAPE: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 7 (6.SP.3): SYMBOLIC = the single statistic entered in the editor. PRACTICE-ONLY
-    # for now; the NUMBER_LINE rep (the data set is points on the line, and center/spread are read
-    # off it) is the natural masterable second surface — its widget already exists — but adding it
-    # here would promote it, deferred to avoid over-scoping this build.
-    _KC.SUMMARY_STATISTICS: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 7 (6.SP.4): SYMBOLIC = the count/value read off the display, entered in the
-    # editor. PRACTICE-ONLY for now; the NUMBER_LINE rep (a dot plot is dots stacked above a number
-    # line) is the natural masterable second surface — its widget already exists — but adding it
-    # here would promote it, deferred to avoid over-scoping this build.
-    _KC.DATA_DISPLAYS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 7 (6.SP.5c): SYMBOLIC = the MAD value; NUMBER_LINE = the same answer over the
+    # set's dot plot (each deviation is a distance from the mean). The plot already renders via
+    # stats_stimulus (wired in service.py). MASTERABLE (2 reps). (Promoted 2026-06-04 per panel.)
+    _KC.MEAN_ABSOLUTE_DEVIATION: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 7 (6.SP.2): SYMBOLIC = the median/range/IQR; NUMBER_LINE = the same answer read
+    # off the data set's dot plot (center & spread along the line). Plot renders via stats_stimulus.
+    # MASTERABLE (2 reps). (Promoted 2026-06-04 per panel audit.)
+    _KC.CENTER_SPREAD_SHAPE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 7 (6.SP.3): SYMBOLIC = the single statistic; NUMBER_LINE = the same answer read
+    # off the dot plot (the data set IS points on the line). Plot renders via stats_stimulus.
+    # MASTERABLE (2 reps). (Promoted 2026-06-04 per panel audit.)
+    _KC.SUMMARY_STATISTICS: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 7 (6.SP.4): SYMBOLIC = the count/value read off the display; NUMBER_LINE = the
+    # same answer over the rendered dot plot / histogram itself (stats_stimulus, wired in
+    # service.py). MASTERABLE (2 reps) — the display IS the standard. (Promoted 2026-06-04.)
+    _KC.DATA_DISPLAYS: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
     # Grade-6 Unit 7 (TEKS 6.12D): SYMBOLIC = the single summary value entered in the editor.
     # PRACTICE-ONLY for now; the AREA_MODEL rep (a bar/area graph of the category breakdown) is the
     # natural masterable second surface — but adding it here would promote it, deferred to avoid

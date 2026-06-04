@@ -29,6 +29,10 @@ _IAS = KnowledgeComponentId.INTEGER_ADD_SUBTRACT
 _SGN = KnowledgeComponentId.SIGNED_NUMBERS
 _IMD = KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE
 _ABS = KnowledgeComponentId.ABSOLUTE_VALUE
+_SUMMARY = KnowledgeComponentId.SUMMARY_STATISTICS
+_DISPLAYS = KnowledgeComponentId.DATA_DISPLAYS
+_CSS = KnowledgeComponentId.CENTER_SPREAD_SHAPE
+_MAD = KnowledgeComponentId.MEAN_ABSOLUTE_DEVIATION
 
 
 def test_schedule_stays_on_goal_kc_but_varies_representations() -> None:
@@ -102,6 +106,21 @@ def test_integer_and_absolute_value_kcs_are_masterable_via_symbolic_plus_number_
     masterable but pictureless for now (the EVALUATE_EXPRESSIONS precedent — number-line jumps for
     products are a later polish). Closes the panel's naked-computation finding (2026-06-04)."""
     for kc in (_IAS, _SGN, _IMD, _ABS):
+        assert all(next_spec(kc, i)[0] == kc for i in range(8)), "single-skill serves only the goal"
+        reps = {rep for i in range(12) for k, rep in [next_spec(kc, i)] if k == kc}
+        assert reps == {Representation.SYMBOLIC, Representation.NUMBER_LINE}, (
+            f"{kc.value} should rotate symbolic + number-line, got {reps}"
+        )
+        assert is_masterable_live(kc) is True, f"{kc.value} must be masterable after promotion"
+
+
+def test_statistics_kcs_are_masterable_via_symbolic_plus_number_line() -> None:
+    """Summary statistics, data displays, center/spread/shape, and MAD are masterable: each is
+    served in SYMBOLIC + NUMBER_LINE over a data set that already renders as a real dot plot /
+    histogram (stats_stimulus, wired in service.py) — so the second representation carries a genuine
+    visual, not a bare list. Promoting them lets a stats lesson reach mastery (panel audit
+    2026-06-04)."""
+    for kc in (_SUMMARY, _DISPLAYS, _CSS, _MAD):
         assert all(next_spec(kc, i)[0] == kc for i in range(8)), "single-skill serves only the goal"
         reps = {rep for i in range(12) for k, rep in [next_spec(kc, i)] if k == kc}
         assert reps == {Representation.SYMBOLIC, Representation.NUMBER_LINE}, (
