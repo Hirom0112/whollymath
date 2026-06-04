@@ -121,6 +121,8 @@ def test_window_statistics_at_last_turn() -> None:
     assert feats.recent_hint_rate == 0.6  # mean(0,0,0,0,3)
     assert feats.recent_error_rate == 0.8  # 4/5 not first_attempt_correct
     assert feats.recent_request_answer_rate == 0.2  # 1/5 requested
+    # t1,t2,t3 are wrong on first attempt with NO hint; t4 is wrong but hinted (excluded); t0 right.
+    assert feats.recent_no_hint_error_rate == 0.6  # 3/5 wrong-without-a-hint
     assert feats.turns_since_last_correct == 1.0  # t4 was correct
     assert feats.prior_unproductive_rate == 0.6  # 3/5 prior turns unproductive
     assert feats.session_position == 5.0
@@ -135,9 +137,49 @@ def test_first_turn_has_neutral_history() -> None:
     assert feats.recent_hint_rate == 0.0
     assert feats.recent_error_rate == 0.0
     assert feats.recent_request_answer_rate == 0.0
+    assert feats.recent_no_hint_error_rate == 0.0
     assert feats.turns_since_last_correct == 0.0
     assert feats.prior_unproductive_rate == 0.0
     assert feats.session_position == 0.0
+
+
+def test_no_hint_error_rate_excludes_hinted_errors() -> None:
+    """The quiet-mis-reasoning feature counts ONLY unaided first-attempt errors.
+
+    Distinguishes it from ``recent_error_rate``: a wrong-but-hinted turn raises the error rate
+    but NOT the no-hint-error rate (the learner sought help — not the silent confident error the
+    weak RP/expression KCs exhibit). Two prior turns, both wrong on first attempt: one hinted,
+    one not. error_rate = 1.0; no_hint_error_rate = 0.5.
+    """
+    session = [
+        _turn(
+            correct=True,
+            first_attempt_correct=False,
+            attempt_count=2,
+            hint_count=0,
+            requested_answer=False,
+            latency=1000,
+        ),  # wrong, no hint
+        _turn(
+            correct=True,
+            first_attempt_correct=False,
+            attempt_count=2,
+            hint_count=2,
+            requested_answer=False,
+            latency=2000,
+        ),  # wrong, hinted
+        _turn(
+            correct=True,
+            first_attempt_correct=True,
+            attempt_count=1,
+            hint_count=0,
+            requested_answer=False,
+            latency=3000,
+        ),  # the current turn (features built from the two prior)
+    ]
+    feats = session_examples(session)[2].features
+    assert feats.recent_error_rate == 1.0  # both prior turns wrong on first attempt
+    assert feats.recent_no_hint_error_rate == 0.5  # only the un-hinted one counts
 
 
 def test_features_use_only_prior_turns_no_leakage() -> None:

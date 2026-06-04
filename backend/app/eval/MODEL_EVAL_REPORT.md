@@ -36,7 +36,7 @@ scored observe-only in the turn loop (sub-100ms; no LLM in the loop — CLAUDE.m
 | Property | Value | Source |
 |---|---|---|
 | Training examples | 322,417 | [re-fit] |
-| Feature width | 54 (8 behavioral + 46-KC one-hot) | [re-fit] |
+| Feature width | 56 (9 behavioral + 47-KC one-hot) | [re-fit] |
 | Overall holdout AUC | **0.899** | [re-fit] |
 | Fractions-only predecessor AUC | 0.885 | [re-fit] |
 | KCs with real EDM labels | 39 (all cleared n≥30, no thin bucket needed) | [re-fit] |
@@ -57,14 +57,20 @@ genuine weak cluster. Reported weakest-first so the limitation leads, not the he
 
 ### Weak (AUC < 0.83) — the finding, not a flaw to hide
 
+Numbers below are the current shipped artifact (after the `recent_no_hint_error_rate`
+mis-reasoning feature, §3). The feature gave a small, honest lift across the cluster and
+promoted `write_expressions` over the 0.85 trustworthy bar, but the hardest three
+(`rate_problems`, `evaluate_expressions`, `percent`) barely moved — confirming the
+behavioral-signal ceiling: those need problem-*content* features, not more behavioral ones.
+
 | KC | n (test turns) | AUC | calibration gap | code |
 |---|---:|---:|---:|---|
-| `rate_problems` | 2592 | **0.744** | 0.006 | 6.RP.A.3b |
-| `evaluate_expressions` | 505 | **0.741** | 0.009 | 6.EE.A.2c |
-| `ratio_language` | 1025 | **0.769** | 0.026 | 6.RP.A.1 |
-| `equivalent_ratios` | 3680 | **0.809** | 0.006 | 6.RP.A.3a |
-| `percent` | 2149 | **0.819** | 0.000 | 6.RP.A.3c |
-| `write_expressions` | 3283 | **0.849** | 0.007 | 6.EE.A.2a / 6.EE.B.6 |
+| `rate_problems` | 2592 | **0.748** | 0.006 | 6.RP.A.3b |
+| `evaluate_expressions` | 505 | **0.748** | 0.009 | 6.EE.A.2c |
+| `ratio_language` | 1025 | **0.780** | 0.024 | 6.RP.A.1 |
+| `equivalent_ratios` | 3680 | **0.820** | 0.007 | 6.RP.A.3a |
+| `percent` | 2149 | **0.817** | 0.000 | 6.RP.A.3c |
+| `write_expressions` (now trustworthy) | 3283 | **0.850** | 0.007 | 6.EE.A.2a / 6.EE.B.6 |
 
 ### Mid (0.83 ≤ AUC < 0.90)
 
@@ -107,9 +113,17 @@ percent as a raw count) — **quiet mis-reasoning, not a behavioral storm.** The
 wrong, but the per-turn behavioral trace looks like a fluent, low-latency, no-hint turn.
 The model has little to read, so AUC drops to ~0.74–0.82.
 
-**Backlog (richer features for mis-reasoning-without-error topics):** step-level dwell
-time, edit/backspace churn, and intermediate-value capture — signals that distinguish
-confident-wrong from confident-right. Tracked, not built in v1.
+**Built (2026-06-04):** `recent_no_hint_error_rate` — the rate of recent turns answered
+*wrong without requesting a hint*, the literal confident-error tell. It landed as the
+4th-most-important feature (SHAP 0.26), is faithfully computable on the live tutor (from
+`correct` + `hinted`, no train/serve skew), and lifted the cluster modestly —
+`write_expressions` crossed into the trustworthy set. The hardest three stayed put.
+
+**Backlog (still needed for the hardest mis-reasoning-without-error topics):** problem-
+*content* features — the `problem_text_bert_pca` vector already in `problem_details.csv`,
+step-level dwell time, edit/backspace churn, intermediate-value capture. The BERT route is
+the highest-leverage next step but needs a serve-time embedding for our *generated*
+problems (an architecture decision, not just a training change). Tracked, not built in v1.
 
 ---
 
@@ -119,10 +133,10 @@ We do **not** silence the model on weak KCs, and we do **not** let it drive a
 low-confidence proactive nudge there either. The mitigation is a precise filter:
 
 - **Trustworthy set** = KCs whose validated per-KC AUC ≥ 0.85
-  (`per_kc_validation.trustworthy_kcs`). On the re-fit run that is **33 trustworthy /
-  6 reactive-only** [re-fit]. The 6 reactive-only are exactly the weak cluster in §2:
-  `rate_problems`, `evaluate_expressions`, `ratio_language`, `equivalent_ratios`,
-  `percent`, `write_expressions`.
+  (`per_kc_validation.trustworthy_kcs`). On the current shipped artifact that is
+  **34 trustworthy / 5 reactive-only** [re-fit]. The 5 reactive-only are the hard core of
+  the weak cluster in §2: `rate_problems`, `evaluate_expressions`, `ratio_language`,
+  `equivalent_ratios`, `percent` (`write_expressions` cleared the bar after the §3 feature).
 - The **proactive arm** (`SustainedHelpNeedGate.should_intervene_for_kc`) fires only on a
   trustworthy KC. On a guarded KC it stays silent and the **deterministic reactive layer**
   (SymPy verdict → morph + misconception) handles the turn — which never depended on the
@@ -250,12 +264,12 @@ KC; we do not claim a persona attacked each KC.
 | # | Limitation | Status |
 |---|---|---|
 | 1 | RP/rate/percent + expression-eval KCs: HelpNeed AUC ~0.74–0.82 (quiet mis-reasoning, weak behavioral tells) | **Known finding.** Mitigated by the Tier-2 guard (§4); backlog: richer mis-reasoning features (§3). |
-| 2 | Tier-2 guard is wired but **dormant** (committed artifact carries `trustworthy_kcs=None`) | **Pending re-stamp.** Activates on the owner's next re-fit (needs EDM Cup data). Self-activating, no code change. |
+| 2 | Tier-2 guard is wired but **dormant** (committed artifact carries `trustworthy_kcs=None`) | **RESOLVED (2026-06-04).** Re-fit stamped **34 trustworthy KCs** onto the committed artifact; the guard is now live and width-compatible (`is_compatible_with_live_features()==True`), auto-re-enabling the live-scoring tests. |
 | 3 | Intent→UI routing **37%** — 12 of 17 LIVE_KCs route errors to symbolic (no manipulative widget) | **Roadmap.** Domain+widget work; coordinate-plane in progress. (§6) |
 | 4 | Hint-dependence delta (proactive vs reactive ≤10%) | **Pending live A/B** on the proactive arm. |
 | 5 | Transfer-after-scaffold-removal | **Pending live A/B** on the proactive arm. |
 | 6 | `summary_statistics` calibration gap 0.062 @ n=62 | Thin sample; reported pooled/flagged, not as a confident per-KC number. |
-| 7 | Per-KC AUC numbers (§2) not reproducible from a clean checkout | EDM Cup dataset is owner-only; cited from the recorded re-fit run (commit `4e1f26c`). |
+| 7 | Per-KC AUC numbers (§2) not reproducible from a clean checkout | **RESOLVED (2026-06-04).** EDM Cup 2023 is openly mirrored on OSF (`osf.io/yrwuh`, no login); pulled into the gitignored `backend/data/edmcup2023/` and the §2 numbers reproduce via the README command. Data stays gitignored (ASSISTments terms forbid redistribution; non-commercial). |
 
 None of these gate shipping v1. They are the honest boundary of what is measured versus
 what is built — which is the artifact the PRD asks for.

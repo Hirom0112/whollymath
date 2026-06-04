@@ -25,6 +25,7 @@ def _example(*, struggling: bool, i: int) -> TrainingExample:
             recent_hint_rate=2.0 * rate,
             recent_error_rate=rate,
             recent_request_answer_rate=rate,
+            recent_no_hint_error_rate=rate,
             turns_since_last_correct=1.0 + 4.0 * rate,
             prior_unproductive_rate=rate,
             session_position=5.0,

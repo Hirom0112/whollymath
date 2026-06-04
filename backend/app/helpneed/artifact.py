@@ -13,9 +13,11 @@ on a 6-week build it would be premature infrastructure (CLAUDE.md §8.6).
 Provenance is the one cost of committing a binary derived from gitignored data, and
 the project's answer is the decision log: the artifact is reproduced by
 ``python -m app.helpneed.train_pipeline`` with ``WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000``
-and ``WHOLLYMATH_HELPNEED_OUT`` set (RESEARCH.md §7.2 — holdout AUC 0.893). The
+and ``WHOLLYMATH_HELPNEED_OUT`` set (RESEARCH.md §7.2 — holdout AUC 0.899 on the
+cross-topic skill set; the 0.893/fraction-only figure was the predecessor). The
 production artifact is fit on ALL examples from that pass (the 25% holdout exists only
-to *measure* quality, not to be discarded in production).
+to *measure* quality, not to be discarded in production), and carries the stamped
+Tier-2 trustworthy set (per-KC AUC ≥ 0.85) the proactive gate reads at boot.
 
 No LLM, no SymPy, no DB here (CLAUDE.md §8.1/§8.2) — this only locates and loads a
 joblib file behind ``HelpNeedPredictor.load``.
