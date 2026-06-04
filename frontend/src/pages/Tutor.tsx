@@ -702,7 +702,7 @@ export function Tutor({
         : intervention !== null
           ? (intervention.audio ?? null)
           : null;
-  const { speaking } = useGuideSpeech(helpAudio);
+  const { speaking, viseme } = useGuideSpeech(helpAudio);
 
   return (
     <main className="wm-tutor">
@@ -1085,6 +1085,7 @@ export function Tutor({
                 emotion={guideEmotion?.emotion}
                 intensity={guideEmotion?.intensity}
                 speaking={speaking}
+                viseme={viseme}
               />
             </div>
           ) : (
@@ -1098,6 +1099,7 @@ export function Tutor({
                 emotion={guideEmotion?.emotion}
                 intensity={guideEmotion?.intensity}
                 speaking={speaking}
+                viseme={viseme}
               />
             </div>
           )}

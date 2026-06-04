@@ -296,6 +296,55 @@
   }
 }
 
+/* Phoneme-accurate lip-sync: when `data-viseme` is present (set each animation frame by
+   `useGuideSpeech` → `visemeAt`), the mouth HOLDS a shape per phoneme class instead of the generic
+   pulse above — so it reads as articulation, not a buzzer. A short transition smooths shape changes.
+   These attribute rules follow `.wm-guide-speaking .wm-guide-mouth` in source order (equal
+   specificity) so they win, and only ever apply while speaking (the attr is set only then). */
+.wm-guide-speaking .wm-guide-mouth[data-viseme] {
+  animation: none;
+  transition:
+    transform 60ms ease-out,
+    width 60ms ease-out,
+    height 60ms ease-out,
+    border-radius 60ms ease-out;
+}
+.wm-guide-mouth[data-viseme='rest'] {
+  transform: translateX(-50%) scaleY(0.08);
+}
+.wm-guide-mouth[data-viseme='closed'] {
+  transform: translateX(-50%) scaleY(0.1);
+}
+.wm-guide-mouth[data-viseme='open'] {
+  transform: translateX(-50%) scaleY(1);
+}
+.wm-guide-mouth[data-viseme='wide'] {
+  transform: translateX(-50%) scaleY(0.5);
+  width: 27px;
+}
+.wm-guide-mouth[data-viseme='round'] {
+  transform: translateX(-50%) scaleY(0.95);
+  width: 16px;
+  border-radius: 50%;
+}
+.wm-guide-mouth[data-viseme='narrow'] {
+  transform: translateX(-50%) scaleY(0.6);
+  width: 11px;
+  border-radius: 50%;
+}
+.wm-guide-mouth[data-viseme='teeth'] {
+  transform: translateX(-50%) scaleY(0.2);
+  width: 20px;
+}
+.wm-guide-mouth[data-viseme='lips'] {
+  transform: translateX(-50%) scaleY(0.35);
+  width: 18px;
+}
+.wm-guide-mouth[data-viseme='consonant'] {
+  transform: translateX(-50%) scaleY(0.3);
+  width: 18px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Reduced-motion users get no audio from the hook anyway, but defend the animation here too:
      the mouth holds a gentle static shape instead of pulsing, and the smile stays. */

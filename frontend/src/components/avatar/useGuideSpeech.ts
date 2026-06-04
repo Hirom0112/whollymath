@@ -23,6 +23,7 @@ import type { SpokenAudio } from '@whollymath/shared-types';
 import { useEffect, useRef, useState } from 'react';
 
 import { installAudioUnlock, sharedAudioElement } from './audioUnlock';
+import { type Viseme, visemeAt } from './visemes';
 
 // The persisted-mute storage key — MUST match `Mascot`'s `MUTE_STORAGE_KEY` so one toggle governs
 // both the caption visibility and the audio. (Kept in lock-step by this shared literal.)
@@ -34,9 +35,11 @@ export interface GuideSpeech {
   speaking: boolean;
   /** Index into `audio.words` of the word being spoken now; -1 when not animating. */
   wordIndex: number;
+  /** The phoneme-class mouth shape at the current instant (`rest` when not animating). */
+  viseme: Viseme;
 }
 
-const SILENT: GuideSpeech = { speaking: false, wordIndex: -1 };
+const SILENT: GuideSpeech = { speaking: false, wordIndex: -1, viseme: 'rest' };
 
 function readStoredMuted(): boolean {
   try {
@@ -103,6 +106,8 @@ export function useGuideSpeech(audio: SpokenAudio | null): GuideSpeech {
     // non-nullable type — TS would widen a hoisted `function`'s capture back to `... | null`.
     const audioEl = element;
     const wtimes = audio.wtimes;
+    const words = audio.words;
+    const wdurations = audio.wdurations;
     const reduceMotion = prefersReducedMotion();
     audioEl.src = audioUrl;
     audioEl.currentTime = 0;
@@ -121,7 +126,12 @@ export function useGuideSpeech(audio: SpokenAudio | null): GuideSpeech {
 
     const tick = (): void => {
       if (cancelled) return;
-      setSpeech({ speaking: true, wordIndex: currentWordIndex(audioEl.currentTime) });
+      const now = audioEl.currentTime;
+      setSpeech({
+        speaking: true,
+        wordIndex: currentWordIndex(now),
+        viseme: visemeAt(words, wtimes, wdurations, now),
+      });
       frameRef.current = window.requestAnimationFrame(tick);
     };
 
