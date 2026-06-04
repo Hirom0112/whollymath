@@ -25,6 +25,10 @@ _CD = KnowledgeComponentId.COMMON_DENOMINATOR
 _MUL = KnowledgeComponentId.MULTIPLY_FRACTIONS
 _DIV = KnowledgeComponentId.DIVIDE_FRACTIONS
 _DEC = KnowledgeComponentId.DECIMAL_OPERATIONS
+_IAS = KnowledgeComponentId.INTEGER_ADD_SUBTRACT
+_SGN = KnowledgeComponentId.SIGNED_NUMBERS
+_IMD = KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE
+_ABS = KnowledgeComponentId.ABSOLUTE_VALUE
 
 
 def test_schedule_stays_on_goal_kc_but_varies_representations() -> None:
@@ -87,6 +91,21 @@ def test_fraction_decimal_kcs_are_masterable_via_symbolic_plus_area_model() -> N
         reps = {rep for i in range(12) for k, rep in [next_spec(kc, i)] if k == kc}
         assert reps == {Representation.SYMBOLIC, Representation.AREA_MODEL}, (
             f"{kc.value} should rotate symbolic + area-model, got {reps}"
+        )
+        assert is_masterable_live(kc) is True, f"{kc.value} must be masterable after promotion"
+
+
+def test_integer_and_absolute_value_kcs_are_masterable_via_symbolic_plus_number_line() -> None:
+    """Signed-number, integer add/sub & mult/div, and absolute-value KCs are masterable: each is
+    served in SYMBOLIC + NUMBER_LINE. The number-line picture is a display stimulus over the same
+    scalar answer (IntegerJump / SignedPoint / AbsoluteValue scenes); INTEGER_MULTIPLY_DIVIDE is
+    masterable but pictureless for now (the EVALUATE_EXPRESSIONS precedent — number-line jumps for
+    products are a later polish). Closes the panel's naked-computation finding (2026-06-04)."""
+    for kc in (_IAS, _SGN, _IMD, _ABS):
+        assert all(next_spec(kc, i)[0] == kc for i in range(8)), "single-skill serves only the goal"
+        reps = {rep for i in range(12) for k, rep in [next_spec(kc, i)] if k == kc}
+        assert reps == {Representation.SYMBOLIC, Representation.NUMBER_LINE}, (
+            f"{kc.value} should rotate symbolic + number-line, got {reps}"
         )
         assert is_masterable_live(kc) is True, f"{kc.value} must be masterable after promotion"
 

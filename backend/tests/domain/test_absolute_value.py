@@ -19,9 +19,10 @@ misconception a genuinely wrong answer on every item.
 
 from __future__ import annotations
 
-from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId, Representation
 from app.domain.misconceptions import MisconceptionId, signed_not_magnitude
 from app.domain.problem_generators import AnswerKind, generate_problem
+from app.domain.scene import scene_for
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -37,6 +38,18 @@ def _problem(seed: int):  # type: ignore[no-untyped-def]
 def test_absolute_value_is_live() -> None:
     """The KC is content-complete (registered), so the tutor can schedule it."""
     assert _KC in LIVE_KCS
+
+
+def test_number_line_is_the_same_item_with_a_picture() -> None:
+    """NUMBER_LINE serves the SAME scalar answer as SYMBOLIC (same operands + value), now with a
+    distance-from-zero scene attached — the masterable second representation, no new input widget.
+    Absolute value IS a distance, so the line is the canonical picture (panel audit 2026-06-04)."""
+    sym = generate_problem(_KC, seed=5, surface_format=Representation.SYMBOLIC)
+    line = generate_problem(_KC, seed=5, surface_format=Representation.NUMBER_LINE)
+    assert line.surface_format is Representation.NUMBER_LINE
+    assert line.operands == sym.operands
+    assert line.correct_value == sym.correct_value
+    assert scene_for(_KC, line.operands) is not None
 
 
 def test_generated_problem_is_a_negative_input_with_positive_answer() -> None:

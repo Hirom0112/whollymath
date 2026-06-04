@@ -12,9 +12,10 @@ generated; and generation is deterministic (PROJECT.md §4.1). Mandatory-TDD dom
 
 from __future__ import annotations
 
-from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId
+from app.domain.knowledge_components import LIVE_KCS, KnowledgeComponentId, Representation
 from app.domain.misconceptions import MisconceptionId, flip_result_sign
 from app.domain.problem_generators import AnswerKind, Problem, generate_problem
+from app.domain.scene import scene_for
 from app.domain.verifier import ErrorCategory, verify
 from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
@@ -25,6 +26,18 @@ _KC = KnowledgeComponentId.INTEGER_MULTIPLY_DIVIDE
 
 def _problem(seed: int) -> Problem:
     return generate_problem(_KC, seed)
+
+
+def test_number_line_is_the_same_item_masterable_without_a_picture_yet() -> None:
+    """NUMBER_LINE serves the SAME scalar answer as SYMBOLIC, making the KC masterable (≥2 reps).
+    Pictureless for now (no scene deriver) — the EVALUATE_EXPRESSIONS/MULTI_DIGIT_DIVISION
+    precedent; the directed-jump picture for products is a later polish (panel audit 2026-06-04)."""
+    sym = generate_problem(_KC, seed=5, surface_format=Representation.SYMBOLIC)
+    line = generate_problem(_KC, seed=5, surface_format=Representation.NUMBER_LINE)
+    assert line.surface_format is Representation.NUMBER_LINE
+    assert line.operands == sym.operands
+    assert line.correct_value == sym.correct_value
+    assert scene_for(_KC, line.operands) is None  # documents pictureless-but-masterable
 
 
 def test_integer_multiply_divide_is_live() -> None:

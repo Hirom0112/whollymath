@@ -79,18 +79,17 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # wired in scene.py). MASTERABLE: two live representations, no new input widget.
     # (Promoted 2026-06-04 per the panel audit; the second rep already renders.)
     _KC.DECIMAL_OPERATIONS: (_REP.SYMBOLIC, _REP.AREA_MODEL),
-    # Grade-6 Unit 3: SYMBOLIC = the non-negative integer (the distance) entered in the editor.
-    # PRACTICE-ONLY until a signed NUMBER_LINE distance widget lands (T3), then adding NUMBER_LINE
-    # makes it masterable with no other change.
-    _KC.ABSOLUTE_VALUE: (_REP.SYMBOLIC,),
-    # Grade-6 Unit-INT: SYMBOLIC = the signed sum entered in the editor. PRACTICE-ONLY for now; the
-    # NUMBER_LINE rep (its widget exists) is the natural masterable second surface — adding
-    # NUMBER_LINE here promotes it, deferred to avoid over-scoping this build.
-    _KC.INTEGER_ADD_SUBTRACT: (_REP.SYMBOLIC,),
-    # Grade-6 Unit 3: SYMBOLIC = the signed integer (the opposite) entered in the editor. PRACTICE-
-    # ONLY for now; the NUMBER_LINE rep (its widget already exists) is the natural masterable second
-    # surface — adding NUMBER_LINE here promotes it, deferred to avoid over-scoping this build.
-    _KC.SIGNED_NUMBERS: (_REP.SYMBOLIC,),
+    # Grade-6 Unit 3: SYMBOLIC = the distance in the editor; NUMBER_LINE = the same scalar over the
+    # AbsoluteValueStimulus picture (distance-from-zero, already wired). MASTERABLE (2 reps).
+    # (Promoted 2026-06-04 per the panel audit; absolute value IS a distance, so the line is it.)
+    _KC.ABSOLUTE_VALUE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit-INT: SYMBOLIC = the signed sum; NUMBER_LINE = the same answer over the directed-
+    # jump picture (IntegerJumpStimulus, already wired). MASTERABLE (2 reps). (Promoted 2026-06-04.)
+    _KC.INTEGER_ADD_SUBTRACT: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
+    # Grade-6 Unit 3: SYMBOLIC = the opposite in the editor; NUMBER_LINE = the same answer over the
+    # SignedPointStimulus picture (reflection across zero, already wired). MASTERABLE (2 reps).
+    # (Promoted 2026-06-04 per the panel audit; signed numbers ARE positions on the line.)
+    _KC.SIGNED_NUMBERS: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
     # Grade-6 Unit 4: EXPRESSION = the typed algebra string (the ExpressionInput widget). Live on
     # EXPRESSION (not SYMBOLIC) — this KC's default + only answer surface; the WORD_PROBLEM rep is
     # the phrase framing with no surface state. PRACTICE-ONLY (one live rep); a second masterable
@@ -139,11 +138,11 @@ _LIVE_REPRESENTATIONS: dict[KnowledgeComponentId, tuple[Representation, ...]] = 
     # WORD_PROBLEM is the phrase framing with no surface state. PRACTICE-ONLY (one live rep); there
     # is no second concrete widget for naming a part, so SYMBOLIC stays the only live surface.
     _KC.EXPRESSION_PARTS: (_REP.SYMBOLIC,),
-    # Grade-6 Unit-INT (TEKS 6.3C/D): SYMBOLIC = the signed integer product/quotient entered in the
-    # editor. PRACTICE-ONLY for now; the NUMBER_LINE rep (its widget exists) is the natural
-    # masterable second surface — a product is repeated directed jumps from zero — but adding it
-    # here promotes it, deferred to avoid over-scoping this build.
-    _KC.INTEGER_MULTIPLY_DIVIDE: (_REP.SYMBOLIC,),
+    # Grade-6 Unit-INT (TEKS 6.3C/D): SYMBOLIC = the signed product/quotient; NUMBER_LINE = the same
+    # answer (a product is repeated directed jumps from zero). MASTERABLE (2 reps). Pictureless for
+    # now — no scene deriver yet (EVALUATE_EXPRESSIONS/MULTI_DIGIT_DIVISION precedent: masterable
+    # without a picture); the directed-jump scene is a later polish. (Promoted 2026-06-04.)
+    _KC.INTEGER_MULTIPLY_DIVIDE: (_REP.SYMBOLIC, _REP.NUMBER_LINE),
     # Grade-6 Unit 6 (TEKS 6.8A): SYMBOLIC = the missing angle / area as a single number entered in
     # the editor. PRACTICE-ONLY for now; the AREA_MODEL rep (the triangle FIGURE — its angles and
     # its base×height region) is the natural masterable second surface, added here once a
