@@ -712,9 +712,11 @@ class StartSessionRequest(BaseModel):
     proactive_enabled: bool = Field(
         default=False,
         description=(
-            "Opt into the proactive HelpNeed arm for this session (Slice 4.5). Default "
-            "OFF = observe-only (RESEARCH.md §7.5); set by the Slice 5.4 A/B harness or a "
-            "demo. When OFF the session never sees a proactive intervention."
+            "Whether this session runs the proactive/live-adaptation arm (Slice 4.5). The API "
+            "default is conservative (False = observe-only, RESEARCH.md §7.5) so the eval harness "
+            "and tests stay explicit, but the LEARNER app sends True for every session (owner "
+            "2026-06-04 — individualize for every child); a learner opts OUT with ?proactive=0. "
+            "When False the session never sees a proactive intervention or live morph."
         ),
     )
     locale: Locale = Field(

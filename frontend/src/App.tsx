@@ -39,10 +39,12 @@ import { SessionProvider, useSession } from './state/SessionContext';
 // line — nothing written for the scanner to read — so it has no scannable homework.
 const HOMEWORK_KC: KnowledgeComponentId = 'KC_equivalence';
 
-// Demo / A/B switch: ?proactive=1 opts into the proactive HelpNeed arm (Slice 4.5).
-// Default OFF = observe-only (RESEARCH.md §7.5); not a learner-facing control. Read once at
-// module load so it's a stable value for the whole run (the URL changes as the learner navigates).
-const PROACTIVE = new URLSearchParams(window.location.search).get('proactive') === '1';
+// Live adaptation arm: the hyperreactive loop is ON for every learner (owner 2026-06-04 —
+// "individualize for every child"). It stays advisory + sustained-signal-gated (the refuse-rules
+// and SustainedHelpNeedGate are the guardrails), so "on" means the screen MAY morph with a labeled
+// reason, never chaotically. `?proactive=0` opts a session OUT — the A/B control arm and the eval
+// harness still measure both ways. Read once at module load so it's stable for the whole run.
+const PROACTIVE = new URLSearchParams(window.location.search).get('proactive') !== '0';
 
 // The app entry. The router lives INSIDE App (App.tsx stays self-contained, and tests that render
 // <App/> keep working) and is wrapped in the SessionProvider so every route shares the lesson
@@ -104,7 +106,8 @@ function readFrom(state: unknown, fallback: string): string {
 
 // The Landing route also absorbs the legacy query-param entry points (existing links / printed QR
 // codes may still use ?teacher=1, ?eval=1, ?theater=1, ?hwupload=<token>). We redirect them to the
-// new paths once, preserving ?proactive=1, before rendering the landing for a plain visit.
+// new paths once, preserving the ?proactive=0 OPT-OUT (the loop is on by default), before rendering
+// the landing for a plain visit.
 function LandingRoute(): React.JSX.Element {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -114,16 +117,16 @@ function LandingRoute(): React.JSX.Element {
   const evalArm = params.get('eval') === '1';
   const theater = params.get('theater') === '1';
   const hwUpload = params.get('hwupload');
-  const proactive = params.get('proactive') === '1';
+  const proactiveOff = params.get('proactive') === '0';
 
   const legacyTarget = ((): string | null => {
-    const suffix = proactive ? '?proactive=1' : '';
+    const suffix = proactiveOff ? '?proactive=0' : '';
     if (teacher) return `/teacher${suffix}`;
     if (parent) return `/parent${suffix}`;
     if (evalArm) return `/eval${suffix}`;
     if (theater) return `/theater${suffix}`;
     if (hwUpload !== null && hwUpload !== '') {
-      const sep = proactive ? '&proactive=1' : '';
+      const sep = proactiveOff ? '&proactive=0' : '';
       return `/hw/upload?token=${encodeURIComponent(hwUpload)}${sep}`;
     }
     return null;
