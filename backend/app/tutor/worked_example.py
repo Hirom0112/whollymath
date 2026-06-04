@@ -463,16 +463,42 @@ def _equivalent_ratios_steps(problem: Problem) -> tuple[WorkedStep, ...]:
 
 
 def _percent_steps(problem: Problem) -> tuple[WorkedStep, ...]:
-    """The 'per 100, then of the whole' steps for a percent-of problem.
+    """Per-100 steps for a percent item in EITHER direction of 6.RP.3c.
 
-    ``operands = (percent, whole)``; the answer is ``percent/100 * whole ==
-    problem.correct_value``. Raises if the operands are missing (CLAUDE.md §8.5).
+    ``operands = (percent, whole, mode)`` (the decimal-operations shape). ``mode == 0``
+    (_PERCENT_OF) asks "what is p% of whole?" and ``mode == 1`` (_PERCENT_FIND_WHOLE) asks "{part}
+    is p% of what number?". Each branch lands on ``problem.correct_value`` (the part for percent-of,
+    the whole for find-the-whole). Raises if the operands are missing or the mode is unknown (§8.5).
     """
     operands = problem.operands
-    if operands is None or len(operands) != 2:
-        raise ValueError(f"percent problem {problem.problem_id} needs (percent, whole)")
-    percent, whole = int(operands[0]), int(operands[1])
+    if operands is None or len(operands) != 3:
+        raise ValueError(f"percent problem {problem.problem_id} needs (percent, whole, mode)")
+    percent, whole, mode = int(operands[0]), int(operands[1]), int(operands[2])
     answer = problem.correct_value
+    if mode == 1:  # _PERCENT_FIND_WHOLE
+        part = percent * whole // 100  # the integer part the prompt states (generator guarantees)
+        return (
+            WorkedStep(
+                shown=f"{percent}% means {percent} out of 100, i.e. the fraction {percent}/100.",
+                why_prompt="Why is a percent just a fraction with a denominator of 100?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=(
+                    f"{part} is {percent}/100 of the whole, so divide the part by the fraction: "
+                    f"{part} ÷ {percent}/100."
+                ),
+                why_prompt="Why does dividing the part by the percent recover the whole?",
+                revealed_value=None,
+            ),
+            WorkedStep(
+                shown=f"That is {answer.p}.",
+                why_prompt="Why is the whole bigger than the part when the percent is under 100?",
+                revealed_value=answer,
+            ),
+        )
+    if mode != 0:  # _PERCENT_OF is 0; anything else is an unexpected mode
+        raise ValueError(f"percent problem {problem.problem_id} has unknown mode {mode}")
     each = f"{answer.p}/{answer.q}" if answer.q != 1 else f"{answer.p}"
     return (
         WorkedStep(

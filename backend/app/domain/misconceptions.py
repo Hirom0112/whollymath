@@ -1038,6 +1038,29 @@ def decimal_point_misplacement(operands: tuple[Rational, ...]) -> Rational | Non
     return Rational(first * second) * (10 ** min(p1, p2))
 
 
+def percent_as_amount(operands: tuple[Rational, ...]) -> Rational | None:
+    """percent-as-amount: report the percent NUMBER itself instead of that percent OF the whole.
+
+    The percent generator encodes an item as ``(percent, whole, mode)`` where ``mode == 0``
+    (_PERCENT_OF) asks "what is p% of whole?" and ``mode == 1`` (_PERCENT_FIND_WHOLE) asks
+    "{part} is p% of what number?". This error is PERCENT_OF-specific — it models reading the
+    percent ``p`` as an absolute count instead of taking it OF the base (30% of 50 -> 30, not 15).
+    On the find-the-whole direction there is no "percent OF the whole" to skip (the answer IS the
+    whole), so the error does not apply: this returns ``None`` for mode 1 and for an unexpected
+    operand shape (defensive), exactly as ``decimal_point_misplacement`` returns ``None`` off the
+    multiply mode. The verifier then never mislabels a correct (or otherwise-wrong) find-the-whole
+    answer as percent-as-amount. Returned as a SymPy ``Rational`` so the verifier compares values
+    directly; the generator excludes whole == 100, so on a PERCENT_OF item ``p`` always differs from
+    the correct ``p*whole/100``.
+    """
+    if len(operands) != 3:
+        return None  # defensive: the verifier then reports OTHER rather than a false match
+    percent, _whole, mode = operands
+    if mode != 0:  # find-the-whole: no "percent OF the whole" to skip, so the error does not apply
+        return None
+    return percent
+
+
 def signed_not_magnitude(value: int) -> Rational:
     """signed-not-magnitude: report the signed value itself instead of its distance from 0.
 

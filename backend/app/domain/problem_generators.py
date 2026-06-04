@@ -812,28 +812,60 @@ _PERCENT_BY_DIFFICULTY: dict[int, tuple[int, ...]] = {
 # distinct from the correct value (p% of 100 == p only at whole == 100).
 _PERCENT_WHOLES: tuple[int, ...] = (20, 30, 40, 50, 60, 80)
 
+# Direction modes for KC_percent, the THIRD operand of every item (the ``(percent, whole, mode)``
+# shape). Module-level int constants mirroring _DECIMAL_MULTIPLY etc.: the seeded RNG picks one so a
+# single generator covers BOTH directions of CCSS 6.RP.3c — "what is p% of whole?" AND "find the
+# whole given a part and a percent" — not just the part (the coverage gap the panel flagged,
+# 2026-06-04). The flag also lets the verifier gate the percent-of-specific percent-as-amount
+# misconception (it must not fire on find-the-whole).
+_PERCENT_OF = 0
+_PERCENT_FIND_WHOLE = 1
+
 
 def _generate_percent(
     rng: random.Random, seed: int, surface_format: Representation, difficulty: int | None = None
 ) -> Problem:
-    """KC_percent: find a percent OF a quantity (a rate per 100).
+    """KC_percent: relate a percent, a part, and a whole in EITHER direction (CCSS 6.RP.3c).
 
-    Asks "what is p% of whole?"; the answer is the SymPy ``Rational(p*whole, 100)`` (may reduce
-    to a fraction, which the editor accepts). ``operands = (p, whole)`` so the verifier can replay
-    the percent-as-amount misconception (answering the percent ``p`` itself). Numeric, symbolic.
+    The seeded RNG picks a direction MODE so the single lesson covers the whole standard, not just
+    the part (coverage fix, panel audit 2026-06-04):
+
+      - PERCENT_OF (mode 0): "what is p% of whole?" — the original behavior. The answer is the SymPy
+        ``Rational(p*whole, 100)`` (may reduce to a fraction, which the editor accepts).
+      - FIND_WHOLE (mode 1): "{part} is p% of what number?" — given the part and the percent, find
+        the whole. The answer is the whole itself (a positive integer). Only ``(p, whole)`` pairs
+        whose part ``p*whole/100`` is a positive WHOLE number are used, so the stated part reads
+        cleanly (no fractional part in the prompt): the candidate wholes are filtered to those with
+        ``p*whole`` divisible by 100. Every percent in the pools admits at least one such whole.
+
+    ``operands = (percent, whole, mode)`` mirrors the KC_decimal_operations shape. ``whole`` is kept
+    as ``operands[1]`` in BOTH modes so the find-the-whole answer is recoverable, and the verifier
+    can gate the PERCENT_OF-specific percent-as-amount misconception (answering ``p`` itself), which
+    returns ``None`` off mode 0, mirroring the decimal-point-misplacement gate. Numeric, symbolic.
     """
     pool = _PERCENT_BY_DIFFICULTY.get(difficulty, _PERCENT_POOL) if difficulty else _PERCENT_POOL
     percent = rng.choice(pool)
-    whole = rng.choice(_PERCENT_WHOLES)
-    statement = f"What is {percent}% of {whole}?"
+    mode = rng.choice((_PERCENT_OF, _PERCENT_FIND_WHOLE))
+    if mode == _PERCENT_FIND_WHOLE:
+        # Keep only wholes whose part (p% of whole) is a positive whole number, so the prompt states
+        # a clean integer part. Every pool percent admits at least one such whole (tested).
+        whole_pool = tuple(w for w in _PERCENT_WHOLES if (percent * w) % 100 == 0)
+        whole = rng.choice(whole_pool)
+        part = percent * whole // 100
+        statement = f"{part} is {percent}% of what number?"
+        correct_value = Rational(whole)
+    else:
+        whole = rng.choice(_PERCENT_WHOLES)
+        statement = f"What is {percent}% of {whole}?"
+        correct_value = Rational(percent * whole, 100)
     return Problem(
         problem_id=_generated_id(KnowledgeComponentId.PERCENT, seed, surface_format),
         kc=KnowledgeComponentId.PERCENT,
         surface_format=surface_format,
         statement=statement,
-        correct_value=Rational(percent * whole, 100),
+        correct_value=correct_value,
         representations_available=get_kc(KnowledgeComponentId.PERCENT).representations,
-        operands=(Rational(percent), Rational(whole)),
+        operands=(Rational(percent), Rational(whole), Rational(mode)),
     )
 
 

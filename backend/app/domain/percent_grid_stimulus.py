@@ -7,14 +7,17 @@ whole?"; this module turns the SAME ``p`` the prompt names into a structured, di
 picture carries the meaning of the percent for the learner.
 
 Single source of truth (the §8.4 anti-drift rule): the stimulus is DERIVED from the problem's
-``operands`` — ``(percent, whole)``, the exact pair the generator also formats into the prompt text
-("What is {percent}% of {whole}?") — so the picture and the words can never disagree. Nothing here
-recomputes or invents data.
+``operands`` — ``(percent, whole, mode)``, whose leading ``percent`` the generator also formats into
+the prompt text (both directions of 6.RP.3c name the percent: "What is {percent}% of {whole}?" and
+"{part} is {percent}% of what number?") — so the picture and the words can never disagree. Nothing
+here recomputes or invents data.
 
 This is DISPLAY-ONLY, like ``SetModelStimulus`` / ``StatsStimulus``: it carries the QUESTION INPUT
-(the percent, as a count of shaded cells out of 100), NEVER the ANSWER. The answer ``p*whole/100``
-(e.g. 18 for "30% of 60") lives only in ``Problem.correct_value`` and never enters the stimulus —
-shading the percent leaks nothing the prompt text doesn't already say. Grading stays with the SymPy
+(the percent, as a count of shaded cells out of 100), NEVER the ANSWER. The answer (the part for
+percent-of, the whole for find-the-whole) lives only in ``Problem.correct_value`` and never enters
+the stimulus — shading the percent leaks nothing the prompt text doesn't already say. The grid is
+meaningful in BOTH directions: "30 per 100" is exactly the rate the learner reasons with whether
+they are taking it OF a whole or recovering the whole from a part. Grading stays with the SymPy
 verifier server-side (CLAUDE.md §8.2); this changes nothing about grading.
 
 No SymPy decision-making and no LLM here — a pure projection of already-decided domain data into a
@@ -52,14 +55,15 @@ def percent_grid_for(
     """The display-only hundred-grid for a problem, derived from its ``operands``; ``None`` for any
     problem that names no percent (every KC except KC_percent).
 
-    KC_percent encodes ``operands = (percent, whole)`` — index 0 is the percent ``p`` the prompt
-    asks about, index 1 is the whole. Only the percent drives the picture (the grid is always 100
-    cells; the whole is irrelevant to "p per 100"), so the whole is not read. The shaded count is
-    clamped to [0, 100] defensively so a malformed percent never draws more than a full grid.
+    KC_percent encodes ``operands = (percent, whole, mode)`` — index 0 is the percent ``p`` the
+    prompt names in BOTH directions, index 1 is the whole, index 2 is the direction mode. Only the
+    percent drives the picture (the grid is always 100 cells; the whole and mode are irrelevant to
+    "p per 100"), so neither is read. The shaded count is clamped to [0, 100] defensively so a
+    malformed percent never draws more than a full grid.
     """
     if kc is not KnowledgeComponentId.PERCENT:
         return None
-    if operands is None or len(operands) != 2:
+    if operands is None or len(operands) != 3:
         return None  # defensive: a malformed operand tuple draws no picture rather than crashing
     percent = int(operands[0])
     shaded = max(0, min(100, percent))

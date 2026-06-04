@@ -82,6 +82,7 @@ from app.domain.misconceptions import (
     parse_points,
     part_part_ratio,
     part_whole_ratio,
+    percent_as_amount,
     place_value_slip,
     reversed_operands,
     signed_not_magnitude,
@@ -678,13 +679,15 @@ _WRONG_ANSWER_MODELS: tuple[_WrongAnswerModel, ...] = (
         predict=lambda ops: additive_ratio(int(ops[0]), int(ops[1]), int(ops[2])),
     ),
     # percent-as-amount: answers the percent number itself instead of that percent OF the whole
-    # (operands are (percent, whole)). A wrong OPERATION (ignored the base).
+    # (operands are (percent, whole, mode)). A wrong OPERATION (ignored the base). PERCENT_OF-
+    # SPECIFIC: the predictor returns None on the find-the-whole mode (no "percent OF the whole" to
+    # skip there), so it never fires off mode 0 — the decimal-point-misplacement gate pattern.
     _WrongAnswerModel(
         kc=KnowledgeComponentId.PERCENT,
-        operand_count=2,
+        operand_count=3,
         error_category=ErrorCategory.OPERATION,
         misconception=MisconceptionId.PERCENT_AS_AMOUNT,
-        predict=lambda ops: ops[0],
+        predict=percent_as_amount,
     ),
     # multiply-as-add: multiplied two fractions by ADDING them instead (operands are the two
     # fractions). A wrong OPERATION (x treated as +) — the sum is larger than the product.
