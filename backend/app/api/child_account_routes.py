@@ -53,6 +53,8 @@ from app.api.parent_session import (
 )
 from app.api.rate_limit import rate_limit
 from app.api.routes import StoreDep
+from app.api.schemas import TeacherStudentView
+from app.api.teacher_service import TeacherService
 from app.auth.passwords import InvalidPinError
 from app.auth.tokens import session_signing_key
 
@@ -152,6 +154,25 @@ def get_child(public_id: str, parent: CurrentParentDep, store: StoreDep) -> Chil
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="child not found"
             ) from exc
+
+
+@child_account_router.get(
+    "/parent/children/{public_id}/progress", response_model=TeacherStudentView
+)
+def get_child_progress(
+    public_id: str, parent: CurrentParentDep, store: StoreDep
+) -> TeacherStudentView:
+    """One child's full progress drill-in for the parent dashboard. 404 if not owned (BOLA).
+
+    Reuses the teacher drill-in computation (``TeacherService.child`` → ``_student_view``) so the
+    parent sees the SAME mastery evidence + named misconception, parent-scoped by ownership rather
+    than roster. A child who hasn't practiced yet returns an honest just-getting-started view."""
+    _require_persistence(store)
+    assert store.session_factory is not None
+    view = TeacherService(store.session_factory).child(parent.learner_id, public_id, _now())
+    if view is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="child not found")
+    return view
 
 
 @child_account_router.get("/parent/children/{public_id}/export")

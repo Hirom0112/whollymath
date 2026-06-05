@@ -114,7 +114,13 @@ def _activity(turns: list[Turn], now: datetime) -> list[ActivityEventView]:
 
 
 def _display_name(learner: Learner) -> str:
-    """A human label for a learner: the email local-part, else a stable 'Student N'."""
+    """A human label: the set display name, else the email local-part, else a stable 'Student N'.
+
+    ``display_name`` is preferred so a CHILD account (no email, a real name set at creation) shows
+    its name on the parent dashboard rather than a "Student N" placeholder; teacher students with no
+    display name fall back to the email local-part as before."""
+    if learner.display_name:
+        return learner.display_name
     if learner.email:
         return learner.email.split("@", 1)[0]
     return f"Student {learner.id}"
@@ -384,6 +390,25 @@ class TeacherService:
             if repo.get_student_if_on_roster(db, teacher_id, student.id) is None:
                 return None
             return _student_view(db, student, now)
+
+    def child(
+        self, parent_id: int, child_public_id: str, now: datetime
+    ) -> TeacherStudentView | None:
+        """One CHILD's full progress drill-in for their parent, or ``None`` if not owned (→ 404).
+
+        The parent dashboard reuses the teacher drill-in shape (a child IS one learner's evidence),
+        so this reuses the exact same ``_student_view`` computation as ``student`` — only the
+        authorization differs: ownership is the BOLA query ``get_child_for_parent`` (the
+        ``parent_id`` is in the WHERE clause, so another family's ``public_id`` returns ``None``)
+        rather than roster membership. A child with no practice yet yields an honest "just getting
+        started" view from the same code — no fabricated progress."""
+        if self.session_factory is None:
+            return None
+        with self.session_factory() as db:
+            child = repo.get_child_for_parent(db, parent_id, child_public_id)
+            if child is None:
+                return None
+            return _student_view(db, child, now)
 
     def assign(
         self, teacher_id: int, student_session_id: str, unit_slug: str, now: datetime

@@ -8,7 +8,7 @@
 // fetch path (stubbed for later) and the seeded demo household (parentDemo.ts). Both paths exist so
 // flipping to real data is a one-line change once a backend + real child logins land.
 
-import { createChild, listChildren, parentMe, type ChildAccount } from './parentAuth';
+import { createChild, getJson, listChildren, parentMe, type ChildAccount } from './parentAuth';
 import {
   addChildInDemo,
   demoChild,
@@ -78,24 +78,57 @@ function summaryFromAccount(account: ChildAccount): ChildSummary {
   };
 }
 
+// Build a roster card from a child's REAL progress drill-in, so the household roster reflects the
+// same live data as the per-child view (no "just added" placeholder for a child who has practiced).
+// Falls back to the identity-only card if the progress read fails for one child, so a single bad
+// read never breaks the whole roster. Scales line up: percent_complete is 0..1 and accuracy_history
+// is the 0..100 sparkline series on both the drill-in and the ChildSummary card.
+async function childSummaryFromProgress(account: ChildAccount): Promise<ChildSummary> {
+  try {
+    const d = await fetchChild(account.public_id);
+    return {
+      child_id: account.public_id,
+      name: account.display_name,
+      grade: account.grade_level,
+      category: d.category,
+      status_line: d.category_reason,
+      current_unit_title: d.current_unit_title ?? null,
+      current_lesson_title: d.current_lesson_title ?? null,
+      percent_complete: d.percent_complete,
+      practiced_today: (d.accuracy_history?.length ?? 0) > 0,
+      trend: d.accuracy_history ?? [],
+    };
+  } catch {
+    return summaryFromAccount(account);
+  }
+}
+
 /** Fetch the signed-in parent's household: their name, the household label, and the child cards. */
 export async function fetchHousehold(): Promise<Household> {
   if (!PARENT_API_READY) return demoHousehold();
-  const [me, children] = await Promise.all([parentMe(), listChildren()]);
+  const [me, accounts] = await Promise.all([parentMe(), listChildren()]);
   const first = nameFromEmail(me.email);
+  // Each card is built from the child's live progress drill-in (one read per child), so the roster
+  // and the per-child view never disagree. A child with no practice yet returns an honest
+  // just-getting-started view from the same code path.
+  const children = await Promise.all(accounts.map(childSummaryFromProgress));
   return {
     parent_name: first,
     household_label: `The ${first} Family`,
-    children: children.map(summaryFromAccount),
+    children,
   };
 }
 
-/** Fetch one child's full progress drill-in. Served from the authored demo fixtures (no backend
- *  progress model yet). 404 if the child id is not one we can render a detail for. */
+/** Fetch one child's full progress drill-in from the live, parent-owned endpoint (BOLA-scoped
+ *  server-side). 404 if the child is not this parent's. In offline demo mode (`!PARENT_API_READY`)
+ *  it serves the authored fixtures instead. */
 export async function fetchChild(childId: string): Promise<ChildDetail> {
-  const child = demoChild(childId);
-  if (child === null) throw new ApiError(404, `child ${childId} has no progress detail yet`);
-  return Promise.resolve(child);
+  if (!PARENT_API_READY) {
+    const child = demoChild(childId);
+    if (child === null) throw new ApiError(404, `child ${childId} has no progress detail yet`);
+    return child;
+  }
+  return getJson<ChildDetail>(`/parent/children/${encodeURIComponent(childId)}/progress`);
 }
 
 /** Fetch the parent's seeded notes / "things to ask about" (authored fixtures; local-toggle). */

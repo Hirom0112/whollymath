@@ -170,6 +170,43 @@ def test_get_other_familys_child_is_404_bola(app: FastAPI) -> None:
     assert body["public_id"] == child_a["public_id"]
 
 
+def test_child_progress_drill_in_for_owned_child(app: FastAPI) -> None:
+    # The parent dashboard's per-child drill-in: the teacher drill-in shape, parent-scoped. A child
+    # with no practice yet returns an honest, well-formed "just getting started" view.
+    parent = _signed_up_parent(app, "progress@example.com")
+    _, child = _create_child(parent, username="progresskid", display_name="Progress Kid")
+    assert isinstance(child, dict)
+
+    status, body = parent.get(f"/parent/children/{child['public_id']}/progress")
+    assert status == 200, body
+    assert body["name"] == "Progress Kid"
+    # The drill-in shape the parent UI (ChildDetail) renders is present and well-typed.
+    assert body["category"] in {"struggling", "needs_attention", "on_track"}
+    assert isinstance(body["accuracy_history"], list)
+    assert isinstance(body["alerts"], list)
+    assert isinstance(body["strengths"], list)
+    assert isinstance(body["weaknesses"], list)
+
+
+def test_child_progress_other_familys_child_is_404_bola(app: FastAPI) -> None:
+    # The progress endpoint is BOLA-scoped exactly like the summary endpoint: a parent can only read
+    # their OWN child's progress; another family's public_id is a 404, never their data.
+    parent_a = _signed_up_parent(app, "pa@example.com")
+    _, child_a = _create_child(parent_a, username="pakid")
+    assert isinstance(child_a, dict)
+
+    parent_b = _signed_up_parent(app, "pb@example.com")
+    _, child_b = _create_child(parent_b, username="pbkid")
+    assert isinstance(child_b, dict)
+
+    status, _ = parent_a.get(f"/parent/children/{child_b['public_id']}/progress")
+    assert status == 404
+
+    status, body = parent_a.get(f"/parent/children/{child_a['public_id']}/progress")
+    assert status == 200
+    assert body["name"] == "Kid One"
+
+
 def test_reset_pin_is_204(app: FastAPI) -> None:
     parent = _signed_up_parent(app, "reset@example.com")
     _, child = _create_child(parent, username="kiddo")
