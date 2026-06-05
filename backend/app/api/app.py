@@ -127,6 +127,35 @@ def _build_session_factory() -> sessionmaker[OrmSession] | None:
         return None
 
 
+def _maybe_seed_demo_class(session_factory: sessionmaker[OrmSession] | None) -> None:
+    """Seed the demo class at boot when WHOLLYMATH_SEED_DEMO_CLASS is set (opt-in, off by default).
+
+    Drives the six persona bots through the real turn loop and rosters them to the demo teacher, so
+    a fresh deploy's one-click teacher demo shows a genuine class instead of an empty roster. Kept
+    OUT of ``provision_demo_teacher`` on purpose: demo-login is the standard "get a teacher" path
+    (incl. in tests), so seeding there would pollute every roster. Guarded by the env flag so the
+    test/dev boot is untouched; idempotent (stable per-bot ids) so repeated boots are a fast no-op;
+    best-effort so a seeding failure can never stop the app from booting. Lazy import avoids a
+    module-load cycle (student_bots imports SessionStore from service)."""
+    if not os.environ.get("WHOLLYMATH_SEED_DEMO_CLASS"):
+        return
+    if session_factory is None:
+        _log.warning("WHOLLYMATH_SEED_DEMO_CLASS set but no DATABASE_URL reachable; skipping seed")
+        return
+    try:
+        from datetime import UTC, datetime
+
+        from app.personas.student_bots import seed_demo_class, seed_demo_parent
+
+        now = datetime.now(UTC)
+        learner_ids = seed_demo_class(session_factory, now=now)
+        _log.info("seeded demo class: %d student bots", len(learner_ids))
+        _parent_id, child_ids = seed_demo_parent(session_factory, now=now)
+        _log.info("seeded demo parent: %d children", len(child_ids))
+    except Exception:  # noqa: BLE001 — seeding is best-effort; the app must still boot.
+        _log.exception("demo seeding failed; the teacher/parent demo will show an empty roster")
+
+
 def create_app() -> FastAPI:
     """Build and return the FastAPI app with the turn-loop routes mounted.
 
@@ -168,6 +197,11 @@ def create_app() -> FastAPI:
         # so the app boots with no Postgres. Writes are off the decision path (invariant 7).
         session_factory=_build_session_factory(),
     )
+    # Optionally populate the demo class at boot so the one-click teacher demo shows a real,
+    # persona-driven roster on a fresh database (the dashboard reads LIVE data now, not fixtures —
+    # frontend api/teacher.ts TEACHER_API_READY=true). Opt-in via WHOLLYMATH_SEED_DEMO_CLASS so it
+    # never runs in tests or a plain dev boot. Off the turn loop entirely.
+    _maybe_seed_demo_class(app.state.session_store.session_factory)
     # The homework scan flow's store (PROJECT.md §3.4 two-star model): one per app instance, like
     # the turn-loop store, so runs are isolated between apps. Real Mathpix OCR when MATHPIX_APP_KEY
     # is configured, else the deterministic MockScanner (no key needed) — same flow either way.

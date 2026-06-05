@@ -42,6 +42,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import sessionmaker
@@ -49,6 +50,7 @@ from sympy import Rational
 
 from app.api.schemas import ActionType, TurnRequest
 from app.api.service import SessionStore
+from app.auth.passwords import hash_password, hash_pin
 from app.db import repositories as repo
 from app.domain.curriculum import all_units
 from app.domain.knowledge_components import KnowledgeComponentId
@@ -332,9 +334,102 @@ def seed_demo_class(
     ]
 
 
+# ─── Demo PARENT + children (parent dashboard) ────────────────────────────────────────────────
+# The parent surface mirrors the teacher one: a household of real CHILD accounts with genuine,
+# persona-driven progress, so the parent dashboard roster + per-child drill-in read live data
+# (api/parent.ts), not fixtures. A child is a normal learner, so we drive the same personas through
+# the real turn loop against the child's ``child:<public_id>`` session — identical to the child
+# logging in and practicing. Two children give a clear spread (one thriving, one struggling).
+DEMO_PARENT_EMAIL = "demo.parent@whollymath.dev"
+DEMO_PARENT_PASSWORD = "demo-parent-pw1"  # noqa: S105 — a public demo credential, not a secret.
+DEMO_CHILD_PIN = "8245"  # non-trivial demo PIN (not a sequential/common one)
+
+
+@dataclass(frozen=True)
+class DemoChildProfile:
+    """A demo child: a persona to drive + the login identity its account is created with."""
+
+    persona: PersonaConfig
+    display_name: str
+    username: str
+    route_key: str
+
+
+DEMO_CHILD_PROFILES: tuple[DemoChildProfile, ...] = (
+    DemoChildProfile(get_persona("capable_cora"), "Cora", "cora-demo", "combine"),
+    DemoChildProfile(get_persona("surface_sam"), "Sam", "sam-demo", "combine"),
+)
+
+
+def _demo_child_public_id(username: str) -> str:
+    """A STABLE public id for a demo child, so re-seeding maps to the same child (idempotent).
+
+    ``create_child`` takes the public id from the caller; a random uuid4 each run would mint a new
+    child every boot. uuid5 over a fixed namespace + the username is deterministic, so the child's
+    account, drill-in URL, and persisted progress are stable across reboots."""
+    return uuid5(NAMESPACE_URL, f"whollymath-demo-child:{username}").hex
+
+
+def seed_demo_parent(
+    session_factory: sessionmaker[OrmSession],
+    *,
+    now: datetime,
+) -> tuple[int, list[int]]:
+    """Create the demo parent + children, drive their personas; return (parent_id, child_ids).
+
+    Idempotent end-to-end: the parent is keyed on its email (one row), each child on a stable
+    ``public_id`` (one row), and ``run``-style turn driving is skipped once a child already has
+    persisted turns. So re-running yields the same household with the same progress. The demo parent
+    is created email-verified so its children are immediately live (the verification gate is the
+    real-signup consent anchor, not relevant to the seeded demo account)."""
+    with session_factory() as db:
+        parent = repo.get_parent_by_email(db, DEMO_PARENT_EMAIL)
+        if parent is None:
+            parent = repo.create_parent_with_password(
+                db, email=DEMO_PARENT_EMAIL, password_hash=hash_password(DEMO_PARENT_PASSWORD)
+            )
+            parent.email_verified = True  # demo parent is pre-verified so children go live
+            db.commit()
+        parent_id = parent.id
+
+    child_ids: list[int] = []
+    for profile in DEMO_CHILD_PROFILES:
+        public_id = _demo_child_public_id(profile.username)
+        with session_factory() as db:
+            child = repo.get_child_for_parent(db, parent_id, public_id)
+            if child is None:
+                child = repo.create_child(
+                    db,
+                    parent_id=parent_id,
+                    public_id=public_id,
+                    display_name=profile.display_name,
+                    grade_level=6,
+                    locale="en",
+                    child_username=profile.username,
+                    pin_hash=hash_pin(DEMO_CHILD_PIN),
+                )
+                db.commit()
+            child_ids.append(child.id)
+        # Drive the persona through the real turn loop AS this child (its child:<public_id>
+        # session), so the child accrues genuine mastery/turns. Reuses the class-bot driving path.
+        bot = StudentBotProfile(
+            persona=profile.persona,
+            display_name=profile.display_name,
+            session_id=f"child:{public_id}",
+            route_key=profile.route_key,
+            intended_category="on_track",
+        )
+        if not _already_seeded(session_factory, bot.session_id):
+            _drive_turns(bot, session_factory)
+    return parent_id, child_ids
+
+
 __all__ = [
     "DEMO_BOT_PROFILES",
+    "DEMO_CHILD_PROFILES",
+    "DemoChildProfile",
     "StudentBotProfile",
     "run_student_bot",
     "seed_demo_class",
+    "seed_demo_parent",
 ]
