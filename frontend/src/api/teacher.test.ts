@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   TEACHER_API_READY,
@@ -6,71 +6,116 @@ import {
   demoLogin,
   fetchRoster,
   fetchTeacherStudent,
-  type StudentCategory,
+  setTeacherToken,
 } from './teacher';
 
 import { ApiError } from './index';
 
-// The student bots that seed a real class are deferred (saved to test the lesson plans), so the
-// client runs in DEMO mode (TEACHER_API_READY=false): it serves the seeded demo class so the
-// dashboard renders a populated roster instead of the empty live one. These tests pin the demo
-// path the dashboard relies on + the offline sign-in. (The live /teacher/* path is intact and was
-// verified end-to-end manually; it re-activates when the flag flips back to true.)
+// The teacher surface now runs LIVE (TEACHER_API_READY=true): the client hits the real /teacher/*
+// endpoints, which a demo-login idempotently seeds with six persona bots. These tests pin the live
+// client WIRING — correct path, method, auth header, response shaping, and 404 mapping — by mocking
+// `fetch`. The roster's data quality (categories, alerts, misconceptions) is owned by the backend
+// persona/teacher-service tests, not re-asserted here against fixtures.
 
-describe('teacher demo client (bots deferred)', () => {
-  it('serves the demo class while the bots are deferred', () => {
-    expect(TEACHER_API_READY).toBe(false);
+interface MockResponse {
+  status: number;
+  body: unknown;
+}
+type Router = (url: string, method: string) => MockResponse;
+
+function mockFetch(router: Router): ReturnType<typeof vi.fn> {
+  const spy = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    const method = (init?.method ?? 'GET').toUpperCase();
+    const { status, body } = router(String(url), method);
+    return {
+      ok: status < 400,
+      status,
+      json: async () => body,
+    } as Response;
+  });
+  vi.stubGlobal('fetch', spy);
+  return spy;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  setTeacherToken(null);
+});
+
+describe('teacher live client', () => {
+  it('runs in live mode against the real /teacher endpoints', () => {
+    expect(TEACHER_API_READY).toBe(true);
   });
 
-  it('demo-login signs in offline (no backend needed)', async () => {
+  it('demo-login POSTs /teacher/demo-login and returns the minted handle', async () => {
+    const spy = mockFetch((url, method) => {
+      if (url.endsWith('/teacher/demo-login') && method === 'POST') {
+        return {
+          status: 200,
+          body: {
+            learner_id: 1,
+            email: 'demo.teacher@whollymath.dev',
+            role: 'teacher',
+            token: 'demo:demo-teacher',
+          },
+        };
+      }
+      return { status: 404, body: {} };
+    });
     const handle = await demoLogin();
     expect(handle.role).toBe('teacher');
-    expect(handle.token).not.toBe('');
+    expect(handle.token).toBe('demo:demo-teacher');
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining('/teacher/demo-login'),
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 
-  it('roster spans every ranked category so the dashboard shows all three sections', async () => {
-    const roster = await fetchRoster();
-    const present = new Set<StudentCategory>((roster.students ?? []).map((s) => s.category));
-    expect(present.has('struggling')).toBe(true);
-    expect(present.has('needs_attention')).toBe(true);
-    expect(present.has('on_track')).toBe(true);
-    expect(roster.teacher_name).not.toBe('');
-    expect(roster.class_name).not.toBe('');
-  });
-
-  it('every struggling student carries at least one urgent alert (the ranking invariant)', async () => {
-    const roster = await fetchRoster();
-    const struggling = (roster.students ?? []).filter((s) => s.category === 'struggling');
-    expect(struggling.length).toBeGreaterThan(0);
-    for (const s of struggling) {
-      expect((s.alerts ?? []).some((a) => a.severity === 'urgent')).toBe(true);
-    }
-  });
-
-  it('drills into a student with the named misconception teachers asked for', async () => {
-    const maya = await fetchTeacherStudent('stu-maya');
-    expect(maya.name).toBe('Maya R.');
-    expect(maya.struggle.matched_misconception).toBe('Natural-number bias');
-    expect((maya.strengths ?? []).length + (maya.weaknesses ?? []).length).toBeGreaterThan(0);
-  });
-
-  it('404s on a student not in the class (the authorization contract)', async () => {
-    await expect(fetchTeacherStudent('stu-nobody')).rejects.toBeInstanceOf(ApiError);
-    await expect(fetchTeacherStudent('stu-nobody')).rejects.toMatchObject({ status: 404 });
-  });
-
-  it('assign-next-unit is idempotent and reflected on the next read', async () => {
-    const updated = await assignUnit('stu-emma', 'u1-ratios-rates');
-    expect(updated.assigned_unit_id).toBe('u1-ratios-rates');
-    const again = await assignUnit('stu-emma', 'u1-ratios-rates');
-    expect(again.assigned_unit_id).toBe('u1-ratios-rates');
-    const reread = await fetchTeacherStudent('stu-emma');
-    expect(reread.assigned_unit_id).toBe('u1-ratios-rates');
-  });
-
-  it('rejects assigning to a student not in the class', async () => {
-    await expect(assignUnit('stu-nobody', 'u1-ratios-rates')).rejects.toMatchObject({
-      status: 404,
+  it('fetchRoster GETs /teacher/roster and sends the bearer token', async () => {
+    setTeacherToken('demo:demo-teacher');
+    const spy = mockFetch((url) => {
+      if (url.endsWith('/teacher/roster')) {
+        return {
+          status: 200,
+          body: {
+            teacher_name: 'demo.teacher',
+            class_name: 'Demo Class',
+            as_of: '2026-06-05T00:00:00Z',
+            bucket_trends: { struggling: [], needs_attention: [], on_track: [] },
+            students: [{ student_id: 'bot-surface-sam', category: 'struggling', trend: [1, 2] }],
+          },
+        };
+      }
+      return { status: 404, body: {} };
     });
+    const roster = await fetchRoster();
+    expect(roster.teacher_name).toBe('demo.teacher');
+    expect(roster.students?.[0].student_id).toBe('bot-surface-sam');
+    const init = spy.mock.calls[0][1] as RequestInit;
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer demo:demo-teacher');
+  });
+
+  it('fetchTeacherStudent maps a 404 to an ApiError (the authorization contract)', async () => {
+    mockFetch(() => ({ status: 404, body: { detail: 'not on roster' } }));
+    await expect(fetchTeacherStudent('bot-nobody')).rejects.toBeInstanceOf(ApiError);
+    await expect(fetchTeacherStudent('bot-nobody')).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('assignUnit POSTs the unit and returns the updated student view', async () => {
+    const spy = mockFetch((url, method) => {
+      if (url.includes('/assign-unit') && method === 'POST') {
+        return {
+          status: 200,
+          body: { student: { student_id: 'bot-surface-sam', assigned_unit_id: 'u1' } },
+        };
+      }
+      return { status: 404, body: {} };
+    });
+    const student = await assignUnit('bot-surface-sam', 'u1');
+    expect(student.assigned_unit_id).toBe('u1');
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining('/teacher/student/bot-surface-sam/assign-unit'),
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 });

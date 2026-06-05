@@ -6,7 +6,24 @@ import { TeacherStudentView } from './TeacherStudentView';
 // The student drill-in (TODO TCH.F3). These pin the spec's load-bearing order and the one
 // write action: the ALERTS banner comes first, the named misconception is surfaced (the
 // diagnostic teachers asked for), assigning a unit reflects immediately, and back navigates out.
-// The client runs in demo mode (bots deferred), so it serves the seeded class directly.
+// The teacher client now runs LIVE (TEACHER_API_READY=true), so we mock the api/teacher data
+// functions to resolve the demo fixtures — the render/order assertions below are independent of the
+// live/offline flag and of a running backend. (Live wiring is covered in api/teacher.test.ts.)
+vi.mock('../api/teacher', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/teacher')>();
+  const demo = await import('../api/teacherDemo');
+  return {
+    ...actual,
+    fetchTeacherStudent: (id: string) => {
+      const s = demo.demoStudent(id);
+      return s ? Promise.resolve(s) : Promise.reject(new Error('not on roster'));
+    },
+    assignUnit: (id: string, unitId: string) => {
+      const s = demo.assignUnitInDemo(id, unitId);
+      return s ? Promise.resolve(s) : Promise.reject(new Error('not on roster'));
+    },
+  };
+});
 
 describe('TeacherStudentView', () => {
   it('renders the alerts banner before the rest of the sections', async () => {

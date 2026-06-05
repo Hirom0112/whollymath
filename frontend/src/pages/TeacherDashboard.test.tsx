@@ -3,10 +3,25 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TeacherDashboard } from './TeacherDashboard';
 
-// The teacher roster (TODO TCH.F2). These pin the contract that makes the dashboard useful:
-// students are grouped under RANKED headers (struggling first), each row opens the right
-// student, and the search filters by name. The client runs in demo mode (bots deferred), so
-// fetchRoster serves the seeded demo class directly — no network to stub.
+// The teacher client now runs LIVE (TEACHER_API_READY=true), so the component's data calls hit the
+// network. These component tests pin the dashboard's RENDERING contract (ranked sections, search,
+// status strip, copy law) against the polished demo fixtures — so we mock the api/teacher data
+// functions to resolve those fixtures, decoupling the render assertions from the live/offline flag
+// and from a running backend. (The live client wiring itself is covered in api/teacher.test.ts.)
+vi.mock('../api/teacher', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/teacher')>();
+  const demo = await import('../api/teacherDemo');
+  return {
+    ...actual,
+    fetchRoster: () => Promise.resolve(demo.DEMO_ROSTER),
+    fetchReminders: () => Promise.resolve(demo.DEMO_REMINDERS),
+    fetchAggregateTrends: () => Promise.resolve(demo.DEMO_AGGREGATE_TRENDS),
+    fetchTeacherStudent: (id: string) => {
+      const s = demo.demoStudent(id);
+      return s ? Promise.resolve(s) : Promise.reject(new Error('not on roster'));
+    },
+  };
+});
 
 describe('TeacherDashboard', () => {
   it('groups students under ranked category sections, struggling first', async () => {

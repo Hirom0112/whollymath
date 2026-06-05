@@ -109,22 +109,16 @@ export interface TeacherAggregateTrends {
   skill_gap_series: number[];
 }
 
-// The real /teacher/* endpoints + types are live and working (TCH.B8). But the student BOTS that
-// seed a real class (T1 data-gen) are DEFERRED to the end — saved to test the lesson plans — so the
-// live roster is empty for now. Until the bots seed a class, serve the seeded demo class
-// (teacherDemo.ts / DEMO_ROSTER) so the dashboard renders a populated, demoable roster instead of an
-// empty one (owner decision, 2026-05-30). Flip back to true once the bots land. The live code paths
-// stay intact so the flip is a one-line change.
-//
-// TODO(owner, deferred — confirmed 2026-06-02): switch the teacher (and parent) surfaces off the
-// hardcoded fixtures and onto REAL data. This needs two things first, then flip the flag(s):
-//   1. Seed a real demo CLASS in the DB (a teacher + a roster of synthetic Grade-6 learners) —
-//      the never-built TCH.B9 seeder.
-//   2. Create real LOGINS for those synthetic learners so their sessions/mastery are genuine
-//      (username/password student accounts), so the roster/triage/insights reflect real progress.
-// Until then we intentionally keep the polished demo fixtures for the pitch. The parent surface
-// mirrors this exact pattern with its own PARENT_API_READY flag (see api/parent.ts).
-export const TEACHER_API_READY = false;
+// LIVE (2026-06-05): the teacher surface now reads REAL data. The two prerequisites that kept this
+// on fixtures are met: (1) the TCH.B9 seeder exists and runs idempotently on demo-login
+// (`SessionStore.provision_demo_teacher` → `seed_demo_class`), driving six persona bots through the
+// real turn loop; (2) those bots ARE the synthetic learners — their sessions/mastery are genuine, so
+// the roster/triage/insights reflect real persisted progress. Every /teacher/* endpoint returns the
+// UI-complete shape (verified: roster carries as_of/bucket_trends/per-student trend, drill-in carries
+// remediation_estimate_minutes/accuracy_history/notes, aggregate-trends carries skill_gap_series).
+// DEMO_ROSTER (teacherDemo.ts) is retained only as the offline fallback below.
+// (The parent surface still mirrors the old pattern via PARENT_API_READY — see api/parent.ts.)
+export const TEACHER_API_READY = true;
 
 /* ──────────────────────────────────────────────────────────────────────────
    Client. Both paths exist; `TEACHER_API_READY` selects which is live.
