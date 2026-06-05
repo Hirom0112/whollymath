@@ -317,9 +317,14 @@ class Turn(Base):
     # Named misconception/error pattern, only present when the answer was wrong.
     error_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # The surface state the learner was in for this turn (S1–S5; ARCHITECTURE.md §7).
-    surface_state: Mapped[str] = mapped_column(String(16), nullable=False)
-    # The transition triggered by this turn, if any (labeled per refuse-rule 4).
-    state_transition: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Width must hold the longest SurfaceState value ("S3_fraction_bars_primary" = 24);
+    # the original String(16) truncated EVERY value on Postgres (SQLite ignores varchar
+    # limits, so tests and the SQLite default store never caught it). 32 leaves headroom.
+    surface_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    # The transition triggered by this turn, if any (labeled per refuse-rule 4). Holds a
+    # full learner-facing sentence (up to ~62 chars today); String(64) had zero headroom,
+    # so widen to 255 to keep slightly longer copy from silently truncating on Postgres.
+    state_transition: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Response timing — a top HelpNeed feature (ARCHITECTURE.md §8).
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     # Whether scaffolding was used; gates the unscaffolded-correct mastery rule.

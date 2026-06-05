@@ -181,3 +181,54 @@ def test_mastery_state_accepts_every_registry_kc_value(
         rows = db.query(MasteryState).filter_by(learner_id=learner.id).all()
         stored = {row.kc_id for row in rows}
         assert stored == {member.value for member in KnowledgeComponentId}
+
+
+def test_turn_surface_state_column_holds_every_surface_state_value() -> None:
+    """turn.surface_state must be wide enough for every SurfaceState value.
+
+    Backend-agnostic on purpose: SQLite ignores VARCHAR limits, so a round-trip test on
+    SQLite (what the rest of this module uses) CANNOT catch a too-narrow column — it only
+    blows up on Postgres, the prod backend. This asserts the declared column width against
+    the enum directly, so the drift is caught in CI without a running Postgres. Regression
+    for the 2026-06-05 bug where String(16) truncated every "S?_..." value on Postgres and
+    silently dropped all persisted turns (migration c4f1a9d27b30).
+    """
+    from app.policy.surface_states import SurfaceState
+    from sqlalchemy import String as SqlString
+
+    col_type = Turn.__table__.columns["surface_state"].type
+    assert isinstance(col_type, SqlString)  # narrows for the type checker
+    width = col_type.length
+    longest = max(len(member.value) for member in SurfaceState)
+    assert width is not None and width >= longest, (
+        f"turn.surface_state is String({width}) but the longest SurfaceState value is "
+        f"{longest} chars — every value would truncate on Postgres."
+    )
+
+
+def test_turn_state_transition_column_holds_longest_transition_label() -> None:
+    """turn.state_transition must hold the longest learner-facing transition sentence.
+
+    Same backend-agnostic rationale as above: only Postgres enforces the width. Pulls the
+    quoted strings out of the policy module and asserts the declared column is wide enough,
+    so adding a longer transition message can't silently truncate in prod.
+    """
+    import pathlib
+    import re
+
+    import app.policy.transitions as transitions_module
+    from sqlalchemy import String as SqlString
+
+    col_type = Turn.__table__.columns["state_transition"].type
+    assert isinstance(col_type, SqlString)  # narrows for the type checker
+    width = col_type.length
+    src = pathlib.Path(transitions_module.__file__).read_text()
+    # Learner-facing labels are quoted sentences (a space + a lowercase word). This is a
+    # heuristic upper bound, not an exhaustive catalog; it guards the realistic copy lengths.
+    candidates = re.findall(r'"([^"\n]{12,})"', src) + re.findall(r"'([^'\n]{12,})'", src)
+    sentences = [c for c in candidates if " " in c and any(ch.islower() for ch in c)]
+    longest = max((len(s) for s in sentences), default=0)
+    assert width is not None and width >= longest, (
+        f"turn.state_transition is String({width}) but a transition string is {longest} "
+        f"chars — it would truncate on Postgres."
+    )
