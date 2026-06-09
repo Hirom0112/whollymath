@@ -475,9 +475,18 @@ def _serve_next(live: _LiveSession) -> Problem:
     # how far into the lesson we are, so a lesson opens friendly and works up to bias-baiting
     # large denominators instead of feeling flat (CURRICULUM_DRAFT.md §1.1).
     difficulty = difficulty_for(served_index)
-    return session.present_problem(
+    problem = session.present_problem(
         kc=kc, seed=seed, surface_format=surface_format, difficulty=difficulty
     )
+    # A fresh practice problem is now on screen → reset the per-problem hint-escalation counter
+    # so its first REQUEST_HINT starts again at a NUDGE (Feature B, §3.5/0.D.3). Done HERE, the
+    # single chokepoint that serves a practice problem, so EVERY path resets uniformly — the
+    # normal answer turn, a probe-fail re-serve, a probe-pass re-serve, and the resumed parent —
+    # instead of each caller having to remember (a probe path used to skip it, so the next
+    # problem's first hint jumped straight to a worked step). _begin_remediation serves its own
+    # first problem and resets there.
+    live.hints_this_problem = 0
+    return problem
 
 
 def _help_need(
@@ -972,11 +981,7 @@ def _answer_response(
             next_problem=_problem_view(live.probe_steps[0]),
         )
 
-    next_problem = _serve_next(live)
-    # A fresh practice problem was just served → reset the per-problem hint-escalation
-    # counter so the next REQUEST_HINT on it starts again at a NUDGE (Feature B). The probe
-    # paths above return before here, so entering/leaving the probe never touches the counter.
-    live.hints_this_problem = 0
+    next_problem = _serve_next(live)  # resets hints_this_problem (Feature B)
     help_need = _help_need(session, next_problem, predictor)
     if help_need is not None:
         live.help_need_history.append(help_need)

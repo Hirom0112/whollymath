@@ -119,6 +119,26 @@ def test_counter_resets_when_an_answer_advances_the_problem() -> None:
     assert not _has_digit(r.hint or "")
 
 
+def test_serving_a_fresh_problem_always_resets_the_hint_counter() -> None:
+    """The per-problem hint counter is reset at the single chokepoint that serves a fresh
+    practice problem (``_serve_next``), so EVERY re-serve path resets — including the
+    probe-fail and probe-pass re-serves, which previously skipped it and let the next
+    problem's FIRST hint jump straight to a worked step instead of a nudge.
+    """
+    from app.api.service import _serve_next  # noqa: PLC0415
+
+    store = SessionStore()
+    started = store.start(_ROUTE)
+    sid, pid = started.session_id, started.problem.problem_id
+    # Advance one turn so history has an answered turn for the scheduler to read.
+    store.process_turn(_answer_req(sid, pid, "0/1"))
+    live = store._sessions[sid]  # noqa: SLF001 (test introspection)
+
+    live.hints_this_problem = 3  # as if three hints were taken on the current problem
+    _serve_next(live)  # the chokepoint the probe-fail/-pass and remediation paths all call
+    assert live.hints_this_problem == 0
+
+
 def test_partial_and_worked_use_deterministic_canonical_text_without_a_provider() -> None:
     """With no providers wired, escalated hints ARE the deterministic canonical worked text.
 
