@@ -18,6 +18,7 @@ TODO.md
 # the remotes (same posture as mdfile/). T2/T3 share these via the working tree, not git.
 HANDOFF.md
 HANDOFF*.md
+HANDOFFS/
 *COORDINATION*.md
 AGENT_TEAM.md
 
