@@ -356,6 +356,30 @@ def test_minimum_attempts_floor_blocks_mastery() -> None:
     assert len(reasons) == 1
 
 
+def test_minimum_attempts_floor_counts_only_engaged_attempts() -> None:
+    """The minimum-attempts floor is a QUANTITY-OF-EVIDENCE gate, so disengaged
+    (sub-floor) clicks must not pad it. A Click-through-Cleo with only three genuine
+    engaged corrects (enough for rules 1–4) plus two sub-floor clicks must STILL be
+    blocked by the floor — otherwise non-evidence (a click that counts for nothing in
+    BKT or any quality rule) is allowed to satisfy an evidence gate.
+    """
+    log = [
+        _obs(kc=KC, representation=Representation.SYMBOLIC),
+        _obs(kc=OTHER_KC, representation=Representation.AREA_MODEL),
+        _obs(kc=KC, representation=Representation.AREA_MODEL),
+        _obs(kc=OTHER_KC, representation=Representation.SYMBOLIC),
+        _obs(kc=KC, representation=Representation.SYMBOLIC),
+        # Two sub-floor clicks on KC (latency below the 2000 ms engagement floor):
+        # five RAW attempts on KC, but only three of engaged evidence.
+        _obs(kc=KC, representation=Representation.SYMBOLIC, latency_ms=500),
+        _obs(kc=KC, representation=Representation.SYMBOLIC, latency_ms=500),
+    ]
+    assert sum(1 for o in log if o.kc == KC) == 5  # raw attempts clear 5…
+    mastered, reasons = declare_mastery(KC, log)
+    assert not mastered  # …but disengaged clicks don't count, so the floor still bites
+    assert any("minimum attempt" in r.lower() for r in reasons)
+
+
 def test_below_threshold_blocks_even_with_all_rules_met() -> None:
     """Rule 1: if BKT ≤ τ, mastery is blocked regardless of the other rules.
 

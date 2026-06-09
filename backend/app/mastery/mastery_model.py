@@ -366,13 +366,16 @@ def _has_interleaved_mastery_set(kc: KnowledgeComponentId, observations: list[Ob
 
 
 def _scored_attempt_count(kc: KnowledgeComponentId, observations: list[Observation]) -> int:
-    """Number of scored attempts on ``kc`` (the minimum-attempts floor counts these).
+    """Number of ENGAGED scored attempts on ``kc`` (the minimum-attempts floor counts these).
 
-    Every attempt on the KC counts — correct or not, hinted or not, engaged or
-    not. The floor is a quantity-of-evidence gate ("two right ≠ mastered"); the
-    quality of that evidence is judged by the other §3.4 rules.
+    Every engaged attempt on the KC counts — correct or not, hinted or not. The floor is a
+    quantity-of-*evidence* gate ("two right ≠ mastered"); a sub-floor (low-engagement) click
+    contributes zero evidence everywhere else (BKT weight 0 via ``_evidence_weight``, and it
+    is excluded from rules 2–4), so it must not pad this floor either — otherwise a
+    Click-through-Cleo clears the floor with disengaged clicks while having only a couple of
+    genuine attempts. The quality of the engaged evidence is judged by the other §3.4 rules.
     """
-    return sum(1 for o in observations if o.kc == kc)
+    return sum(1 for o in observations if o.kc == kc and not o.is_low_engagement())
 
 
 def _is_engagement_floored(kc: KnowledgeComponentId, observations: list[Observation]) -> bool:
