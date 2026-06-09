@@ -47,6 +47,7 @@ from dataclasses import dataclass
 
 from app.domain.knowledge_components import KnowledgeComponentId, Representation, get_kc
 from app.domain.lesson_spec import get_lesson_spec
+from app.domain.misconceptions import add_across, subtract_across
 from app.domain.problem_generators import AnswerKind, Problem, generate_problem
 from app.policy.scheduler import live_representations
 from app.tutor.transfer_probe import build_error_finding_transfer_item
@@ -128,7 +129,20 @@ def build_live_probe_steps(
     operands = error_item.problem.operands
     assert operands is not None and len(operands) == 2
     first, second = operands
-    op = "+" if kc is KnowledgeComponentId.ADDITION_UNLIKE else "-"
+    is_addition = kc is KnowledgeComponentId.ADDITION_UNLIKE
+    op = "+" if is_addition else "-"
+
+    # Display the claim in its UNREDUCED across-error form (1/4 + 1/4 = 2/8), NOT
+    # {claimed.p}/{claimed.q} — SymPy silently reduces 2/8 → 1/4, producing the degenerate
+    # "Tim says 1/4 + 1/4 = 1/4" and erasing the very add-across mistake the learner must spot.
+    # The judged VALUE (operands=(claimed, correct) below) is unchanged; only the shown text is
+    # corrected. Mirrors transfer_probe._build_bank_error_finding_item. The reject step is only
+    # built for the across-error operation KCs (add/sub); other KCs return early above.
+    across = (
+        add_across(first.p, first.q, second.p, second.q)
+        if is_addition
+        else subtract_across(first.p, first.q, second.p, second.q)
+    )
 
     # Reject step: "Is the claim right?" — yes/no truth is claimed == correct (NO for a
     # wrong claim). Operands carry (claimed, correct) so the yes/no verifier compares them.
@@ -138,7 +152,7 @@ def build_live_probe_steps(
         surface_format=Representation.SYMBOLIC,
         statement=(
             f"Tim says {first.p}/{first.q} {op} {second.p}/{second.q} "
-            f"= {claimed.p}/{claimed.q}. Is that right?"
+            f"= {across.numerator}/{across.denominator}. Is that right?"
         ),
         correct_value=correct,
         representations_available=get_kc(kc).representations,

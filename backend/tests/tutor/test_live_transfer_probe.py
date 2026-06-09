@@ -49,6 +49,21 @@ def test_every_masterable_kc_probe_has_at_least_two_steps() -> None:
         assert len(steps) >= 2, f"{kc.value} probe must have >=2 steps, got {len(steps)}"
 
 
+def test_addition_reject_step_shows_the_unreduced_misconception_claim() -> None:
+    """The error-finding reject step must display the wrong claim in its UNREDUCED
+    across-error form (1/4 + 1/4 = 2/8), not the SymPy-reduced value (1/4). Rendering
+    the reduced claim produces the degenerate, self-contradicting 'Tim says 1/4 + 1/4
+    = 1/4' and erases the very add-across mistake the learner is asked to spot — the
+    whole point of the §3.9 error-finding item. (Mirrors the bank builder, which already
+    renders across.numerator/across.denominator.)"""
+    steps = build_live_probe_steps(
+        KnowledgeComponentId.ADDITION_UNLIKE, recent_format=Representation.SYMBOLIC
+    )
+    reject = next(s for s in steps if s.problem_id.startswith("PROBE-REJECT"))
+    assert "= 2/8" in reject.statement, reject.statement
+    assert "= 1/4. Is that right?" not in reject.statement  # the reduced (degenerate) form
+
+
 def test_every_masterable_kc_probe_spans_at_least_two_representations() -> None:
     """The ≥2 steps must span ≥2 DISTINCT representations (PROJECT.md §3.4 rule 2): a
     format-tied grip cannot pass a probe that demands the skill in two surfaces."""
