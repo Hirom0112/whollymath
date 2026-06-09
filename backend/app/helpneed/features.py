@@ -153,7 +153,12 @@ def _features_at(session: Sequence[EdmCupTurn], index: int) -> HelpNeedFeatures:
     return HelpNeedFeatures(
         recent_latency_ms_mean=_mean(latencies),
         recent_attempts_mean=_mean([float(t.attempt_count) for t in window]),
-        recent_hint_rate=_mean([float(t.hint_count) for t in window]),
+        # BINARY hinted-rate (did the turn use ANY hint), NOT a hint COUNT. The live path can only
+        # observe a boolean `hinted` per turn (live_features.py treats `not hinted` as the analogue
+        # of `hint_count == 0`), so a count-scaled training feature (mean of 0..9) was a train/serve
+        # skew: the model learned thresholds the live 0..1 signal could never reach. Aligned to the
+        # boolean both sides can compute (the model is re-fit on this corrected feature).
+        recent_hint_rate=_mean([1.0 if t.hint_count > 0 else 0.0 for t in window]),
         recent_error_rate=_mean([0.0 if t.first_attempt_correct else 1.0 for t in window]),
         recent_request_answer_rate=_mean([1.0 if t.requested_answer else 0.0 for t in window]),
         # "Quiet mis-reasoning": a first-attempt error WITHOUT seeking a hint — the confident

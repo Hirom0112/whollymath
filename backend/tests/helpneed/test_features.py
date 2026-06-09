@@ -118,7 +118,7 @@ def test_window_statistics_at_last_turn() -> None:
     feats = session_examples(_session())[5].features
     assert feats.recent_latency_ms_mean == 3000.0  # mean(1000..5000)
     assert feats.recent_attempts_mean == 1.4  # mean(1,2,2,1,1)
-    assert feats.recent_hint_rate == 0.6  # mean(0,0,0,0,3)
+    assert feats.recent_hint_rate == 0.2  # binary: mean(0,0,0,0,1) — only t4 used any hint
     assert feats.recent_error_rate == 0.8  # 4/5 not first_attempt_correct
     assert feats.recent_request_answer_rate == 0.2  # 1/5 requested
     # t1,t2,t3 are wrong on first attempt with NO hint; t4 is wrong but hinted (excluded); t0 right.
