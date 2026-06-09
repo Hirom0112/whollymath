@@ -15,6 +15,11 @@ parental consent**: the parent's own authenticated action *is* the consent event
 
 - **Parent auth:** Google sign-in **or** email + password. Email/password parents
   must verify their email (the consent anchor) via a link sent through AWS SES.
+- **Consent is enforced before a child goes live.** A child can be *created* freely, but no
+  child session may start until the parent's email is verified: both `/child/login` (school)
+  and the at-home `start-session` return **403** while `email_verified` is `False`. Google
+  parents are pre-verified (Google asserts a verified email); the demo parent is pre-verified.
+  (Enforced in `child_account_service` via `ParentEmailNotVerifiedError`.)
 - **Child access (chosen model):** parent-managed profiles **+** a non-identifying
   **username + 4-digit PIN**.
   - *At home:* the signed-in parent picks a child profile (`start-session`) — no

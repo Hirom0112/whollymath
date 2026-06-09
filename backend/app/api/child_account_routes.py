@@ -35,6 +35,7 @@ from app.api.child_account_service import (
     ChildNotFoundError,
     ChildSessionOutcome,
     InvalidChildCredentialsError,
+    ParentEmailNotVerifiedError,
     UsernameTakenError,
     child_login,
     create_child_account,
@@ -264,6 +265,11 @@ def start_child_session(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="child not found"
             ) from exc
+        except ParentEmailNotVerifiedError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="verify your email to activate your child's account",
+            ) from exc
     return _apply_child_session(response, outcome)
 
 
@@ -325,5 +331,10 @@ def child_login_route(
         except InvalidChildCredentialsError as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials"
+            ) from exc
+        except ParentEmailNotVerifiedError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="ask your parent to verify their email before signing in",
             ) from exc
     return _apply_child_session(response, outcome)

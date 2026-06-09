@@ -89,8 +89,8 @@ capture · HelpNeed v2 on real-student data (blocked on a data license).
 
 ## 3. Known issues / fix backlog
 
-A whole-application code review (2026-06-08) found the following. **The seven load-bearing ones are
-fixed** on branch `fix/critical-review-bugs` (each test-first; AUC held at 0.900):
+A whole-application code review (2026-06-08) found the following. **The eight load-bearing ones are
+fixed** (each test-first; HelpNeed AUC held at 0.900):
 
 | Status | Issue |
 |---|---|
@@ -101,11 +101,9 @@ fixed** on branch `fix/critical-review-bugs` (each test-first; AUC held at 0.900
 | ✅ Fixed | Corrupt TTS timings sidecar could raise into a turn → guarded (re-render) |
 | ✅ Fixed | Camera confirm could double-submit → routed through the guarded submit path |
 | ✅ Fixed | HelpNeed `recent_hint_rate` train/serve skew → binary on both sides, model re-fit |
+| ✅ Fixed | COPPA consent gate not enforced → child can't go live (login or start-session) until the parent's email is verified |
 
 **Open (lower severity / awaiting a decision):**
-- **COPPA consent gate not enforced** — child accounts can be created before the parent's email is
-  verified (docs say they shouldn't go live until then). *Needs an owner decision: block child
-  creation, or block child login, until verified.*
 - Mastery rep-diversity rule 2 can be satisfied by a *hinted* correct (S5 probe is the backstop) —
   design judgment call.
 - `verify()` crashes on three common-denominator *bank* items (latent — the bank isn't wired to
@@ -122,8 +120,9 @@ fixed** on branch `fix/critical-review-bugs` (each test-first; AUC held at 0.900
 ## 4. Owner decisions / external blockers
 
 These need **you** (or an ops/legal step), not code:
-- **COPPA gate behavior** (see §3) and **AWS SES sender verification** (auth emails are currently
-  logged, not sent).
+- **AWS SES sender verification** (auth emails are currently logged, not sent — and the COPPA gate
+  now blocks a child from going live until the parent clicks that email, so verifying the SES
+  sender is what makes email/password signups usable in production).
 - **Conversational tutor** — STT + stored chat transcripts are biometric-adjacent (COPPA);
   approve before building (gates Wave 5).
 - **30 fps Chromebook test** for the 3D avatar; **ElevenLabs live-synth cost** sign-off.

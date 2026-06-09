@@ -102,6 +102,23 @@ class InvalidChildCredentialsError(Exception):
     """Child login failed: unknown parent / username / wrong PIN — ONE generic error (no enum)."""
 
 
+class ParentEmailNotVerifiedError(Exception):
+    """A child cannot go live until its parent's email is verified (the COPPA consent anchor → 403).
+
+    The parent's verified email IS the verifiable-parental-consent event (AUTH.md): the child is
+    created freely, but no child session may start — neither the school-path /child/login nor the
+    at-home parent profile-pick — until ``parent.email_verified`` is True (Google parents are
+    pre-verified; email/password parents must click the link)."""
+
+
+def _require_parent_verified(child: Learner) -> None:
+    """Gate a child going live on the parent's verified email. Fail closed if the parent is
+    missing or unverified — a child must never reach a live session without anchored consent."""
+    parent = child.parent
+    if parent is None or not parent.email_verified:
+        raise ParentEmailNotVerifiedError
+
+
 @dataclass(frozen=True)
 class IssuedChildSession:
     """A freshly minted child session the route turns into cookies (Netflix-style switch)."""
@@ -239,6 +256,9 @@ def open_child_session_for_parent(
     then sets the child cookie, which REPLACES the parent's cookie — that is intended.
     """
     child = _require_owned_child(db, parent_id=parent_id, public_id=public_id)
+    # Ownership is proven, but the child still cannot go live until the parent's email is verified
+    # (COPPA consent anchor) — gate the at-home profile-pick exactly like /child/login.
+    _require_parent_verified(child)
     session = _issue_child_session(db, learner_id=child.id, signing_key=signing_key, now=now)
     outcome = ChildSessionOutcome(
         child=ChildSessionResponse(public_id=public_id, display_name=child.display_name),
@@ -302,6 +322,13 @@ def child_login(
     cleared = after_successful_attempt()
     child.failed_pin_attempts = cleared.failed_attempts
     child.pin_locked_until = cleared.locked_until
+    # The PIN is right and the lockout cleared — but the child stays offline until the parent's
+    # email is verified (the COPPA consent anchor). Checked AFTER the PIN so it never reveals
+    # whether a username exists. Persist the cleared lockout first so a later verified login isn't
+    # penalized for this attempt.
+    if child.parent is None or not child.parent.email_verified:
+        db.commit()
+        raise ParentEmailNotVerifiedError
     session = _issue_child_session(db, learner_id=child.id, signing_key=signing_key, now=now)
     outcome = ChildSessionOutcome(
         child=ChildSessionResponse(

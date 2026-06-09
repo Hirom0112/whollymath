@@ -90,11 +90,23 @@ def _configure_sessions(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _signed_up_parent(app: FastAPI, email: str) -> CookieClient:
-    """Sign a parent up and return the authed cookie client (its session cookie is set)."""
+    """Sign a parent up and return the authed cookie client (its session cookie is set).
+
+    The parent is NOT email-verified yet (email/password parents start unverified, the COPPA
+    consent anchor) — call ``_verify_parent_email`` before any child can go live."""
     client = CookieClient(app)
     status, _ = client.post("/parent/signup", {"email": email, "password": _GOOD_PASSWORD})
     assert status == 201
     return client
+
+
+def _verify_parent_email(client: CookieClient, sender: _CapturingSender) -> None:
+    """Click the verification link the signup email carried — the COPPA consent anchor that
+    lets this parent's children go live (mirrors a parent clicking the emailed link)."""
+    assert sender.last_url is not None, "signup should have sent a verification email"
+    token = sender.last_url.split("token=", 1)[1]
+    status, _ = client.get(f"/parent/verify-email?token={token}")
+    assert status == 200
 
 
 def _create_child(
@@ -239,8 +251,9 @@ def test_delete_child_then_list_empty(app: FastAPI) -> None:
     assert listing == []
 
 
-def test_start_session_sets_child_cookie(app: FastAPI) -> None:
+def test_start_session_sets_child_cookie(app: FastAPI, sender: _CapturingSender) -> None:
     parent = _signed_up_parent(app, "pick@example.com")
+    _verify_parent_email(parent, sender)  # consent anchor — child can now go live
     _, child = _create_child(parent, username="kiddo", display_name="Pick Me")
     assert isinstance(child, dict)
     status, body = parent.post(f"/parent/children/{child['public_id']}/start-session")
@@ -260,8 +273,27 @@ def test_start_session_other_family_is_404(app: FastAPI) -> None:
     assert status == 404
 
 
-def test_child_login_success_and_wrong_pin_and_unknown_username(app: FastAPI) -> None:
+def test_child_cannot_go_live_until_parent_email_verified(app: FastAPI) -> None:
+    """COPPA consent anchor: a child created under an UNVERIFIED email/password parent cannot
+    go live by EITHER path — not /child/login (school) and not the at-home start-session — until
+    the parent verifies their email. Creation itself is allowed; only going live is gated (403)."""
+    parent = _signed_up_parent(app, "unverified@example.com")  # email/password → NOT verified
+    _, child = _create_child(parent, username="waiting", pin=_GOOD_PIN)
+    assert isinstance(child, dict)
+
+    # School path: right username + PIN, but the parent is unverified → 403, not a child session.
+    status, _ = CookieClient(app).post("/child/login", {"username": "waiting", "pin": _GOOD_PIN})
+    assert status == 403
+    # At-home profile-pick by the (authenticated, unverified) parent → also 403.
+    status, _ = parent.post(f"/parent/children/{child['public_id']}/start-session")
+    assert status == 403
+
+
+def test_child_login_success_and_wrong_pin_and_unknown_username(
+    app: FastAPI, sender: _CapturingSender
+) -> None:
     parent = _signed_up_parent(app, "household@example.com")
+    _verify_parent_email(parent, sender)  # consent anchor — child can now go live
     _, child = _create_child(parent, username="kiddo", pin=_GOOD_PIN)
     assert isinstance(child, dict)
 
