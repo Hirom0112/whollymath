@@ -451,7 +451,7 @@ frontend/
     telemetry/        # Raw-interaction instrumentation: buffers + flushes to /events
     auth/             # Auth context + parent/child sign-in
     api/              # API client (generated from Pydantic types) + demo fixtures
-    pages/            # Top-level routes (Tutor, Teacher*, Parent*, Units, SignIn …)
+    pages/            # Top-level routes (Tutor, Units, SignIn …); pages/teacher/ + pages/parent/ group those flows
 
 shared-types/         # Generated TypeScript types from Pydantic
 infrastructure/       # AWS CDK (Network · Database · App · Ml stacks)
