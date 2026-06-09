@@ -30,6 +30,7 @@ content hash folds in the locale + voice config, so the es-MX toggle never plays
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -79,6 +80,24 @@ def _default_provider() -> TtsProvider | None:
     return ElevenLabsProvider()
 
 
+def _to_live_audio(
+    audio_path: Path,
+    words: Sequence[str],
+    wtimes: Sequence[float],
+    wdurations: Sequence[float],
+) -> LiveAudio:
+    """Shape a cached or freshly-rendered timing track into a ``LiveAudio`` ref.
+
+    One construction site for the cache-hit and post-render paths, which build the identical
+    wire shape (served URL + index-aligned word/time/duration arrays, defensively coerced)."""
+    return LiveAudio(
+        audio_url=audio_url_for(audio_path.name),
+        words=[str(w) for w in words],
+        wtimes=[float(t) for t in wtimes],
+        wdurations=[float(d) for d in wdurations],
+    )
+
+
 def synthesize_live(
     text: str,
     *,
@@ -111,13 +130,7 @@ def synthesize_live(
 
     cached = load_timings(cache_dir, text_sha)
     if audio_path.exists() and cached is not None:
-        words, wtimes, wdurations = cached
-        return LiveAudio(
-            audio_url=audio_url_for(audio_path.name),
-            words=[str(w) for w in words],
-            wtimes=[float(t) for t in wtimes],
-            wdurations=[float(d) for d in wdurations],
-        )
+        return _to_live_audio(audio_path, *cached)
 
     engine = provider if provider is not None else _default_provider()
     if engine is None:
@@ -131,12 +144,7 @@ def synthesize_live(
     cache_dir.mkdir(parents=True, exist_ok=True)
     audio_path.write_bytes(rendered.audio)
     store_timings(cache_dir, text_sha, rendered)
-    return LiveAudio(
-        audio_url=audio_url_for(audio_path.name),
-        words=[str(w) for w in rendered.words],
-        wtimes=[float(t) for t in rendered.wtimes],
-        wdurations=[float(d) for d in rendered.wdurations],
-    )
+    return _to_live_audio(audio_path, rendered.words, rendered.wtimes, rendered.wdurations)
 
 
 __all__ = ["LiveAudio", "live_synth_enabled", "synthesize_live"]
