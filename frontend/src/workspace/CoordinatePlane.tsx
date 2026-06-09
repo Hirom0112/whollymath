@@ -26,11 +26,9 @@ import type { WorkspaceWidgetProps } from './WidgetContract';
  *
  * Custom SVG, no charting/graph lib (TECH_STACK §2). Class names unique app-wide (global CSS).
  *
- * NOTE — wire/routing DEFERRED: this widget emits the point string but is NOT yet routed. The
- * backend coordinate-plane contract (a `widget_id` / `answer_kind` for it, and the point-set SymPy
- * verifier path) is not in committed code; the selectWidget case + ProblemView wiring land later
- * against the real backend types, like the expression widget (no invented cross-lane contract —
- * §1/§5).
+ * Routed live: ``selectWidget`` returns ``'coordinate_plane'`` for ``widget_id="coordinate_plane"``
+ * and the emitted point string is graded by the point-set SymPy verifier path, like the expression
+ * widget.
  */
 
 /** A placed lattice point. */

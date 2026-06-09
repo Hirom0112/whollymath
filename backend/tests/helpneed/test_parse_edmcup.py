@@ -252,6 +252,27 @@ def test_parse_action_logs_first_attempt_correct(tmp_path: Path) -> None:
     assert turn.total_latency_ms == 5_000
 
 
+def test_parse_action_logs_duplicate_start_after_response_clamps_negative_latency(
+    tmp_path: Path,
+) -> None:
+    """A duplicate ``problem_started`` AFTER a response moves the start clock past the first
+    response, which would make the latency negative. A negative duration is impossible, so it is
+    recorded as missing (None) rather than poisoning the recent-latency feature."""
+    body = (
+        _action_row(assignment="A1", ts=100, problem="P1", action="problem_started")
+        + _action_row(assignment="A1", ts=200, problem="P1", action="wrong_response")
+        + _action_row(assignment="A1", ts=300, problem="P1", action="problem_started")
+        + _action_row(assignment="A1", ts=400, problem="P1", action="correct_response")
+    )
+    action_logs = _write_action_logs(tmp_path, body)
+    fraction_problems = {"P1": ("4.NF.A.1", KnowledgeComponentId.EQUIVALENCE)}
+    (turn,) = list(parse_action_logs(action_logs, fraction_problems))
+    # first_response (t=200) precedes the duplicate start (t=300) → raw latency would be
+    # (200-300)*1000 = -100_000 → clamped to None.
+    assert turn.latency_ms_to_first_response is None
+    assert turn.total_latency_ms == 100_000  # (400-300)*1000, still a valid positive duration
+
+
 # ─── Hint usage disqualifies first_attempt_correct ────────────────────────────
 
 

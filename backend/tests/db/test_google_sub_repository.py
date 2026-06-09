@@ -100,3 +100,25 @@ def test_anonymous_learner_has_no_google_sub(
         anon = repo.get_or_create_learner(db, "anon-session")
         db.commit()
         assert anon.google_sub is None
+
+
+def test_parent_google_signin_reconciles_a_prior_student_row(
+    session_factory: sessionmaker[OrmSession],
+) -> None:
+    """A Google sub first seen on the anonymous STUDENT path (role="student", unverified) must,
+    when the same account later signs in AS a parent, be reconciled to a verified parent — not
+    returned as a student row stuck email_verified=False (which would then block its own children
+    via the COPPA gate)."""
+    with session_factory() as db:
+        student = repo.get_or_create_learner_by_google_sub(db, "shared-sub")
+        db.commit()
+        assert student.role == "student"
+        assert student.email_verified is False
+        student_id = student.id
+
+    with session_factory() as db:
+        parent = repo.get_or_create_parent_by_google_sub(db, "shared-sub", email="p@example.com")
+        db.commit()
+        assert parent.id == student_id  # same row, reconciled (no duplicate)
+        assert parent.role == "parent"
+        assert parent.email_verified is True

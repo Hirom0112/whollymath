@@ -103,17 +103,19 @@ fixed** (each test-first; HelpNeed AUC held at 0.900):
 | ✅ Fixed | HelpNeed `recent_hint_rate` train/serve skew → binary on both sides, model re-fit |
 | ✅ Fixed | COPPA consent gate not enforced → child can't go live (login or start-session) until the parent's email is verified |
 
-**Open (lower severity / awaiting a decision):**
-- Mastery rep-diversity rule 2 can be satisfied by a *hinted* correct (S5 probe is the backstop) —
-  design judgment call.
-- `verify()` crashes on three common-denominator *bank* items (latent — the bank isn't wired to
-  serving yet).
-- Cross-role Google-`sub` reuse can leave a parent row stuck `email_verified=False`.
-- In-memory session store has no eviction (slow growth) and concurrent same-session submits aren't
-  locked — *fine for a single-instance demo; production-harden?*
-- `parse_edmcup` can emit a negative latency on a duplicate `problem_started` (training-data only).
-- A few stale docstrings (`InequalityInput`/`CoordinatePlane` "not yet routed"; a `repositories.py`
-  index name).
+Also fixed in the same pass: the `parse_edmcup` negative-latency clamp, the cross-role Google-`sub`
+reconcile (a parent who first touched the student surface is no longer stuck unverified), and the
+stale `InequalityInput`/`CoordinatePlane`/`repositories.py` docstrings.
+
+**Open (intentionally left — fixing would risk a regression or needs a decision):**
+- Mastery rep-diversity rule 2 can be satisfied by a *hinted* correct — a design judgment the S5
+  probe already backstops; tightening it risks false negatives, so left as defense-in-depth.
+- `verify()` raises on three common-denominator *bank* items — **latent** (the bank isn't wired to
+  serving) and fail-loud-by-design on a construction bug; the real fix is a content/bank-wiring
+  decision (tracked under §2.1 geometry/figure-style wiring).
+- In-memory session store has no eviction and concurrent same-session submits aren't locked — fine
+  for a single-instance demo; a naive cap could evict an *active* learner's session, so this is a
+  deliberate production-harden-later item, not a quick fix.
 
 ---
 

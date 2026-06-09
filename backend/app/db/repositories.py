@@ -229,6 +229,13 @@ def get_or_create_parent_by_google_sub(
     if existing is not None:
         if email is not None and existing.email is None:
             existing.email = email
+        # A Google account signing in AS a parent IS a parent. If this ``sub`` was first seen on
+        # the anonymous student path (role="student", email_verified=False), reconcile it so the
+        # parent session is issued for a proper, verified parent — not a student row stuck
+        # unverified (which would then block its own children via the COPPA gate). Idempotent when
+        # the row is already a verified parent. (The student path never demotes a parent.)
+        existing.role = PARENT_ROLE
+        existing.email_verified = True
         return existing
     learner = Learner(
         session_id=f"google:{sub}",
@@ -257,9 +264,11 @@ def create_child(
     A child is a normal student Learner (role stays "student" — identity gates
     surfaces only, invariant 8) plus the parent link and login credential. Its
     ``session_id`` is the namespaced ``child:<public_id>`` (public_id is a unique
-    UUID4, so the session_id is unique too). ``child_username`` is unique only within
-    the parent's household (the ``uq_learner_parent_username`` index). ``pin_hash`` is
-    already Argon2id-hashed by the caller. add-only; caller commits.
+    UUID4, so the session_id is unique too). ``child_username`` is **globally** unique
+    (the ``uq_learner_child_username`` index — the per-household
+    ``uq_learner_parent_username`` was dropped in migration ``b2d4f6a8c1e3``, owner
+    decision 2026-06-04, so a kid can log in with username + PIN alone, no parent email).
+    ``pin_hash`` is already Argon2id-hashed by the caller. add-only; caller commits.
     """
     child = Learner(
         session_id=f"child:{public_id}",

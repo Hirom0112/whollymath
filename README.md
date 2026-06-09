@@ -194,7 +194,7 @@ The build is **deployed and running** at [whollymath.app](https://whollymath.app
   (captions-only scaffold: avatar help text localizes, problems stay English).
 - ✅ **AWS deployment** — CloudFront → ALB → Fargate → RDS, via CDK.
 
-**Tests:** backend **3,158 passing** (9 skipped); frontend **306 passing** (52 files); production
+**Tests:** backend **3,166 passing** (9 skipped); frontend **306 passing** (52 files); production
 build green. *(Phase-0 baseline of this cleanup pass, 2026-06-08.)*
 
 ---

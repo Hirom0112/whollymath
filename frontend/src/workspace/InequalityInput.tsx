@@ -21,11 +21,9 @@ import type { WorkspaceWidgetProps } from './WidgetContract';
  *
  * Custom markup, no widget lib (TECH_STACK §2). Class names unique app-wide (global CSS).
  *
- * NOTE — wire/routing DEFERRED: this widget emits the inequality string but is NOT yet routed. The
- * backend inequality contract (widget_id="inequality" / an answer_kind, and the SymPy verifier
- * path) is not in committed code; the selectWidget case + ProblemView wiring land later against the
- * real backend types, like the expression and coordinate-plane widgets (no invented cross-lane
- * contract — §1/§5).
+ * Routed live: ``selectWidget`` returns ``'inequality'`` for ``widget_id="inequality"`` and the
+ * emitted inequality string is graded by the SymPy verifier path, like the expression and
+ * coordinate-plane widgets.
  */
 
 /** The relations the learner can pick: kid-facing glyph → the ASCII token written to the value. */

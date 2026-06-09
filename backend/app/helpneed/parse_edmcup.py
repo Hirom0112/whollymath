@@ -179,6 +179,14 @@ class _OpenTurn:
             if self.correct and self.started_at_ms is not None and self.correct_at_ms is not None
             else None
         )
+        # A duplicate ``problem_started`` AFTER a response moves ``started_at_ms`` forward of the
+        # response timestamp, yielding a NEGATIVE latency that would poison the recent-latency
+        # feature. A negative duration is impossible, so treat it as missing (``None``) — the same
+        # semantics as a turn with no recorded start/response.
+        if latency_first is not None and latency_first < 0:
+            latency_first = None
+        if total_latency is not None and total_latency < 0:
+            total_latency = None
         return EdmCupTurn(
             assignment_log_id=self.assignment_log_id,
             problem_id=self.problem_id,
