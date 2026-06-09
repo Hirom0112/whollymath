@@ -23,6 +23,7 @@ from app.api.schemas import ActionType, SurfaceState, TurnRequest
 from app.api.service import SessionStore
 from app.tts.live_synth import LiveAudio
 from app.tts.manifest_lookup import (
+    audio_url_for,
     lookup_audio,
     override_cache_dir,
     reset_default_cache_dir,
@@ -30,7 +31,7 @@ from app.tts.manifest_lookup import (
 )
 from app.tts.spoken_bank import nudge_string_id
 
-from tests.api.asgi_client import get_raw, post_json
+from tests.api.asgi_client import get_raw
 
 
 @pytest.fixture
@@ -171,31 +172,19 @@ def test_escalated_worked_step_hint_has_no_audio() -> None:
 
 
 def test_static_mount_resolves_a_cached_audio_path() -> None:
-    """The /tts/audio mount serves a real cached mp3 the hint references (off the turn loop)."""
-    if not _equivalence_audio_is_cached():
+    """The /tts/audio mount serves the real cached mp3 a banked nudge clip references.
+
+    Driven straight off the manifest (not a hint turn): a banked nudge with cached audio resolves
+    to an ``audio_url`` under the mount, and a GET of that URL returns the real mp3 bytes — proving
+    the static mount the SpokenAudio refs point at is wired (off the turn loop)."""
+    entry = lookup_audio(nudge_string_id("KC_equivalence", 0))
+    if entry is None:
         pytest.skip("equivalence nudge audio not rendered in the (gitignored) cache")
+    audio_url = audio_url_for(str(entry["audio_file"]))
+    assert audio_url.startswith("/tts/audio/")
 
     app = create_app()
-    status, body = post_json(app, "/session", {"route_key": _EQUIVALENCE_ROUTE})
-    assert status == 200
-    sid, pid = body["session_id"], body["problem"]["problem_id"]
-
-    _, turn = post_json(
-        app,
-        "/turn",
-        {
-            "session_id": sid,
-            "problem_id": pid,
-            "action": "request_hint",
-            "surface_state": body["surface_state"],
-            "latency_ms": 1000,
-            "hint_used": False,
-        },
-    )
-    audio = turn["hint_audio"]
-    assert audio is not None
-
-    asset_status, asset_bytes = get_raw(app, audio["audio_url"])
+    asset_status, asset_bytes = get_raw(app, audio_url)
     assert asset_status == 200
     assert len(asset_bytes) > 0
 

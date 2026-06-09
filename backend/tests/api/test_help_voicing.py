@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 from app.api.schemas import ActionType, SurfaceState, TurnRequest
 from app.api.service import SessionStore
+from app.domain.knowledge_components import KnowledgeComponentId
 from app.helpneed.artifact import load_predictor
 from app.llm.provider import Message, Tier
 from app.policy.emotion import Emotion
@@ -70,22 +71,30 @@ def _hint_req(session_id: str, problem_id: str) -> TurnRequest:
     )
 
 
+# The first hint on a NUMBER_LINE_PLACEMENT problem takes the conceptual-nudge path (its worked
+# example's first step would BE the answer, so it is NOT used as the first hint — see
+# ``_FIRST_STEP_REVEALS_ANSWER``). That nudge path is the one the voice provider rephrases, so it is
+# where the voiced-vs-prewritten invariant (4) is observable on a REACTIVE hint. (For other KCs the
+# first hint is the deterministic worked SETUP step, voiced by live TTS, not the voice provider.)
+_NUDGE_KC = KnowledgeComponentId.NUMBER_LINE_PLACEMENT
+
+
 def test_hint_is_voiced_when_a_voice_provider_is_present(empty_cache: None) -> None:
-    """A REQUEST_HINT turn returns the mascot-voiced line when voicing is enabled.
+    """A nudge-path REQUEST_HINT turn returns the mascot-voiced line when voicing is enabled.
 
     Isolated to an empty cache so the line stays silent and ships the voiced caption (otherwise a
     cached canonical line would be captioned verbatim — see ``empty_cache``).
     """
     store = SessionStore(voice_provider=_FakeVoice())
-    started = store.start(_ROUTE)
+    started = store.start_kc(_NUDGE_KC)
     resp = store.process_turn(_hint_req(started.session_id, started.problem.problem_id))
     assert resp.hint == _VOICED
 
 
 def test_hint_is_prewritten_without_a_voice_provider() -> None:
-    """With no voice provider, the hint is the pre-written nudge verbatim (invariant 4)."""
+    """With no voice provider, the nudge-path hint is the pre-written nudge verbatim (inv. 4)."""
     store = SessionStore()  # no voice provider
-    started = store.start(_ROUTE)
+    started = store.start_kc(_NUDGE_KC)
     resp = store.process_turn(_hint_req(started.session_id, started.problem.problem_id))
     assert resp.hint == select_nudge(started.problem.kc).text
     assert resp.hint != _VOICED

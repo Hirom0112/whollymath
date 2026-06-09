@@ -1071,6 +1071,40 @@ def _probe_hint_response(live: _LiveSession) -> TurnResponse:
     )
 
 
+# The one KC whose worked example's FIRST step IS the answer (it places the target fraction on the
+# line itself), so its first hint must stay the conceptual nudge, not the setup step. Every other
+# KC's opening worked step is answer-free setup (audited 2026-06-09), which is exactly what a first
+# hint should be: specific to THIS problem's numbers, but not the result.
+_FIRST_STEP_REVEALS_ANSWER = frozenset({KnowledgeComponentId.NUMBER_LINE_PLACEMENT})
+
+
+def _first_problem_specific_hint(
+    problem: Problem,
+    locale: Locale,
+    voice_provider: LLMProvider | None,
+    hint_provider: LLMProvider | None,
+) -> str:
+    """The FIRST explicit hint — SPECIFIC to this problem, never its answer (owner 2026-06-09).
+
+    The worked example's opening step frames the problem with its real numbers without stating the
+    result (the only exception, NUMBER_LINE_PLACEMENT, whose first step IS the answer, keeps the
+    conceptual nudge). A KC with no worked example falls back to the nudge as well. Always a DYNAMIC
+    line — voiced live downstream, captions-only if synth is unavailable (invariant 4)."""
+    if problem.kc not in _FIRST_STEP_REVEALS_ANSWER:
+        try:
+            return build_validated_hint(
+                problem, HintLevel.PARTIAL_STEP, provider=hint_provider
+            ).natural_language
+        except Exception:  # noqa: BLE001 — a KC without a worked example still owes a first hint (invariant 4)
+            _log.exception("partial-step first hint unavailable for %s; using nudge", problem.kc)
+    return voice_help(
+        _localized_nudge_text(problem.kc, 0, locale),
+        moment=MomentType.STUCK_NUDGE,
+        provider=voice_provider,
+        locale=locale,
+    ).text
+
+
 def _hint_response(
     live: _LiveSession,
     voice_provider: LLMProvider | None,
@@ -1087,20 +1121,21 @@ def _hint_response(
     Escalation by ``live.hints_this_problem`` — how many hints have been requested on the
     CURRENT problem (the counter resets when an answer serves a fresh problem, §3.5/0.D.3):
 
-      - 0 → NUDGE: the deterministic, pre-written conceptual prompt for the KC (Slice 3.8
-        ``select_nudge`` — no SymPy/LLM decision, §8.1), rephrased in the mascot's voice
-        (Slice 5.5.2) when voicing is enabled, or verbatim otherwise (invariant 4).
-      - 1 → PARTIAL_STEP, 2+ → WORKED_STEP: the validated worked-example hint
-        (``build_validated_hint`` — the locked 5.6 pipeline: canonical worked text → LLM
-        rephrase → SymPy numeric gate → ≤2 retries → canonical fallback). We use its
-        ``natural_language`` directly and do NOT also run it through ``voice_help``: the
-        hint pipeline already does its own LLM rephrase behind the SymPy gate, so a second
-        voicing would bypass that numeric gate. With ``hint_provider=None`` (tests, degraded
-        store) the pipeline returns the deterministic canonical text — escalation is still
-        real, just not LLM-warmed.
+      - 0 → PROBLEM-SPECIFIC first hint (owner 2026-06-09): a misconception-corrective for the
+        learner's last wrong answer if one matched, else the worked example's opening SETUP step
+        (this problem's real numbers, but NOT the answer — see ``_first_problem_specific_hint``).
+        A dynamic line, voiced live below in the learner's locale (captions-only without synth).
+      - 1+ → WORKED_STEP: the full validated worked-example walkthrough whose closing step states
+        the answer (``build_validated_hint`` — the locked 5.6 pipeline: canonical worked text →
+        LLM rephrase → SymPy numeric gate → ≤2 retries → canonical fallback). We use its
+        ``natural_language`` directly and do NOT also run it through ``voice_help``: the hint
+        pipeline already does its own LLM rephrase behind the SymPy gate, so a second voicing would
+        bypass that numeric gate. With ``hint_provider=None`` (tests, degraded store) the pipeline
+        returns the deterministic canonical text — escalation is still real, just not LLM-warmed.
 
     The counter is incremented AFTER selecting, so the first request on a problem is the
-    nudge. A hint never advances the problem (refuse-rule 3), so the count only grows here.
+    problem-specific first hint. A hint never advances the problem (refuse-rule 3), so the count
+    only grows here.
     """
     problem = live.tutor.current_problem
     requests_so_far = live.hints_this_problem
@@ -1112,39 +1147,30 @@ def _hint_response(
     # escalated partial_step / worked_step hints are number-templated and stay captions-only.
     hint_audio: SpokenAudio | None = None
     if requests_so_far == 0:
-        canonical_nudge = _localized_nudge_text(problem.kc, 0, locale)
-        hint_audio = _nudge_audio(problem.kc.value, locale=locale)
-        if hint_audio is not None:
-            # Speak the cached canonical line and caption it verbatim (canonical-line invariant) —
-            # the mouth lip-syncs the same words the bubble shows.
-            hint_text = canonical_nudge
+        # The FIRST hint is SPECIFIC to THIS problem and never its answer (owner 2026-06-09: "a
+        # hint, not the answer choice"). If the learner's last wrong answer matched a NAMED
+        # misconception (the verifier already decided this, off the turn loop), the first hint
+        # corrects THAT error (Slice 1.2) — gated through the SymPy numeric gate + safety filter.
+        # Otherwise it is the worked example's opening SETUP step, which states the problem's real
+        # numbers but not the result. Both are DYNAMIC lines (no banked clip): the LLM only
+        # re-voices an already-decided line — it never decides correctness (§8.2) or sees mastery
+        # (§8.3) — and with no provider returns the deterministic text (invariant 4). The voicing
+        # happens live below, in the learner's locale (en AND es-MX).
+        matched = _last_matched_misconception(live)
+        if matched is not None:
+            hint_text = voice_misconception_nudge(
+                get_misconception(matched),
+                _localized_nudge_text(problem.kc, 0, locale),
+                provider=voice_provider,
+                locale=locale,
+            )
         else:
-            # No cached audio: the mascot rephrases the canonical nudge in the learner's locale.
-            # If the learner's LAST wrong answer matched a NAMED misconception (the verifier already
-            # decided this, off the turn loop), voice an ERROR-SPECIFIC corrective nudge tailored to
-            # that misconception (Slice 1.2) — gated through the SymPy numeric gate + safety filter,
-            # with the canonical nudge as the dependable fallback. Otherwise the generic nudge.
-            # Either path: the LLM only re-voices an already-decided line; it never decides
-            # correctness (§8.2) or sees mastery state (§8.3), and with no provider returns the
-            # verbatim canonical nudge (invariant 4). es-MX stays captions-only until audio renders.
-            matched = _last_matched_misconception(live)
-            if matched is not None:
-                hint_text = voice_misconception_nudge(
-                    get_misconception(matched),
-                    canonical_nudge,
-                    provider=voice_provider,
-                    locale=locale,
-                )
-            else:
-                hint_text = voice_help(
-                    canonical_nudge,
-                    moment=MomentType.STUCK_NUDGE,
-                    provider=voice_provider,
-                    locale=locale,
-                ).text
+            hint_text = _first_problem_specific_hint(problem, locale, voice_provider, hint_provider)
     else:
-        level = HintLevel.PARTIAL_STEP if requests_so_far == 1 else HintLevel.WORKED_STEP
-        hint_text = build_validated_hint(problem, level, provider=hint_provider).natural_language
+        # Second hint on: the full worked walkthrough (its closing step states the answer).
+        hint_text = build_validated_hint(
+            problem, HintLevel.WORKED_STEP, provider=hint_provider
+        ).natural_language
     # If no banked clip voiced this line (an LLM-rephrased nudge, a misconception corrective, or a
     # number-templated worked step — and the whole es-MX path until its bank renders), voice the
     # EXACT shown text live in Hope and cache it (owner decision 2026-06-04). Degrades to
