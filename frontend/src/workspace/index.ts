@@ -1,4 +1,7 @@
-// Custom SVG manipulatives: FractionBar, NumberLine, SymbolicEditor (TECH_STACK §2).
+// Custom SVG workspace widgets (answer inputs + display-only stimuli). selectWidget() in
+// WidgetContract.ts dispatches by KC/representation; SymbolicEditor, NumberLine, and FractionArea
+// are the core manipulatives (TECH_STACK §2). FractionBar is an earlier bar model, still exported
+// but not currently routed by selectWidget — superseded by FractionArea.
 export { SymbolicEditor, fractionToAnswer, type FractionValue } from './SymbolicEditor';
 export { NumberLine, clampTick, nearestTick, tickFraction } from './NumberLine';
 export { FractionBar, barToAnswer, type BarValue } from './FractionBar';
