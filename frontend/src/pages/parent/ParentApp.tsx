@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { ApiError } from '../../api/index';
-import { fetchHousehold } from '../../api/parent';
+import { fetchHousehold, setParentDemoMode } from '../../api/parent';
 import { parentGoogle, parentLogin, parentLogout, parentMe } from '../../api/parentAuth';
 import { promptGoogleSignIn } from '../../auth/google';
 import { ThemeProvider } from '../../state/ThemeContext';
@@ -48,6 +48,9 @@ export function ParentApp(): React.JSX.Element {
 
 function ParentSurface(): React.JSX.Element {
   const [signedIn, setSignedIn] = useState(false);
+  // True when the learner entered via the login-free demo bypass (no real session). Tracked so
+  // sign-out clears the API-layer demo flag and skips the server-side parent logout.
+  const [demo, setDemo] = useState(false);
   // null = still checking the existing session (GET /parent/me).
   const [checking, setChecking] = useState(true);
   const [gate, setGate] = useState<GateView>('signin');
@@ -140,11 +143,17 @@ function ParentSurface(): React.JSX.Element {
   }
 
   function handleSignOut(): void {
-    // Revoke the session SERVER-side (and clear the cookies) — not just forget it locally —
-    // so a leaked/cached cookie is dead. Best-effort: we reset the UI regardless of the result.
-    void parentLogout().catch(() => {
-      /* already-invalid session / offline: the local reset below still signs the user out */
-    });
+    if (demo) {
+      // Demo bypass has no server session — just drop the API-layer demo flag and reset the UI.
+      setParentDemoMode(false);
+      setDemo(false);
+    } else {
+      // Revoke the session SERVER-side (and clear the cookies) — not just forget it locally —
+      // so a leaked/cached cookie is dead. Best-effort: we reset the UI regardless of the result.
+      void parentLogout().catch(() => {
+        /* already-invalid session / offline: the local reset below still signs the user out */
+      });
+    }
     setHeader(null);
     setSignedIn(false);
     setGate('signin');
@@ -179,6 +188,14 @@ function ParentSurface(): React.JSX.Element {
           // A child signs in on the student /signin page (their own/school device), not in the
           // parent portal — loop the link there per the single student sign-in surface.
           window.location.assign('/signin');
+        }}
+        onDemo={() => {
+          // Login-free bypass: flip the API layer to the seeded demo household and land on the
+          // dashboard immediately (no account, no /parent/me check).
+          setAuthError(null);
+          setParentDemoMode(true);
+          setDemo(true);
+          enterDashboard();
         }}
       />
     );

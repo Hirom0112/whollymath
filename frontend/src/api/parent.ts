@@ -43,6 +43,24 @@ export type { ChildDetail };
 // real add-child; set false to fall back to the fully-seeded demo household offline.
 export const PARENT_API_READY = true;
 
+// Runtime demo bypass for the PARENT surface (the "Explore a demo family" button on the sign-in
+// gate). Unlike the teacher demo (a real backend account) and like the student demo (anonymous, no
+// account), the parent demo is a pure-frontend bypass: clicking it flips this flag so the whole
+// API layer reads the polished, deterministic seeded household (parentDemo.ts) instead of the live
+// `/parent/*` backend. That gives an instant, login-free dashboard to demo against (no SES email
+// verification, no real child accounts) and works offline / on a stale backend. Cleared on sign-out.
+let demoMode = false;
+
+/** Turn the parent demo bypass on/off. Set true by the sign-in gate's demo button; false on exit. */
+export function setParentDemoMode(on: boolean): void {
+  demoMode = on;
+}
+
+/** Whether the parent surface is serving the seeded demo household (explicit bypass OR API not ready). */
+export function isParentDemo(): boolean {
+  return demoMode || !PARENT_API_READY;
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
    Client. The household ROSTER + ADD-A-CHILD go through the real cookie-session
    `/parent/*` backend (api/parentAuth.ts); per-child DRILL-IN + NOTES stay on the
@@ -105,7 +123,7 @@ async function childSummaryFromProgress(account: ChildAccount): Promise<ChildSum
 
 /** Fetch the signed-in parent's household: their name, the household label, and the child cards. */
 export async function fetchHousehold(): Promise<Household> {
-  if (!PARENT_API_READY) return demoHousehold();
+  if (isParentDemo()) return demoHousehold();
   const [me, accounts] = await Promise.all([parentMe(), listChildren()]);
   const first = nameFromEmail(me.email);
   // Each card is built from the child's live progress drill-in (one read per child), so the roster
@@ -123,7 +141,7 @@ export async function fetchHousehold(): Promise<Household> {
  *  server-side). 404 if the child is not this parent's. In offline demo mode (`!PARENT_API_READY`)
  *  it serves the authored fixtures instead. */
 export async function fetchChild(childId: string): Promise<ChildDetail> {
-  if (!PARENT_API_READY) {
+  if (isParentDemo()) {
     const child = demoChild(childId);
     if (child === null) throw new ApiError(404, `child ${childId} has no progress detail yet`);
     return child;
@@ -156,7 +174,7 @@ export interface AddChildLive {
 export async function addChild(
   input: AddChildLive,
 ): Promise<{ childId: string; username: string }> {
-  if (!PARENT_API_READY) {
+  if (isParentDemo()) {
     const demoInput: AddChildInput = {
       name: input.name,
       grade: input.grade,

@@ -1,8 +1,23 @@
 import { useEffect, useState } from 'react';
 
+import { isParentDemo } from '../../api/parent';
 import { listChildren, startChildSession, type ChildAccount } from '../../api/parentAuth';
+import { demoHousehold } from '../../api/parentDemo';
 import { ParentShell } from '../../components/ParentShell';
 import './ParentChildPicker.css';
+
+// The demo household's children, shaped as the picker's `ChildAccount` rows. In the login-free demo
+// bypass there is no real backend session, so the picker reads the same seeded household the rest of
+// the parent surface does and "Start practice" drops into the anonymous learner app (like the
+// student demo) rather than minting a child session.
+function demoPickerChildren(): ChildAccount[] {
+  return demoHousehold().children.map((c) => ({
+    public_id: c.child_id,
+    display_name: c.name,
+    grade_level: c.grade,
+    locale: 'en',
+  }));
+}
 
 /**
  * "Who's practicing?" profile picker (S5). Shown when a parent is signed in and wants to hand a
@@ -39,6 +54,10 @@ export function ParentChildPicker({
 
   useEffect(() => {
     let live = true;
+    if (isParentDemo()) {
+      setChildren(demoPickerChildren());
+      return;
+    }
     listChildren()
       .then((rows) => {
         if (live) setChildren(rows);
@@ -55,6 +74,11 @@ export function ParentChildPicker({
     if (startingId !== null) return;
     setStartingId(child.public_id);
     setError(null);
+    if (isParentDemo()) {
+      // No real child session in the demo bypass — drop into the anonymous learner app.
+      window.location.assign('/units');
+      return;
+    }
     try {
       await startChildSession(child.public_id);
       // The cookie is now a child session — send them into the learner app.

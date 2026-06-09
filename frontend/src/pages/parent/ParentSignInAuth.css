@@ -97,6 +97,30 @@
   color: var(--wm-blue-bright);
 }
 
+/* The login-free demo bypass under the primary actions — a quiet, centered text link (it must read
+   as "just looking", never compete with Google / Sign up), matching the student gate's demo link. */
+.wm-psignin-demolink {
+  align-self: center;
+  margin-top: 2px;
+  font-family: var(--wm-font-sans);
+  font-size: var(--wm-fs-meta);
+  font-weight: 700;
+  color: var(--wm-blue);
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.wm-psignin-demolink:hover {
+  color: var(--wm-blue-bright);
+}
+.wm-psignin-demolink:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wm-psignin-login-submit {
     transition: none;

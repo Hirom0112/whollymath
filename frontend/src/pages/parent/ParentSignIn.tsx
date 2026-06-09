@@ -156,6 +156,7 @@ export function ParentSignIn({
   onGoogle,
   onEmailLogin,
   onChildSignIn,
+  onDemo,
   busy = false,
   error = null,
 }: {
@@ -167,6 +168,8 @@ export function ParentSignIn({
   onEmailLogin: (email: string, password: string) => void;
   // Open the standalone child sign-in (own/school device).
   onChildSignIn: () => void;
+  // Bypass login into the seeded demo household (no account — the pitch / "just looking" path).
+  onDemo: () => void;
   busy?: boolean;
   error?: string | null;
 }): React.JSX.Element {
@@ -230,6 +233,14 @@ export function ParentSignIn({
               </button>
               <button type="button" className="wm-psignin-demo" onClick={onSignUp} disabled={busy}>
                 Sign up
+              </button>
+              <button
+                type="button"
+                className="wm-psignin-demolink"
+                onClick={onDemo}
+                disabled={busy}
+              >
+                Explore a demo family — no sign-in
               </button>
             </div>
 
