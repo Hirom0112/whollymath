@@ -8,9 +8,9 @@ import {
   type HelpNeedTrend,
   type KcMasteryView,
   type TeacherStudentView as StudentDetail,
-} from '../api/teacher';
-import { TeacherShell } from '../components/TeacherShell';
-import { AlertBadge, CategoryChip, ProgressBar } from '../components/TeacherSignals';
+} from '../../api/teacher';
+import { TeacherShell } from '../../components/TeacherShell';
+import { AlertBadge, CategoryChip, ProgressBar } from '../../components/TeacherSignals';
 import './TeacherStudentView.css';
 
 /**

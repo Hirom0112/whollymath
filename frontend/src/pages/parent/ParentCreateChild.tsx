@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
-import { ApiError } from '../api/index';
-import { addChild } from '../api/parent';
-import { ParentShell } from '../components/ParentShell';
+import { ApiError } from '../../api/index';
+import { addChild } from '../../api/parent';
+import { ParentShell } from '../../components/ParentShell';
 
-import './parent/ParentCreateChildAuth.css';
+import './ParentCreateChildAuth.css';
 import './ParentCreateChild.css';
 
 /**

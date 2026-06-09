@@ -10,11 +10,11 @@ import {
   type StudentCategory,
   type TeacherReminder,
   type TeacherStudentView,
-} from '../api/teacher';
-import { AreaChart } from '../components/AreaChart';
-import { Sparkline, type SparklineTone } from '../components/Sparkline';
-import { TeacherShell } from '../components/TeacherShell';
-import { AlertBadge, CategoryChip, ProgressBar } from '../components/TeacherSignals';
+} from '../../api/teacher';
+import { AreaChart } from '../../components/AreaChart';
+import { Sparkline, type SparklineTone } from '../../components/Sparkline';
+import { TeacherShell } from '../../components/TeacherShell';
+import { AlertBadge, CategoryChip, ProgressBar } from '../../components/TeacherSignals';
 import './TeacherDashboard.css';
 
 /**

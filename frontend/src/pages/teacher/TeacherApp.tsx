@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-import { demoLogin, fetchRoster, setTeacherToken } from '../api/teacher';
-import { ThemeProvider } from '../state/ThemeContext';
+import { demoLogin, fetchRoster, setTeacherToken } from '../../api/teacher';
+import { ThemeProvider } from '../../state/ThemeContext';
 
 import { TeacherDashboard } from './TeacherDashboard';
 import { TeacherSignIn } from './TeacherSignIn';

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
-import { fetchChild, type ChildDetail } from '../api/parent';
-import type { ActivityEventView, KcMasteryView } from '../api/teacher';
-import { AreaChart } from '../components/AreaChart';
-import { ParentShell } from '../components/ParentShell';
-import { CategoryChip } from '../components/TeacherSignals';
+import { fetchChild, type ChildDetail } from '../../api/parent';
+import type { ActivityEventView, KcMasteryView } from '../../api/teacher';
+import { AreaChart } from '../../components/AreaChart';
+import { ParentShell } from '../../components/ParentShell';
+import { CategoryChip } from '../../components/TeacherSignals';
 import './ParentChildView.css';
 
 /**

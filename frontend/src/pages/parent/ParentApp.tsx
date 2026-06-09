@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 
-import { ApiError } from '../api/index';
-import { fetchHousehold } from '../api/parent';
-import { parentGoogle, parentLogin, parentLogout, parentMe } from '../api/parentAuth';
-import { promptGoogleSignIn } from '../auth/google';
-import { ThemeProvider } from '../state/ThemeContext';
+import { ApiError } from '../../api/index';
+import { fetchHousehold } from '../../api/parent';
+import { parentGoogle, parentLogin, parentLogout, parentMe } from '../../api/parentAuth';
+import { promptGoogleSignIn } from '../../auth/google';
+import { ThemeProvider } from '../../state/ThemeContext';
 
-import { ParentChildPicker } from './parent/ParentChildPicker';
-import { ParentSignupWizard } from './parent/ParentSignupWizard';
+import { ParentChildPicker } from './ParentChildPicker';
 import { ParentChildView } from './ParentChildView';
 import { ParentCreateChild } from './ParentCreateChild';
 import { ParentDashboard } from './ParentDashboard';
 import { ParentSignIn } from './ParentSignIn';
+import { ParentSignupWizard } from './ParentSignupWizard';
 
 /**
  * The parent surface container, mirroring TeacherApp. Reached at the real `/parent` route (single

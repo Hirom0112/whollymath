@@ -6,14 +6,14 @@ import {
   type ChildSummary,
   type Household,
   type ParentNote,
-} from '../api/parent';
-import { AreaChart } from '../components/AreaChart';
-import { ParentShell } from '../components/ParentShell';
-import { Sparkline, type SparklineTone } from '../components/Sparkline';
-import { CategoryChip, ProgressBar } from '../components/TeacherSignals';
+} from '../../api/parent';
+import { AreaChart } from '../../components/AreaChart';
+import { ParentShell } from '../../components/ParentShell';
+import { Sparkline, type SparklineTone } from '../../components/Sparkline';
+import { CategoryChip, ProgressBar } from '../../components/TeacherSignals';
 
-import { ParentDashboardTour, shouldShowParentTour } from './parent/ParentDashboardTour';
-import './parent/ParentDashboardActions.css';
+import { ParentDashboardTour, shouldShowParentTour } from './ParentDashboardTour';
+import './ParentDashboardActions.css';
 import './ParentDashboard.css';
 
 /**

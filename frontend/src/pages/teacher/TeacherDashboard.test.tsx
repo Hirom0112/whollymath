@@ -8,9 +8,9 @@ import { TeacherDashboard } from './TeacherDashboard';
 // status strip, copy law) against the polished demo fixtures — so we mock the api/teacher data
 // functions to resolve those fixtures, decoupling the render assertions from the live/offline flag
 // and from a running backend. (The live client wiring itself is covered in api/teacher.test.ts.)
-vi.mock('../api/teacher', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../api/teacher')>();
-  const demo = await import('../api/teacherDemo');
+vi.mock('../../api/teacher', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api/teacher')>();
+  const demo = await import('../../api/teacherDemo');
   return {
     ...actual,
     fetchRoster: () => Promise.resolve(demo.DEMO_ROSTER),

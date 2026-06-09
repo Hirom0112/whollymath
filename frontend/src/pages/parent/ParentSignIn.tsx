@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import './parent/ParentSignInAuth.css';
+import './ParentSignInAuth.css';
 import './ParentSignIn.css';
 
 /**

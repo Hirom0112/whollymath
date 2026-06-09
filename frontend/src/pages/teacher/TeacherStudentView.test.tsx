@@ -9,9 +9,9 @@ import { TeacherStudentView } from './TeacherStudentView';
 // The teacher client now runs LIVE (TEACHER_API_READY=true), so we mock the api/teacher data
 // functions to resolve the demo fixtures — the render/order assertions below are independent of the
 // live/offline flag and of a running backend. (Live wiring is covered in api/teacher.test.ts.)
-vi.mock('../api/teacher', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../api/teacher')>();
-  const demo = await import('../api/teacherDemo');
+vi.mock('../../api/teacher', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api/teacher')>();
+  const demo = await import('../../api/teacherDemo');
   return {
     ...actual,
     fetchTeacherStudent: (id: string) => {
