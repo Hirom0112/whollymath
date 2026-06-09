@@ -83,6 +83,15 @@ export class AppStack extends cdk.Stack {
       secretName: 'whollymath/mathpix-app-key',
       description: 'Mathpix app key (homework-scan OCR); value set out-of-band post-deploy.',
     });
+    // ElevenLabs key for the avatar's LIVE voice synthesis (app/tts/live_synth.py). With it set,
+    // dynamic help lines that have no pre-rendered clip — problem-specific worked-example hints and
+    // every es-MX line until its bank renders — are voiced on demand (and content-hash cached), so
+    // Spanish hints + number-templated hints speak instead of staying captions-only. Unset ⇒ the
+    // avatar degrades to captions-only (invariant 4). Value set out-of-band post-deploy.
+    const elevenLabsSecret = new secretsmanager.Secret(this, 'ElevenLabsApiKey', {
+      secretName: 'whollymath/elevenlabs-api-key',
+      description: 'ElevenLabs API key (live avatar voice synth); value set out-of-band post-deploy.',
+    });
     // HS256 signing key for our parent/child session JWTs (app/auth/tokens.py, Slice
     // auth/parent-child). Unlike the API-key shells above, the AUTO-GENERATED random value
     // is exactly what we want — a long random signing secret — so it needs NO out-of-band
@@ -165,6 +174,7 @@ export class AppStack extends cdk.Stack {
           ANTHROPIC_API_KEY: ecs.Secret.fromSecretsManager(anthropicSecret),
           LANGSMITH_API_KEY: ecs.Secret.fromSecretsManager(langsmithSecret),
           MATHPIX_APP_KEY: ecs.Secret.fromSecretsManager(mathpixSecret),
+          ELEVENLABS_API_KEY: ecs.Secret.fromSecretsManager(elevenLabsSecret),
           SESSION_SIGNING_KEY: ecs.Secret.fromSecretsManager(sessionSigningKey),
         },
       },
@@ -292,6 +302,10 @@ export class AppStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MathpixSecretArn', {
       value: mathpixSecret.secretArn,
       description: 'ARN of the Mathpix app key secret (populate the value post-deploy)',
+    });
+    new cdk.CfnOutput(this, 'ElevenLabsSecretArn', {
+      value: elevenLabsSecret.secretArn,
+      description: 'ARN of the ElevenLabs API key secret (populate the value post-deploy)',
     });
   }
 }
