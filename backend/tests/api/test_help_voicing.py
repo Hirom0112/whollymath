@@ -71,32 +71,67 @@ def _hint_req(session_id: str, problem_id: str) -> TurnRequest:
     )
 
 
-# The first hint on a NUMBER_LINE_PLACEMENT problem takes the conceptual-nudge path (its worked
-# example's first step would BE the answer, so it is NOT used as the first hint — see
-# ``_FIRST_STEP_REVEALS_ANSWER``). That nudge path is the one the voice provider rephrases, so it is
-# where the voiced-vs-prewritten invariant (4) is observable on a REACTIVE hint. (For other KCs the
-# first hint is the deterministic worked SETUP step, voiced by live TTS, not the voice provider.)
-_NUDGE_KC = KnowledgeComponentId.NUMBER_LINE_PLACEMENT
+# The reactive-hint path uses the voice provider for ONE case: the error-specific FIRST hint after
+# a wrong answer that the verifier named a misconception (hints are otherwise "short nudges, never
+# the answer" — the worked example's answer-free setup steps, then the banked conceptual nudge with
+# its cached audio). So that misconception-corrective is where the voiced-vs-prewritten invariant
+# (4) is observable on a reactive hint. (The misconception voicing itself is unit-tested in
+# tests/persona_surface/test_misconception_voice.py.)
+_MISCONCEPTION_KC = KnowledgeComponentId.ADDITION_UNLIKE
 
 
-def test_hint_is_voiced_when_a_voice_provider_is_present(empty_cache: None) -> None:
-    """A nudge-path REQUEST_HINT turn returns the mascot-voiced line when voicing is enabled.
+def _answer_req(session_id: str, problem_id: str, answer: str) -> TurnRequest:
+    return TurnRequest(
+        session_id=session_id,
+        problem_id=problem_id,
+        action=ActionType.SUBMIT_ANSWER,
+        submitted_answer=answer,
+        surface_state=SurfaceState.SYMBOLIC_FOCUS,
+        latency_ms=3000,
+        hint_used=False,
+    )
+
+
+def _add_across_answer(problem) -> str:  # type: ignore[no-untyped-def]
+    """The classic 'add the tops and bottoms' wrong answer for an a/b + c/d item — which the
+    verifier names ADD_ACROSS_ERROR, so the next hint is the misconception corrective."""
+    a, b = problem.operands[0], problem.operands[1]
+    return f"{a.p + b.p}/{a.q + b.q}"
+
+
+def test_misconception_first_hint_is_voiced_when_a_voice_provider_is_present(
+    empty_cache: None,
+) -> None:
+    """After a wrong answer the verifier named a misconception, the FIRST hint is that error's
+    corrective, returned in the mascot's voice when voicing is enabled.
 
     Isolated to an empty cache so the line stays silent and ships the voiced caption (otherwise a
     cached canonical line would be captioned verbatim — see ``empty_cache``).
     """
     store = SessionStore(voice_provider=_FakeVoice())
-    started = store.start_kc(_NUDGE_KC)
-    resp = store.process_turn(_hint_req(started.session_id, started.problem.problem_id))
+    started = store.start_kc(_MISCONCEPTION_KC)
+    sid, pid = started.session_id, started.problem.problem_id
+    problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001 (test introspection)
+
+    store.process_turn(_answer_req(sid, pid, _add_across_answer(problem)))
+    assert store._sessions[sid].tutor.history[-1].result.matched_misconception is not None  # noqa: SLF001
+
+    current = store._sessions[sid].tutor.current_problem  # noqa: SLF001
+    resp = store.process_turn(_hint_req(sid, current.problem_id))
     assert resp.hint == _VOICED
 
 
 def test_hint_is_prewritten_without_a_voice_provider() -> None:
-    """With no voice provider, the nudge-path hint is the pre-written nudge verbatim (inv. 4)."""
+    """With no voice provider, the misconception hint is the pre-written nudge verbatim (inv. 4)."""
     store = SessionStore()  # no voice provider
-    started = store.start_kc(_NUDGE_KC)
-    resp = store.process_turn(_hint_req(started.session_id, started.problem.problem_id))
-    assert resp.hint == select_nudge(started.problem.kc).text
+    started = store.start_kc(_MISCONCEPTION_KC)
+    sid, pid = started.session_id, started.problem.problem_id
+    problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001
+
+    store.process_turn(_answer_req(sid, pid, _add_across_answer(problem)))
+    current = store._sessions[sid].tutor.current_problem  # noqa: SLF001
+    resp = store.process_turn(_hint_req(sid, current.problem_id))
+    assert resp.hint == select_nudge(current.kc).text
     assert resp.hint != _VOICED
 
 

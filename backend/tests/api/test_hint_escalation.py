@@ -1,30 +1,31 @@
-"""Escalating hints on the live hint path (Feature B, Slice 5.6 → API).
+"""Hints on the live hint path: SHORT nudges that NEVER reveal the answer (owner 2026-06-09).
 
-A REQUEST_HINT turn escalates on REPEATED requests on the SAME problem. Since the owner change of
-2026-06-09 ("a hint, not the answer choice") the FIRST hint is SPECIFIC to this problem but never
-its answer — the worked example's opening SETUP step (``_first_problem_specific_hint``), or the
-conceptual nudge as a fallback (a KC whose first step would BE the answer, e.g. number-line
-placement, or a problem with no worked example). The 2nd+ request gives the full WORKED_STEP
-walkthrough (its closing step states the answer). A hint turn never changes the surface state or
-advances the problem (§3.8 refuse-rule 3). The counter resets when a submitted answer advances the
-problem, so the first hint on a fresh problem is the problem-specific first hint again.
+A REQUEST_HINT turn never advances the problem or changes the surface state (§3.8 refuse-rule 3).
+Each request returns ONE short line, and the sequence NEVER states the final answer however many
+times it is clicked:
 
-These run with NO providers wired, so they also prove the no-LLM fallback path: with
-``hint_provider=None`` ``build_validated_hint`` returns the deterministic canonical text, so
-escalation is real (just not LLM-warmed) in tests. SymPy decides every answer; no mocks.
+  - The Nth hint is the Nth answer-free SETUP step of the worked example
+    (``_answer_free_step_lines`` — the leading steps before any that writes the answer; specific to
+    this problem's real numbers, but not the result).
+  - Once those setup steps are exhausted (or there were none — e.g. number-line placement, whose
+    first step IS the answer), it STAYS on the conceptual nudge, which is answer-free by
+    construction. So repeated clicks keep nudging and never escalate to the answer.
+
+These run with NO providers wired, so the lines are the deterministic canonical text (es-MX
+translation is a separate, provider-only path). SymPy decides every answer; no mocks.
 """
 
 from __future__ import annotations
 
-import re
-
 from app.api.schemas import ActionType, SurfaceState, TurnRequest
-from app.api.service import SessionStore, _first_problem_specific_hint
+from app.api.service import SessionStore, _answer_free_step_lines
 from app.domain.knowledge_components import KnowledgeComponentId
-from app.tutor.hints import HintLevel, build_validated_hint, select_nudge
+from app.domain.problem_generators import generate_problem
+from app.tutor.hints import select_nudge
 from app.tutor.worked_example import worked_example_for
 
-_ROUTE = "combine"
+# A KC whose generated problems have a multi-step worked example with answer-free setup steps.
+_KC = KnowledgeComponentId.ADDITION_UNLIKE
 
 
 def _hint_req(session_id: str, problem_id: str) -> TurnRequest:
@@ -50,136 +51,125 @@ def _answer_req(session_id: str, problem_id: str, answer: str) -> TurnRequest:
     )
 
 
-def _has_digit(text: str) -> bool:
-    return any(ch.isdigit() for ch in text)
+def _answer_str(problem_kc: KnowledgeComponentId, problem) -> str:  # type: ignore[no-untyped-def]
+    a = problem.correct_value
+    return f"{a.p}/{a.q}"
 
 
-def test_first_hint_is_problem_specific_then_worked_on_same_problem() -> None:
-    """1st hint = the problem-specific FIRST hint (the worked example's opening SETUP step, which
-    carries this problem's digits but NOT its answer), 2nd+ = the full WORKED_STEP walkthrough.
-    Surface + problem stay put each time (a hint never advances, refuse-rule 3)."""
-    store = SessionStore()  # no providers — proves the deterministic fallback
-    started = store.start(_ROUTE)
+# ─── _answer_free_step_lines: leading setup steps, never the answer ───────────
+
+
+def test_answer_free_step_lines_are_leading_steps_without_the_answer() -> None:
+    """The helper returns the worked example's leading steps, stopping before any that states the
+    answer — so no returned line contains the answer fraction, across many generated problems."""
+    for seed in range(8):
+        problem = generate_problem(_KC, seed=seed)
+        lines = _answer_free_step_lines(problem)
+        steps = worked_example_for(problem).steps
+        answer = f"{problem.correct_value.p}/{problem.correct_value.q}"
+        # They are a PREFIX of the worked steps' shown text...
+        assert lines == [s.shown for s in steps[: len(lines)]]
+        # ...and not one of them writes the answer.
+        assert all(answer not in line for line in lines)
+        # The NEXT step (the first omitted one) is the one that reveals the answer.
+        if len(lines) < len(steps):
+            revealing = steps[len(lines)]
+            assert revealing.revealed_value == problem.correct_value or answer in revealing.shown
+
+
+def test_number_line_has_no_answer_free_setup_step() -> None:
+    """NUMBER_LINE_PLACEMENT's only worked step IS the answer (it places the target fraction), so it
+    has no answer-free setup step — hints fall back to the conceptual nudge."""
+    for seed in range(5):
+        problem = generate_problem(KnowledgeComponentId.NUMBER_LINE_PLACEMENT, seed=seed)
+        assert _answer_free_step_lines(problem) == []
+
+
+# ─── live hint escalation: setup steps → nudge, never the answer ──────────────
+
+
+def test_hints_walk_setup_steps_then_stay_on_nudge_never_the_answer() -> None:
+    """Each hint is the next answer-free setup step; once exhausted it STAYS on the conceptual
+    nudge. No hint ever states the answer, and the surface/problem never change."""
+    store = SessionStore()  # no providers → canonical text
+    started = store.start_kc(_KC)
     sid, pid = started.session_id, started.problem.problem_id
     problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001 (test introspection)
+    setup = _answer_free_step_lines(problem)
+    assert setup, "this KC's generated problem should have answer-free setup steps"
+    nudge = select_nudge(problem.kc).text
+    answer = _answer_str(problem.kc, problem)
 
-    # 1st request → the problem-specific first hint (setup step). It is NOT the full worked
-    # walkthrough, and it does not state the answer; surface/problem are unchanged.
-    expected_first = _first_problem_specific_hint(problem, "en", None, None)
-    expected_worked = build_validated_hint(problem, HintLevel.WORKED_STEP).natural_language
-    r1 = store.process_turn(_hint_req(sid, pid))
-    assert r1.hint == expected_first
-    assert r1.hint != expected_worked  # the first hint is NOT the full (answer-stating) walkthrough
-    answer = f"{problem.correct_value.p}/{problem.correct_value.q}"
-    assert answer not in (r1.hint or "")  # a hint, not the answer
-    assert r1.next_surface_state == started.surface_state
-    assert r1.next_problem is not None and r1.next_problem.problem_id == pid
+    # Walk the setup steps in order — short, specific, never the answer; problem/surface unchanged.
+    for expected in setup:
+        r = store.process_turn(_hint_req(sid, pid))
+        assert r.hint == expected
+        assert answer not in (r.hint or "")
+        assert r.next_surface_state == started.surface_state
+        assert r.next_problem is not None and r.next_problem.problem_id == pid
 
-    # 2nd request → WORKED_STEP: the full numbered walkthrough, longer than the first hint.
-    r2 = store.process_turn(_hint_req(sid, pid))
-    assert r2.hint == expected_worked
-    assert _has_digit(r2.hint or "")
-    assert len(r2.hint or "") > len(r1.hint or "")
-    assert r2.next_surface_state == started.surface_state
-    assert r2.next_problem is not None and r2.next_problem.problem_id == pid
-
-    # 3rd request → still WORKED_STEP (2+ stays at the full walkthrough).
-    r3 = store.process_turn(_hint_req(sid, pid))
-    assert r3.hint == expected_worked
-    assert r3.next_surface_state == started.surface_state
+    # Exhausted → stays on the conceptual nudge however many more times it is asked. Never escalates
+    # to the answer (the whole point of the 2026-06-09 change).
+    for _ in range(4):
+        r = store.process_turn(_hint_req(sid, pid))
+        assert r.hint == nudge
+        assert answer not in (r.hint or "")
+        assert r.next_surface_state == started.surface_state
 
 
-def test_fourth_and_later_requests_stay_at_worked_step() -> None:
-    """2+ ⇒ WORKED_STEP: a 4th request on the same problem still returns the full walkthrough."""
+def test_number_line_hints_are_the_nudge_and_never_the_answer() -> None:
+    """A number-line problem (no answer-free setup step) hints the conceptual nudge from the very
+    first request, and never the answer fraction."""
     store = SessionStore()
-    started = store.start(_ROUTE)
+    started = store.start_kc(KnowledgeComponentId.NUMBER_LINE_PLACEMENT)
     sid, pid = started.session_id, started.problem.problem_id
     problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001
-    expected_worked = build_validated_hint(problem, HintLevel.WORKED_STEP).natural_language
+    nudge = select_nudge(problem.kc).text
+    answer = _answer_str(problem.kc, problem)
+
     for _ in range(3):
-        store.process_turn(_hint_req(sid, pid))
-    r4 = store.process_turn(_hint_req(sid, pid))
-    assert r4.hint == expected_worked
+        r = store.process_turn(_hint_req(sid, pid))
+        assert r.hint == nudge
+        assert answer not in (r.hint or "")
 
 
 def test_counter_resets_when_an_answer_advances_the_problem() -> None:
-    """After a submitted answer serves a fresh problem, the first hint is the problem-specific
-    first hint again (counter reset) — NOT the escalated worked walkthrough carried over."""
+    """After a submitted answer serves a fresh problem, the first hint is that problem's first
+    answer-free setup step again (counter reset) — not a carried-over deeper line."""
     store = SessionStore()
-    started = store.start(_ROUTE)
+    started = store.start_kc(_KC)
     sid, pid = started.session_id, started.problem.problem_id
 
-    # Escalate twice on the calibration problem (so the counter is at 2).
+    # Take a couple of hints on the first problem (advance the counter).
     store.process_turn(_hint_req(sid, pid))
     store.process_turn(_hint_req(sid, pid))
 
-    # Submit a (wrong) answer to advance to a fresh practice problem.
+    # Submit a (wrong) answer to advance to a fresh problem.
     answered = store.process_turn(_answer_req(sid, pid, "0/1"))
     assert answered.next_problem is not None
     new_pid = answered.next_problem.problem_id
-    new_problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001 (test introspection)
+    new_problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001
+    new_setup = _answer_free_step_lines(new_problem)
+    expected_first = new_setup[0] if new_setup else select_nudge(new_problem.kc).text
 
-    # First hint on the fresh problem is the problem-specific first hint again (counter reset),
-    # not the full worked walkthrough that the previous problem had escalated to.
     r = store.process_turn(_hint_req(sid, new_pid))
-    assert r.hint == _first_problem_specific_hint(new_problem, "en", None, None)
-    assert r.hint != build_validated_hint(new_problem, HintLevel.WORKED_STEP).natural_language
+    assert r.hint == expected_first
 
 
 def test_serving_a_fresh_problem_always_resets_the_hint_counter() -> None:
-    """The per-problem hint counter is reset at the single chokepoint that serves a fresh
-    practice problem (``_serve_next``), so EVERY re-serve path resets — including the
-    probe-fail and probe-pass re-serves, which previously skipped it and let the next
-    problem's FIRST hint jump straight to a worked step instead of a nudge.
+    """The per-problem hint counter is reset at the single chokepoint that serves a fresh practice
+    problem (``_serve_next``), so EVERY re-serve path resets — including the probe-fail and
+    probe-pass re-serves, which previously skipped it and let the next problem's first hint jump
+    straight past the setup step.
     """
     from app.api.service import _serve_next  # noqa: PLC0415
 
     store = SessionStore()
-    started = store.start(_ROUTE)
+    started = store.start_kc(_KC)
     sid, pid = started.session_id, started.problem.problem_id
-    # Advance one turn so history has an answered turn for the scheduler to read.
     store.process_turn(_answer_req(sid, pid, "0/1"))
     live = store._sessions[sid]  # noqa: SLF001 (test introspection)
 
     live.hints_this_problem = 3  # as if three hints were taken on the current problem
     _serve_next(live)  # the chokepoint the probe-fail/-pass and remediation paths all call
     assert live.hints_this_problem == 0
-
-
-def test_first_and_worked_use_deterministic_canonical_text_without_a_provider() -> None:
-    """With no providers wired, the hints ARE the deterministic canonical worked text.
-
-    Proves the no-LLM fallback path is what backs the live escalation in tests: the FIRST hint
-    equals the first canonical step's ``shown`` (the setup step, for this combine problem which has
-    a worked example), and the 2nd hint equals the full numbered walkthrough — both straight from
-    ``worked_example_for`` (the domain authority)."""
-    store = SessionStore()
-    started = store.start(_ROUTE)
-    sid, pid = started.session_id, started.problem.problem_id
-    problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001
-    steps = worked_example_for(problem).steps
-
-    r_first = store.process_turn(_hint_req(sid, pid))
-    assert r_first.hint == steps[0].shown  # the opening SETUP step, not the answer
-
-    r_worked = store.process_turn(_hint_req(sid, pid))
-    expected = "\n".join(f"{i}. {step.shown}" for i, step in enumerate(steps, start=1))
-    assert r_worked.hint == expected
-    # The numbered worked walkthrough has at least as many lines as canonical steps.
-    assert len(re.findall(r"^\d+\.", r_worked.hint or "", flags=re.MULTILINE)) == len(steps)
-
-
-def test_number_line_first_hint_is_the_nudge_not_the_answer_revealing_step() -> None:
-    """NUMBER_LINE_PLACEMENT is the one KC whose worked example's FIRST step IS the answer (it
-    places the target fraction on the line). Its first hint must therefore stay the conceptual
-    nudge, never that answer-revealing step — the guard that keeps "specific first hint" honest."""
-    from app.domain.problem_generators import generate_problem  # noqa: PLC0415
-
-    for seed in range(6):  # a few distinct targets, not one lucky problem
-        problem = generate_problem(KnowledgeComponentId.NUMBER_LINE_PLACEMENT, seed=seed)
-        first = _first_problem_specific_hint(problem, "en", None, None)
-        # The first hint is the conceptual nudge, NOT the answer-stating first worked step.
-        assert first == select_nudge(problem.kc).text
-        answer = f"{problem.correct_value.p}/{problem.correct_value.q}"
-        assert answer not in first
-        assert first != worked_example_for(problem).steps[0].shown

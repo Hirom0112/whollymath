@@ -139,38 +139,6 @@ def test_first_hint_live_synthesises_when_no_banked_clip(
     assert result.hint_audio.words == ["picture", "how", "big"]
 
 
-def _answer_req(session_id: str, problem_id: str, answer: str) -> TurnRequest:
-    return TurnRequest(
-        session_id=session_id,
-        problem_id=problem_id,
-        action=ActionType.SUBMIT_ANSWER,
-        submitted_answer=answer,
-        surface_state=SurfaceState.SYMBOLIC_FOCUS,
-        latency_ms=3000,
-        hint_used=False,
-    )
-
-
-def test_escalated_worked_step_hint_has_no_audio() -> None:
-    """Only the first (NUDGE) hint can have audio; the escalated worked-step stays captions-only.
-
-    Driven on a fresh PRACTICE problem (the equivalence calibration item carries no single-operand
-    worked example), so the partial/worked escalation actually builds; it never carries audio."""
-    store = SessionStore()
-    started = store.start(_EQUIVALENCE_ROUTE)
-    sid, pid = started.session_id, started.problem.problem_id
-
-    # Advance to a fresh practice problem so the worked-example escalation can build.
-    answered = store.process_turn(_answer_req(sid, pid, "0/1"))
-    assert answered.next_problem is not None
-    new_pid = answered.next_problem.problem_id
-
-    store.process_turn(_hint_req(sid, new_pid))  # 1st: nudge (maybe audio)
-    second = store.process_turn(_hint_req(sid, new_pid))  # 2nd: partial_step — never audio
-
-    assert second.hint_audio is None
-
-
 def test_static_mount_resolves_a_cached_audio_path() -> None:
     """The /tts/audio mount serves the real cached mp3 a banked nudge clip references.
 

@@ -1029,6 +1029,29 @@ def build_validated_hint(
     return _fallback()
 
 
+def localize_hint_line(
+    canonical_line: str,
+    *,
+    provider: LLMProvider | None = None,
+    locale: Locale = "en",
+) -> str:
+    """A single SHORT hint line in the learner's locale — fast, with no LLM retry-storm.
+
+    English (or no provider) returns the domain's canonical line verbatim — instant, no model call.
+    For es-MX the line is translated by ONE LLM pass kept behind the SAME guards as the worked-step
+    rephrase (``is_safe_copy`` + the SymPy numeric gate, so every digit survives); a failed/blank
+    translation falls back to the English canonical (invariant 4). Because it is a single short line
+    (not the multi-number walkthrough), the numeric gate passes on the first try, so there is no
+    repeated-retry latency — unlike ``build_validated_hint(WORKED_STEP)``.
+    """
+    if locale == "en" or provider is None:
+        return canonical_line
+    candidate = render_hint_text(canonical_line, provider=provider, locale=locale)
+    if is_safe_copy(candidate) and numeric_claims_preserved(canonical_line, candidate):
+        return candidate
+    return canonical_line
+
+
 __all__ = [
     "MAX_HINT_COPY_CHARS",
     "NUDGE_BANK",
@@ -1037,5 +1060,6 @@ __all__ = [
     "NudgeHint",
     "build_validated_hint",
     "is_safe_copy",
+    "localize_hint_line",
     "select_nudge",
 ]
