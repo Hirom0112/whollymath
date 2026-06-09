@@ -128,7 +128,10 @@ def synthesize_live(
     text_sha = content_hash(text, locale)
     audio_path = cache_dir / f"{text_sha}.{ELEVENLABS_AUDIO_EXT}"
 
-    cached = load_timings(cache_dir, text_sha)
+    try:
+        cached = load_timings(cache_dir, text_sha)
+    except Exception:  # noqa: BLE001 - a corrupt/partial timings sidecar (e.g. a render killed mid-write) must not raise into the help moment (invariant 4); treat it as a cache miss and re-render
+        cached = None
     if audio_path.exists() and cached is not None:
         return _to_live_audio(audio_path, *cached)
 

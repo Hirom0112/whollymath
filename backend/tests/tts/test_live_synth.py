@@ -39,6 +39,26 @@ def test_cache_miss_synthesises_and_returns_well_formed_ref(tmp_path: Path) -> N
     assert len(audio.words) == len(audio.wtimes) == len(audio.wdurations)
 
 
+def test_corrupt_timings_sidecar_degrades_to_a_re_render_not_a_crash(tmp_path: Path) -> None:
+    """A truncated/corrupt timings sidecar (e.g. a render killed mid-write, leaving the .mp3
+    written but the .timings.json partial) must NOT raise into the help moment. It is treated as
+    a cache miss and re-rendered, so the line still degrades safely (invariant 4)."""
+    from app.tts.batch import content_hash, timings_path
+
+    text = "picture the whole thing"
+    first = synthesize_live(text, provider=FakeTtsProvider(), cache_dir=tmp_path)
+    assert first is not None  # primed the cache (audio + sidecar on disk)
+
+    # Corrupt the timings sidecar in place (truncated JSON).
+    timings_path(tmp_path, content_hash(text, "en")).write_text("{ not valid", encoding="utf-8")
+
+    # The next call must not raise on the bad JSON — it re-renders (cache miss) and returns a ref.
+    second = FakeTtsProvider()
+    again = synthesize_live(text, provider=second, cache_dir=tmp_path)
+    assert again is not None
+    assert second.calls == [(text, "en")]  # re-rendered rather than crashing on the corrupt file
+
+
 def test_repeat_is_a_free_cache_hit(tmp_path: Path) -> None:
     first = FakeTtsProvider()
     a = synthesize_live("check the whole amount", provider=first, cache_dir=tmp_path)
