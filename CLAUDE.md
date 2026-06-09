@@ -438,7 +438,7 @@ If you change the mastery model, run the persona suite. If any persona now achie
 
 - Local development: `docker-compose up` for Postgres; FastAPI runs with `uvicorn --reload`; React runs with `vite`
 - Preview environments: not implemented in v1 (out of scope)
-- Push to main: GitHub Actions runs CDK deploy to production (every commit on main is a potential deploy — keep main green)
+- Push to main: CI (`.github/workflows/ci.yml`) runs **lint + type-check + tests only — it does NOT deploy.** Production deploys are **manual** (`cd infrastructure && pnpm deploy`, i.e. `cdk deploy --all`). Keep main green regardless: a green main is the thing a deploy ships.
 
 ### AWS CDK conventions
 
