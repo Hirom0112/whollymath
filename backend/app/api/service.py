@@ -1046,6 +1046,31 @@ def _last_matched_misconception(live: _LiveSession) -> MisconceptionId | None:
     return history[-1].result.matched_misconception
 
 
+def _probe_hint_response(live: _LiveSession) -> TurnResponse:
+    """A REQUEST_HINT while the S5 transfer probe is in progress (PROJECT.md §3.9).
+
+    The probe is the UNAIDED confirm gate, so we never escalate a hint here: scaffolding it
+    would defeat the very check that is meant to be unscaffolded. (Before this guard, the request
+    fell through to ``_hint_response``, which hints ``tutor.current_problem`` — the PAUSED practice
+    problem, not the probe step on screen — and wrongly bumped that problem's hint counter.) We
+    keep the current probe step on screen with a gentle, non-revealing prompt and touch no state.
+    """
+    session = live.tutor
+    goal_kc = session.history[0].observation.kc
+    step = live.probe_steps[live.probe_index]
+    return TurnResponse(
+        correct=False,
+        error_type=ErrorType.NONE,
+        next_surface_state=SurfaceState.TRANSFER_PROBE,
+        feedback="This is a quick check to confirm what you know — give it your best try.",
+        hint=None,
+        mastery=_probe_mastery_view(session, live, goal_kc),
+        help_need=None,
+        intervention=None,
+        next_problem=_problem_view(step),
+    )
+
+
 def _hint_response(
     live: _LiveSession,
     voice_provider: LLMProvider | None,
@@ -1558,7 +1583,14 @@ class SessionStore:
         if live is None:
             raise SessionNotFoundError(request.session_id)
         if request.action is ActionType.REQUEST_HINT:
-            response = _hint_response(live, self.voice_provider, self.hint_provider, request.locale)
+            # During the S5 probe a hint must not scaffold the unaided confirm gate, nor hint the
+            # paused practice problem behind it — keep the probe step on screen instead (§3.9).
+            if live.probe_steps:
+                response = _probe_hint_response(live)
+            else:
+                response = _hint_response(
+                    live, self.voice_provider, self.hint_provider, request.locale
+                )
         else:
             response = _answer_response(
                 live, request, self.predictor, self.gate, self.voice_provider

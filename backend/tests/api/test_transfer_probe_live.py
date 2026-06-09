@@ -118,3 +118,34 @@ def test_failing_a_probe_step_demotes_instead_of_confirming() -> None:
     assert not _goal_mastered(body, "KC_addition_unlike")
     assert body["correct"] is False
     assert body["next_surface_state"] != "S5_transfer_probe"  # back to practice, not the probe
+
+
+def test_hint_during_probe_does_not_scaffold_or_hint_the_paused_problem() -> None:
+    """A REQUEST_HINT while the S5 probe is on screen must not escalate a hint (the probe is
+    the UNAIDED confirm gate) and must not hint the paused practice problem behind it. The same
+    probe step stays on screen with no hint text, and the probe still works afterward."""
+    app = create_app()
+    session_id, probe_problem = _drive_until_probe(app)
+
+    status, body = post_json(
+        app,
+        "/turn",
+        {
+            "session_id": session_id,
+            "problem_id": probe_problem["problem_id"],
+            "action": "request_hint",
+            "surface_state": "S5_transfer_probe",
+            "latency_ms": 4000,
+            "hint_used": False,
+        },
+    )
+    assert status == 200, body
+    assert isinstance(body, dict)
+    assert body["hint"] is None  # no scaffold on the unaided gate
+    assert body["next_surface_state"] == "S5_transfer_probe"  # still on the probe
+    # The SAME probe step is still on screen — not a hint for the paused practice problem.
+    assert body["next_problem"]["problem_id"] == probe_problem["problem_id"]
+
+    # And the probe is unaffected: answering the step correctly still advances/confirms.
+    after = _turn(app, session_id, probe_problem, _correct_answer(probe_problem))
+    assert after["correct"] is True
