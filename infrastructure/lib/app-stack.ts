@@ -90,7 +90,8 @@ export class AppStack extends cdk.Stack {
     // avatar degrades to captions-only (invariant 4). Value set out-of-band post-deploy.
     const elevenLabsSecret = new secretsmanager.Secret(this, 'ElevenLabsApiKey', {
       secretName: 'whollymath/elevenlabs-api-key',
-      description: 'ElevenLabs API key (live avatar voice synth); value set out-of-band post-deploy.',
+      description:
+        'ElevenLabs API key (live avatar voice synth); value set out-of-band post-deploy.',
     });
     // HS256 signing key for our parent/child session JWTs (app/auth/tokens.py, Slice
     // auth/parent-child). Unlike the API-key shells above, the AUTO-GENERATED random value
