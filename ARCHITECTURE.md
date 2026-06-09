@@ -1,10 +1,10 @@
 # Architecture
 
-> The technical reference for WhollyMath — an adaptive, multimodal tutor for fraction
-> equivalence and operations. This document is the canonical, in-repo explanation of *how*
-> the system is built and *why* it is built that way. Deeper design rationale, the decision
-> log, and research citations live in the team's internal planning docs (local-only); this
-> file is the public, follow-along technical map.
+> The technical reference for WhollyMath — an adaptive, multimodal **Grade-6 math** tutor.
+> This document is the canonical, in-repo explanation of *how* the system is built and *why*
+> it is built that way. Deeper design rationale, the decision log, and research citations live
+> in the team's internal planning docs (local-only); this file is the public, follow-along
+> technical map.
 
 **Audience:** anyone reading the repo for the first time — a new contributor, a reviewer, or
 future us. If you read this top to bottom, you will understand every major moving part and
@@ -35,15 +35,17 @@ the invariants that hold them together.
 
 ## 1. The one-paragraph version
 
-WhollyMath is a web tutor that teaches **fraction equivalence, addition, and subtraction** to
-6th–7th graders. It adapts its interface to what the learner *demonstrably* understands using
-a small, disciplined set of surface states, and it declares "mastery" only through a model
-that is explicitly defended against guessing, pattern-matching, and over-reliance on hints.
-All math correctness is decided by **symbolic computation (SymPy)** — never by a language
-model. The whole system is stress-tested by **five adversarial synthetic learners**, each one
-a deterministic instantiation of a documented fraction misconception, and it is measured
-honestly against a chat-only baseline and a static worked-example baseline, with a **transfer
-test** as the moment of truth.
+WhollyMath is a web tutor that teaches the **full Grade-6 math standard** — 9 units / 44
+playable knowledge components (ratios, the number system, expressions & equations, geometry,
+statistics, plus TEKS-only integer arithmetic and financial literacy) — to 6th–7th graders.
+It adapts its interface to what the learner *demonstrably* understands using a small,
+disciplined set of surface states, and it declares "mastery" only through a model that is
+explicitly defended against guessing, pattern-matching, and over-reliance on hints. All math
+correctness is decided by **symbolic computation (SymPy)** — never by a language model. The
+engine is curriculum-general; its adversarial **synthetic-learner harness** and three-arm
+evaluation were designed and stress-tested on the fraction core (five deterministic personas,
+each a documented misconception), and the same behavioral model generalizes across the
+curriculum — with a **transfer test** as the moment of truth.
 
 ---
 
@@ -75,7 +77,7 @@ flowchart TB
     Learner((Learner))
 
     subgraph FE["Frontend · React + TypeScript + Vite"]
-        WS["Math Workspace<br/>SVG: FractionBar · NumberLine · SymbolicEditor"]
+        WS["Math Workspace<br/>SVG: FractionArea · NumberLine · SymbolicEditor · …"]
         SM["Surface State Machine<br/>S1 – S5"]
     end
 
@@ -108,26 +110,39 @@ be fooled, and to compare the adaptive UI against baselines.
 
 ## 4. The learning domain (what we teach)
 
-A single, tightly scoped goal: *the learner can reason about whether two fractions are
-equivalent, can add and subtract fractions with unlike denominators, and can resist the
-natural-number-bias trap (believing ⅙ > ½ because 6 > 2).* Positive fractions only;
-no multiplication or division.
+The curriculum is the **full Grade-6 math standard**, organized as **9 units / 54 catalog
+lessons / 44 engine-served knowledge components (KCs)**. The KC — not the unit — is the unit of
+mastery: "mastered fractions" is meaningless; "mastered KC_add_common_denom" is trackable. Each
+KC carries its canonical correct procedure, its named misconceptions, and the wrong-answer
+patterns those misconceptions produce, defined in **Layer 1** (the single source of truth the
+mastery model, the personas, and the transfer test all reference).
 
-The goal decomposes into **five knowledge components (KCs)** — the unit of mastery. "Mastered
-fractions" is meaningless; "mastered KC3" is trackable.
+Coverage is **dual-tagged to CCSS and TEKS where both apply**; two units are TEKS-only
+(integer arithmetic and personal financial literacy have no CCSS Grade-6 home). Registries:
+`domain/curriculum.py` (units/lessons), `domain/knowledge_components.py` (KC enum),
+`domain/lesson_spec.py` (per-KC engine specs).
 
-| KC  | Skill |
-|-----|-------|
-| KC1 | Identify equivalent fractions |
-| KC2 | Find a common denominator |
-| KC3 | Add with a common denominator |
-| KC4 | Subtract with a common denominator |
-| KC5 | Place a fraction correctly on a number line |
+| # | Unit | Lessons | Standards |
+|---|------|---------|-----------|
+| 1 | Ratios & Rates | 6 | 6.RP.A · TEKS 6.4/6.5 |
+| 2 | Fractions & Decimals | 8 | 6.NS.1–4 · TEKS 6.2E/6.3 |
+| 3 | Rational Numbers | 7 | 6.NS.5–8 · TEKS 6.2/6.11 |
+| 4 | Integer Arithmetic | 4 | **TEKS-only** 6.3C/6.3D |
+| 5 | Expressions | 6 | 6.EE.1–4 · TEKS 6.6/6.7 |
+| 6 | Equations & Inequalities | 5 | 6.EE.5–9 · TEKS 6.9/6.10 |
+| 7 | Geometry (area/SA/volume) | 6 | 6.G.1–4 · TEKS 6.8 |
+| 8 | Statistics | 6 | 6.SP.1–5 · TEKS 6.12/6.13 |
+| 9 | Personal Financial Literacy | 6 | **TEKS-only** 6.14A–H |
 
-Each KC carries its canonical correct procedure, its named misconceptions, and the
-wrong-answer patterns those misconceptions produce. This is **Layer 1** of the harness and the
-single source of truth that the mastery model, the personas, and the transfer test all
-reference.
+> **KC counts (be precise):** 47 enum members, **44 engine-served** (LessonSpec + a working
+> SymPy generator), 45 referenced by some lesson. Use **44** for "playable KCs the tutor serves."
+> Four U8 financial-literacy lessons are `concept_only` (no SymPy generator) by design.
+
+**The fraction core (the original five KCs)** — identify equivalent fractions, find a common
+denominator, add / subtract with a common denominator, and place a fraction on a number line —
+remains special: it is the deeply-tested heart the synthetic-learner harness (Section 5) was
+built against, and it doubles as the **remediation tier** a struggling 6th-grader is routed down
+into when a prerequisite is missing.
 
 ---
 
@@ -175,7 +190,11 @@ flowchart LR
 | **Click-through Cleo** | Disengagement (not knowledge) | Sub-2s answers, picks first option, skips prompts | Engagement-floor signals in the mastery model |
 
 The personas are the **integration tests** for the mastery model (Section 6). If a persona who
-*should not* reach mastery does, the model is broken.
+*should not* reach mastery does, the model is broken. The five personas are deliberately built on
+fraction misconceptions — the fraction core is where the harness is deepest — but the mastery
+rules they force (representation diversity, unscaffolded evidence, interleaving, engagement
+floor) are *behavioral*, not fraction-specific, so they protect mastery declarations across the
+whole Grade-6 curriculum.
 
 ---
 
@@ -269,12 +288,18 @@ Beyond reactive transitions, a predictor estimates — at every turn — the pro
 learner is in an unproductive state, so help can arrive *before* it is asked for (students who
 most need help are least likely to ask).
 
-- **Model:** XGBoost classifier (interpretable via SHAP, sub-10 ms inference, no GPU). Trained
-  on CMU DataShop public fraction-tutor traces.
+- **Model:** XGBoost classifier (interpretable via SHAP, sub-100 ms inference, no GPU). Trained
+  on the public **EDM Cup 2023** intelligent-tutor logs (ASSISTments family; restored via the OSF
+  mirror `osf.io/yrwuh`). Current artifact: **56 features, holdout AUC ≈ 0.899**, committed at
+  `helpneed/artifacts/helpneed_v1.joblib`.
 - **Features (all real-time available):** response latency on current and recent problems, error
-  pattern on the current problem, hint requests in the last N problems, time since last correct
-  answer, BKT mastery probabilities, recent state transitions.
-- **Output:** a HelpNeed probability per turn, with a confidence interval.
+  pattern on the current problem, hint requests in the last N problems, recent no-hint error rate,
+  time since last correct answer, BKT mastery probabilities, recent state transitions.
+- **Output:** a HelpNeed probability per turn, **observe-only** — it never feeds a transition, a
+  refuse-rule, or the next-problem choice (the graded path stays deterministic).
+- **Trustworthy-KC guard:** the predictor is trusted on the **34 KCs** where its calibration holds;
+  on the remaining (harder ratio/expression) KCs the risk band is suppressed and the tutor stays
+  reactive-only, rather than acting on a low-confidence score.
 - **Intervention escalation** when the probability crosses threshold:
   1. **Inline assertion** — a partial worked step appears in the workspace, in the same format
      as student-derived steps.
@@ -385,7 +410,7 @@ actuals is itself part of the evidence.
 | ML | **scikit-learn / XGBoost** | Interpretable (SHAP), fast inference, no GPU |
 | LLM | **Claude** (Opus for hard generation, Sonnet/Haiku for cheap surface calls) behind a provider abstraction | Strong constrained instruction-following; swappable |
 | Deploy | **AWS via CDK (TypeScript)** — S3 + CloudFront, ECS Fargate, RDS | Reproducible IaC; single always-on container avoids demo cold-starts |
-| Auth / identity | **Google Sign-In (OAuth 2.0 / OIDC)** — backend verifies Google ID tokens; no passwords stored | Delegating to Google is safer than rolling our own (no credential storage, MFA + recovery handled); Workspace-for-Education accounts anchor the under-13 consent story |
+| Auth / identity | **Parent/child accounts** — parent signs in with Google **or** email+password (Argon2id); child logs in with a username + 4-digit PIN. We mint our own short-lived, **revocable** HS256 session JWT; Google ID tokens are verified via `google-auth`. See [`AUTH.md`](./AUTH.md). | Parent-as-account-holder is the cleanest COPPA verifiable-consent path; we delegate crypto to vetted libraries (Argon2id, PyJWT, google-auth) rather than hand-rolling auth |
 | Behavioral capture | **Append-only `interaction_event` (Postgres JSONB) + async `/events` ingest** | Full raw interaction stream (keystrokes, drags, dwell) off the turn loop; derived offline into HelpNeed-v2 features |
 | LLM tracing | **LangSmith** (wraps the `llm/` provider) | Per-call cost/latency/prompt observability at the one provider seam; tracing-only, no LangChain adoption |
 
@@ -405,9 +430,14 @@ backend/
     mastery/          # BKT model + the augmentation rules
     policy/           # State transitions, refuse-rules, interleaving logic
     helpneed/         # HelpNeed predictor: training + inference
-    tutor/            # Session loop, problem presentation
-    auth/             # Google OIDC token verification + current-learner resolution
+    tutor/            # Session loop, problem presentation, transfer probe, hints
+    auth/             # Parent/child auth: Argon2id, session JWT, Google verify, PIN lockout
+    teacher/          # Teacher-dashboard services (roster, per-child signals)
+    homework/         # Homework scan flow (assign → QR → OCR → read-back → grade)
+    notifications/    # SES parental-consent email (logging fallback when unconfigured)
+    tts/              # Voice synthesis (ElevenLabs) — V2, off the turn loop
     events/           # Behavioral-event schema + async ingestion service (telemetry)
+    eval/             # Three-arm baseline comparison (evaluation runs, not unit tests)
     api/              # FastAPI routes (thin; call services)
     db/               # SQLAlchemy models + migrations + repositories
     llm/              # Provider abstraction (the ONLY place LLMs are called)
@@ -415,16 +445,16 @@ backend/
 
 frontend/
   src/
-    components/       # React components (+ Storybook stories)
-    workspace/        # Custom SVG: FractionBar, NumberLine, SymbolicEditor
-    state/            # State machines for surface transitions
+    components/       # React components (+ avatar/ guide subtree)
+    workspace/        # Custom SVG widgets + selectWidget dispatch (WidgetContract.ts)
+    state/            # Surface state machines + LocaleContext (en / es-MX)
     telemetry/        # Raw-interaction instrumentation: buffers + flushes to /events
-    auth/             # Google Sign-In button + ID-token handling
-    api/              # API client (generated from Pydantic types)
-    pages/            # Top-level routes
+    auth/             # Auth context + parent/child sign-in
+    api/              # API client (generated from Pydantic types) + demo fixtures
+    pages/            # Top-level routes (Tutor, Teacher*, Parent*, Units, SignIn …)
 
 shared-types/         # Generated TypeScript types from Pydantic
-infrastructure/       # AWS CDK
+infrastructure/       # AWS CDK (Network · Database · App · Ml stacks)
 ```
 
 The directory names are load-bearing: see the boundaries in Section 14.
@@ -450,10 +480,11 @@ These are the rules that keep the system honest and fast. Breaking one is a bug,
    session/mastery writes happen alongside or after the response, never on the sub-100 ms
    decision path. The `/events` stream is fire-and-forget; a lost or slow event must never
    break, delay, or change a turn's outcome.
-8. **Identity is verified at the boundary and never reaches the reasoning core.** Google ID
-   tokens are verified in `auth/` and resolved to a learner in the API layer; identity does
-   not flow into the mastery model, the policy, or the LLM (extends invariant 3 — the system
-   reasons over *knowledge state*, not over *who* the learner is).
+8. **Identity is verified at the boundary and never reaches the reasoning core.** Credentials
+   (Google ID token, parent password, or child PIN) are verified in `auth/` and resolved to a
+   learner in the API layer; identity does not flow into the mastery model, the policy, or the
+   LLM (extends invariant 3 — the system reasons over *knowledge state*, not over *who* the
+   learner is). Child PII never reaches the LLM (COPPA; see [`AUTH.md`](./AUTH.md)).
 9. **Capture richly, act conservatively.** The full behavioral stream exists to improve
    *understanding* (HelpNeed, mastery, evaluation). It does not widen what the UI does
    automatically: interventions remain governed by the refuse-rules and the sustained-signal
@@ -472,26 +503,35 @@ across a phone, a tablet, and a return after days away. The governing constraint
 9 — **capture richly, act conservatively**: everything here feeds *understanding*, never a
 twitchier interface.
 
-### 15.1 Identity — Google Sign-In (OIDC)
+### 15.1 Identity — parent/child accounts
 
-Authentication is delegated to Google. The frontend uses Google Identity Services to obtain an
-**ID token**; the backend's `auth/` module verifies that token (signature against Google's
-JWKS, audience = our client ID, issuer + expiry) and resolves it to a learner keyed by the
-Google account id (the `sub` claim). **We never store passwords** — delegating to Google means
-no credential storage, no reset flows, and Google handles MFA, recovery, and breach detection.
-This is deliberately safer than a hand-rolled auth system (OWASP's "don't build your own auth").
+> Full design, threat model, and the OWASP/NIST control map live in [`AUTH.md`](./AUTH.md);
+> this is the architecture-level summary. (This reverses the earlier "Google-only, no passwords"
+> posture — an owner decision on 2026-06-03.)
 
-The learner profile we keep is minimal: the Google `sub`, a display name, an optional email,
-and `created_at`. Identity stops at the API boundary: per invariant 8, `sub` never flows into
-the mastery model, the policy, or the LLM.
+A **parent is the account holder and the COPPA consent authority**; the parent creates each
+child's profile and login.
 
-**Under-13 / COPPA.** Personal Google accounts require age 13+. The intended path for 6th–7th
-graders is **Google Workspace for Education** (school-issued accounts), where the *school* is
-the consent authority under COPPA's school-consent provision — a cleaner posture than us
-collecting parental consent directly. The exact consent posture (Workspace-only vs. also
-allowing 13+ personal accounts with a notice) is a flagged decision recorded in `PROJECT.md`,
-not silently locked here. Data minimization and a stated retention policy apply regardless,
-because this is children's data.
+- **Parent auth:** Google sign-in **or** email + password. Email/password parents verify their
+  email (the consent anchor) via an AWS SES link. Passwords are hashed with **Argon2id** — we
+  *do* store a password hash for email/password parents; we never store a plaintext or
+  reversible credential.
+- **Child auth:** a non-identifying **username + 4-digit PIN** (PIN hashed with Argon2id). At
+  home the signed-in parent picks a child profile; on a school/own device the child logs in with
+  username + PIN alone (no parent email — a kid does not know it), so usernames are globally
+  unique. The PIN is defended by a common-PIN blocklist, per-account lockout, and per-IP rate
+  limiting — not by the hash alone.
+- **Sessions** are our own short-lived **HS256 JWTs**, held in an HttpOnly+Secure cookie and
+  backed by a server-side **revocable** `AuthSession` row (real logout + parent "sign out
+  everywhere"). We do not rely on a bare stateless JWT.
+
+Identity stops at the API boundary: per invariant 8, the learner id never flows into the mastery
+model, the policy, or the LLM. **Data minimization:** child data is a nickname (not a real name),
+grade, locale, a username + PIN hash, and learning progress — **no child email**. A `ConsentRecord`
+is stamped in the same commit as the child row, so a child never exists without proof of consent;
+parents can export and delete a child's data (the COPPA review/deletion rights). If a **school**
+ever becomes the customer, a separate FERPA "school-official" tenancy is added rather than blurred
+into this direct-to-consumer parent flow.
 
 ### 15.2 Continuity — server-side session persistence & resumption
 
@@ -558,7 +598,7 @@ mid-problem — that remains the refuse-rules' and the sustained-signal gate's j
 ## 16. V2 AI expansion — decisions
 
 The tracked decision log for the "V2" AI expansion (a talking avatar guide, a warm voice, a Spanish
-help-mode, richer HelpNeed). The detailed planning lives in the gitignored `PROJECT.md` / `V2_TODO.md`;
+help-mode, richer HelpNeed). The detailed planning lives in the gitignored `mdfile/` planning docs;
 this section is the part a reviewer can read in git history (CLAUDE.md §1, §8.4). The two turn-loop
 invariants hold throughout: no LLM/heavy model in the sub-100 ms graded loop, and SymPy is the sole
 math-correctness authority. A third: no biometric/camera capture of children (camera = paper only).
@@ -575,8 +615,11 @@ math-correctness authority. A third: no biometric/camera capture of children (ca
   grapheme→viseme mouth shapes from the shipped word timings (no external binary); a Rhubarb acoustic
   upgrade is an optional later swap needing a binary.
 - **Spanish = bilingual scaffold, es-MX.** Only the avatar's help (text + audio) localizes; the
-  on-screen problem stays English. The only DB change is the `Learner.locale` flag. es-MX strings +
-  audio are built but gated `ES_MX_REVIEWED=False` until a native educator signs off.
+  on-screen problem stays English. The only DB change is the `Learner.locale` flag. The es-MX help
+  strings (176 entries = 132 nudges + 44 misconception names) are reviewed and live —
+  `ES_MX_REVIEWED = True` (a module constant in `tutor/hints_es.py`, not an env flag). This is a
+  **captions-only** scaffold (~16% of user-facing strings): no Spanish audio for dynamic text and
+  no problem-statement translation yet.
 - **Eye-tracking = DECLINED** (children's-privacy wall + a fabricated citation in the source report);
   telemetry-based engagement substitutes.
 - **Camera in the live lesson = per-unit.** The "snap your handwritten work" beat (OCR → SymPy grades,
