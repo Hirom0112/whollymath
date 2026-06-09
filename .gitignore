@@ -25,8 +25,9 @@ AGENT_TEAM.md
 # We submit these to Nerdy directly, NOT through this repo, so they don't belong in the
 # tracked tree (they were briefly tracked in de379e5; untracked here). They stay on disk.
 # KEPT TRACKED: README.md (needed to run the code), CLAUDE.md (governs the code),
-# ARCHITECTURE.md (the public technical reference README points to), and AUTH.md (the
-# tracked design-of-record for parent/child auth, cross-linked from ARCHITECTURE §15.1).
+# ARCHITECTURE.md (the public technical reference README points to), AUTH.md (the tracked
+# design-of-record for parent/child auth, cross-linked from ARCHITECTURE §15.1), and
+# ROADMAP.md (the reviewer-facing what's-built / what's-left status + fix backlog).
 DECISION_LOG.md
 DEMO.md
 LIMITATIONS.md

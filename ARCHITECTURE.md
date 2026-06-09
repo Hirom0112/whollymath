@@ -290,14 +290,14 @@ most need help are least likely to ask).
 
 - **Model:** XGBoost classifier (interpretable via SHAP, sub-100 ms inference, no GPU). Trained
   on the public **EDM Cup 2023** intelligent-tutor logs (ASSISTments family; restored via the OSF
-  mirror `osf.io/yrwuh`). Current artifact: **56 features, holdout AUC ≈ 0.899**, committed at
+  mirror `osf.io/yrwuh`). Current artifact: **56 features, holdout AUC ≈ 0.900**, committed at
   `helpneed/artifacts/helpneed_v1.joblib`.
 - **Features (all real-time available):** response latency on current and recent problems, error
   pattern on the current problem, hint requests in the last N problems, recent no-hint error rate,
   time since last correct answer, BKT mastery probabilities, recent state transitions.
 - **Output:** a HelpNeed probability per turn, **observe-only** — it never feeds a transition, a
   refuse-rule, or the next-problem choice (the graded path stays deterministic).
-- **Trustworthy-KC guard:** the predictor is trusted on the **34 KCs** where its calibration holds;
+- **Trustworthy-KC guard:** the predictor is trusted on the **33 KCs** where its calibration holds;
   on the remaining (harder ratio/expression) KCs the risk band is suppressed and the tutor stays
   reactive-only, rather than acting on a low-confidence score.
 - **Intervention escalation** when the probability crosses threshold:

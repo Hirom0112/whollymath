@@ -162,6 +162,8 @@ whollymath/
 ├── shared-types/    # TypeScript types generated from Pydantic
 ├── infrastructure/  # AWS CDK (CloudFront / ALB / Fargate / RDS)
 ├── ARCHITECTURE.md  # ← the in-depth technical reference (start here after this file)
+├── ROADMAP.md       # what's built / what's left + the fix backlog
+├── AUTH.md          # parent/child auth design + security posture
 ├── CLAUDE.md        # contribution guidelines, commit conventions, source hierarchy
 └── README.md        # you are here
 ```
@@ -179,8 +181,8 @@ The build is **deployed and running** at [whollymath.app](https://whollymath.app
 - ✅ **Mastery model** — BKT per KC with the anti-gaming augmentation rules (representation
   diversity, unscaffolded attempts, interleaving), gated by an S5 transfer probe.
 - ✅ **Five adversarial personas** + behavioral simulator — the integration suite.
-- ✅ **HelpNeed predictor** — XGBoost (AUC ≈ 0.899) trained on EDM Cup data, integrated
-  **observe-only**, with a 34-KC trustworthy guard.
+- ✅ **HelpNeed predictor** — XGBoost (AUC ≈ 0.900) trained on EDM Cup data, integrated
+  **observe-only**, with a 33-KC trustworthy guard.
 - ✅ **Adaptive UI** — five surface states with labeled, rule-driven transitions and refuse-rules.
 - ✅ **Evaluation harness** — three-arm comparison (adaptive vs. chat-only vs. static) + a
   proactive-intervention A/B.
@@ -246,11 +248,12 @@ model ever grows or needs independent versioning — premature at this size.
 
 Because the data is gitignored, the binary's provenance can't show in a diff, so it lives
 in the decision log instead. **Reproduce the committed artifact** (XGBoost, fit on all
-~322k examples from the first 5M action rows; holdout AUC 0.899). The earlier 0.893/~95.8k
+~322k examples from the first 5M action rows; holdout AUC 0.900). The earlier 0.893/~95.8k
 figure was the fraction-only predecessor — the skill filter was since widened to the full
-cross-topic Grade-6 KC set, and a "quiet mis-reasoning" feature (wrong without seeking a
-hint) was added, lifting the artifact to 0.899 with 34 proactive-eligible (per-KC AUC ≥ 0.85)
-KCs:
+cross-topic Grade-6 KC set, a "quiet mis-reasoning" feature (wrong without seeking a hint)
+was added, and `recent_hint_rate` was corrected to the binary hinted-rate the live path can
+compute (fixing a train/serve skew) — the artifact holds **AUC 0.900 with 33 proactive-eligible
+(per-KC AUC ≥ 0.85) KCs**:
 
 ```bash
 cd backend && WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000 \
