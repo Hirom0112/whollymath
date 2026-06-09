@@ -534,6 +534,19 @@ export function Tutor({
     await submitAnswerValue(submittedAnswer);
   }
 
+  // The camera read-back confirm submits the OCR'd answer through the SAME guarded path as the
+  // form submit: enter 'submitting' FIRST (which disables the widget + buttons) so a snapped
+  // answer can't be double-submitted while the turn is in flight. submitAnswerValue assumes the
+  // phase is already 'submitting', so the camera must not call it directly (HR.C1/C3).
+  async function handleCameraConfirm(answer: string): Promise<void> {
+    if (phase !== 'answering') return;
+    setPhase('submitting');
+    setError(null);
+    setIntervention(null);
+    setMidNudge(null);
+    await submitAnswerValue(answer);
+  }
+
   async function handleHint(): Promise<void> {
     if (phase !== 'answering') return;
     setError(null);
@@ -950,7 +963,7 @@ export function Tutor({
                   declares this per lesson via ProblemView.supports_written_work). Confirmed reads
                   go through the normal submit, so SymPy grades a snapped answer like a typed one. */}
               {problem.supports_written_work ? (
-                <WorkCamera onConfirm={submitAnswerValue} disabled={phase === 'submitting'} />
+                <WorkCamera onConfirm={handleCameraConfirm} disabled={phase === 'submitting'} />
               ) : null}
             </form>
           ) : (
