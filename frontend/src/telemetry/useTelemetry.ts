@@ -13,8 +13,11 @@ import { TelemetryBuffer, type TelemetryEventType } from './telemetry';
 
 // How often to drain the buffer while the page is open.
 const FLUSH_INTERVAL_MS = 10_000;
-// No interaction for this long → one `idle` event (a single edge, not a repeating timer),
-// matching the engagement-floor / idle framing the backend already reasons about (§3.6).
+// No interaction for this long → an `idle` event. The timer RE-ARMS after each fire, so a learner
+// who sits without ever touching the problem keeps emitting idle pings (one every IDLE_AFTER_MS).
+// That accumulation is what lets the backend's sustained-struggle gate (mid_problem_help.py needs
+// ≥2 idle pings) proactively offer a hint to a stuck-but-silent learner — a single edge never could.
+// Any real activity (pointer/key/focus) re-arms it from zero, so an engaged learner never trips it.
 const IDLE_AFTER_MS = 30_000;
 
 export interface Telemetry {
@@ -43,8 +46,13 @@ export function useTelemetry(
   useEffect(() => {
     const armIdle = (): void => {
       if (idleTimer.current !== null) clearTimeout(idleTimer.current);
-      idleTimer.current = setTimeout(() => {
+      idleTimer.current = setTimeout(function fire() {
         buffer.track('idle', { after_ms: IDLE_AFTER_MS });
+        // Push the idle ping to the backend now (don't wait up to FLUSH_INTERVAL_MS) so a stuck,
+        // silent learner gets their proactive nudge promptly — and re-arm so a second ping follows,
+        // which is what crosses the gate's sustained-idle threshold.
+        void buffer.flush();
+        idleTimer.current = setTimeout(fire, IDLE_AFTER_MS);
       }, IDLE_AFTER_MS);
     };
 
