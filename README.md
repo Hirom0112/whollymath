@@ -6,7 +6,7 @@
 
 [![Live](https://img.shields.io/badge/live-whollymath.app-2EA043?logo=amazonaws&logoColor=white)](https://whollymath.app)
 ![Status](https://img.shields.io/badge/status-deployed-2EA043)
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -46,7 +46,7 @@ decimals, rational numbers, integer arithmetic, expressions, equations, geometry
 personal financial literacy — for 6th–7th graders, with **dual CCSS + TEKS coverage**. It's
 deployed and live at **[whollymath.app](https://whollymath.app)**.
 
-Under the hood: **43 content-complete knowledge components across 9 units**, each with a problem
+Under the hood: **44 engine-served knowledge components across 9 units**, each with a problem
 generator, a SymPy verifier path, documented misconceptions, validated hints, and a lesson spec.
 Five things set it apart from the tutors most students use:
 
@@ -67,7 +67,7 @@ flowchart TB
     Learner((Learner))
 
     subgraph FE["Frontend · React + TypeScript"]
-        WS["Math Workspace<br/>FractionBar · NumberLine · SymbolicEditor"]
+        WS["Math Workspace<br/>FractionArea · NumberLine · SymbolicEditor · …"]
         SM["Surface State Machine · S1–S5"]
     end
 
@@ -113,8 +113,9 @@ specific design rule:
 
 ## Curriculum coverage
 
-Nine units, **43 playable knowledge components**, aligned to both the Common Core (CCSS) and the
-Texas standards (TEKS):
+Nine units, **44 playable knowledge components**, with **dual CCSS + TEKS coverage where both
+apply** — integer arithmetic (U-INT) and personal financial literacy (U8) are **TEKS-only**, with
+no CCSS Grade-6 home:
 
 | Unit | Focus | Standards |
 |---|---|---|
@@ -128,8 +129,9 @@ Texas standards (TEKS):
 | **U7** | Statistics — questions, summary stats, spread/shape, displays, MAD, categorical data | 6.SP · TEKS 6.12 |
 | **U8** | Personal financial literacy (check register, lifetime income) | TEKS 6.14 |
 
-> Three U8 financial-literacy lessons (banking, credit, paying for college) ship as honest
-> **concept lessons** — no SymPy generator, since they're conceptual rather than computational.
+> Four U8 financial-literacy lessons (three concept KCs — banking, credit, paying for college;
+> banking spans two lessons) ship as honest **concept lessons** — no SymPy generator, since
+> they're conceptual rather than computational.
 
 ---
 
@@ -137,9 +139,13 @@ Texas standards (TEKS):
 
 - **Frontend:** React + TypeScript + Vite, with custom SVG components for the math workspace.
 - **Backend:** Python + FastAPI, with SymPy for all symbolic math verification.
-- **Database:** PostgreSQL via SQLAlchemy.
-- **ML:** scikit-learn / XGBoost for the HelpNeed predictor (interpretable, sub-10 ms inference).
-- **LLM:** Claude behind a provider abstraction — used only for natural-language surface text.
+- **Database:** PostgreSQL via SQLAlchemy (Alembic migrations).
+- **ML:** scikit-learn / XGBoost for the HelpNeed predictor (interpretable via SHAP, fast CPU
+  inference, no GPU).
+- **Auth:** parent/child accounts — Argon2id hashing, revocable HS256 session JWTs, Google OIDC
+  verify (see [`AUTH.md`](./AUTH.md)).
+- **LLM & voice:** Claude behind a provider abstraction (surface text only); ElevenLabs for V2
+  voice — both off the graded turn loop.
 - **Infra:** AWS via CDK (TypeScript) — CloudFront, ECS Fargate, RDS Postgres; live at
   [whollymath.app](https://whollymath.app).
 
@@ -169,18 +175,25 @@ whollymath/
 
 The build is **deployed and running** at [whollymath.app](https://whollymath.app). Current state:
 
-- ✅ **Domain model** — 43 KCs across 9 units, SymPy verifiers, misconceptions, validated hints.
+- ✅ **Domain model** — 44 KCs across 9 units, SymPy verifiers, misconceptions, validated hints.
 - ✅ **Mastery model** — BKT per KC with the anti-gaming augmentation rules (representation
   diversity, unscaffolded attempts, interleaving), gated by an S5 transfer probe.
 - ✅ **Five adversarial personas** + behavioral simulator — the integration suite.
-- ✅ **HelpNeed predictor** — XGBoost trained on EDM Cup data, integrated **observe-only**.
+- ✅ **HelpNeed predictor** — XGBoost (AUC ≈ 0.899) trained on EDM Cup data, integrated
+  **observe-only**, with a 34-KC trustworthy guard.
 - ✅ **Adaptive UI** — five surface states with labeled, rule-driven transitions and refuse-rules.
 - ✅ **Evaluation harness** — three-arm comparison (adaptive vs. chat-only vs. static) + a
   proactive-intervention A/B.
-- ✅ **Teacher portal** — class roster and per-student progress views.
+- ✅ **Teacher & parent dashboards** — class roster and per-child progress views (live data).
+- ✅ **Parent/child auth** — COPPA-aware accounts: parent sign-up (Google or email+password),
+  child username+PIN, data export/delete ([`AUTH.md`](./AUTH.md)).
+- ✅ **Homework scan** — assign → QR → photo OCR (Mathpix) → read-back → SymPy-graded ★★.
+- ✅ **V2 AI layer** — talking 2D mascot guide, ElevenLabs voice, and an es-MX Spanish help-mode
+  (captions-only scaffold: avatar help text localizes, problems stay English).
 - ✅ **AWS deployment** — CloudFront → ALB → Fargate → RDS, via CDK.
 
-**Tests:** backend **2,789 passing** (9 skipped); frontend **187 passing**; production build green.
+**Tests:** backend **3,158 passing** (9 skipped); frontend **306 passing** (52 files); production
+build green. *(Phase-0 baseline of this cleanup pass, 2026-06-08.)*
 
 ---
 
@@ -205,8 +218,10 @@ cd frontend && pnpm install && pnpm dev        # serves on :5173, proxies /api �
 
 Copy `.env.example` → `.env` and fill in keys as needed. The app runs with sensible fallbacks:
 without `ANTHROPIC_API_KEY` the LLM surface is disabled (the deterministic engine still works),
-without `MATHPIX_APP_KEY` the homework scanner uses a deterministic mock, and without
-`GOOGLE_CLIENT_ID` accounts are off and the anonymous session flow is used.
+without `MATHPIX_APP_KEY` the homework scanner uses a deterministic mock, without
+`ELEVENLABS_API_KEY` voice falls back to captions, and without `GOOGLE_CLIENT_ID` Google sign-in is
+off (email/password + child PIN still work). **One key is required for accounts:**
+`SESSION_SIGNING_KEY` — the parent/child auth endpoints **fail closed (503)** if it is unset.
 
 **macOS prerequisite for the HelpNeed predictor:** XGBoost needs the OpenMP runtime.
 Install it once with `brew install libomp` (Linux/CI wheels bundle it). To retrain the
