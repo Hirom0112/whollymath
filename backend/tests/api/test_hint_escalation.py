@@ -5,7 +5,7 @@ Each request returns ONE short line, and the sequence NEVER states the final ans
 times it is clicked:
 
   - The Nth hint is the Nth answer-free SETUP step of the worked example
-    (``_answer_free_step_lines`` — the leading steps before any that writes the answer; specific to
+    (``_answer_free_hint_lines`` — the leading steps before any that writes the answer; specific to
     this problem's real numbers, but not the result).
   - Once those setup steps are exhausted (or there were none — e.g. number-line placement, whose
     first step IS the answer), it STAYS on the conceptual nudge, which is answer-free by
@@ -18,7 +18,7 @@ translation is a separate, provider-only path). SymPy decides every answer; no m
 from __future__ import annotations
 
 from app.api.schemas import ActionType, SurfaceState, TurnRequest
-from app.api.service import SessionStore, _answer_free_step_lines
+from app.api.service import SessionStore, _answer_free_hint_lines
 from app.domain.knowledge_components import KnowledgeComponentId
 from app.domain.problem_generators import generate_problem
 from app.tutor.hints import select_nudge
@@ -56,15 +56,15 @@ def _answer_str(problem_kc: KnowledgeComponentId, problem) -> str:  # type: igno
     return f"{a.p}/{a.q}"
 
 
-# ─── _answer_free_step_lines: leading setup steps, never the answer ───────────
+# ─── _answer_free_hint_lines: leading setup steps, never the answer ───────────
 
 
-def test_answer_free_step_lines_are_leading_steps_without_the_answer() -> None:
+def test_answer_free_hint_lines_are_leading_steps_without_the_answer() -> None:
     """The helper returns the worked example's leading steps, stopping before any that states the
     answer — so no returned line contains the answer fraction, across many generated problems."""
     for seed in range(8):
         problem = generate_problem(_KC, seed=seed)
-        lines = _answer_free_step_lines(problem)
+        lines = _answer_free_hint_lines(problem)
         steps = worked_example_for(problem).steps
         answer = f"{problem.correct_value.p}/{problem.correct_value.q}"
         # They are a PREFIX of the worked steps' shown text...
@@ -77,27 +77,66 @@ def test_answer_free_step_lines_are_leading_steps_without_the_answer() -> None:
             assert revealing.revealed_value == problem.correct_value or answer in revealing.shown
 
 
+def test_ratio_part_to_part_hints_are_method_lines_never_the_ratio() -> None:
+    """A part-to-part ratio item ("the ratio of red to blue") has NO answer-free worked step — its
+    first step states the comparison "3 to 2", which IS the answer (3/2). So its hints are the
+    mode-aware METHOD lines, and none writes the ratio in ANY form (p/q, "p to q", "p:q")."""
+    found = False
+    for seed in range(40):
+        problem = generate_problem(KnowledgeComponentId.RATIO_LANGUAGE, seed=seed)
+        if problem.operands is None or int(problem.operands[0]) != 1:  # 1 = part-to-part
+            continue
+        found = True
+        a = problem.correct_value
+        forms = {f"{a.p}/{a.q}", f"{a.p} to {a.q}", f"{a.p}:{a.q}"}
+        lines = _answer_free_hint_lines(problem)
+        assert lines, "a ratio item must always have method hint lines"
+        assert all(form not in line for line in lines for form in forms), lines
+        # The method framing, NOT the worked-step "…compares the two colours to EACH OTHER: 3 to 2".
+        assert "compares the two colours to each other" in lines[0].lower()
+        break
+    assert found, "no part-to-part ratio problem found in 40 seeds"
+
+
+def test_ratio_part_whole_hints_are_method_lines_never_the_fraction() -> None:
+    """A part-whole ratio item ("what fraction are red?") also uses mode-aware method lines, and
+    none writes the answer fraction."""
+    found = False
+    for seed in range(40):
+        problem = generate_problem(KnowledgeComponentId.RATIO_LANGUAGE, seed=seed)
+        if problem.operands is None or int(problem.operands[0]) != 0:  # 0 = part-whole
+            continue
+        found = True
+        a = problem.correct_value
+        forms = {f"{a.p}/{a.q}", f"{a.p} to {a.q}", f"{a.p}:{a.q}"}
+        lines = _answer_free_hint_lines(problem)
+        assert lines
+        assert all(form not in line for line in lines for form in forms), lines
+        assert "fraction of the whole" in lines[0].lower()
+        break
+    assert found, "no part-whole ratio problem found in 40 seeds"
+
+
 def test_number_line_has_no_answer_free_setup_step() -> None:
     """NUMBER_LINE_PLACEMENT's only worked step IS the answer (it places the target fraction), so it
     has no answer-free setup step — hints fall back to the conceptual nudge."""
     for seed in range(5):
         problem = generate_problem(KnowledgeComponentId.NUMBER_LINE_PLACEMENT, seed=seed)
-        assert _answer_free_step_lines(problem) == []
+        assert _answer_free_hint_lines(problem) == []
 
 
 # ─── live hint escalation: setup steps → nudge, never the answer ──────────────
 
 
-def test_hints_walk_setup_steps_then_stay_on_nudge_never_the_answer() -> None:
-    """Each hint is the next answer-free setup step; once exhausted it STAYS on the conceptual
-    nudge. No hint ever states the answer, and the surface/problem never change."""
+def test_hints_walk_setup_steps_then_stay_on_the_last_never_the_answer() -> None:
+    """Each hint is the next answer-free setup step; once exhausted it STAYS on the LAST one. No
+    hint ever states the answer, and the surface/problem never change."""
     store = SessionStore()  # no providers → canonical text
     started = store.start_kc(_KC)
     sid, pid = started.session_id, started.problem.problem_id
     problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001 (test introspection)
-    setup = _answer_free_step_lines(problem)
+    setup = _answer_free_hint_lines(problem)
     assert setup, "this KC's generated problem should have answer-free setup steps"
-    nudge = select_nudge(problem.kc).text
     answer = _answer_str(problem.kc, problem)
 
     # Walk the setup steps in order — short, specific, never the answer; problem/surface unchanged.
@@ -108,11 +147,11 @@ def test_hints_walk_setup_steps_then_stay_on_nudge_never_the_answer() -> None:
         assert r.next_surface_state == started.surface_state
         assert r.next_problem is not None and r.next_problem.problem_id == pid
 
-    # Exhausted → stays on the conceptual nudge however many more times it is asked. Never escalates
-    # to the answer (the whole point of the 2026-06-09 change).
+    # Exhausted → stays on the LAST answer-free setup line however many more times asked. Never
+    # escalates to the answer (the whole point of the 2026-06-09 change).
     for _ in range(4):
         r = store.process_turn(_hint_req(sid, pid))
-        assert r.hint == nudge
+        assert r.hint == setup[-1]
         assert answer not in (r.hint or "")
         assert r.next_surface_state == started.surface_state
 
@@ -149,7 +188,7 @@ def test_counter_resets_when_an_answer_advances_the_problem() -> None:
     assert answered.next_problem is not None
     new_pid = answered.next_problem.problem_id
     new_problem = store._sessions[sid].tutor.current_problem  # noqa: SLF001
-    new_setup = _answer_free_step_lines(new_problem)
+    new_setup = _answer_free_hint_lines(new_problem)
     expected_first = new_setup[0] if new_setup else select_nudge(new_problem.kc).text
 
     r = store.process_turn(_hint_req(sid, new_pid))

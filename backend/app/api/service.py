@@ -1071,29 +1071,61 @@ def _probe_hint_response(live: _LiveSession) -> TurnResponse:
     )
 
 
-def _answer_free_step_lines(problem: Problem) -> list[str]:
-    """The worked example's leading steps UP TO (not including) the first that states the ANSWER.
+def _answer_forms(problem: Problem) -> set[str]:
+    """Every short rendering of the answer a hint line must NOT contain — the fraction ``p/q`` and
+    its ratio spellings ``p to q`` / ``p:q`` (so "first colour on top: 2/3" AND "compare 3 to 2"
+    are both caught), plus the bare integer when the answer is whole."""
+    a = problem.correct_value
+    forms = {f"{a.p}/{a.q}", f"{a.p} to {a.q}", f"{a.p}:{a.q}"}
+    if a.q == 1:
+        forms.add(str(a.p))
+    return forms
 
-    Owner 2026-06-09: hints are "short nudges, never the answer." These are the setup steps — short,
-    SPECIFIC to this problem's real numbers, but never the result: we walk the worked steps and stop
-    at the first one that either carries the answer as its ``revealed_value`` or writes the answer
-    fraction in its text (so e.g. the ratio step "first colour on top: 2/3" is excluded, but its
-    intermediate "the common denominator is 4" is kept). Empty when no worked example is buildable,
-    or when the very first step already reveals the answer (number-line placement) — the caller then
-    falls back to the conceptual nudge, which is itself always answer-free.
+
+def _ratio_method_lines(problem: Problem) -> list[str]:
+    """Mode-aware, ANSWER-FREE method hints for a ratio item.
+
+    Ratio is special: its worked example's FIRST step states the comparison itself ("…: 3 to 2"),
+    which IS the answer, and ALL its conceptual nudges are written for the fraction-OF-the-whole
+    case — wrong framing for a "ratio of one colour TO the other" question. So ratio hints can't use
+    the worked steps or those nudges; they guide the METHOD for the question's mode instead
+    (``operands[0]``: 0 = fraction of the whole, 1 = ratio of one colour to the other). No line
+    names a count or the result, so the sequence is answer-free however many times it is asked.
     """
+    mode = int(problem.operands[0]) if problem.operands else 0
+    if mode == 1:  # part-to-part: "the ratio of red to blue"
+        return [
+            "A ratio compares the two colours to each other — not to the total.",
+            "Count the first colour for the top, and the second colour for the bottom.",
+        ]
+    return [  # part-whole: "what fraction of ALL the counters are red?"
+        "A fraction of the whole counts every counter — both colours — on the bottom.",
+        "Put just the asked colour on top, and the total of all the counters on the bottom.",
+    ]
+
+
+def _answer_free_hint_lines(problem: Problem) -> list[str]:
+    """Ordered SHORT hint lines for this problem that NEVER state the answer in any form.
+
+    For RATIO_LANGUAGE, the mode-aware method lines (its worked steps and nudges would leak or
+    misframe the answer — see ``_ratio_method_lines``). For every other KC, the worked example's
+    leading SETUP steps — specific to this problem's real numbers — walked only UP TO the first
+    that carries the answer as ``revealed_value`` or writes any ``_answer_forms`` rendering of it.
+    Empty only when no worked example is buildable or its first step already reveals the answer
+    (number-line placement); the caller then falls back to the conceptual nudge.
+    """
+    if problem.kc is KnowledgeComponentId.RATIO_LANGUAGE:
+        return _ratio_method_lines(problem)
     answer = problem.correct_value
-    answer_forms = {f"{answer.p}/{answer.q}"}
-    if answer.q == 1:
-        answer_forms.add(str(answer.p))
+    forms = _answer_forms(problem)
     lines: list[str] = []
     try:
         steps = worked_example_for(problem).steps
-    except Exception:  # noqa: BLE001 — a non-buildable worked example just yields no setter steps
+    except Exception:  # noqa: BLE001 — a non-buildable worked example just yields no setup steps
         _log.exception("worked example unavailable for hints on %s", problem.kc)
         return lines
     for step in steps:
-        if step.revealed_value == answer or any(form in step.shown for form in answer_forms):
+        if step.revealed_value == answer or any(form in step.shown for form in forms):
             break
         lines.append(step.shown)
     return lines
@@ -1118,11 +1150,12 @@ def _hint_response(
 
       - If the learner's last wrong answer matched a NAMED misconception, the FIRST hint corrects
         THAT error (Slice 1.2) — the conceptual nudge for the misconception, still answer-free.
-      - Otherwise the Nth hint is the Nth answer-free SETUP step of the worked example
-        (``_answer_free_step_lines`` — specific, this problem's real numbers, never the result).
-      - Once those setup steps are exhausted (or there were none), it STAYS on the conceptual nudge
-        (banked, bilingual, cached audio) — so repeated clicks keep nudging and never escalate to
-        the answer.
+      - Otherwise the Nth hint is the Nth answer-free line for the problem
+        (``_answer_free_hint_lines`` — the worked example's setup steps, or ratio's mode-aware
+        method lines), and once those are exhausted it STAYS on the last one — so repeated clicks
+        keep nudging and never escalate to the answer.
+      - A KC with no answer-free line (number-line placement, whose first worked step IS the answer)
+        falls back to the conceptual nudge (banked, bilingual, cached audio) — itself answer-free.
 
     Each line is the domain's canonical text (English) or a single-pass es-MX translation
     (``localize_hint_line`` — no retry-storm), voiced live (banked nudges hit the cache instantly).
@@ -1136,7 +1169,7 @@ def _hint_response(
     hint_audio: SpokenAudio | None = None
 
     matched = _last_matched_misconception(live) if idx == 0 else None
-    setup_lines = _answer_free_step_lines(problem)
+    lines = _answer_free_hint_lines(problem)
     if matched is not None:
         # Error-specific FIRST hint: the misconception's conceptual nudge (answer-free), voiced.
         hint_text = voice_misconception_nudge(
@@ -1145,12 +1178,14 @@ def _hint_response(
             provider=voice_provider,
             locale=locale,
         )
-    elif idx < len(setup_lines):
-        # The Nth answer-free setup step — short, specific, never the result. Canonical text (en) or
-        # a single-pass es-MX translation; voiced live (a fresh number-templated line synth's once).
-        hint_text = localize_hint_line(setup_lines[idx], provider=hint_provider, locale=locale)
+    elif lines:
+        # The Nth answer-free line (staying on the last once exhausted) — short, never the result.
+        # Canonical text (en) or a single-pass es-MX translation; voiced live (a fresh line synth's
+        # once, then the content-hash cache makes a repeat free).
+        line = lines[min(idx, len(lines) - 1)]
+        hint_text = localize_hint_line(line, provider=hint_provider, locale=locale)
     else:
-        # Setup steps exhausted → STAY on the conceptual nudge. Banked + bilingual, so it carries
+        # No answer-free line for this KC → the conceptual nudge. Banked + bilingual, so it carries
         # cached audio (instant) and is answer-free by construction, however many times it is asked.
         hint_text = _localized_nudge_text(problem.kc, 0, locale)
         hint_audio = _nudge_audio(problem.kc.value, locale=locale)
