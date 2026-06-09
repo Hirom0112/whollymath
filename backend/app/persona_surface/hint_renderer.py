@@ -29,6 +29,7 @@ real math copy warrants more capability than the mascot's one-liner (which uses 
 from __future__ import annotations
 
 from app.llm.provider import AnthropicProvider, LLMProvider, Message, Tier
+from app.tts.provider import Locale
 
 # The rephrase character + the HARD guardrails. It rewords warmly; it never alters the math
 # and never reveals more than the canonical text already shows. The numeric guardrails are
@@ -43,21 +44,38 @@ HINT_SYSTEM_PROMPT = (
     "do NOT solve any further. Only reword the hint you were given more kindly."
 )
 
+# Appended for the es-MX help-language so the SAME canonical (English) step is RESTATED in
+# Spanish (Slice 3.6 bilingual help) — the digits-stay-digits rule above keeps the math intact, so
+# the SymPy numeric gate still validates the Spanish candidate. A failed/blank completion falls
+# back to the English canonical, exactly like the en path (invariant 4).
+_ES_MX_DIRECTIVE = (
+    " IMPORTANT: write your restatement in clear, natural Mexican Spanish (español de México), "
+    "still keeping every number and fraction exactly as digits."
+)
+
+
+def _hint_system_prompt(locale: Locale) -> str:
+    """The rephrase system prompt for ``locale`` (English, or English + the es-MX directive)."""
+    return HINT_SYSTEM_PROMPT if locale == "en" else HINT_SYSTEM_PROMPT + _ES_MX_DIRECTIVE
+
 
 def render_hint_text(
     base_text: str,
     *,
     provider: LLMProvider | None = None,
     tier: Tier = "standard",
+    locale: Locale = "en",
 ) -> str:
-    """Rephrase the canonical hint text warmly; fall back to it verbatim on any trouble.
+    """Rephrase the canonical hint text warmly (in ``locale``); fall back to it verbatim on trouble.
 
     ``base_text`` is the deterministic, verified-correct canonical step text — the ONLY
     content the model sees (knowledge-state-blind, §8.3). With no ``provider`` the text is
     returned unchanged (Layer 4 disabled, invariant 4). Any provider failure or a
     blank/whitespace completion also returns ``base_text`` — rephrasing is a polish that
     must never break a help moment. The returned candidate is NOT yet trusted: the caller
-    (``tutor/hints.py``) runs it through the SymPy numeric gate before showing it.
+    (``tutor/hints.py``) runs it through the SymPy numeric gate before showing it. For
+    ``locale="es-MX"`` the canonical English step is restated in Spanish (digits preserved, so
+    the numeric gate still validates); the fallback stays the English canonical.
 
     Hint slot-fill uses the ``standard`` tier (Sonnet 4.6, decision 0.D.4).
     """
@@ -65,7 +83,7 @@ def render_hint_text(
         return base_text
     messages = [Message("user", f"Here is the hint to restate in your voice:\n{base_text}")]
     try:
-        rephrased = provider.complete(messages, tier=tier, system=HINT_SYSTEM_PROMPT)
+        rephrased = provider.complete(messages, tier=tier, system=_hint_system_prompt(locale))
     except Exception:
         # Invariant 4: a model/network failure costs us naturalness, never the hint itself.
         return base_text

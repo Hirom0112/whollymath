@@ -54,6 +54,7 @@ from app.domain.problem_generators import Problem
 from app.domain.verifier import ErrorCategory
 from app.llm.provider import LLMProvider
 from app.persona_surface.hint_renderer import render_hint_text
+from app.tts.provider import Locale
 from app.tutor.worked_example import worked_example_for
 
 
@@ -977,6 +978,7 @@ def build_validated_hint(
     *,
     provider: LLMProvider | None = None,
     max_retries: int = 2,
+    locale: Locale = "en",
 ) -> Hint:
     """Build a ``partial_step`` / ``worked_step`` hint via the locked 5.6 pipeline.
 
@@ -1013,7 +1015,7 @@ def build_validated_hint(
         return _fallback()
 
     for _ in range(1 + max_retries):
-        candidate = render_hint_text(canonical_text, provider=provider)
+        candidate = render_hint_text(canonical_text, provider=provider, locale=locale)
         if is_safe_copy(candidate) and numeric_claims_preserved(canonical_text, candidate):
             return Hint(
                 kc=problem.kc,

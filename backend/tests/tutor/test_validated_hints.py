@@ -96,6 +96,24 @@ def test_faithful_rephrase_is_used() -> None:
     assert provider.calls[0]["tier"] == "standard"
 
 
+def test_es_mx_locale_asks_the_model_for_spanish() -> None:
+    """The es-MX help-language threads a Spanish-restatement directive into the rephrase system
+    prompt (Slice 3.6), while the digits-as-digits rule keeps the SymPy numeric gate valid. The
+    default 'en' path carries no such directive."""
+    problem = generate_problem(_KC_ADD, seed=1)
+    canonical = _canonical_partial(_KC_ADD, seed=1)
+
+    es_provider = _RecordingProvider(reply=f"Para empezar: {canonical}")
+    build_validated_hint(problem, HintLevel.PARTIAL_STEP, provider=es_provider, locale="es-MX")
+    es_system = es_provider.calls[0]["system"]
+    assert isinstance(es_system, str) and "español de México" in es_system
+
+    en_provider = _RecordingProvider(reply=f"To start: {canonical}")
+    build_validated_hint(problem, HintLevel.PARTIAL_STEP, provider=en_provider, locale="en")
+    en_system = en_provider.calls[0]["system"]
+    assert isinstance(en_system, str) and "español de México" not in en_system
+
+
 # ─── Wrong number → falls back after exactly 1 + max_retries calls ───────────
 
 

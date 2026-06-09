@@ -1093,7 +1093,7 @@ def _first_problem_specific_hint(
     if problem.kc not in _FIRST_STEP_REVEALS_ANSWER:
         try:
             return build_validated_hint(
-                problem, HintLevel.PARTIAL_STEP, provider=hint_provider
+                problem, HintLevel.PARTIAL_STEP, provider=hint_provider, locale=locale
             ).natural_language
         except Exception:  # noqa: BLE001 — a KC without a worked example still owes a first hint (invariant 4)
             _log.exception("partial-step first hint unavailable for %s; using nudge", problem.kc)
@@ -1169,7 +1169,7 @@ def _hint_response(
     else:
         # Second hint on: the full worked walkthrough (its closing step states the answer).
         hint_text = build_validated_hint(
-            problem, HintLevel.WORKED_STEP, provider=hint_provider
+            problem, HintLevel.WORKED_STEP, provider=hint_provider, locale=locale
         ).natural_language
     # If no banked clip voiced this line (an LLM-rephrased nudge, a misconception corrective, or a
     # number-templated worked step — and the whole es-MX path until its bank renders), voice the
