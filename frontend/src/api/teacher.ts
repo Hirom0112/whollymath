@@ -109,19 +109,35 @@ export interface TeacherAggregateTrends {
   skill_gap_series: number[];
 }
 
-// LIVE (2026-06-05): the teacher surface now reads REAL data. The two prerequisites that kept this
-// on fixtures are met: (1) the TCH.B9 seeder exists and runs idempotently on demo-login
-// (`SessionStore.provision_demo_teacher` → `seed_demo_class`), driving six persona bots through the
-// real turn loop; (2) those bots ARE the synthetic learners — their sessions/mastery are genuine, so
-// the roster/triage/insights reflect real persisted progress. Every /teacher/* endpoint returns the
-// UI-complete shape (verified: roster carries as_of/bucket_trends/per-student trend, drill-in carries
-// remediation_estimate_minutes/accuracy_history/notes, aggregate-trends carries skill_gap_series).
-// DEMO_ROSTER (teacherDemo.ts) is retained only as the offline fallback below.
-// (The parent surface still mirrors the old pattern via PARENT_API_READY — see api/parent.ts.)
+// The `/teacher/*` endpoints are real and UI-complete (roster carries as_of/bucket_trends/per-student
+// trend, drill-in carries remediation_estimate_minutes/accuracy_history/notes, aggregate-trends
+// carries skill_gap_series). BUT the demo teacher's CLASS is empty: the TCH.B9 class seeder was never
+// built (backend `provision_demo_teacher` creates only the teacher row, no students), so the live
+// dashboard has nothing to show. Until that seeder lands, the demo button uses the runtime bypass
+// (`setTeacherDemoMode`) to serve the polished seeded class from teacherDemo.ts. `TEACHER_API_READY`
+// stays true so a real signed-in teacher with a real (seeded) class would read live data.
 export const TEACHER_API_READY = true;
 
+// Runtime demo bypass for the TEACHER surface (the "Continue as a demo teacher" button). The live
+// `/teacher/*` backend authenticates a demo teacher, but its class has no seeded students (the
+// TCH.B9 class seeder was never built — provision_demo_teacher only creates the teacher row), so the
+// real dashboard is EMPTY. For the pitch we want a populated class, so clicking the demo button
+// flips this flag and the whole teacher API layer serves the polished, deterministic seeded class
+// (teacherDemo.ts) — exactly the runtime-bypass pattern api/parent.ts uses. Cleared on sign-out.
+let teacherDemoMode = false;
+
+/** Turn the teacher demo bypass on/off. Set true by the sign-in gate's demo button; false on exit. */
+export function setTeacherDemoMode(on: boolean): void {
+  teacherDemoMode = on;
+}
+
+/** Whether the teacher surface is serving the seeded demo class (explicit bypass OR API not ready). */
+export function isTeacherDemo(): boolean {
+  return teacherDemoMode || !TEACHER_API_READY;
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
-   Client. Both paths exist; `TEACHER_API_READY` selects which is live.
+   Client. Both paths exist; `isTeacherDemo()` selects which is live.
    ────────────────────────────────────────────────────────────────────────── */
 
 async function getJson<T>(path: string): Promise<T> {
@@ -168,7 +184,7 @@ function teacherAuthHeaders(): Record<string, string> {
  * or without a backend.
  */
 export async function demoLogin(): Promise<DemoLoginResponse> {
-  if (!TEACHER_API_READY) {
+  if (isTeacherDemo()) {
     return Promise.resolve({
       learner_id: 0,
       email: 'demo.teacher@whollymath.dev',
@@ -181,13 +197,13 @@ export async function demoLogin(): Promise<DemoLoginResponse> {
 
 /** Fetch the signed-in teacher's roster, students grouped-ready for the ranked list (TCH.B8). */
 export async function fetchRoster(): Promise<TeacherRosterView> {
-  if (!TEACHER_API_READY) return Promise.resolve(DEMO_ROSTER);
+  if (isTeacherDemo()) return Promise.resolve(DEMO_ROSTER);
   return getJson<TeacherRosterView>('/teacher/roster');
 }
 
 /** Fetch one student's full drill-in. 404 if the student is not on this teacher's roster. */
 export async function fetchTeacherStudent(studentId: string): Promise<TeacherStudentView> {
-  if (!TEACHER_API_READY) {
+  if (isTeacherDemo()) {
     const student = demoStudent(studentId);
     if (student === null) throw new ApiError(404, `student ${studentId} not on roster`);
     return Promise.resolve(student);
@@ -197,7 +213,7 @@ export async function fetchTeacherStudent(studentId: string): Promise<TeacherStu
 
 /** Assign the next unit to a student (TODO TCH.B7). Idempotent; owns-student guarded server-side. */
 export async function assignUnit(studentId: string, unitId: string): Promise<TeacherStudentView> {
-  if (!TEACHER_API_READY) {
+  if (isTeacherDemo()) {
     const student = assignUnitInDemo(studentId, unitId);
     if (student === null) throw new ApiError(404, `student ${studentId} not on roster`);
     return Promise.resolve(student);
@@ -211,12 +227,12 @@ export async function assignUnit(studentId: string, unitId: string): Promise<Tea
 
 /** Fetch the class-level aggregate trends for the "Student Insights" card (dashboard upgrade). */
 export async function fetchAggregateTrends(): Promise<TeacherAggregateTrends> {
-  if (!TEACHER_API_READY) return Promise.resolve(DEMO_AGGREGATE_TRENDS);
+  if (isTeacherDemo()) return Promise.resolve(DEMO_AGGREGATE_TRENDS);
   return getJson<TeacherAggregateTrends>('/teacher/aggregate-trends');
 }
 
 /** Fetch the signed-in teacher's reminders / to-dos (dashboard upgrade). */
 export async function fetchReminders(): Promise<TeacherReminder[]> {
-  if (!TEACHER_API_READY) return Promise.resolve(DEMO_REMINDERS);
+  if (isTeacherDemo()) return Promise.resolve(DEMO_REMINDERS);
   return getJson<TeacherReminder[]>('/teacher/reminders');
 }

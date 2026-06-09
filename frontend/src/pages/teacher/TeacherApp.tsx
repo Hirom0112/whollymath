@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { demoLogin, fetchRoster, setTeacherToken } from '../../api/teacher';
+import { demoLogin, fetchRoster, setTeacherDemoMode, setTeacherToken } from '../../api/teacher';
 import { ThemeProvider } from '../../state/ThemeContext';
 
 import { TeacherDashboard } from './TeacherDashboard';
@@ -46,6 +46,11 @@ function TeacherSurface(): React.JSX.Element {
     if (signingIn) return;
     setSigningIn(true);
     setAuthError(null);
+    // The live demo teacher's class is empty (no TCH.B9 seeder), so the demo runs on the seeded
+    // class fixture: flip the API layer to demo mode before any /teacher read, then the roster +
+    // drill-ins render the polished class with no backend data. (demoLogin short-circuits in demo
+    // mode, so this also needs no live session.)
+    setTeacherDemoMode(true);
     try {
       const handle = await demoLogin();
       setTeacherToken(handle.token);
@@ -66,6 +71,7 @@ function TeacherSurface(): React.JSX.Element {
 
   function handleSignOut(): void {
     setTeacherToken(null);
+    setTeacherDemoMode(false);
     setHeader(null);
     setSignedIn(false);
     setView({ kind: 'roster' });
