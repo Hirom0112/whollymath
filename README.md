@@ -64,12 +64,12 @@ Five things set it apart from the tutors most students use:
 <td><b>Nine units, gated.</b> The full Grade-6 standard (ratios → fractions → rational numbers → expressions → equations → geometry → statistics → financial literacy). Finishing a unit unlocks the next.</td>
 </tr>
 <tr>
-<td><img src="docs/screenshots/workspace.png" alt="A ratio problem rendered in the adaptive workspace"/></td>
+<td><img src="docs/screenshots/spanish.png" alt="A unit-rate lesson with the help language flipped to Spanish: the problem stays in English while the hint is in Spanish"/></td>
 <td><img src="docs/screenshots/teacher.png" alt="The teacher class dashboard with student triage"/></td>
 </tr>
 <tr>
-<td><b>One disciplined surface.</b> Manipulable representations (here, a ratio jar), a single answer affordance, inline hints — never a chaotic morphing UI.</td>
-<td><b>Teacher triage.</b> The roster ranks into <i>Struggling / Needs attention / On track</i> with an aggregate skill-gap view. <i>(The public demo class is unseeded, so it's shown empty.)</i></td>
+<td><b>Help in Spanish, on tap.</b> Flip the bottom-left toggle and the hints, nudges, and the mascot's voice switch to Spanish (es-MX) — the problem stays English while the help meets the learner in their language. <i>(Problem-statement translation is on the roadmap.)</i></td>
+<td><b>Teacher triage.</b> The roster ranks into <i>Struggling / Needs attention / On track</i>, surfaces the highest-priority student to check in with, and rolls up an aggregate skill-gap view. <i>(Shown on the synthetic demo class — no real student data.)</i></td>
 </tr>
 </table>
 
