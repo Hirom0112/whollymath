@@ -2,10 +2,11 @@
 
 # WhollyMath
 
-### An adaptive, multimodal Grade-6 math tutor — with a mastery model you can actually trust.
+### An adaptive Grade-6 math tutor that helps kids learn in English and Spanish — with a mastery model you can actually trust.
 
 [![Live](https://img.shields.io/badge/live-whollymath.app-2EA043?logo=amazonaws&logoColor=white)](https://whollymath.app)
 ![Status](https://img.shields.io/badge/status-deployed-2EA043)
+![Tests](https://img.shields.io/badge/tests-3%2C474_passing-2EA043)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
@@ -14,28 +15,17 @@
 ![XGBoost](https://img.shields.io/badge/XGBoost-EB5E28)
 ![AWS](https://img.shields.io/badge/AWS_CDK-232F3E?logo=amazonaws&logoColor=white)
 
-**▶ Live demo: [whollymath.app](https://whollymath.app)**
+<a href="https://whollymath.app"><img src="docs/screenshots/landing.png" width="820" alt="WhollyMath — Math, made whole" /></a>
+
+### ▶ [Try the live demo &nbsp;→](https://whollymath.app)
 
 </div>
 
 ---
 
-## Why this exists
+## Contents
 
-**Fractions are the single best-replicated predictor of later algebra success — more than
-whole-number knowledge.** The ability to place a fraction on a number line is tied to
-understanding the equal sign, variables, and equations. It's the gateway skill — so it's the
-spine WhollyMath is built around, inside a **full Grade-6 curriculum**.
-
-And yet the AI learning tools most students touch today fall into two shapes:
-
-- **a chat box** — "ask me anything," with no idea whether you actually understood the answer, and
-- **a static worked-example walkthrough** — the same five steps for everyone, no adaptation, no
-  check that step 2 landed before showing step 3.
-
-Neither can tell the difference between a learner who *understands* and one who is guessing,
-pattern-matching a single format, or leaning on hints. **WhollyMath is built to tell the
-difference — and to prove it.**
+[What this is](#what-this-is) · [See it in action](#see-it-in-action) · [How it fits together](#how-it-fits-together) · [The five adversarial learners](#the-five-adversarial-learners) · [Curriculum coverage](#curriculum-coverage) · [Tech stack](#tech-stack) · [Status — done · in progress · next](#status--done--in-progress--next) · [Running it](#running-it) · [Repository layout](#repository-layout) · [How this project is built](#how-this-project-is-built) · [Grounded in research](#grounded-in-research)
 
 ---
 
@@ -57,6 +47,31 @@ Five things set it apart from the tutors most students use:
 | ✅ | **Symbolic verification, not LLM guesswork** | Every answer and step is checked by **SymPy**. A language model never decides whether your math is right. |
 | 🧪 | **Five adversarial synthetic learners** | Each persona deterministically instantiates a documented misconception and tries to fool the mastery model. They are the integration test suite. |
 | 📊 | **An honest evaluation** | Measured against a chat-only baseline and a static worked-example baseline, with a **transfer test** as the moment of truth — and results reported regardless of which wins. |
+
+---
+
+## See it in action
+
+*Real screenshots from the live deployment at [whollymath.app](https://whollymath.app).*
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/hint.png" alt="The workspace mid-help: a problem-specific spoken hint with an English/Spanish toggle"/></td>
+<td width="50%"><img src="docs/screenshots/units.png" alt="The Grade-6 unit map, gated unit by unit"/></td>
+</tr>
+<tr>
+<td><b>The workspace, mid-help.</b> A <i>problem-specific</i> hint — never the answer — voiced by the mascot, with a one-tap English/Spanish help toggle. SymPy has already decided correctness; the LLM only phrases the nudge.</td>
+<td><b>Nine units, gated.</b> The full Grade-6 standard (ratios → fractions → rational numbers → expressions → equations → geometry → statistics → financial literacy). Finishing a unit unlocks the next.</td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/workspace.png" alt="A ratio problem rendered in the adaptive workspace"/></td>
+<td><img src="docs/screenshots/teacher.png" alt="The teacher class dashboard with student triage"/></td>
+</tr>
+<tr>
+<td><b>One disciplined surface.</b> Manipulable representations (here, a ratio jar), a single answer affordance, inline hints — never a chaotic morphing UI.</td>
+<td><b>Teacher triage.</b> The roster ranks into <i>Struggling / Needs attention / On track</i> with an aggregate skill-gap view. <i>(The public demo class is unseeded, so it's shown empty.)</i></td>
+</tr>
+</table>
 
 ---
 
@@ -153,49 +168,58 @@ Full rationale for each choice lives in the team's internal tech-stack doc.
 
 ---
 
-## Repository layout
+## Status — done · in progress · next
 
-```
-whollymath/
-├── backend/         # Python + FastAPI: domain model, mastery, policy, helpneed, personas, tutor, eval, teacher, llm
-├── frontend/        # React + TypeScript: workspace, surface state machine, pages
-├── shared-types/    # TypeScript types generated from Pydantic
-├── infrastructure/  # AWS CDK (CloudFront / ALB / Fargate / RDS)
-├── ARCHITECTURE.md  # ← the in-depth technical reference (start here after this file)
-├── ROADMAP.md       # what's built / what's left + the fix backlog
-├── AUTH.md          # parent/child auth design + security posture
-├── CLAUDE.md        # contribution guidelines, commit conventions, source hierarchy
-└── README.md        # you are here
-```
+Deployed and running at **[whollymath.app](https://whollymath.app)**. This is an honest snapshot;
+the full map with the fix backlog and owner sign-offs lives in [`ROADMAP.md`](./ROADMAP.md).
 
-> Detailed planning, the decision log, and research citations live in internal docs kept local
-> to the team (not in version control). `ARCHITECTURE.md` is the public technical reference.
+### ✅ Built and live
 
----
-
-## What's built
-
-The build is **deployed and running** at [whollymath.app](https://whollymath.app). Current state:
-
-- ✅ **Domain model** — 44 KCs across 9 units, SymPy verifiers, misconceptions, validated hints.
-- ✅ **Mastery model** — BKT per KC with the anti-gaming augmentation rules (representation
-  diversity, unscaffolded attempts, interleaving), gated by an S5 transfer probe.
-- ✅ **Five adversarial personas** + behavioral simulator — the integration suite.
-- ✅ **HelpNeed predictor** — XGBoost (AUC ≈ 0.900) trained on EDM Cup data, integrated
-  **observe-only**, with a 33-KC trustworthy guard.
-- ✅ **Adaptive UI** — five surface states with labeled, rule-driven transitions and refuse-rules.
-- ✅ **Evaluation harness** — three-arm comparison (adaptive vs. chat-only vs. static) + a
+- **Adaptive turn loop** — SymPy verify → BKT mastery → policy/refuse-rules → observe-only
+  HelpNeed, with **no LLM on the graded path**. Five surface states (S1–S5), labeled transitions,
+  an S5 transfer-probe confirm gate.
+- **Full Grade-6 curriculum** — 9 units, **44 engine-served KCs**, each with a problem generator,
+  SymPy verifier, documented misconceptions, validated hints, and a lesson spec. Dual CCSS + TEKS.
+- **Mastery model** — per-KC BKT plus the anti-gaming guardrails (τ=0.90, ≥5 *engaged* attempts,
+  ≥2 representations, ≥1 unscaffolded correct, interleaving, engagement floor) — validated by the
+  five adversarial personas as the integration suite.
+- **HelpNeed predictor** — XGBoost on EDM Cup 2023, **holdout AUC 0.900**, observe-only, with a
+  33-KC trustworthy guard.
+- **Teacher & parent dashboards** — live data: ranked roster + per-child mastery/HelpNeed signals,
+  and a parent progress drill-in.
+- **Parent/child auth** — COPPA-aware: parent sign-up (Google or email+password, Argon2id), child
+  username+PIN, consent record + data export/delete ([`AUTH.md`](./AUTH.md)).
+- **Homework scan** — assign → QR → photo OCR (Mathpix, mock fallback) → read-back → SymPy-graded.
+- **Voiced 2D mascot** — ElevenLabs "Hope" voice (pre-rendered bank + content-hash-cached live
+  synth, off the turn loop) with phoneme lip-sync, and problem-specific spoken hints.
+- **Spanish help-mode** — 176 reviewed help strings, captions-localized (problems stay English for now).
+- **Evaluation harness** — three-arm comparison (adaptive vs. chat-only vs. static) + a
   proactive-intervention A/B.
-- ✅ **Teacher & parent dashboards** — class roster and per-child progress views (live data).
-- ✅ **Parent/child auth** — COPPA-aware accounts: parent sign-up (Google or email+password),
-  child username+PIN, data export/delete ([`AUTH.md`](./AUTH.md)).
-- ✅ **Homework scan** — assign → QR → photo OCR (Mathpix) → read-back → SymPy-graded ★★.
-- ✅ **V2 AI layer** — talking 2D mascot guide, ElevenLabs voice, and an es-MX Spanish help-mode
-  (captions-only scaffold: avatar help text localizes, problems stay English).
-- ✅ **AWS deployment** — CloudFront → ALB → Fargate → RDS, via CDK.
+- **AWS deployment** — CloudFront → ALB → Fargate → RDS, via CDK.
 
-**Tests:** backend **3,166 passing** (9 skipped); frontend **306 passing** (52 files); production
-build green. *(Phase-0 baseline of this cleanup pass, 2026-06-08.)*
+### 🚧 In progress
+
+- **Hyperreactive generalization** — making 6 hardcoded KC→representation bindings table-driven
+  `LessonSpec` reads, to unlock the full ~54-lesson "the interface is the tutoring" contract.
+- **Richer multimodal beats** — geometry net figure-drawing (6.G.4), inequality solution-graph
+  (6.EE.8), post-answer manipulables.
+- **Fuller Spanish** — i18n UI chrome, problem-statement translation, and Spanish audio (help text
+  ships today).
+
+### 🔭 Next / planned
+
+- **Conversational tutor** — real-time spoken dialogue, gated behind a kids-safety guardrail layer
+  that must front all child-facing LLM output first (not started).
+- **HelpNeed v2** on real-student telemetry (blocked on a data license); FSRS spaced review;
+  DKT/AKT learner model.
+- **3D avatar** — built as a default-off spike; ships only after a 30 fps low-end-Chromebook test.
+
+> **Needs a human, not code:** AWS SES sender verification (so email/password signups can send the
+> COPPA consent email), plus the sign-offs tracked in [`ROADMAP.md`](./ROADMAP.md) §4.
+
+**Quality bar (verified on `main`, 2026-06-09):** backend **3,168 tests passing** (9 skipped),
+frontend **306 passing** (52 files); `ruff`, `mypy --strict` (361 files), `tsc`, and the production
+`vite build` all clean.
 
 ---
 
@@ -234,7 +258,10 @@ cd backend && uv run python -m app.helpneed.train_pipeline
 # optional fast pass: WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000 uv run python -m app.helpneed.train_pipeline
 ```
 
-### The committed HelpNeed model artifact
+<details>
+<summary><b>The committed HelpNeed model artifact</b> — how the trained predictor ships in-repo (click to expand)</summary>
+
+<br>
 
 The deployed turn loop needs a *fitted* predictor at boot, but the 1.44 GB EDM Cup
 training data is gitignored (too large for git, re-downloadable from source). The
@@ -263,6 +290,28 @@ cd backend && WHOLLYMATH_EDMCUP_ROW_LIMIT=5000000 \
 
 The predictor scores each answered turn **observe-only** — the API returns it as
 `help_need`, but interventions are gated on the A/B result rather than assumed.
+
+</details>
+
+---
+
+## Repository layout
+
+```
+whollymath/
+├── backend/         # Python + FastAPI: domain model, mastery, policy, helpneed, personas, tutor, eval, teacher, llm
+├── frontend/        # React + TypeScript: workspace, surface state machine, pages
+├── shared-types/    # TypeScript types generated from Pydantic
+├── infrastructure/  # AWS CDK (CloudFront / ALB / Fargate / RDS)
+├── ARCHITECTURE.md  # ← the in-depth technical reference (start here after this file)
+├── ROADMAP.md       # what's built / what's left + the fix backlog
+├── AUTH.md          # parent/child auth design + security posture
+├── CLAUDE.md        # contribution guidelines, commit conventions, source hierarchy
+└── README.md        # you are here
+```
+
+> Detailed planning, the decision log, and research citations live in internal docs kept local
+> to the team (not in version control). `ARCHITECTURE.md` is the public technical reference.
 
 ---
 
